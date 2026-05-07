@@ -679,6 +679,49 @@ def save_consent(student_id: int, consent_text: str, consent_version: str = "v1"
     )
 
 
+def has_consent(student_id: int) -> bool:
+    row = query_one("SELECT COUNT(*) AS n FROM consent_records WHERE student_id=:sid", {"sid": int(student_id)})
+    return bool(row and int(row.get("n", 0)) > 0)
+
+
+def ai_interaction_count(student_id: int) -> int:
+    row = query_one("SELECT COUNT(*) AS n FROM ai_interactions WHERE student_id=:sid", {"sid": int(student_id)})
+    return int(row.get("n", 0)) if row else 0
+
+
+def completed_lesson_count(student_id: int) -> int:
+    row = query_one(
+        "SELECT COUNT(*) AS n FROM lesson_progress WHERE student_id=:sid AND completed=1",
+        {"sid": int(student_id)},
+    )
+    return int(row.get("n", 0)) if row else 0
+
+
+def complete_case_status(student_id: int, total_lessons: int) -> Dict[str, Any]:
+    pre_done = get_test_attempt(student_id, "pre") is not None
+    post_done = get_test_attempt(student_id, "post") is not None
+    survey_done = get_survey(student_id) is not None
+    completed_lessons = completed_lesson_count(student_id)
+    ai_count = ai_interaction_count(student_id)
+    consent_done = has_consent(student_id)
+    requirements = {
+        "consent": consent_done,
+        "pre_test": pre_done,
+        "at_least_one_lesson": completed_lessons >= 1,
+        "at_least_one_ai_interaction": ai_count >= 1,
+        "post_test": post_done,
+        "survey": survey_done,
+    }
+    missing = [key for key, ok in requirements.items() if not ok]
+    return {
+        "is_complete_case": len(missing) == 0,
+        "missing_requirements": missing,
+        "completed_lessons": completed_lessons,
+        "ai_interactions": ai_count,
+        "consent_done": consent_done,
+    }
+
+
 def log_event(student_id: Optional[int], actor_role: str, event_type: str, event_detail: str = "") -> None:
     exec_sql(
         """
@@ -738,7 +781,7 @@ def students_df(limit: Optional[int] = None) -> pd.DataFrame:
 
 
 def count_rows(table: str) -> int:
-    allowed = {"students", "test_attempts", "survey_responses", "ai_interactions", "events_log"}
+    allowed = {"students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress"}
     if table not in allowed:
         raise ValueError(f"Unsupported table for count_rows: {table}")
     row = query_one(f"SELECT COUNT(*) AS n FROM {table}")
@@ -836,23 +879,55 @@ def progress_summary_df(total_lessons: int) -> pd.DataFrame:
     progress = query_df("SELECT student_id, COUNT(*) AS completed_lessons FROM lesson_progress WHERE completed=1 GROUP BY student_id")
     surveys = query_df("SELECT student_id, COUNT(*) AS survey_done FROM survey_responses GROUP BY student_id")
     ai_counts = query_df("SELECT student_id, COUNT(*) AS ai_interactions FROM ai_interactions GROUP BY student_id")
+    consents = query_df("SELECT student_id, COUNT(*) AS consent_done FROM consent_records GROUP BY student_id")
     pre = attempts[attempts["attempt_type"] == "pre"][["student_id", "score"]].rename(columns={"score": "pre_score"}) if not attempts.empty else pd.DataFrame(columns=["student_id", "pre_score"])
     post = attempts[attempts["attempt_type"] == "post"][["student_id", "score"]].rename(columns={"score": "post_score"}) if not attempts.empty else pd.DataFrame(columns=["student_id", "post_score"])
     df = students.rename(columns={"id": "student_id"})
-    for other in [pre, post, progress, surveys, ai_counts]:
+    for other in [pre, post, progress, surveys, ai_counts, consents]:
         df = df.merge(other, how="left", on="student_id")
     df["completed_lessons"] = df["completed_lessons"].fillna(0).astype(int)
     df["survey_done"] = df["survey_done"].fillna(0).astype(int)
     df["ai_interactions"] = df["ai_interactions"].fillna(0).astype(int)
+    df["consent_done"] = df["consent_done"].fillna(0).astype(int)
     df["pre_done"] = df["pre_score"].notna()
     df["post_done"] = df["post_score"].notna()
     df["learning_gain"] = df["post_score"] - df["pre_score"]
+    df["has_ai_interaction"] = df["ai_interactions"] > 0
+    df["has_lesson_activity"] = df["completed_lessons"] >= 1
+    df["is_complete_case"] = (
+        (df["consent_done"] > 0)
+        & df["pre_done"]
+        & df["has_lesson_activity"]
+        & df["has_ai_interaction"]
+        & df["post_done"]
+        & (df["survey_done"] > 0)
+    )
+
+    def _missing_reason(row: pd.Series) -> str:
+        missing = []
+        if int(row.get("consent_done", 0)) <= 0:
+            missing.append("consent")
+        if not bool(row.get("pre_done", False)):
+            missing.append("pre-test")
+        if int(row.get("completed_lessons", 0)) < 1:
+            missing.append("lesson")
+        if int(row.get("ai_interactions", 0)) < 1:
+            missing.append("AI interaction")
+        if not bool(row.get("post_done", False)):
+            missing.append("post-test")
+        if int(row.get("survey_done", 0)) <= 0:
+            missing.append("survey")
+        return "Complete" if not missing else ", ".join(missing)
+
+    df["complete_case_missing"] = df.apply(_missing_reason, axis=1)
     df["progress_percent"] = (
-        df["pre_done"].astype(int)
+        (df["consent_done"] > 0).astype(int)
+        + df["pre_done"].astype(int)
         + (df["completed_lessons"] / max(1, total_lessons))
+        + (df["ai_interactions"] > 0).astype(int)
         + df["post_done"].astype(int)
         + (df["survey_done"] > 0).astype(int)
-    ) / 4 * 100
+    ) / 6 * 100
     return df
 
 
@@ -922,6 +997,7 @@ def paper_summary() -> Dict[str, Any]:
         "n_pre": int(progress["pre_done"].sum()) if not progress.empty and "pre_done" in progress else 0,
         "n_post": int(progress["post_done"].sum()) if not progress.empty and "post_done" in progress else 0,
         "n_complete_pairs": int(len(completed)),
+        "n_complete_cases": int(progress["is_complete_case"].sum()) if not progress.empty and "is_complete_case" in progress else 0,
         "n_surveys": int(len(survey)) if not survey.empty else 0,
         "total_ai_interactions": int(len(logs)) if not logs.empty else 0,
     }

@@ -54,6 +54,38 @@ CUSTOM_CSS = """
 .qai-code {background: #f8fafc; padding: 1rem; border-radius: 0.8rem; border: 1px solid #e5e7eb; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
 div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 [data-testid="stMetric"] {background: #fff; border: 1px solid var(--qai-border); border-radius: 1rem; padding: 1rem; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);}
+/* Compact navigation for small screens and long evaluator menus */
+[data-testid="stSidebar"] .stButton button {
+  min-height: 2.05rem !important;
+  padding: 0.18rem 0.45rem !important;
+  font-size: 0.82rem !important;
+  line-height: 1.05 !important;
+  border-radius: 0.55rem !important;
+}
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {font-size: 1rem !important;}
+[data-testid="stSidebar"] .stCaption, [data-testid="stSidebar"] p {font-size: 0.78rem !important;}
+.qai-code-badge {
+  background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 0.9rem;
+  padding: 1rem; font-size: 1.4rem; font-weight: 800; letter-spacing: 0.04em;
+  color: #172042; text-align: center; margin: 0.5rem 0 1rem 0;
+}
+.qai-step {
+  background: white; border: 1px solid var(--qai-border); border-radius: 0.9rem;
+  padding: 0.85rem; min-height: 5.2rem; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+.qai-step-done {border-color: #a7e3bd; background: #f5fff8;}
+.qai-step-pending {border-color: #e5e7eb; background: #ffffff;}
+.qai-step-title {font-size: 0.86rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem;}
+.qai-step-value {font-size: 0.78rem; color: #475569;}
+@media (max-width: 900px) {
+  .block-container {padding-top: 1rem; padding-left: 0.8rem; padding-right: 0.8rem;}
+  .qai-hero {padding: 1.2rem 1.1rem; border-radius: 1rem;}
+  .qai-hero h1 {font-size: 1.35rem;}
+  .qai-hero p {font-size: 0.88rem;}
+  .qai-card {padding: 0.9rem; border-radius: 0.9rem;}
+  [data-testid="stMetric"] {padding: 0.65rem;}
+  div.stButton > button {min-height: 2.25rem;}
+}
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -78,6 +110,7 @@ def init_state() -> None:
         "evaluator_logged_in": False,
         "evaluator_page": "Evaluator Dashboard",
         "last_tutor_result": None,
+        "new_participant_code": None,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -154,6 +187,49 @@ def all_lessons_done(student_id: int) -> bool:
         return False
     done = set(progress[progress["completed"] == 1]["lesson_id"].tolist())
     return all(lesson["id"] in done for lesson in content.LESSONS)
+
+
+def has_minimum_ai_interaction(student_id: int) -> bool:
+    return db.ai_interaction_count(student_id) >= 1
+
+
+def has_research_consent(student_id: int) -> bool:
+    return db.has_consent(student_id)
+
+
+def render_participant_code_box(code: str) -> None:
+    st.markdown("<div class='qai-muted'>Save this code. You will need it to sign in later.</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='qai-code-badge'>{code}</div>", unsafe_allow_html=True)
+    st.code(code, language=None)
+
+
+def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
+    status = db.complete_case_status(student["id"], total_lessons=len(content.LESSONS))
+    items = [
+        ("Consent", status["consent_done"]),
+        ("Pre-test", test_is_done(student["id"], "pre")),
+        ("Lesson activity", status["completed_lessons"] >= 1),
+        ("AI Tutor", status["ai_interactions"] >= 1),
+        ("Post-test", test_is_done(student["id"], "post")),
+        ("Survey", db.get_survey(student["id"]) is not None),
+    ]
+    if compact:
+        done_count = sum(1 for _, ok in items if ok)
+        st.progress(done_count / len(items), text=f"Completion requirements: {done_count}/{len(items)}")
+        return
+    cols = st.columns(3)
+    for idx, (label, ok) in enumerate(items):
+        klass = "qai-step-done" if ok else "qai-step-pending"
+        value = "Done" if ok else "Pending"
+        with cols[idx % 3]:
+            st.markdown(
+                f"<div class='qai-step {klass}'><div class='qai-step-title'>{label}</div><div class='qai-step-value'>{value}</div></div>",
+                unsafe_allow_html=True,
+            )
+    if status["is_complete_case"]:
+        st.success("This participation is complete for analysis.")
+    else:
+        st.caption("For valid analysis, complete all requirements before leaving the platform.")
 
 
 def render_status_badge() -> None:
@@ -306,10 +382,10 @@ def render_sidebar() -> None:
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     if not student:
         return ["Student Home", "Sign in", "Create account"]
-    pages = ["Student Home", "Pre-test"]
+    pages = ["Student Home", "Research Notice", "Pre-test"]
     if test_is_done(student["id"], "pre"):
         pages += ["Adaptive Plan", "Learning Module", "AI Tutor Lab"]
-    if all_lessons_done(student["id"]):
+    if all_lessons_done(student["id"]) and has_minimum_ai_interaction(student["id"]):
         pages += ["Post-test"]
     if test_is_done(student["id"], "post"):
         pages += ["Satisfaction Survey"]
@@ -344,6 +420,8 @@ def render_student_app() -> None:
         render_student_signin()
     elif page == "Create account":
         render_student_registration()
+    elif page == "Research Notice":
+        require_student(render_research_notice)
     elif page == "Pre-test":
         require_student(render_test_page, "pre")
     elif page == "Adaptive Plan":
@@ -385,22 +463,20 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         return
 
     st.markdown(f"<div class='qai-ok'><b>Signed in:</b> {student['full_name']} ({student['participant_code']})</div>", unsafe_allow_html=True)
+    if st.session_state.get("new_participant_code"):
+        st.success("Account created successfully. Save your participant code before continuing.")
+        render_participant_code_box(st.session_state["new_participant_code"])
+        if st.button("I saved my participant code", type="primary"):
+            st.session_state.new_participant_code = None
+            st.session_state.student_page = next_student_page(student)
+            st.rerun()
+        return
     summary = db.progress_summary_df(len(content.LESSONS))
     row = summary[summary["student_id"] == student["id"]]
     progress = float(row["progress_percent"].iloc[0]) if not row.empty else 0.0
     st.progress(progress / 100, text=f"Overall progress: {progress:.0f}%")
 
-    cols = st.columns(5)
-    steps = [
-        ("1", "Pre-test", test_is_done(student["id"], "pre")),
-        ("2", "Adaptive Plan", db.get_recommendation(student["id"]) is not None),
-        ("3", "Learning", all_lessons_done(student["id"])),
-        ("4", "Post-test", test_is_done(student["id"], "post")),
-        ("5", "Survey", db.get_survey(student["id"]) is not None),
-    ]
-    for col, (num, label, done) in zip(cols, steps):
-        with col:
-            st.metric(label=f"{num}. {label}", value="Done" if done else "Pending")
+    render_completion_requirements(student)
 
     st.divider()
     c1, c2, c3 = st.columns(3)
@@ -422,17 +498,52 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
 
 def next_student_page(student: Dict[str, Any]) -> str:
     sid = student["id"]
+    if not has_research_consent(sid):
+        return "Research Notice"
     if not test_is_done(sid, "pre"):
         return "Pre-test"
     if db.get_recommendation(sid) is None:
         return "Adaptive Plan"
     if not all_lessons_done(sid):
         return "Learning Module"
+    if not has_minimum_ai_interaction(sid):
+        return "AI Tutor Lab"
     if not test_is_done(sid, "post"):
         return "Post-test"
     if db.get_survey(sid) is None:
         return "Satisfaction Survey"
     return "Student Home"
+
+
+def render_research_notice(student: Dict[str, Any]) -> None:
+    hero("Research Notice and Consent", "Please read this notice before continuing the study workflow.")
+    if has_research_consent(student["id"]):
+        st.success("Research notice already confirmed.")
+        render_completion_requirements(student, compact=True)
+        if st.button("Continue", type="primary"):
+            st.session_state.student_page = next_student_page(student)
+            st.rerun()
+        return
+
+    st.markdown("""
+    <div class='qai-card'>
+    <h3>Study notice</h3>
+    <p>This platform is used for a pilot evaluation of AI-supported learning for introductory quantum programming.</p>
+    <ul>
+      <li>Your pre-test, post-test, learning progress, reflections, survey answers, and AI tutor interactions will be recorded for research analysis.</li>
+      <li>Your participant code is used to organize the data. Avoid creating multiple accounts.</li>
+      <li>AI tutor responses may be reviewed by the evaluator to assess conceptual accuracy, relevance, scaffolding, and feedback quality.</li>
+      <li>The AI tutor is a learning support tool. It should not replace your own reasoning.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    agree = st.checkbox("I have read the study notice and agree to participate in this pilot evaluation.")
+    if st.button("Confirm and continue", type="primary", disabled=not agree):
+        consent_text = "Participant confirmed research notice and consented to recording learning data and AI tutor interactions."
+        db.save_consent(student["id"], consent_text, consent_version="v2")
+        db.log_event(student["id"], "student", "consent_confirmed", "Research notice confirmed")
+        st.session_state.student_page = next_student_page(student)
+        st.rerun()
 
 
 def render_student_signin() -> None:
@@ -473,7 +584,9 @@ def render_student_registration() -> None:
         study_code = ""
         if access_required:
             study_code = st.text_input("Study registration access code", type="password")
-        consent = st.checkbox("I understand that my answers and interactions will be recorded for the pilot evaluation.")
+        st.markdown("#### Research notice")
+        st.caption("Your learning data, pre/post-test results, reflections, survey answers, and AI tutor interactions will be recorded for research analysis. Please create only one account and save your participant code.")
+        consent = st.checkbox("I have read the study notice and agree to participate in this pilot evaluation.")
         submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
     if submitted:
         try:
@@ -491,7 +604,8 @@ def render_student_registration() -> None:
             db.save_consent(student["id"], consent_text, consent_version="v1")
             db.log_event(student["id"], "student", "account_created", "Student created account and confirmed consent notice")
             st.session_state.student_id = student["id"]
-            st.session_state.student_page = "Pre-test"
+            st.session_state.new_participant_code = student["participant_code"]
+            st.session_state.student_page = "Student Home"
             st.success(f"Account created. Your participant code is: {student['participant_code']}")
             st.rerun()
         except Exception as exc:
@@ -507,6 +621,11 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
     hero(title, subtitle)
     if kind == "post" and not all_lessons_done(student["id"]):
         st.warning("Please complete the learning module before the post-test.")
+        return
+    if kind == "post" and not has_minimum_ai_interaction(student["id"]):
+        st.warning("Please complete at least one AI Tutor interaction before the post-test. This is required for the AI-supported learning evaluation.")
+        if st.button("Go to AI Tutor Lab", type="primary"):
+            set_student_page("AI Tutor Lab")
         return
     existing = db.get_test_attempt(student["id"], kind)
     if existing:
@@ -688,9 +807,14 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             st.rerun()
 
     if all_lessons_done(student["id"]):
-        st.success("All sections are completed. You can continue to the post-test.")
-        if st.button("Go to post-test", type="primary"):
-            set_student_page("Post-test")
+        if has_minimum_ai_interaction(student["id"]):
+            st.success("All sections are completed and at least one AI Tutor interaction is recorded. You can continue to the post-test.")
+            if st.button("Go to post-test", type="primary"):
+                set_student_page("Post-test")
+        else:
+            st.info("Before the post-test, please complete at least one AI Tutor interaction so the study can evaluate AI-supported learning.")
+            if st.button("Go to AI Tutor Lab", type="primary"):
+                set_student_page("AI Tutor Lab")
 
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
@@ -713,11 +837,11 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     )
     concepts = sorted({c for lesson in content.LESSONS for c in lesson["concepts"]})
     concept = st.selectbox("Concept focus", concepts)
-    prompt = st.text_area("Your question, explanation, or Qiskit code", height=180, placeholder="Example: Please explain this in Arabic because I did not understand the concept.")
+    prompt = st.text_area("Write your attempt, question, explanation, or Qiskit code before asking the tutor", height=180, placeholder="Example: I think Hadamard creates a 50/50 probability, but I do not understand why measurement is random. Please explain in Arabic.")
     st.caption("For research validity, write your current understanding first. The tutor is designed to guide, not replace, your reasoning. The tutor should answer in the selected language or the language of your question.")
     if st.button("Ask AI tutor", type="primary", use_container_width=True):
-        if not prompt.strip() and task in ["Check my explanation", "Debug or interpret Qiskit code"]:
-            st.warning("Please write your explanation or code first.")
+        if len(prompt.strip()) < 10:
+            st.warning("Please write at least a short attempt or question before asking the AI tutor.")
             return
         tutor = feedback_engine.generate_tutor_response(
             task=task,
@@ -816,12 +940,13 @@ def render_evaluator_dashboard() -> None:
     df = db.progress_summary_df(len(content.LESSONS))
     survey_count = db.count_rows("survey_responses")
     ai_count = db.count_rows("ai_interactions")
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Students", len(df))
     c2.metric("Pre-tests", int(df["pre_done"].sum()) if not df.empty else 0)
     c3.metric("Post-tests", int(df["post_done"].sum()) if not df.empty else 0)
-    c4.metric("Surveys", survey_count)
-    c5.metric("AI logs", ai_count)
+    c4.metric("Complete cases", int(df["is_complete_case"].sum()) if not df.empty and "is_complete_case" in df else 0)
+    c5.metric("Surveys", survey_count)
+    c6.metric("AI logs", ai_count)
 
     status = feedback_engine.provider_status()
     st.markdown("### AI tutor configuration")
@@ -844,7 +969,8 @@ def render_evaluator_dashboard() -> None:
 
     if not df.empty:
         st.markdown("### Recent participants")
-        recent = df[["participant_code", "full_name", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions"]].head(30)
+        recent_cols = ["participant_code", "full_name", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions", "is_complete_case", "complete_case_missing"]
+        recent = df[[c for c in recent_cols if c in df.columns]].head(30)
         st.dataframe(recent, use_container_width=True, hide_index=True)
         if len(df) > 30:
             st.caption(f"Showing 30 most recent participants out of {len(df)}. Use Results Export for the full dataset.")
@@ -905,6 +1031,9 @@ def render_student_details() -> None:
     else:
         c3.metric("Learning gain", "-")
 
+    st.markdown("### Completion requirements")
+    render_completion_requirements(student)
+
     st.markdown("### Lesson reflections")
     progress = db.get_lesson_progress(student["id"])
     st.dataframe(progress, use_container_width=True)
@@ -922,7 +1051,8 @@ def render_progress_monitor() -> None:
     if df.empty:
         st.info("No students registered yet.")
         return
-    st.dataframe(df[["participant_code", "full_name", "pre_done", "completed_lessons", "post_done", "survey_done", "progress_percent", "ai_interactions"]], use_container_width=True)
+    cols = ["participant_code", "full_name", "consent_done", "pre_done", "completed_lessons", "ai_interactions", "post_done", "survey_done", "is_complete_case", "complete_case_missing", "progress_percent"]
+    st.dataframe(df[[c for c in cols if c in df.columns]], use_container_width=True, hide_index=True)
     render_progress_bars(df, "participant_code", "progress_percent", "Completion progress")
 
 
@@ -933,7 +1063,8 @@ def render_learning_analytics() -> None:
         st.info("No student data yet.")
         return
     st.markdown("### Score summary")
-    show = df[["participant_code", "full_name", "pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions"]]
+    show_cols = ["participant_code", "full_name", "pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions", "is_complete_case", "complete_case_missing"]
+    show = df[[c for c in show_cols if c in df.columns]]
     st.dataframe(show, use_container_width=True)
     numeric = show[["pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions"]].dropna(how="all")
     if not numeric.empty:
@@ -964,12 +1095,17 @@ def render_paper_ready_analysis() -> None:
         return
 
     complete = progress.dropna(subset=["pre_score", "post_score"]).copy()
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Registered", len(progress))
     c2.metric("Pre-tests", int(progress["pre_done"].sum()))
     c3.metric("Post-tests", int(progress["post_done"].sum()))
     c4.metric("Complete pairs", len(complete))
-    c5.metric("Surveys", len(survey))
+    c5.metric("Complete cases", int(progress["is_complete_case"].sum()) if "is_complete_case" in progress else 0)
+    c6.metric("Surveys", len(survey))
+
+    st.markdown("### Completion validity for analysis")
+    completion_cols = ["participant_code", "full_name", "consent_done", "pre_done", "completed_lessons", "ai_interactions", "post_done", "survey_done", "is_complete_case", "complete_case_missing"]
+    st.dataframe(progress[[c for c in completion_cols if c in progress.columns]], use_container_width=True, hide_index=True)
 
     st.markdown("### Pre-test / Post-test summary")
     if complete.empty:
