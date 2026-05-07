@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
@@ -17,6 +18,12 @@ class TutorResult:
     provider: str
     model: str
     diagnostic: str = ""
+    latency_ms: int = 0
+    response_word_count: int = 0
+    student_input_language: str = "English"
+    response_language: str = "English"
+    error_type: str = ""
+    is_fallback_used: int = 0
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -84,6 +91,31 @@ def _normalize_language(value: str) -> str:
     if value in {"english", "en"}:
         return "English"
     return "Auto-detect"
+
+
+def detect_input_language(text: str = "") -> str:
+    if _contains_arabic(text):
+        return "Arabic"
+    return "English"
+
+
+def _word_count(text: str) -> int:
+    return len((text or "").split())
+
+
+def _classify_error(exc: Exception) -> str:
+    message = str(exc).lower()
+    if "429" in message or "quota" in message or "rate" in message:
+        return "rate_limit_or_quota"
+    if "401" in message or "403" in message or "api key" in message or "unauthorized" in message:
+        return "authentication_or_permission"
+    if "timeout" in message:
+        return "timeout"
+    if "503" in message or "unavailable" in message:
+        return "provider_unavailable"
+    if "empty response" in message or "no candidates" in message:
+        return "empty_response"
+    return "provider_error"
 
 
 def resolve_response_language(
@@ -319,38 +351,75 @@ def generate_tutor_response(
     student_profile: Optional[Dict[str, Any]] = None,
     lesson_context: Optional[Dict[str, Any]] = None,
 ) -> TutorResult:
+    """Generate an AI tutor response and attach research instrumentation metadata."""
+    started = time.perf_counter()
     response_language = resolve_response_language(student_input, student_profile, lesson_context)
+    input_language = detect_input_language(student_input)
     prompt = build_prompt(task, concept, student_input, student_profile, lesson_context)
     status = provider_status()
     provider = status["provider"]
+
+    def finalize(
+        response: str,
+        mode: str,
+        provider_name: str,
+        model_name: str,
+        diagnostic: str = "",
+        error_type: str = "",
+        fallback_used: int = 0,
+    ) -> TutorResult:
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        return TutorResult(
+            response=response,
+            mode=mode,
+            provider=provider_name,
+            model=model_name,
+            diagnostic=diagnostic,
+            latency_ms=latency_ms,
+            response_word_count=_word_count(response),
+            student_input_language=input_language,
+            response_language=response_language,
+            error_type=error_type,
+            is_fallback_used=int(fallback_used),
+        )
+
     if provider == "gemini" and status["gemini_key_detected"]:
         try:
             text, prov, model = call_gemini(prompt, response_language)
-            return TutorResult(text, "llm", prov, model)
+            return finalize(text, "llm", prov, model)
         except Exception as exc:
             fallback = (
                 "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
                 + local_fallback(task, concept, student_input, response_language)
             )
-            return TutorResult(fallback, "llm_error", "gemini", status["model"], str(exc))
+            return finalize(fallback, "llm_error", "gemini", status["model"], str(exc), _classify_error(exc), 1)
     if provider == "openai" and status["openai_key_detected"]:
         try:
             text, prov, model = call_openai(prompt, response_language)
-            return TutorResult(text, "llm", prov, model)
+            return finalize(text, "llm", prov, model)
         except Exception as exc:
             fallback = (
                 "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
                 + local_fallback(task, concept, student_input, response_language)
             )
-            return TutorResult(fallback, "llm_error", "openai", status["model"], str(exc))
+            return finalize(fallback, "llm_error", "openai", status["model"], str(exc), _classify_error(exc), 1)
     if provider == "groq" and status["groq_key_detected"]:
         try:
             text, prov, model = call_groq(prompt, response_language)
-            return TutorResult(text, "llm", prov, model)
+            return finalize(text, "llm", prov, model)
         except Exception as exc:
             fallback = (
                 "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
                 + local_fallback(task, concept, student_input, response_language)
             )
-            return TutorResult(fallback, "llm_error", "groq", status["model"], str(exc))
-    return TutorResult(local_fallback(task, concept, student_input, response_language), "rule_based", "local", "local-fallback")
+            return finalize(fallback, "llm_error", "groq", status["model"], str(exc), _classify_error(exc), 1)
+
+    return finalize(
+        local_fallback(task, concept, student_input, response_language),
+        "rule_based",
+        "local",
+        "local-fallback",
+        "",
+        "",
+        1,
+    )

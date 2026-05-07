@@ -187,6 +187,35 @@ def to_excel_bytes(dfs: Dict[str, pd.DataFrame]) -> bytes:
     return output.getvalue()
 
 
+def log_tutor_interaction(
+    student_id: int,
+    module: str,
+    concept: str,
+    task: str,
+    prompt: str,
+    tutor: Any,
+) -> None:
+    """Persist an AI interaction with research metadata for LLM performance analysis."""
+    db.log_ai_interaction(
+        student_id,
+        module,
+        concept,
+        task,
+        prompt,
+        tutor.response,
+        tutor.mode,
+        tutor.provider,
+        tutor.model,
+        tutor.diagnostic,
+        latency_ms=getattr(tutor, "latency_ms", None),
+        response_word_count=getattr(tutor, "response_word_count", None),
+        student_input_language=getattr(tutor, "student_input_language", ""),
+        response_language=getattr(tutor, "response_language", ""),
+        error_type=getattr(tutor, "error_type", ""),
+        is_fallback_used=getattr(tutor, "is_fallback_used", 0),
+    )
+
+
 def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title: str = "") -> None:
     """Render lightweight progress bars without st.bar_chart.
 
@@ -249,6 +278,7 @@ def render_sidebar() -> None:
                 "Progress Monitor",
                 "Learning Analytics",
                 "Paper-ready Analysis",
+                "LLM Performance Evaluation",
                 "Feedback Logs",
                 "Survey Results",
                 "Event Logs",
@@ -553,9 +583,9 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
             student_profile=profile,
             lesson_context={"recommended_lessons": recommended, "weak_concepts": weak, "response_language": plan_language},
         )
-        db.log_ai_interaction(
+        log_tutor_interaction(
             student["id"], "adaptive_plan", "Adaptive learning", "Generate personalized study plan",
-            "Generate a concise study plan based on pre-test results.", tutor.response, tutor.mode, tutor.provider, tutor.model, tutor.diagnostic,
+            "Generate a concise study plan based on pre-test results.", tutor,
         )
         st.markdown("### AI-generated study plan")
         st.write(tutor.response)
@@ -630,9 +660,9 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             student_profile=student_profile(student),
             lesson_context={**lesson, "response_language": activity_language},
         )
-        db.log_ai_interaction(
+        log_tutor_interaction(
             student["id"], "learning_module", ", ".join(lesson["concepts"]), task,
-            f"Lesson activity for {lesson['title']}", tutor.response, tutor.mode, tutor.provider, tutor.model, tutor.diagnostic,
+            f"Lesson activity for {lesson['title']}", tutor,
         )
         st.markdown("#### AI tutor response")
         st.write(tutor.response)
@@ -696,8 +726,8 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
             student_profile=student_profile(student),
             lesson_context={"source": "AI Tutor Lab", "response_language": tutor_language},
         )
-        db.log_ai_interaction(
-            student["id"], "ai_tutor_lab", concept, task, prompt, tutor.response, tutor.mode, tutor.provider, tutor.model, tutor.diagnostic
+        log_tutor_interaction(
+            student["id"], "ai_tutor_lab", concept, task, prompt, tutor
         )
         st.markdown("### AI tutor response")
         st.write(tutor.response)
@@ -751,6 +781,8 @@ def render_evaluator_app() -> None:
         render_learning_analytics()
     elif page == "Paper-ready Analysis":
         render_paper_ready_analysis()
+    elif page == "LLM Performance Evaluation":
+        render_llm_performance_evaluation()
     elif page == "Feedback Logs":
         render_feedback_logs()
     elif page == "Survey Results":
@@ -1004,6 +1036,32 @@ def render_paper_ready_analysis() -> None:
     else:
         st.info("No survey responses yet.")
 
+    st.markdown("### LLM pedagogical performance evaluation")
+    eval_summary = db.llm_evaluation_summary_df()
+    if not eval_summary.empty:
+        st.dataframe(eval_summary, use_container_width=True, hide_index=True)
+        render_progress_bars(eval_summary, "metric", "mean_score", "Mean expert rating by criterion")
+    else:
+        st.info("No expert ratings have been recorded yet. Use the LLM Performance Evaluation page to rate AI tutor responses.")
+
+    technical_logs = db.ai_logs_df(limit=10000)
+    if not technical_logs.empty:
+        tech_rows = []
+        total_ai = len(technical_logs)
+        for label, condition in [
+            ("LLM success rate", technical_logs["mode"].astype(str).eq("llm")),
+            ("LLM error rate", technical_logs["mode"].astype(str).eq("llm_error")),
+            ("Fallback/rule-based rate", technical_logs["mode"].astype(str).isin(["rule_based", "llm_error"])),
+        ]:
+            n = int(condition.sum())
+            tech_rows.append({"metric": label, "count": n, "percentage": round(n / max(total_ai, 1) * 100, 2)})
+        if "latency_ms" in technical_logs:
+            latency = pd.to_numeric(technical_logs["latency_ms"], errors="coerce").dropna()
+            if not latency.empty:
+                tech_rows.append({"metric": "Mean response latency (ms)", "count": round(float(latency.mean()), 2), "percentage": None})
+        technical_summary = pd.DataFrame(tech_rows)
+        st.dataframe(technical_summary, use_container_width=True, hide_index=True)
+
     st.markdown("### Download paper-ready tables")
     export_tables = {
         "paper_summary": pd.DataFrame([{
@@ -1019,6 +1077,8 @@ def render_paper_ready_analysis() -> None:
         "concept_gain": concept_gain,
         "ai_usage": ai_usage,
         "survey_means": survey_means,
+        "llm_evaluation_summary": db.llm_evaluation_summary_df(),
+        "llm_evaluations": db.llm_evaluations_df(),
     }
     st.download_button(
         "Download paper-ready analysis workbook",
@@ -1027,6 +1087,93 @@ def render_paper_ready_analysis() -> None:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         type="primary",
     )
+
+
+def render_llm_performance_evaluation() -> None:
+    hero("LLM Performance Evaluation", "Rate AI tutor responses using a pedagogical rubric for journal-level analysis.")
+    st.markdown("""
+    This page evaluates the LLM tutor itself, not the student. Rate sampled AI responses from 1 to 5 across
+    conceptual, pedagogical, and technical criteria. These ratings will be used to report LLM pedagogical
+    quality in addition to student learning gain.
+    """)
+
+    c1, c2, c3 = st.columns(3)
+    limit = c1.selectbox("Responses to load", [10, 20, 50, 100], index=1)
+    only_unrated = c2.checkbox("Show only unrated responses", value=True)
+    only_llm = c3.checkbox("Focus on LLM / LLM-error responses", value=True)
+    candidates = db.llm_candidate_interactions_df(limit=limit, only_unrated=only_unrated, only_llm=only_llm)
+    if candidates.empty:
+        st.info("No AI responses match these filters.")
+        summary = db.llm_evaluation_summary_df()
+        if not summary.empty:
+            st.markdown("### Current rating summary")
+            st.dataframe(summary, use_container_width=True, hide_index=True)
+        return
+
+    st.markdown("### Candidate AI responses")
+    preview_cols = [
+        "interaction_id", "created_at", "participant_code", "concept", "task", "mode", "provider", "model",
+        "latency_ms", "response_word_count", "existing_quality_score",
+    ]
+    available_preview = [c for c in preview_cols if c in candidates.columns]
+    st.dataframe(candidates[available_preview], use_container_width=True, hide_index=True)
+
+    interaction_ids = candidates["interaction_id"].astype(int).tolist()
+    selected_id = st.selectbox("Select an AI interaction to evaluate", interaction_ids)
+    row = candidates[candidates["interaction_id"] == selected_id].iloc[0].to_dict()
+
+    st.markdown("### Prompt and AI response")
+    st.caption(f"Participant: {row.get('participant_code', '-')} | Concept: {row.get('concept', '-')} | Task: {row.get('task', '-')}")
+    with st.expander("Student prompt / input", expanded=True):
+        st.write(row.get("prompt") or "[No student free text recorded]")
+    with st.expander("AI tutor response", expanded=True):
+        st.write(row.get("response") or "")
+    if row.get("diagnostic"):
+        with st.expander("Technical diagnostic"):
+            st.code(str(row.get("diagnostic"))[:3000])
+
+    st.markdown("### Expert rubric rating")
+    st.caption("1 = poor/incorrect, 3 = acceptable/partial, 5 = excellent/highly appropriate")
+    with st.form(f"llm_eval_{selected_id}"):
+        c1, c2 = st.columns(2)
+        with c1:
+            conceptual_accuracy = st.slider("Conceptual accuracy", 1, 5, 3, help="Scientific correctness of quantum/Qiskit explanation.")
+            answer_relevance = st.slider("Answer relevance", 1, 5, 3, help="How directly the response addresses the student's request.")
+            pedagogical_clarity = st.slider("Pedagogical clarity", 1, 5, 3, help="Clarity and usefulness for an introductory learner.")
+            scaffolding_quality = st.slider("Scaffolding quality", 1, 5, 3, help="Stepwise guidance rather than direct answer dumping.")
+        with c2:
+            qiskit_alignment = st.slider("Qiskit alignment", 1, 5, 3, help="Correctness and appropriateness of Qiskit examples or interpretation.")
+            reflection_support = st.slider("Reflection support", 1, 5, 3, help="Encourages learner reflection and reduces over-reliance.")
+            personalization = st.slider("Personalization", 1, 5, 3, help="Adapts to learner profile, pre-test weaknesses, or question language.")
+        overall_comment = st.text_area("Evaluator comment", height=100, placeholder="Optional notes about strengths, errors, or pedagogical value.")
+        submitted = st.form_submit_button("Save LLM evaluation", type="primary", use_container_width=True)
+    if submitted:
+        db.save_llm_evaluation(
+            selected_id,
+            secret("EVALUATOR_USERNAME", "evaluator"),
+            conceptual_accuracy,
+            answer_relevance,
+            pedagogical_clarity,
+            scaffolding_quality,
+            qiskit_alignment,
+            reflection_support,
+            personalization,
+            overall_comment,
+        )
+        st.success("LLM evaluation saved.")
+        st.rerun()
+
+    st.markdown("### Current LLM performance summary")
+    summary = db.llm_evaluation_summary_df()
+    if summary.empty:
+        st.info("No expert ratings saved yet.")
+    else:
+        st.dataframe(summary, use_container_width=True, hide_index=True)
+        render_progress_bars(summary, "metric", "mean_score", "Mean rating by criterion")
+
+    with st.expander("Full saved evaluations"):
+        saved = db.llm_evaluations_df()
+        st.dataframe(saved, use_container_width=True, hide_index=True)
 
 
 def render_feedback_logs() -> None:
@@ -1117,6 +1264,8 @@ def render_results_export() -> None:
                 "concept_scores": db.concept_scores_df(),
                 "lesson_reflections": db.query_df("SELECT * FROM lesson_progress"),
                 "ai_interactions": db.ai_logs_df(),
+                "llm_evaluations": db.llm_evaluations_df(),
+                "llm_evaluation_summary": db.llm_evaluation_summary_df(),
                 "surveys": db.survey_df(),
                 "consent_records": db.consent_records_df(),
                 "event_logs": db.events_log_df(),

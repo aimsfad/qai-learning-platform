@@ -131,6 +131,23 @@ def init_db() -> None:
         )
         """,
         f"""
+        CREATE TABLE IF NOT EXISTS llm_evaluations (
+            id {id_col},
+            ai_interaction_id INTEGER NOT NULL,
+            evaluator_username TEXT,
+            conceptual_accuracy INTEGER,
+            answer_relevance INTEGER,
+            pedagogical_clarity INTEGER,
+            scaffolding_quality INTEGER,
+            qiskit_alignment INTEGER,
+            reflection_support INTEGER,
+            personalization INTEGER,
+            overall_comment TEXT,
+            created_at {created_default},
+            UNIQUE(ai_interaction_id)
+        )
+        """,
+        f"""
         CREATE TABLE IF NOT EXISTS survey_responses (
             id {id_col},
             student_id INTEGER UNIQUE NOT NULL,
@@ -196,6 +213,12 @@ def init_db() -> None:
     ensure_column("ai_interactions", "provider", "TEXT")
     ensure_column("ai_interactions", "model", "TEXT")
     ensure_column("ai_interactions", "diagnostic", "TEXT")
+    ensure_column("ai_interactions", "latency_ms", "INTEGER")
+    ensure_column("ai_interactions", "response_word_count", "INTEGER")
+    ensure_column("ai_interactions", "student_input_language", "TEXT")
+    ensure_column("ai_interactions", "response_language", "TEXT")
+    ensure_column("ai_interactions", "error_type", "TEXT")
+    ensure_column("ai_interactions", "is_fallback_used", "INTEGER DEFAULT 0")
     ensure_column("question_responses", "question_text", "TEXT")
     ensure_column("question_responses", "selected_answer", "TEXT")
     ensure_column("question_responses", "correct_answer", "TEXT")
@@ -484,13 +507,23 @@ def log_ai_interaction(
     provider: str,
     model: str,
     diagnostic: str = "",
+    latency_ms: Optional[int] = None,
+    response_word_count: Optional[int] = None,
+    student_input_language: str = "",
+    response_language: str = "",
+    error_type: str = "",
+    is_fallback_used: int = 0,
 ) -> None:
     exec_sql(
         """
         INSERT INTO ai_interactions
-        (student_id, module, concept, task, prompt, response, mode, provider, model, diagnostic, created_at)
+        (student_id, module, concept, task, prompt, response, mode, provider, model, diagnostic,
+         latency_ms, response_word_count, student_input_language, response_language, error_type,
+         is_fallback_used, created_at)
         VALUES
-        (:student_id, :module, :concept, :task, :prompt, :response, :mode, :provider, :model, :diagnostic, :created_at)
+        (:student_id, :module, :concept, :task, :prompt, :response, :mode, :provider, :model, :diagnostic,
+         :latency_ms, :response_word_count, :student_input_language, :response_language, :error_type,
+         :is_fallback_used, :created_at)
         """,
         {
             "student_id": student_id,
@@ -503,9 +536,131 @@ def log_ai_interaction(
             "provider": provider,
             "model": model,
             "diagnostic": diagnostic,
+            "latency_ms": latency_ms,
+            "response_word_count": response_word_count if response_word_count is not None else len((response or "").split()),
+            "student_input_language": student_input_language,
+            "response_language": response_language,
+            "error_type": error_type,
+            "is_fallback_used": int(is_fallback_used or 0),
             "created_at": utc_now(),
         },
     )
+
+
+def save_llm_evaluation(
+    ai_interaction_id: int,
+    evaluator_username: str,
+    conceptual_accuracy: int,
+    answer_relevance: int,
+    pedagogical_clarity: int,
+    scaffolding_quality: int,
+    qiskit_alignment: int,
+    reflection_support: int,
+    personalization: int,
+    overall_comment: str = "",
+) -> None:
+    payload = {
+        "ai_interaction_id": int(ai_interaction_id),
+        "evaluator_username": evaluator_username.strip(),
+        "conceptual_accuracy": int(conceptual_accuracy),
+        "answer_relevance": int(answer_relevance),
+        "pedagogical_clarity": int(pedagogical_clarity),
+        "scaffolding_quality": int(scaffolding_quality),
+        "qiskit_alignment": int(qiskit_alignment),
+        "reflection_support": int(reflection_support),
+        "personalization": int(personalization),
+        "overall_comment": overall_comment.strip(),
+        "created_at": utc_now(),
+    }
+    if dialect() == "sqlite":
+        sql = """
+        INSERT OR REPLACE INTO llm_evaluations
+        (ai_interaction_id, evaluator_username, conceptual_accuracy, answer_relevance,
+         pedagogical_clarity, scaffolding_quality, qiskit_alignment, reflection_support,
+         personalization, overall_comment, created_at)
+        VALUES
+        (:ai_interaction_id, :evaluator_username, :conceptual_accuracy, :answer_relevance,
+         :pedagogical_clarity, :scaffolding_quality, :qiskit_alignment, :reflection_support,
+         :personalization, :overall_comment, :created_at)
+        """
+    else:
+        sql = """
+        INSERT INTO llm_evaluations
+        (ai_interaction_id, evaluator_username, conceptual_accuracy, answer_relevance,
+         pedagogical_clarity, scaffolding_quality, qiskit_alignment, reflection_support,
+         personalization, overall_comment, created_at)
+        VALUES
+        (:ai_interaction_id, :evaluator_username, :conceptual_accuracy, :answer_relevance,
+         :pedagogical_clarity, :scaffolding_quality, :qiskit_alignment, :reflection_support,
+         :personalization, :overall_comment, :created_at)
+        ON CONFLICT (ai_interaction_id) DO UPDATE SET
+        evaluator_username=EXCLUDED.evaluator_username,
+        conceptual_accuracy=EXCLUDED.conceptual_accuracy,
+        answer_relevance=EXCLUDED.answer_relevance,
+        pedagogical_clarity=EXCLUDED.pedagogical_clarity,
+        scaffolding_quality=EXCLUDED.scaffolding_quality,
+        qiskit_alignment=EXCLUDED.qiskit_alignment,
+        reflection_support=EXCLUDED.reflection_support,
+        personalization=EXCLUDED.personalization,
+        overall_comment=EXCLUDED.overall_comment,
+        created_at=EXCLUDED.created_at
+        """
+    exec_sql(sql, payload)
+
+
+def llm_evaluations_df() -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT e.*, a.student_id, s.participant_code, s.full_name, a.module, a.concept, a.task,
+               a.mode, a.provider, a.model, a.prompt, a.response, a.created_at AS interaction_created_at,
+               ROUND((conceptual_accuracy + answer_relevance + pedagogical_clarity + scaffolding_quality +
+                      qiskit_alignment + reflection_support + personalization) / 7.0, 2) AS pedagogical_quality_score
+        FROM llm_evaluations e
+        LEFT JOIN ai_interactions a ON a.id=e.ai_interaction_id
+        LEFT JOIN students s ON s.id=a.student_id
+        ORDER BY e.created_at DESC
+        """
+    )
+
+
+def llm_evaluation_summary_df() -> pd.DataFrame:
+    df = llm_evaluations_df()
+    if df.empty:
+        return pd.DataFrame()
+    cols = [
+        "conceptual_accuracy", "answer_relevance", "pedagogical_clarity", "scaffolding_quality",
+        "qiskit_alignment", "reflection_support", "personalization", "pedagogical_quality_score",
+    ]
+    rows = []
+    for col in cols:
+        if col in df:
+            rows.append({"metric": col, "mean_score": round(float(pd.to_numeric(df[col], errors="coerce").mean()), 2), "n": int(df[col].notna().sum())})
+    return pd.DataFrame(rows)
+
+
+def llm_candidate_interactions_df(limit: int = 100, only_unrated: bool = False, only_llm: bool = True) -> pd.DataFrame:
+    where = []
+    if only_llm:
+        where.append("a.mode IN ('llm', 'llm_error')")
+    if only_unrated:
+        where.append("e.id IS NULL")
+    where_sql = " WHERE " + " AND ".join(where) if where else ""
+    sql = f"""
+        SELECT a.id AS interaction_id, a.created_at, s.participant_code, s.full_name,
+               a.module, a.concept, a.task, a.mode, a.provider, a.model, a.prompt, a.response,
+               a.diagnostic, a.latency_ms, a.response_word_count, a.student_input_language,
+               a.response_language, a.error_type, a.is_fallback_used,
+               e.id AS evaluation_id,
+               ROUND((e.conceptual_accuracy + e.answer_relevance + e.pedagogical_clarity + e.scaffolding_quality +
+                      e.qiskit_alignment + e.reflection_support + e.personalization) / 7.0, 2) AS existing_quality_score
+        FROM ai_interactions a
+        LEFT JOIN students s ON s.id=a.student_id
+        LEFT JOIN llm_evaluations e ON e.ai_interaction_id=a.id
+        {where_sql}
+        ORDER BY a.created_at DESC
+        LIMIT :limit
+    """
+    return query_df(sql, {"limit": int(limit)})
 
 
 
@@ -639,8 +794,10 @@ def ai_logs_df(
         params["participant_code"] = participant_code
     where_sql = " WHERE " + " AND ".join(where) if where else ""
     sql = f"""
-        SELECT a.created_at, s.participant_code, s.full_name, a.module, a.concept, a.task,
-               a.mode, a.provider, a.model, a.prompt, a.response, a.diagnostic
+        SELECT a.id AS interaction_id, a.created_at, s.participant_code, s.full_name, a.module, a.concept, a.task,
+               a.mode, a.provider, a.model, a.prompt, a.response, a.diagnostic,
+               a.latency_ms, a.response_word_count, a.student_input_language, a.response_language,
+               a.error_type, a.is_fallback_used
         FROM ai_interactions a
         LEFT JOIN students s ON s.id=a.student_id
         {where_sql}
