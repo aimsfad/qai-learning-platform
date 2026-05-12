@@ -358,6 +358,7 @@ def render_sidebar() -> None:
                 "Feedback Logs",
                 "Survey Results",
                 "Event Logs",
+                "System Readiness",
                 "Results Export",
             ]
             st.sidebar.caption("Evaluator menu")
@@ -913,6 +914,8 @@ def render_evaluator_app() -> None:
         render_survey_results()
     elif page == "Event Logs":
         render_event_logs()
+    elif page == "System Readiness":
+        render_system_readiness()
     elif page == "Results Export":
         render_results_export()
 
@@ -949,8 +952,12 @@ def render_evaluator_dashboard() -> None:
     c6.metric("AI logs", ai_count)
 
     status = feedback_engine.provider_status()
-    st.markdown("### AI tutor configuration")
+    readiness = db.system_readiness(len(content.LESSONS))
+    st.markdown("### Deployment status")
     st.write({
+        "app_version": readiness.get("app_version"),
+        "database_dialect": readiness.get("database_dialect"),
+        "database_ok": readiness.get("database_ok"),
         "provider": status["provider"],
         "available": status["available"],
         "model": status["model"],
@@ -1386,34 +1393,73 @@ def render_event_logs() -> None:
     st.caption(f"Showing the latest {max_rows} events.")
     st.dataframe(filtered, use_container_width=True, hide_index=True)
 
-def render_results_export() -> None:
-    hero("Results Export", "Download anonymized study data for statistical analysis and paper reporting.")
-    st.info("To keep the cloud app fast, full export tables are prepared only when you click the button below.")
+def render_system_readiness() -> None:
+    hero("System Readiness", "Non-destructive checks for the live pilot deployment on Streamlit Cloud and Neon.")
+    readiness = db.system_readiness(len(content.LESSONS))
+    provider = feedback_engine.provider_status()
 
-    if st.button("Prepare full export workbook", type="primary"):
-        with st.spinner("Preparing workbook from the database..."):
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Database OK", "Yes" if readiness.get("database_ok") else "No")
+    c2.metric("DB dialect", readiness.get("database_dialect", "unknown"))
+    c3.metric("App version", readiness.get("app_version", "unknown"))
+    c4.metric("AI provider", provider.get("provider", "unknown"))
+
+    if readiness.get("database_error"):
+        st.error(readiness["database_error"])
+
+    st.markdown("### Live counts")
+    rows = []
+    for key, value in readiness.items():
+        if key.startswith("n_"):
+            rows.append({"metric": key, "value": value})
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    st.markdown("### Pilot-safety checks")
+    checks = [
+        {"check": "Using PostgreSQL/Neon, not local SQLite", "status": readiness.get("database_dialect") == "postgresql"},
+        {"check": "Database connection succeeds", "status": bool(readiness.get("database_ok"))},
+        {"check": "Pre/post attempts are now locked after first submission", "status": True},
+        {"check": "Survey is now locked after first submission", "status": True},
+        {"check": "Anonymized research export is available", "status": True},
+    ]
+    st.dataframe(pd.DataFrame(checks), use_container_width=True, hide_index=True)
+    st.warning("Before changing database schema manually, download a backup from Results Export or Neon. These checks do not modify student data.")
+
+
+def render_results_export() -> None:
+    hero("Results Export", "Download pilot-safe study data without losing existing participant information.")
+    st.info("Use the anonymized workbook for analysis and manuscript tables. Use the full backup only for secure administrative backup.")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        prepare_anon = st.button("Prepare anonymized research export", type="primary", use_container_width=True)
+    with col_b:
+        prepare_full = st.button("Prepare full admin backup", use_container_width=True)
+
+    if prepare_anon:
+        with st.spinner("Preparing anonymized workbook from Neon..."):
+            dfs = db.research_export_tables(len(content.LESSONS), anonymized=True)
+            st.session_state["export_tables"] = dfs
+            st.session_state["export_excel"] = to_excel_bytes(dfs)
+            st.session_state["export_filename"] = "qai_research_export_anonymized.xlsx"
+            db.log_event(None, "evaluator", "anonymized_export_prepared", "Evaluator prepared anonymized research export")
+
+    if prepare_full:
+        with st.spinner("Preparing full administrative backup from Neon..."):
             dfs = {
                 "students": db.students_df(),
-                "progress_summary": db.progress_summary_df(len(content.LESSONS)),
-                "test_attempts": db.attempts_df(),
-                "question_responses": db.question_responses_df(),
-                "concept_scores": db.concept_scores_df(),
-                "lesson_reflections": db.query_df("SELECT * FROM lesson_progress"),
-                "ai_interactions": db.ai_logs_df(),
-                "llm_evaluations": db.llm_evaluations_df(),
-                "llm_evaluation_summary": db.llm_evaluation_summary_df(),
-                "surveys": db.survey_df(),
-                "consent_records": db.consent_records_df(),
-                "event_logs": db.events_log_df(),
+                **db.research_export_tables(len(content.LESSONS), anonymized=False),
             }
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
+            st.session_state["export_filename"] = "qai_full_admin_backup.xlsx"
+            db.log_event(None, "evaluator", "full_backup_prepared", "Evaluator prepared full administrative backup")
 
     if "export_excel" in st.session_state:
         st.download_button(
-            "Download Excel workbook",
+            "Download prepared workbook",
             data=st.session_state["export_excel"],
-            file_name="qai_study_export.xlsx",
+            file_name=st.session_state.get("export_filename", "qai_export.xlsx"),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
         )

@@ -12,6 +12,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
+
+APP_VERSION = "pilot-safe-v3.9"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -223,6 +225,14 @@ def init_db() -> None:
     ensure_column("question_responses", "selected_answer", "TEXT")
     ensure_column("question_responses", "correct_answer", "TEXT")
     ensure_column("question_responses", "explanation", "TEXT")
+    ensure_column("test_attempts", "locked", "INTEGER DEFAULT 1")
+    ensure_column("test_attempts", "app_version", "TEXT")
+    ensure_column("survey_responses", "locked", "INTEGER DEFAULT 1")
+    ensure_column("survey_responses", "app_version", "TEXT")
+    ensure_column("ai_interactions", "app_version", "TEXT")
+    ensure_column("ai_interactions", "prompt_template_version", "TEXT")
+    ensure_column("ai_interactions", "lesson_id", "TEXT")
+    ensure_column("ai_interactions", "activity_id", "TEXT")
 
 
 def ensure_column(table: str, column: str, col_type: str) -> None:
@@ -327,6 +337,21 @@ def set_student_active(student_id: int, is_active: bool) -> None:
 
 
 def save_test_attempt(student_id: int, attempt_type: str, answers: Dict[str, int], questions: Sequence[Any]) -> Dict[str, Any]:
+    """Store a pre/post test once.
+
+    Pilot-safety rule: never overwrite an existing attempt. This preserves data
+    already collected from students who have started the live study.
+    """
+    existing = get_test_attempt(student_id, attempt_type)
+    if existing:
+        return {
+            "score": float(existing.get("score", 0.0)),
+            "correct_count": int(existing.get("correct_count", 0)),
+            "total_count": int(existing.get("total_count", 0)),
+            "per_concept": json.loads(existing.get("per_concept_json") or "{}"),
+            "already_submitted": True,
+        }
+
     correct = 0
     per_concept: Dict[str, Dict[str, int]] = {}
     for q in questions:
@@ -347,37 +372,28 @@ def save_test_attempt(student_id: int, attempt_type: str, answers: Dict[str, int
         "answers_json": json.dumps(answers),
         "per_concept_json": json.dumps(per_concept),
         "created_at": utc_now(),
+        "locked": 1,
+        "app_version": APP_VERSION,
     }
-    d = dialect()
-    if d == "sqlite":
-        sql = """
-        INSERT OR REPLACE INTO test_attempts
-        (student_id, attempt_type, score, correct_count, total_count, answers_json, per_concept_json, created_at)
-        VALUES
-        (:student_id, :attempt_type, :score, :correct_count, :total_count, :answers_json, :per_concept_json, :created_at)
-        """
-    else:
-        sql = """
+    sql = """
         INSERT INTO test_attempts
-        (student_id, attempt_type, score, correct_count, total_count, answers_json, per_concept_json, created_at)
+        (student_id, attempt_type, score, correct_count, total_count, answers_json, per_concept_json, created_at, locked, app_version)
         VALUES
-        (:student_id, :attempt_type, :score, :correct_count, :total_count, :answers_json, :per_concept_json, :created_at)
-        ON CONFLICT (student_id, attempt_type) DO UPDATE SET
-        score=EXCLUDED.score, correct_count=EXCLUDED.correct_count, total_count=EXCLUDED.total_count,
-        answers_json=EXCLUDED.answers_json, per_concept_json=EXCLUDED.per_concept_json, created_at=EXCLUDED.created_at
-        """
+        (:student_id, :attempt_type, :score, :correct_count, :total_count, :answers_json, :per_concept_json, :created_at, :locked, :app_version)
+    """
     exec_sql(sql, payload)
     save_question_responses(student_id, attempt_type, answers, questions)
-    return {"score": score, "correct_count": correct, "total_count": total, "per_concept": per_concept}
-
+    return {"score": score, "correct_count": correct, "total_count": total, "per_concept": per_concept, "already_submitted": False}
 
 
 def save_question_responses(student_id: int, attempt_type: str, answers: Dict[str, int], questions: Sequence[Any]) -> None:
-    """Store per-question responses for concept-level paper analysis."""
-    exec_sql(
-        "DELETE FROM question_responses WHERE student_id=:sid AND attempt_type=:attempt_type",
+    """Store per-question responses without deleting existing live data."""
+    existing = query_one(
+        "SELECT COUNT(*) AS n FROM question_responses WHERE student_id=:sid AND attempt_type=:attempt_type",
         {"sid": student_id, "attempt_type": attempt_type},
     )
+    if existing and int(existing.get("n", 0)) > 0:
+        return
     for q in questions:
         selected = int(answers.get(q.id, -1))
         selected_answer = q.options[selected] if 0 <= selected < len(q.options) else ""
@@ -513,17 +529,20 @@ def log_ai_interaction(
     response_language: str = "",
     error_type: str = "",
     is_fallback_used: int = 0,
+    prompt_template_version: str = "qai-tutor-v1",
+    lesson_id: str = "",
+    activity_id: str = "",
 ) -> None:
     exec_sql(
         """
         INSERT INTO ai_interactions
         (student_id, module, concept, task, prompt, response, mode, provider, model, diagnostic,
          latency_ms, response_word_count, student_input_language, response_language, error_type,
-         is_fallback_used, created_at)
+         is_fallback_used, app_version, prompt_template_version, lesson_id, activity_id, created_at)
         VALUES
         (:student_id, :module, :concept, :task, :prompt, :response, :mode, :provider, :model, :diagnostic,
          :latency_ms, :response_word_count, :student_input_language, :response_language, :error_type,
-         :is_fallback_used, :created_at)
+         :is_fallback_used, :app_version, :prompt_template_version, :lesson_id, :activity_id, :created_at)
         """,
         {
             "student_id": student_id,
@@ -542,6 +561,10 @@ def log_ai_interaction(
             "response_language": response_language,
             "error_type": error_type,
             "is_fallback_used": int(is_fallback_used or 0),
+            "app_version": APP_VERSION,
+            "prompt_template_version": prompt_template_version,
+            "lesson_id": lesson_id,
+            "activity_id": activity_id,
             "created_at": utc_now(),
         },
     )
@@ -739,26 +762,23 @@ def log_event(student_id: Optional[int], actor_role: str, event_type: str, event
 
 
 def save_survey(student_id: int, responses: Dict[str, int], open_feedback: Dict[str, str]) -> None:
+    """Store the survey once; do not overwrite live pilot responses."""
+    existing = get_survey(student_id)
+    if existing:
+        return
     payload = {
         "student_id": student_id,
         "responses_json": json.dumps(responses),
         "open_feedback_json": json.dumps(open_feedback),
         "created_at": utc_now(),
+        "locked": 1,
+        "app_version": APP_VERSION,
     }
-    if dialect() == "sqlite":
-        sql = """
-        INSERT OR REPLACE INTO survey_responses
-        (student_id, responses_json, open_feedback_json, created_at)
-        VALUES (:student_id, :responses_json, :open_feedback_json, :created_at)
-        """
-    else:
-        sql = """
+    sql = """
         INSERT INTO survey_responses
-        (student_id, responses_json, open_feedback_json, created_at)
-        VALUES (:student_id, :responses_json, :open_feedback_json, :created_at)
-        ON CONFLICT (student_id) DO UPDATE SET
-        responses_json=EXCLUDED.responses_json, open_feedback_json=EXCLUDED.open_feedback_json, created_at=EXCLUDED.created_at
-        """
+        (student_id, responses_json, open_feedback_json, created_at, locked, app_version)
+        VALUES (:student_id, :responses_json, :open_feedback_json, :created_at, :locked, :app_version)
+    """
     exec_sql(sql, payload)
 
 
@@ -840,7 +860,7 @@ def ai_logs_df(
         SELECT a.id AS interaction_id, a.created_at, s.participant_code, s.full_name, a.module, a.concept, a.task,
                a.mode, a.provider, a.model, a.prompt, a.response, a.diagnostic,
                a.latency_ms, a.response_word_count, a.student_input_language, a.response_language,
-               a.error_type, a.is_fallback_used
+               a.error_type, a.is_fallback_used, a.app_version, a.prompt_template_version, a.lesson_id, a.activity_id
         FROM ai_interactions a
         LEFT JOIN students s ON s.id=a.student_id
         {where_sql}
@@ -983,6 +1003,71 @@ def events_log_df(limit: Optional[int] = None) -> pd.DataFrame:
         sql += " LIMIT :limit"
         params["limit"] = int(limit)
     return query_df(sql, params)
+
+
+
+def anonymize_dataframe(df: pd.DataFrame, keep_student_id: bool = False) -> pd.DataFrame:
+    """Remove direct identifiers from exports while preserving research variables."""
+    if df is None or df.empty:
+        return df
+    out = df.copy()
+    drop_cols = [
+        "full_name", "email", "institution", "password_hash", "raw_name", "name",
+    ]
+    if not keep_student_id:
+        drop_cols.extend(["student_id", "id"])
+    out = out.drop(columns=[c for c in drop_cols if c in out.columns], errors="ignore")
+    return out
+
+
+def research_export_tables(total_lessons: int, anonymized: bool = True) -> Dict[str, pd.DataFrame]:
+    """Paper-ready export tables. Defaults to anonymized data for ethics-safe analysis."""
+    tables: Dict[str, pd.DataFrame] = {
+        "progress_summary": progress_summary_df(total_lessons),
+        "test_attempts": attempts_df(),
+        "question_responses": question_responses_df(),
+        "concept_scores": concept_scores_df(),
+        "lesson_reflections": query_df("SELECT * FROM lesson_progress"),
+        "ai_interactions": ai_logs_df(),
+        "llm_evaluations": llm_evaluations_df(),
+        "llm_evaluation_summary": llm_evaluation_summary_df(),
+        "surveys": survey_df(),
+        "consent_records": consent_records_df(),
+        "event_logs": events_log_df(),
+    }
+    if anonymized:
+        tables = {name: anonymize_dataframe(df) for name, df in tables.items()}
+    return tables
+
+
+def system_readiness(total_lessons: int) -> Dict[str, Any]:
+    """Return non-destructive checks for the live Streamlit/Neon deployment."""
+    d = dialect()
+    status: Dict[str, Any] = {
+        "app_version": APP_VERSION,
+        "database_dialect": d,
+        "database_ok": False,
+        "database_error": "",
+    }
+    try:
+        row = query_one("SELECT 1 AS ok")
+        status["database_ok"] = bool(row and int(row.get("ok", 0)) == 1)
+    except Exception as exc:
+        status["database_error"] = str(exc)
+    for table in ["students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress"]:
+        try:
+            status[f"n_{table}"] = count_rows(table)
+        except Exception:
+            status[f"n_{table}"] = None
+    try:
+        progress = progress_summary_df(total_lessons)
+        status["n_pre"] = int(progress["pre_done"].sum()) if not progress.empty and "pre_done" in progress else 0
+        status["n_post"] = int(progress["post_done"].sum()) if not progress.empty and "post_done" in progress else 0
+        status["n_complete_cases"] = int(progress["is_complete_case"].sum()) if not progress.empty and "is_complete_case" in progress else 0
+        status["n_with_ai_interaction"] = int((progress["ai_interactions"] > 0).sum()) if not progress.empty and "ai_interactions" in progress else 0
+    except Exception as exc:
+        status["progress_error"] = str(exc)
+    return status
 
 
 def paper_summary() -> Dict[str, Any]:
