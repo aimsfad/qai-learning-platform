@@ -52,6 +52,31 @@ CUSTOM_CSS = """
 .qai-danger {background: #fdecec; color: #a72525; padding: 0.9rem 1rem; border-radius: 0.8rem; border: 1px solid #f4b7b7;}
 .qai-muted {color: #64748b; font-size: 0.95rem;}
 .qai-code {background: #f8fafc; padding: 1rem; border-radius: 0.8rem; border: 1px solid #e5e7eb; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+.qai-ux-note {
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  margin: 0.7rem 0;
+}
+.qai-interactive {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  margin: 0.7rem 0;
+  font-weight: 600;
+}
+.qai-scale-box {
+  background: #f8fafc;
+  border: 1px solid #d8e2ef;
+  padding: 0.85rem 1rem;
+  border-radius: 0.9rem;
+  margin: 0.7rem 0;
+}
+
 div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 [data-testid="stMetric"] {background: #fff; border: 1px solid var(--qai-border); border-radius: 1rem; padding: 1rem; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);}
 /* Compact navigation for small screens and long evaluator menus */
@@ -150,6 +175,26 @@ def card(title: str, body: str, pill: Optional[str] = None) -> None:
       {pill_html}
       <h3>{title}</h3>
       <p>{body}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def ux_note(text: str) -> None:
+    st.markdown(f"<div class='qai-ux-note'>{text}</div>", unsafe_allow_html=True)
+
+
+def interactive_note(text: str) -> None:
+    st.markdown(f"<div class='qai-interactive'>{text}</div>", unsafe_allow_html=True)
+
+
+def render_self_eval_scale_help() -> None:
+    st.markdown("""
+    <div class='qai-scale-box'>
+      <b>How to choose the 0–3 level:</b><br>
+      <b>0</b> = No prior knowledge.<br>
+      <b>1</b> = Basic awareness: I have heard about it, but I cannot explain it well.<br>
+      <b>2</b> = Some understanding: I can explain basic ideas with help.<br>
+      <b>3</b> = Good understanding: I can apply or explain it confidently.
     </div>
     """, unsafe_allow_html=True)
 
@@ -397,17 +442,36 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
 # -----------------------------------------------------------------------------
 
 def render_role_selection() -> None:
-    hero("Quantum AI Learning Evaluation Platform", "Pilot platform for AI-supported introductory quantum programming with Qiskit.")
+    hero(
+        "Quantum AI Learning Evaluation Platform",
+        "Pilot platform for AI-supported introductory quantum programming with Qiskit."
+    )
+
+    ux_note(
+        "<b>Please choose your workspace.</b><br>"
+        "Students should use the Student workspace to complete the learning activities, AI tutor interaction, pre-test, post-test, and survey.<br>"
+        "The Evaluator workspace is reserved for the researcher/teacher to monitor progress, review logs, and export anonymized research data."
+    )
+
     col1, col2 = st.columns(2)
     with col1:
-        card("Student workspace", "Create a study account or sign in to complete the pre-test, scaffolded learning activities, AI tutor tasks, post-test, and survey.", "For participants")
+        card(
+            "Student workspace",
+            "Use this option if you are a participant. You will create an account or sign in, complete the learning workflow, interact with the AI tutor, and submit the final survey.",
+            "For students"
+        )
         if st.button("Enter as student", type="primary", use_container_width=True):
             switch_role("student")
+
     with col2:
-        card("Evaluator workspace", "Monitor participant accounts, progress, pre/post scores, AI tutor logs, reflections, survey responses, and exports.", "For evaluator")
+        card(
+            "Evaluator workspace",
+            "Reserved for the professor/researcher. It is used to monitor participant progress, review pre/post-test results, inspect AI tutor logs, and export anonymized research data.",
+            "For evaluator only"
+        )
+        st.caption("Students do not need to use this option.")
         if st.button("Enter as evaluator", use_container_width=True):
             switch_role("evaluator")
-
 
 def render_student_app() -> None:
     student = current_student()
@@ -578,8 +642,17 @@ def render_student_registration() -> None:
             institution = st.text_input("Institution")
         with col2:
             academic_level = st.selectbox("Academic level", ["Licence", "Master", "PhD", "Other"])
-            prior_python = st.slider("Prior Python level", 0, 3, 1, help="0 none, 1 basic, 2 intermediate, 3 advanced")
-            prior_quantum = st.slider("Prior quantum knowledge", 0, 3, 0, help="0 none, 1 basic, 2 intermediate, 3 advanced")
+            render_self_eval_scale_help()
+            prior_python = st.slider(
+                "Prior Python level",
+                0, 3, 1,
+                help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use."
+            )
+            prior_quantum = st.slider(
+                "Prior quantum programming knowledge",
+                0, 3, 0,
+                help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use."
+            )
         password = st.text_input("Password", type="password")
         password2 = st.text_input("Confirm password", type="password")
         study_code = ""
@@ -707,11 +780,19 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
             student["id"], "adaptive_plan", "Adaptive learning", "Generate personalized study plan",
             "Generate a concise study plan based on pre-test results.", tutor,
         )
-        st.markdown("### AI-generated study plan")
+        st.markdown("### 📋 AI-generated study plan")
+        ux_note(
+            "<b>How to read this plan:</b><br>"
+            "1. Start with the concepts listed as weak or recommended.<br>"
+            "2. Complete the learning module before relying on the AI tutor.<br>"
+            "3. Use the AI tutor for hints and explanations, not for copying final answers."
+        )
+        st.markdown("#### Personalized plan")
         st.write(tutor.response)
+        interactive_note("Next interactive step: click “Start learning module” and complete at least one learning activity.")
         if tutor.mode == "llm_error":
             st.info("The LLM service was unavailable, so a local fallback was shown and logged for the evaluator.")
-    if st.button("Start learning module", use_container_width=True):
+    if st.button("Start learning module →", type="primary", use_container_width=True):
         set_student_page("Learning Module")
 
 
@@ -733,6 +814,10 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.info("Recommended based on your pre-test results.")
 
     st.markdown(f"## {lesson['title']}")
+    ux_note(
+        "<b>Page guide:</b> Read the explanation first, then review the Qiskit example, then use the interactive AI-supported activity. "
+        "Finally, write your reflection to mark the section as complete."
+    )
     col1, col2 = st.columns([1.1, 1])
     with col1:
         st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
@@ -756,7 +841,11 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("### AI-supported activity")
+    st.markdown("### 🤖 Interactive AI-supported activity")
+    interactive_note(
+        "This is an interactive part. Choose one button below to generate a guided explanation, a practice exercise, or a hint. "
+        "Try to understand the idea before moving to the reflection."
+    )
     activity_language = st.selectbox(
         "AI response language",
         ["Auto-detect", "English", "Arabic", "French"],
@@ -784,11 +873,12 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             student["id"], "learning_module", ", ".join(lesson["concepts"]), task,
             f"Lesson activity for {lesson['title']}", tutor,
         )
-        st.markdown("#### AI tutor response")
+        st.markdown("#### 🤖 AI tutor response")
         st.write(tutor.response)
 
     st.divider()
-    st.markdown("### Reflection prompt")
+    st.markdown("### ✅ Final reflection before completing this section")
+    interactive_note("Write your own reflection here. This is required to mark the learning section as complete.")
     st.info(lesson["reflective_prompt"])
     reflection_default = ""
     if not progress.empty:
@@ -820,6 +910,11 @@ def render_learning_module(student: Dict[str, Any]) -> None:
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     hero("AI Tutor Lab", "Use the tutor for explanation, feedback, exercise generation, and Qiskit interpretation. Write your own reasoning before relying on generated answers.")
+    ux_note(
+        "<b>How to use the AI Tutor:</b><br>"
+        "First write your own attempt, question, or confusion. Then ask the tutor for explanation, feedback, or hints. "
+        "The tutor is a learning support tool, not a replacement for your reasoning."
+    )
     status = feedback_engine.provider_status()
     if status["available"]:
         st.success(f"LLM provider configured: {status['provider']} ({status['model']})")
@@ -840,6 +935,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     concept = st.selectbox("Concept focus", concepts)
     prompt = st.text_area("Write your attempt, question, explanation, or Qiskit code before asking the tutor", height=180, placeholder="Example: I think Hadamard creates a 50/50 probability, but I do not understand why measurement is random. Please explain in Arabic.")
     st.caption("For research validity, write your current understanding first. The tutor is designed to guide, not replace, your reasoning. The tutor should answer in the selected language or the language of your question.")
+    interactive_note("Interactive step: after writing your attempt or question, click the button below to ask the AI tutor.")
     if st.button("Ask AI tutor", type="primary", use_container_width=True):
         if len(prompt.strip()) < 10:
             st.warning("Please write at least a short attempt or question before asking the AI tutor.")
@@ -854,7 +950,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         log_tutor_interaction(
             student["id"], "ai_tutor_lab", concept, task, prompt, tutor
         )
-        st.markdown("### AI tutor response")
+        st.markdown("### 🤖 AI tutor response")
         st.write(tutor.response)
         if tutor.mode == "llm_error":
             st.info("The external LLM was unavailable. A local hint was shown and the error was logged for the evaluator.")
