@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets as py_secrets
 import string
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
@@ -89,6 +90,16 @@ def init_db() -> None:
             created_at {created_default},
             last_login_at {created_default},
             is_active INTEGER DEFAULT 1
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            token_hash TEXT UNIQUE NOT NULL,
+            created_at {created_default},
+            expires_at {created_default},
+            used_at {created_default}
         )
         """,
         f"""
@@ -330,6 +341,81 @@ def authenticate_student(identifier: str, password: str) -> Optional[Dict[str, A
         exec_sql("UPDATE students SET last_login_at=:ts WHERE id=:id", {"ts": utc_now(), "id": student["id"]})
         return get_student(student["id"])
     return None
+
+
+def get_student_by_email(email: str) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM students WHERE is_active=1 AND LOWER(email)=LOWER(:email) ORDER BY id DESC",
+        {"email": email.strip().lower()},
+    )
+
+
+def _reset_token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_password_reset_token(email: str, minutes_valid: int = 30) -> Optional[Tuple[Dict[str, Any], str, str]]:
+    """Create a one-time reset token for a student email.
+
+    Returns (student, raw_token, expires_at) if the email exists; otherwise None.
+    The raw token is never stored in the database.
+    """
+    student = get_student_by_email(email)
+    if not student:
+        return None
+    now = datetime.now(timezone.utc)
+    expires_at = (now + timedelta(minutes=int(minutes_valid))).isoformat()
+    raw_token = py_secrets.token_urlsafe(32)
+    token_hash = _reset_token_hash(raw_token)
+    exec_sql(
+        """
+        INSERT INTO password_reset_tokens
+        (student_id, token_hash, created_at, expires_at, used_at)
+        VALUES (:student_id, :token_hash, :created_at, :expires_at, NULL)
+        """,
+        {
+            "student_id": student["id"],
+            "token_hash": token_hash,
+            "created_at": now.isoformat(),
+            "expires_at": expires_at,
+        },
+    )
+    return student, raw_token, expires_at
+
+
+def reset_student_password(token: str, new_password: str) -> Tuple[bool, str]:
+    """Validate a password reset token and update the student's password."""
+    if not token.strip():
+        return False, "Missing reset token."
+    if len(new_password or "") < 6:
+        return False, "Password must contain at least 6 characters."
+    token_hash = _reset_token_hash(token.strip())
+    row = query_one(
+        """
+        SELECT prt.*, s.email, s.participant_code
+        FROM password_reset_tokens prt
+        JOIN students s ON s.id = prt.student_id
+        WHERE prt.token_hash=:token_hash
+        """,
+        {"token_hash": token_hash},
+    )
+    if not row:
+        return False, "Invalid or expired reset link."
+    if row.get("used_at"):
+        return False, "This reset link has already been used."
+    try:
+        expires = datetime.fromisoformat(str(row.get("expires_at")))
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+    except Exception:
+        return False, "Invalid reset link expiration."
+    if datetime.now(timezone.utc) > expires:
+        return False, "This reset link has expired. Please request a new one."
+    new_hash = hash_password(new_password)
+    now = utc_now()
+    exec_sql("UPDATE students SET password_hash=:ph WHERE id=:id", {"ph": new_hash, "id": row["student_id"]})
+    exec_sql("UPDATE password_reset_tokens SET used_at=:ts WHERE id=:id", {"ts": now, "id": row["id"]})
+    return True, "Password updated successfully. You can now sign in."
 
 
 def set_student_active(student_id: int, is_active: bool) -> None:
