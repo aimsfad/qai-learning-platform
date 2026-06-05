@@ -3,7 +3,10 @@ from __future__ import annotations
 import io
 import json
 import secrets as py_secrets
-from typing import Any, Dict, List, Optional
+import smtplib
+import ssl
+from email.message import EmailMessage
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import streamlit as st
@@ -139,6 +142,86 @@ def secret(name: str, default: str = "") -> str:
         return str(st.secrets.get(name, default))
     except Exception:
         return default
+
+
+def current_app_base_url() -> str:
+    """Return the public URL used in password reset emails."""
+    base = secret("APP_BASE_URL", "").strip().rstrip("/")
+    if base:
+        return base
+    # Fallback is useful for local testing; set APP_BASE_URL in Streamlit Cloud for production.
+    return "http://localhost:8501"
+
+
+def smtp_is_configured() -> bool:
+    return bool(secret("SMTP_HOST", "").strip() and secret("SMTP_USERNAME", "").strip() and secret("SMTP_PASSWORD", "").strip())
+
+
+def send_password_reset_email(to_email: str, full_name: str, reset_link: str, expires_minutes: int = 30) -> Tuple[bool, str]:
+    """Send a one-time password reset link using SMTP settings from Streamlit secrets."""
+    host = secret("SMTP_HOST", "").strip()
+    port = int(secret("SMTP_PORT", "587") or 587)
+    username = secret("SMTP_USERNAME", "").strip()
+    password = secret("SMTP_PASSWORD", "").strip()
+    sender = secret("SMTP_FROM", username).strip() or username
+    use_ssl = secret("SMTP_USE_SSL", "false").strip().lower() in {"1", "true", "yes"}
+
+    if not (host and username and password and sender):
+        return False, "SMTP email is not configured."
+
+    msg = EmailMessage()
+    msg["Subject"] = "QAI platform password reset"
+    msg["From"] = sender
+    msg["To"] = to_email
+    msg.set_content(
+        f"Hello {full_name},\n\n"
+        "We received a request to reset your password for the QAI Learning Evaluation Platform.\n\n"
+        f"Reset your password using this link:\n{reset_link}\n\n"
+        f"This link is valid for {expires_minutes} minutes and can be used only once.\n"
+        "If you did not request this reset, you can ignore this email.\n\n"
+        "QAI Learning Evaluation Platform"
+    )
+
+    try:
+        if use_ssl:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context, timeout=20) as server:
+                server.login(username, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=20) as server:
+                server.starttls(context=ssl.create_default_context())
+                server.login(username, password)
+                server.send_message(msg)
+        return True, "sent"
+    except Exception as exc:
+        return False, str(exc)
+
+
+def get_query_param(name: str) -> str:
+    try:
+        value = st.query_params.get(name, "")
+        if isinstance(value, list):
+            return str(value[0]) if value else ""
+        return str(value or "")
+    except Exception:
+        try:
+            params = st.experimental_get_query_params()
+            values = params.get(name, [""])
+            return str(values[0]) if values else ""
+        except Exception:
+            return ""
+
+
+def clear_reset_token_from_url() -> None:
+    try:
+        if "reset_token" in st.query_params:
+            del st.query_params["reset_token"]
+    except Exception:
+        try:
+            st.experimental_set_query_params()
+        except Exception:
+            pass
 
 
 def init_state() -> None:
@@ -535,6 +618,10 @@ def render_role_selection() -> None:
             switch_role("evaluator")
 
 def render_student_app() -> None:
+    reset_token = get_query_param("reset_token").strip()
+    if reset_token:
+        render_password_reset_form(reset_token)
+        return
     student = current_student()
     page = st.session_state.student_page
     if page not in student_pages_allowed(student):
@@ -672,6 +759,59 @@ def render_research_notice(student: Dict[str, Any]) -> None:
         st.rerun()
 
 
+def render_password_reset_request() -> None:
+    st.markdown("#### Forgot your password?")
+    st.caption("Enter the email address used during registration. If it exists in the study database, a reset link will be sent.")
+    with st.form("password_reset_request_form"):
+        email = st.text_input("Registered email", key="reset_email_request")
+        submitted = st.form_submit_button("Send password reset link", use_container_width=True)
+    if submitted:
+        email_clean = email.strip().lower()
+        if not email_clean or "@" not in email_clean:
+            st.error("Please enter a valid email address.")
+            return
+        result = db.create_password_reset_token(email_clean, minutes_valid=30)
+        # Avoid revealing whether the email exists.
+        generic_msg = "If this email is registered, a password reset link will be sent shortly."
+        if result:
+            student, token, _expires_at = result
+            reset_link = f"{current_app_base_url()}/?reset_token={token}"
+            ok, diagnostic = send_password_reset_email(student.get("email", email_clean), student.get("full_name", "student"), reset_link)
+            db.log_event(student["id"], "student", "password_reset_requested", "Password reset requested")
+            if not ok:
+                st.warning("Password reset was created, but email delivery is not configured or failed. Please contact the instructor.")
+                if secret("SHOW_RESET_LINK_FOR_DEBUG", "false").strip().lower() in {"1", "true", "yes"}:
+                    st.code(reset_link)
+                return
+        st.success(generic_msg)
+
+
+def render_password_reset_form(token: str) -> None:
+    hero("Reset Password", "Create a new password for your QAI platform account.")
+    st.info("Please enter and confirm your new password. Reset links are valid for a limited time and can be used only once.")
+    with st.form("password_reset_form"):
+        new_password = st.text_input("New password", type="password")
+        new_password2 = st.text_input("Confirm new password", type="password")
+        submitted = st.form_submit_button("Update password", type="primary", use_container_width=True)
+    if submitted:
+        if new_password != new_password2:
+            st.error("Passwords do not match.")
+            return
+        ok, message = db.reset_student_password(token, new_password)
+        if ok:
+            st.success(message)
+            clear_reset_token_from_url()
+            st.session_state.role = "student"
+            st.session_state.student_id = None
+            st.session_state.student_page = "Sign in"
+            st.info("You can now sign in using your email, participant code, or exact full name.")
+            if st.button("Go to sign in", type="primary"):
+                st.rerun()
+        else:
+            st.error(message)
+            st.caption("If the link expired, request a new password reset from the sign-in page.")
+
+
 def render_student_signin() -> None:
     hero("Student Sign in", "Access your existing participant account.")
     st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
@@ -680,6 +820,8 @@ def render_student_signin() -> None:
         password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
+    with st.expander("Forgot password?", expanded=False):
+        render_password_reset_request()
     if submitted:
         student = db.authenticate_student(identifier, password)
         if student:
