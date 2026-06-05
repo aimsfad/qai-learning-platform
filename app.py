@@ -1067,7 +1067,12 @@ def render_lesson_media(lesson_id: str) -> None:
     if video_name:
         video_path = LESSON_MEDIA_DIR / video_name
         if video_path.exists():
-            st.video(str(video_path))
+            try:
+                # Read bytes instead of passing only a filesystem path.
+                # This is more reliable on Streamlit Cloud and with browser video controls.
+                st.video(video_path.read_bytes(), format="video/mp4")
+            except Exception:
+                st.warning("The local micro-video could not be loaded. Please use the visual summary or the optional enrichment link below.")
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
