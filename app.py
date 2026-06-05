@@ -6,6 +6,7 @@ import secrets as py_secrets
 import smtplib
 import ssl
 from email.message import EmailMessage
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -132,6 +133,48 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+APP_DIR = Path(__file__).resolve().parent
+LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
+
+LESSON_MEDIA = {
+    "orientation": {
+        "image": "orientation_visual.png",
+        "caption": "Visual summary of a minimal circuit: qubit, gate, measurement, and classical output.",
+        "resource_label": "IBM Quantum Learning: Get started with Qiskit",
+        "resource_url": "https://quantum.cloud.ibm.com/learning/en/modules/quantum-mechanics/get-started-with-qiskit",
+    },
+    "qubit_measurement": {
+        "video": "measurement_microvideo.mp4",
+        "caption": "Micro-video: measurement maps a qubit state to a classical outcome.",
+        "resource_label": "IBM Quantum Learning modules",
+        "resource_url": "https://quantum.cloud.ibm.com/learning/en/modules",
+    },
+    "hadamard_superposition": {
+        "video": "hadamard_microvideo.mp4",
+        "caption": "Micro-video: the Hadamard gate leads to approximately balanced outcomes across many shots.",
+        "resource_label": "Qiskit learning resources",
+        "resource_url": "https://qiskit.qotlabs.org/learning",
+    },
+    "shots_counts": {
+        "image": "counts_visual.png",
+        "caption": "Visual summary: repeated shots are aggregated into a counts dictionary.",
+        "resource_label": "Qiskit guide: construct circuits",
+        "resource_url": "https://qiskit.qotlabs.org/docs/guides/construct-circuits",
+    },
+    "cnot_correlation": {
+        "video": "cnot_microvideo.mp4",
+        "caption": "Micro-video: CNOT uses a control-target relationship to create correlated outcomes.",
+        "resource_label": "Qiskit YouTube channel",
+        "resource_url": "https://www.youtube.com/Qiskit",
+    },
+    "qiskit_debugging": {
+        "image": "debugging_visual.png",
+        "caption": "Visual debugging aid: measurement requires an allocated classical bit.",
+        "resource_label": "Qiskit documentation",
+        "resource_url": "https://qiskit.qotlabs.org/docs/guides/construct-circuits",
+    },
+}
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -539,6 +582,7 @@ def render_sidebar() -> None:
             pages = [
                 "Evaluator Dashboard",
                 "Students",
+                "Registration Accounts",
                 "Student Details",
                 "Progress Monitor",
                 "Learning Analytics",
@@ -1001,6 +1045,35 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
         set_student_page("Learning Module")
 
 
+
+def render_lesson_media(lesson_id: str) -> None:
+    """Render compact visual/video support for the selected lesson.
+
+    Media files are intentionally short and locally bundled so the platform remains
+    usable even when students cannot access external video platforms. External
+    links are provided only as optional enrichment resources.
+    """
+    media = LESSON_MEDIA.get(lesson_id)
+    if not media:
+        return
+    st.markdown("### Visual explanation")
+    st.caption(media.get("caption", ""))
+    image_name = media.get("image")
+    video_name = media.get("video")
+    if image_name:
+        image_path = LESSON_MEDIA_DIR / image_name
+        if image_path.exists():
+            st.image(str(image_path), use_container_width=True)
+    if video_name:
+        video_path = LESSON_MEDIA_DIR / video_name
+        if video_path.exists():
+            st.video(str(video_path))
+    resource_url = media.get("resource_url")
+    resource_label = media.get("resource_label", "Optional external resource")
+    if resource_url:
+        st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
+
+
 def render_learning_module(student: Dict[str, Any]) -> None:
     hero("Scaffolded Qiskit Learning Module", "Each section combines conceptual scaffolding, a guided Qiskit example, AI-mediated support, and a reflective prompt.")
     rec = db.get_recommendation(student["id"])
@@ -1045,6 +1118,10 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.markdown("#### After measurement")
         st.write(lesson["after_measurement"])
         st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
+    render_lesson_media(lesson["id"])
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='qai-microtask'><b>Mini task before asking AI:</b> Predict the output or identify the most important line in the Qiskit example. Then use the tutor to check or improve your reasoning.</div>", unsafe_allow_html=True)
 
@@ -1228,6 +1305,8 @@ def render_evaluator_app() -> None:
         render_evaluator_dashboard()
     elif page == "Students":
         render_students_admin()
+    elif page == "Registration Accounts":
+        render_registration_accounts()
     elif page == "Student Details":
         render_student_details()
     elif page == "Progress Monitor":
@@ -1342,6 +1421,101 @@ def render_students_admin() -> None:
         return
     st.dataframe(df, use_container_width=True)
 
+
+
+def render_registration_accounts() -> None:
+    hero("Registration Accounts", "Review account-registration information, sign-in status, and access readiness for participants.")
+    st.info(
+        "This evaluator view shows registration metadata needed to support the pilot study. "
+        "It never displays student passwords, password hashes, or password-reset tokens."
+    )
+
+    df = db.students_df()
+    if df.empty:
+        st.info("No registered student accounts yet.")
+        return
+
+    accounts = df.copy()
+    for col in ["email", "institution", "academic_level", "created_at", "last_login_at"]:
+        if col not in accounts.columns:
+            accounts[col] = ""
+        accounts[col] = accounts[col].fillna("")
+    accounts["is_active"] = accounts.get("is_active", 1).fillna(1).astype(int)
+    accounts["email_missing"] = accounts["email"].astype(str).str.strip().eq("")
+    accounts["has_signed_in"] = accounts["last_login_at"].astype(str).str.strip().ne("")
+
+    total = len(accounts)
+    active = int(accounts["is_active"].sum())
+    email_missing = int(accounts["email_missing"].sum())
+    signed_in = int(accounts["has_signed_in"].sum())
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Registered accounts", total)
+    c2.metric("Active accounts", active)
+    c3.metric("Missing email", email_missing)
+    c4.metric("Signed in at least once", signed_in)
+
+    st.markdown("### Search and filters")
+    q = st.text_input("Search by participant code, name, email, or institution")
+    fc1, fc2, fc3 = st.columns(3)
+    with fc1:
+        only_active = st.checkbox("Only active accounts", value=False)
+    with fc2:
+        only_missing_email = st.checkbox("Only accounts missing email", value=False)
+    with fc3:
+        only_never_signed = st.checkbox("Only never signed in", value=False)
+
+    filtered = accounts.copy()
+    if q.strip():
+        query = q.strip().lower()
+        searchable = (
+            filtered["participant_code"].astype(str) + " "
+            + filtered["full_name"].astype(str) + " "
+            + filtered["email"].astype(str) + " "
+            + filtered["institution"].astype(str)
+        ).str.lower()
+        filtered = filtered[searchable.str.contains(query, na=False)]
+    if only_active:
+        filtered = filtered[filtered["is_active"] == 1]
+    if only_missing_email:
+        filtered = filtered[filtered["email_missing"]]
+    if only_never_signed:
+        filtered = filtered[~filtered["has_signed_in"]]
+
+    st.markdown("### Registration account list")
+    display_cols = [
+        "participant_code", "full_name", "email", "institution", "academic_level",
+        "prior_python_level", "prior_quantum_level", "created_at", "last_login_at", "is_active",
+    ]
+    display = filtered[[c for c in display_cols if c in filtered.columns]].copy()
+    display = display.rename(columns={
+        "participant_code": "Participant code",
+        "full_name": "Full name",
+        "email": "Email",
+        "institution": "Institution",
+        "academic_level": "Academic level",
+        "prior_python_level": "Python level",
+        "prior_quantum_level": "Quantum level",
+        "created_at": "Created at",
+        "last_login_at": "Last login",
+        "is_active": "Active",
+    })
+    st.dataframe(display, use_container_width=True, hide_index=True)
+
+    csv = display.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "Download account registration list (CSV)",
+        data=csv,
+        file_name="qai_registration_accounts.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+    st.markdown("### Account support notes")
+    st.markdown(
+        "- Use this page to identify students who forgot their participant code, used the wrong email, or never signed in after registration.\n"
+        "- For password recovery, students should use the **Forgot password** link on the sign-in page.\n"
+        "- The evaluator can see registration contact information, but passwords remain protected and are not recoverable."
+    )
 
 def render_student_details() -> None:
     hero("Student Details", "Inspect a participant's tests, lesson reflections, AI interactions, and survey data.")
