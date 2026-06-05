@@ -102,21 +102,6 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 .qai-step-pending {border-color: #e5e7eb; background: #ffffff;}
 .qai-step-title {font-size: 0.86rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem;}
 .qai-step-value {font-size: 0.78rem; color: #475569;}
-.qai-roadmap {
-  background: #ffffff; border: 1px solid var(--qai-border); border-radius: 1.15rem;
-  padding: 1rem 1rem 0.75rem 1rem; margin: 0.85rem 0 1rem 0;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
-}
-.qai-roadmap-title {font-weight: 800; color: #172042; margin-bottom: 0.55rem;}
-.qai-next-action {
-  background: #eef6ff; border-left: 5px solid #2563eb; border-radius: 0.85rem;
-  padding: 0.85rem 1rem; margin: 0.75rem 0; color: #1e3a8a;
-}
-.qai-microtask {
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.85rem;
-  padding: 0.8rem 0.95rem; margin: 0.6rem 0;
-}
-.qai-small-muted {font-size: 0.82rem; color: #64748b;}
 @media (max-width: 900px) {
   .block-container {padding-top: 1rem; padding-left: 0.8rem; padding-right: 0.8rem;}
   .qai-hero {padding: 1.2rem 1.1rem; border-radius: 1rem;}
@@ -253,89 +238,43 @@ def has_minimum_ai_interaction(student_id: int) -> bool:
     return db.ai_interaction_count(student_id) >= 1
 
 
-def has_minimum_lesson_activity(student_id: int) -> bool:
-    """Return True once the learner has completed at least one reflective lesson activity.
-
-    The pilot protocol treats one completed learning activity as the minimum
-    exposure condition. Requiring all lessons before the post-test increased
-    attrition and made the workflow feel blocked for novice learners.
-    """
-    progress = db.get_lesson_progress(student_id)
-    if progress.empty:
-        return False
-    return int((progress["completed"] == 1).sum()) >= 1
-
-
-def lesson_completion_count(student_id: int) -> int:
-    progress = db.get_lesson_progress(student_id)
-    if progress.empty:
-        return 0
-    return int((progress["completed"] == 1).sum())
-
-
 def has_research_consent(student_id: int) -> bool:
     return db.has_consent(student_id)
 
 
 def render_participant_code_box(code: str) -> None:
-    st.markdown("<div class='qai-warn'><b>Important:</b> Save your participant code now. You will need it if you return later. Do not create a second account.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='qai-muted'>Save this code. You will need it to sign in later.</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='qai-code-badge'>{code}</div>", unsafe_allow_html=True)
     st.code(code, language=None)
-    st.caption("Tip: copy the code to your notes or take a screenshot before continuing.")
-
-
-def completion_items(student: Dict[str, Any]) -> List[tuple[str, bool, str]]:
-    sid = student["id"]
-    lesson_count = lesson_completion_count(sid)
-    return [
-        ("1. Consent", has_research_consent(sid), "Read and confirm the study notice"),
-        ("2. Pre-test", test_is_done(sid, "pre"), "Answer the initial questions"),
-        ("3. Learning", lesson_count >= 1, f"Complete at least one lesson reflection ({lesson_count}/{len(content.LESSONS)})"),
-        ("4. AI Tutor", has_minimum_ai_interaction(sid), "Ask the tutor at least once"),
-        ("5. Post-test", test_is_done(sid, "post"), "Answer the final questions"),
-        ("6. Survey", db.get_survey(sid) is not None, "Submit usability feedback"),
-    ]
-
-
-def next_action_text(student: Dict[str, Any]) -> str:
-    page = next_student_page(student)
-    messages = {
-        "Research Notice": "Next: read and confirm the research notice.",
-        "Pre-test": "Next: complete the pre-test. Do not worry about the score; it only helps personalize the learning path.",
-        "Adaptive Plan": "Next: review your adaptive learning plan, then start the recommended learning section.",
-        "Learning Module": "Next: complete at least one learning section and write the final reflection.",
-        "AI Tutor Lab": "Next: ask the AI Tutor at least one question about a concept you found difficult.",
-        "Post-test": "Next: complete the post-test to finish the learning-outcome part of the study.",
-        "Satisfaction Survey": "Next: submit the short satisfaction survey.",
-        "Student Home": "All required stages are complete. Thank you for participating.",
-    }
-    return messages.get(page, "Continue to the next required step.")
 
 
 def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
-    items = completion_items(student)
-    done_count = sum(1 for _, ok, _ in items if ok)
-    st.markdown("<div class='qai-roadmap'><div class='qai-roadmap-title'>Study roadmap</div>", unsafe_allow_html=True)
-    st.progress(done_count / len(items), text=f"Required workflow progress: {done_count}/{len(items)}")
-    st.markdown(f"<div class='qai-next-action'><b>{next_action_text(student)}</b></div>", unsafe_allow_html=True)
+    status = db.complete_case_status(student["id"], total_lessons=len(content.LESSONS))
+    items = [
+        ("Consent", status["consent_done"]),
+        ("Pre-test", test_is_done(student["id"], "pre")),
+        ("Lesson activity", status["completed_lessons"] >= 1),
+        ("AI Tutor", status["ai_interactions"] >= 1),
+        ("Post-test", test_is_done(student["id"], "post")),
+        ("Survey", db.get_survey(student["id"]) is not None),
+    ]
     if compact:
-        st.markdown("</div>", unsafe_allow_html=True)
+        done_count = sum(1 for _, ok in items if ok)
+        st.progress(done_count / len(items), text=f"Completion requirements: {done_count}/{len(items)}")
         return
     cols = st.columns(3)
-    for idx, (label, ok, detail) in enumerate(items):
+    for idx, (label, ok) in enumerate(items):
         klass = "qai-step-done" if ok else "qai-step-pending"
-        value = "Done" if ok else detail
-        icon = "✅" if ok else "⬜"
+        value = "Done" if ok else "Pending"
         with cols[idx % 3]:
             st.markdown(
-                f"<div class='qai-step {klass}'><div class='qai-step-title'>{icon} {label}</div><div class='qai-step-value'>{value}</div></div>",
+                f"<div class='qai-step {klass}'><div class='qai-step-title'>{label}</div><div class='qai-step-value'>{value}</div></div>",
                 unsafe_allow_html=True,
             )
-    st.markdown("</div>", unsafe_allow_html=True)
-    if done_count == len(items):
+    if status["is_complete_case"]:
         st.success("This participation is complete for analysis.")
     else:
-        st.caption("Tip: use the Continue button on the Student Home page whenever you are unsure what to do next.")
+        st.caption("For valid analysis, complete all requirements before leaving the platform.")
 
 
 def render_status_badge() -> None:
@@ -492,7 +431,7 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     pages = ["Student Home", "Research Notice", "Pre-test"]
     if test_is_done(student["id"], "pre"):
         pages += ["Adaptive Plan", "Learning Module", "AI Tutor Lab"]
-    if has_minimum_lesson_activity(student["id"]) and has_minimum_ai_interaction(student["id"]):
+    if all_lessons_done(student["id"]) and has_minimum_ai_interaction(student["id"]):
         pages += ["Post-test"]
     if test_is_done(student["id"], "post"):
         pages += ["Satisfaction Survey"]
@@ -607,7 +546,7 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     st.divider()
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button(f"Continue: {next_student_page(student)}", type="primary", use_container_width=True):
+        if st.button("Continue", type="primary", use_container_width=True):
             next_page = next_student_page(student)
             st.session_state.student_page = next_page
             st.rerun()
@@ -630,7 +569,7 @@ def next_student_page(student: Dict[str, Any]) -> str:
         return "Pre-test"
     if db.get_recommendation(sid) is None:
         return "Adaptive Plan"
-    if not has_minimum_lesson_activity(sid):
+    if not all_lessons_done(sid):
         return "Learning Module"
     if not has_minimum_ai_interaction(sid):
         return "AI Tutor Lab"
@@ -754,10 +693,8 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
     title = "Pre-test" if kind == "pre" else "Post-test"
     subtitle = "Answer the questions individually. This is used to evaluate learning progress, not to grade you."
     hero(title, subtitle)
-    if kind == "post" and not has_minimum_lesson_activity(student["id"]):
-        st.warning("Please complete at least one learning section and save its reflection before the post-test.")
-        if st.button("Go to learning module", type="primary"):
-            set_student_page("Learning Module")
+    if kind == "post" and not all_lessons_done(student["id"]):
+        st.warning("Please complete the learning module before the post-test.")
         return
     if kind == "post" and not has_minimum_ai_interaction(student["id"]):
         st.warning("Please complete at least one AI Tutor interaction before the post-test. This is required for the AI-supported learning evaluation.")
@@ -867,8 +804,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     completed = set(progress[progress["completed"] == 1]["lesson_id"].tolist()) if not progress.empty else set()
 
     lesson_titles = [lesson["title"] + (" ★" if lesson["id"] in recommended_set else "") for lesson in content.LESSONS]
-    st.progress(len(completed) / len(content.LESSONS), text=f"Learning sections completed: {len(completed)}/{len(content.LESSONS)}. Minimum required for the pilot: 1 section.")
-    selected_title = st.selectbox("Select a learning section", lesson_titles, help="Sections marked with ★ are recommended from your pre-test results. You may complete more than one section if you have time.")
+    selected_title = st.selectbox("Select a learning section", lesson_titles)
     lesson_index = lesson_titles.index(selected_title)
     lesson = content.LESSONS[lesson_index]
 
@@ -903,8 +839,6 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.markdown("#### After measurement")
         st.write(lesson["after_measurement"])
         st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='qai-microtask'><b>Mini task before asking AI:</b> Predict the output or identify the most important line in the Qiskit example. Then use the tutor to check or improve your reasoning.</div>", unsafe_allow_html=True)
 
     st.divider()
     st.markdown("### 🤖 Interactive AI-supported activity")
@@ -963,13 +897,13 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             st.success("Reflection saved. Section completed.")
             st.rerun()
 
-    if has_minimum_lesson_activity(student["id"]):
+    if all_lessons_done(student["id"]):
         if has_minimum_ai_interaction(student["id"]):
-            st.success("You have completed the minimum learning activity and at least one AI Tutor interaction. You can continue to the post-test, or complete more sections for extra practice.")
+            st.success("All sections are completed and at least one AI Tutor interaction is recorded. You can continue to the post-test.")
             if st.button("Go to post-test", type="primary"):
                 set_student_page("Post-test")
         else:
-            st.info("You have completed a learning section. Before the post-test, please ask the AI Tutor at least one question so the study can evaluate AI-supported learning.")
+            st.info("Before the post-test, please complete at least one AI Tutor interaction so the study can evaluate AI-supported learning.")
             if st.button("Go to AI Tutor Lab", type="primary"):
                 set_student_page("AI Tutor Lab")
 
@@ -999,28 +933,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     )
     concepts = sorted({c for lesson in content.LESSONS for c in lesson["concepts"]})
     concept = st.selectbox("Concept focus", concepts)
-    quick_prompts = {
-        "Explain a concept": f"I am confused about {concept}. Explain it simply, then ask me one question to check my understanding.",
-        "Generate a practice exercise": f"Give me one short beginner exercise about {concept}. Do not give the full solution first.",
-        "Check my explanation": f"Here is my explanation of {concept}: ... Please tell me what is correct and what I should improve.",
-        "Debug or interpret Qiskit code": "Here is my Qiskit code:\n\n# paste code here\n\nPlease help me interpret it or find the mistake without giving a long answer.",
-    }
-    st.markdown("#### Quick-start prompts")
-    st.caption("These examples help students who do not know what to ask. You can edit the text before sending.")
-    if "tutor_prompt_draft" not in st.session_state:
-        st.session_state.tutor_prompt_draft = ""
-    qcols = st.columns(2)
-    for i, (label, example) in enumerate([
-        ("Explain simply", quick_prompts["Explain a concept"]),
-        ("Give practice", quick_prompts["Generate a practice exercise"]),
-        ("Check my idea", quick_prompts["Check my explanation"]),
-        ("Help with code", quick_prompts["Debug or interpret Qiskit code"]),
-    ]):
-        with qcols[i % 2]:
-            if st.button(label, key=f"quick_prompt_{i}", use_container_width=True):
-                st.session_state.tutor_prompt_draft = example
-                st.rerun()
-    prompt = st.text_area("Write your attempt, question, explanation, or Qiskit code before asking the tutor", value=st.session_state.get("tutor_prompt_draft", ""), height=180, placeholder="Example: I think Hadamard creates a 50/50 probability, but I do not understand why measurement is random. Please explain in Arabic.")
+    prompt = st.text_area("Write your attempt, question, explanation, or Qiskit code before asking the tutor", height=180, placeholder="Example: I think Hadamard creates a 50/50 probability, but I do not understand why measurement is random. Please explain in Arabic.")
     st.caption("For research validity, write your current understanding first. The tutor is designed to guide, not replace, your reasoning. The tutor should answer in the selected language or the language of your question.")
     interactive_note("Interactive step: after writing your attempt or question, click the button below to ask the AI tutor.")
     if st.button("Ask AI tutor", type="primary", use_container_width=True):
@@ -1041,10 +954,6 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         st.write(tutor.response)
         if tutor.mode == "llm_error":
             st.info("The external LLM was unavailable. A local hint was shown and the error was logged for the evaluator.")
-        if has_minimum_lesson_activity(student["id"]):
-            st.success("AI interaction recorded. If you have completed at least one learning reflection, you may continue to the post-test.")
-            if st.button("Go to post-test", type="primary"):
-                set_student_page("Post-test")
 
 
 def render_survey(student: Dict[str, Any]) -> None:
@@ -1069,8 +978,7 @@ def render_survey(student: Dict[str, Any]) -> None:
     if submitted:
         db.save_survey(student["id"], responses, open_feedback)
         db.log_event(student["id"], "student", "survey_submitted", "Usability questionnaire and open-ended feedback submitted")
-        st.success("Thank you. Your responses have been recorded. Your participation is now complete.")
-        st.balloons()
+        st.success("Thank you. Your responses have been recorded.")
         st.rerun()
 
 # -----------------------------------------------------------------------------
