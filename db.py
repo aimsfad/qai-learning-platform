@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "pilot-safe-v3.9"
+APP_VERSION = "v5-learning-path-analytics"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -244,6 +244,9 @@ def init_db() -> None:
     ensure_column("ai_interactions", "prompt_template_version", "TEXT")
     ensure_column("ai_interactions", "lesson_id", "TEXT")
     ensure_column("ai_interactions", "activity_id", "TEXT")
+    ensure_column("ai_interactions", "selected_text", "TEXT")
+    ensure_column("ai_interactions", "student_usefulness_rating", "INTEGER")
+    ensure_column("ai_interactions", "student_ai_feedback", "TEXT")
 
 
 def ensure_column(table: str, column: str, col_type: str) -> None:
@@ -615,21 +618,23 @@ def log_ai_interaction(
     response_language: str = "",
     error_type: str = "",
     is_fallback_used: int = 0,
-    prompt_template_version: str = "qai-tutor-v1",
+    prompt_template_version: str = "qai-tutor-v5",
     lesson_id: str = "",
     activity_id: str = "",
-) -> None:
-    exec_sql(
-        """
+    selected_text: str = "",
+) -> int:
+    sql = """
         INSERT INTO ai_interactions
         (student_id, module, concept, task, prompt, response, mode, provider, model, diagnostic,
          latency_ms, response_word_count, student_input_language, response_language, error_type,
-         is_fallback_used, app_version, prompt_template_version, lesson_id, activity_id, created_at)
+         is_fallback_used, app_version, prompt_template_version, lesson_id, activity_id, selected_text, created_at)
         VALUES
         (:student_id, :module, :concept, :task, :prompt, :response, :mode, :provider, :model, :diagnostic,
          :latency_ms, :response_word_count, :student_input_language, :response_language, :error_type,
-         :is_fallback_used, :app_version, :prompt_template_version, :lesson_id, :activity_id, :created_at)
-        """,
+         :is_fallback_used, :app_version, :prompt_template_version, :lesson_id, :activity_id, :selected_text, :created_at)
+    """ + (" RETURNING id" if dialect() != "sqlite" else "")
+    return execute_returning_id(
+        sql,
         {
             "student_id": student_id,
             "module": module,
@@ -651,8 +656,20 @@ def log_ai_interaction(
             "prompt_template_version": prompt_template_version,
             "lesson_id": lesson_id,
             "activity_id": activity_id,
+            "selected_text": selected_text,
             "created_at": utc_now(),
         },
+    )
+
+
+def update_ai_student_feedback(ai_interaction_id: int, usefulness_rating: int, comment: str = "") -> None:
+    exec_sql(
+        """
+        UPDATE ai_interactions
+        SET student_usefulness_rating=:rating, student_ai_feedback=:comment
+        WHERE id=:id
+        """,
+        {"rating": int(usefulness_rating), "comment": comment.strip(), "id": int(ai_interaction_id)},
     )
 
 
@@ -847,6 +864,49 @@ def log_event(student_id: Optional[int], actor_role: str, event_type: str, event
     )
 
 
+def get_last_open_lesson(student_id: int) -> str:
+    row = query_one(
+        """
+        SELECT event_detail FROM events_log
+        WHERE student_id=:sid AND event_type='open_module'
+        ORDER BY created_at DESC, id DESC
+        """,
+        {"sid": int(student_id)},
+    )
+    return str(row.get("event_detail") or "") if row else ""
+
+
+def student_events_df(student_id: int, limit: int = 150) -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT created_at, actor_role, event_type, event_detail
+        FROM events_log
+        WHERE student_id=:sid
+        ORDER BY created_at DESC, id DESC
+        LIMIT :limit
+        """,
+        {"sid": int(student_id), "limit": int(limit)},
+    )
+
+
+def ai_learning_observer_df() -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT
+            COALESCE(NULLIF(module,''), 'unknown') AS module,
+            COALESCE(NULLIF(lesson_id,''), 'not linked') AS lesson_id,
+            COUNT(*) AS interactions,
+            AVG(latency_ms) AS avg_latency_ms,
+            AVG(response_word_count) AS avg_response_words,
+            AVG(student_usefulness_rating) AS avg_student_usefulness,
+            SUM(CASE WHEN is_fallback_used=1 THEN 1 ELSE 0 END) AS fallback_count
+        FROM ai_interactions
+        GROUP BY COALESCE(NULLIF(module,''), 'unknown'), COALESCE(NULLIF(lesson_id,''), 'not linked')
+        ORDER BY interactions DESC
+        """
+    )
+
+
 def save_survey(student_id: int, responses: Dict[str, int], open_feedback: Dict[str, str]) -> None:
     """Store the survey once; do not overwrite live pilot responses."""
     existing = get_survey(student_id)
@@ -946,7 +1006,7 @@ def ai_logs_df(
         SELECT a.id AS interaction_id, a.created_at, s.participant_code, s.full_name, a.module, a.concept, a.task,
                a.mode, a.provider, a.model, a.prompt, a.response, a.diagnostic,
                a.latency_ms, a.response_word_count, a.student_input_language, a.response_language,
-               a.error_type, a.is_fallback_used, a.app_version, a.prompt_template_version, a.lesson_id, a.activity_id
+               a.error_type, a.is_fallback_used, a.app_version, a.prompt_template_version, a.lesson_id, a.activity_id, a.selected_text, a.student_usefulness_rating, a.student_ai_feedback
         FROM ai_interactions a
         LEFT JOIN students s ON s.id=a.student_id
         {where_sql}
