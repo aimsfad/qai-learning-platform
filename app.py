@@ -36,7 +36,8 @@ CUSTOM_CSS = """
   --qai-border: #d8e2ef;
   --qai-text: #0f172a;
 }
-.block-container {padding-top: 2rem; max-width: 1180px;}
+.block-container {padding-top: 1rem; max-width: 1180px;}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding-top: 0.5rem;}
 [data-testid="stSidebar"] {background: #ffffff; border-right: 1px solid #eef2f7;}
 .qai-hero {
   background: linear-gradient(120deg, var(--qai-navy), var(--qai-teal));
@@ -121,6 +122,31 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
   padding: 0.8rem 0.95rem; margin: 0.6rem 0;
 }
 .qai-small-muted {font-size: 0.82rem; color: #64748b;}
+
+.qai-sticky-progress {
+  position: sticky; top: 0; z-index: 999;
+  background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+  border: 1px solid #d8e2ef; border-radius: 0.9rem;
+  padding: 0.75rem 0.9rem; margin: 0 0 1rem 0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.qai-sticky-title {font-weight: 800; color: #172042; margin-bottom: 0.2rem;}
+.qai-sticky-meta {font-size: 0.86rem; color: #475569;}
+.qai-path-card {
+  border: 1px solid var(--qai-border); border-radius: 1rem; background: #fff;
+  padding: 0.8rem; min-height: 7rem; margin-bottom: 0.65rem;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+}
+.qai-path-current {border: 2px solid #2563eb; background: #eff6ff;}
+.qai-path-done {border-color: #86efac; background: #f0fdf4;}
+.qai-path-locked {opacity: 0.65; background: #f8fafc;}
+.qai-path-num {font-weight: 800; color: #2563eb; font-size: 0.82rem;}
+.qai-path-status {font-size: 0.78rem; color: #64748b; margin-top: 0.25rem;}
+.qai-inline-ai {
+  border: 1px solid #fde68a; background: #fffbeb; border-radius: 0.85rem;
+  padding: 0.75rem 0.9rem; margin: 0.7rem 0;
+}
+
 @media (max-width: 900px) {
   .block-container {padding-top: 1rem; padding-left: 0.8rem; padding-right: 0.8rem;}
   .qai-hero {padding: 1.2rem 1.1rem; border-radius: 1rem;}
@@ -277,6 +303,8 @@ def init_state() -> None:
         "evaluator_page": "Evaluator Dashboard",
         "last_tutor_result": None,
         "new_participant_code": None,
+        "current_lesson_id": None,
+        "last_ai_interaction_id": None,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -438,6 +466,61 @@ def next_action_text(student: Dict[str, Any]) -> str:
     return messages.get(page, "Continue to the next required step.")
 
 
+
+def lesson_completion_status(student_id: int) -> Dict[str, bool]:
+    progress = db.get_lesson_progress(student_id)
+    if progress.empty:
+        return {lesson["id"]: False for lesson in content.LESSONS}
+    completed = set(progress[progress["completed"] == 1]["lesson_id"].tolist())
+    return {lesson["id"]: lesson["id"] in completed for lesson in content.LESSONS}
+
+
+def first_incomplete_lesson_id(student_id: int) -> str:
+    status = lesson_completion_status(student_id)
+    for lesson in content.LESSONS:
+        if not status.get(lesson["id"], False):
+            return lesson["id"]
+    return content.LESSONS[-1]["id"]
+
+
+def current_or_resume_lesson_id(student_id: int) -> str:
+    current = st.session_state.get("current_lesson_id")
+    valid_ids = {lesson["id"] for lesson in content.LESSONS}
+    if current in valid_ids:
+        return current
+    last = db.get_last_open_lesson(student_id)
+    if last in valid_ids:
+        st.session_state.current_lesson_id = last
+        return last
+    lesson_id = first_incomplete_lesson_id(student_id)
+    st.session_state.current_lesson_id = lesson_id
+    return lesson_id
+
+
+def set_current_lesson(student_id: int, lesson_id: str) -> None:
+    st.session_state.current_lesson_id = lesson_id
+    db.log_event(student_id, "student", "open_module", lesson_id)
+
+
+def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
+    items = completion_items(student)
+    done_count = sum(1 for _, ok, _ in items if ok)
+    lesson_count = lesson_completion_count(student["id"])
+    current_lesson = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else "not started"
+    lesson_title = next((l["title"] for l in content.LESSONS if l["id"] == current_lesson), "Learning not started")
+    next_action = next_action_text(student)
+    st.markdown(
+        f"""
+        <div class='qai-sticky-progress'>
+          <div class='qai-sticky-title'>Study progress: {done_count}/{len(items)} required stages completed</div>
+          <div class='qai-sticky-meta'>Current page: <b>{page}</b> | Learning sections: <b>{lesson_count}/{len(content.LESSONS)}</b> | Current module: <b>{lesson_title}</b></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.progress(done_count / len(items), text=next_action)
+
+
 def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
     items = completion_items(student)
     done_count = sum(1 for _, ok, _ in items if ok)
@@ -502,9 +585,11 @@ def log_tutor_interaction(
     task: str,
     prompt: str,
     tutor: Any,
-) -> None:
-    """Persist an AI interaction with research metadata for LLM performance analysis."""
-    db.log_ai_interaction(
+    lesson_id: str = "",
+    activity_id: str = "",
+    selected_text: str = "",
+) -> Optional[int]:
+    interaction_id = db.log_ai_interaction(
         student_id,
         module,
         concept,
@@ -521,7 +606,33 @@ def log_tutor_interaction(
         response_language=getattr(tutor, "response_language", ""),
         error_type=getattr(tutor, "error_type", ""),
         is_fallback_used=getattr(tutor, "is_fallback_used", 0),
+        lesson_id=lesson_id,
+        activity_id=activity_id,
+        selected_text=selected_text,
     )
+    try:
+        db.log_event(student_id, "student", "ai_response_received", f"{module}|{concept}|{task}|interaction_id={interaction_id}")
+    except Exception:
+        pass
+    return interaction_id
+
+
+def render_ai_usefulness_feedback(interaction_id: Optional[int], key_prefix: str) -> None:
+    if not interaction_id:
+        return
+    st.markdown("<div class='qai-inline-ai'><b>Was this AI response useful for your learning?</b><br><span class='qai-small-muted'>This helps the evaluator assess the pedagogical quality of AI support.</span></div>", unsafe_allow_html=True)
+    rating = st.select_slider(
+        "Usefulness rating",
+        options=[1, 2, 3, 4, 5],
+        value=4,
+        format_func=lambda x: {1: "1 - Not useful", 2: "2", 3: "3 - Acceptable", 4: "4", 5: "5 - Very useful"}[x],
+        key=f"{key_prefix}_rating_{interaction_id}",
+    )
+    comment = st.text_input("Optional short comment", key=f"{key_prefix}_comment_{interaction_id}")
+    if st.button("Save AI usefulness rating", key=f"{key_prefix}_save_{interaction_id}"):
+        db.update_ai_student_feedback(interaction_id, int(rating), comment)
+        db.log_event(None, "student", "student_ai_rating", f"interaction_id={interaction_id}; rating={rating}")
+        st.success("AI usefulness rating saved.")
 
 
 def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title: str = "") -> None:
@@ -559,9 +670,25 @@ def render_sidebar() -> None:
         else:
             st.sidebar.info("No student signed in")
         st.sidebar.caption("Student menu")
+        if student and st.sidebar.button("▶ Continue Learning", key="student_continue_learning", type="primary", use_container_width=True):
+            st.session_state.student_page = next_student_page(student)
+            st.rerun()
         student_menu = student_pages_allowed(student)
+        compact_labels = {
+            "Student Home": "Dashboard",
+            "Research Notice": "Research Notice",
+            "Pre-test": "Pre-test",
+            "Adaptive Plan": "Adaptive Plan",
+            "Learning Module": "Learning Path",
+            "AI Tutor Lab": "AI Tutor",
+            "Post-test": "Post-test",
+            "Satisfaction Survey": "Survey",
+            "Sign in": "Sign in",
+            "Create account": "Create account",
+        }
         for page in student_menu:
-            label = f"● {page}" if st.session_state.student_page == page else page
+            label_text = compact_labels.get(page, page)
+            label = f"● {label_text}" if st.session_state.student_page == page else label_text
             if st.sidebar.button(label, key=f"student_nav_btn_{page}", use_container_width=True):
                 st.session_state.student_page = page
                 st.rerun()
@@ -616,13 +743,18 @@ def render_sidebar() -> None:
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     if not student:
         return ["Student Home", "Sign in", "Create account"]
-    pages = ["Student Home", "Research Notice", "Pre-test"]
-    if test_is_done(student["id"], "pre"):
-        pages += ["Adaptive Plan", "Learning Module", "AI Tutor Lab"]
+    pages = ["Student Home"]
+    if not has_research_consent(student["id"]):
+        pages.append("Research Notice")
+        return pages
+    if not test_is_done(student["id"], "pre"):
+        pages.append("Pre-test")
+        return pages
+    pages += ["Learning Module", "AI Tutor Lab"]
     if has_minimum_lesson_activity(student["id"]) and has_minimum_ai_interaction(student["id"]):
-        pages += ["Post-test"]
+        pages.append("Post-test")
     if test_is_done(student["id"], "post"):
-        pages += ["Satisfaction Survey"]
+        pages.append("Satisfaction Survey")
     return pages
 
 # -----------------------------------------------------------------------------
@@ -671,6 +803,8 @@ def render_student_app() -> None:
     if page not in student_pages_allowed(student):
         st.session_state.student_page = "Student Home"
         page = "Student Home"
+    if student and page not in {"Sign in", "Create account"}:
+        render_student_top_progress(student, page)
     if page == "Student Home":
         render_student_home(student)
     elif page == "Sign in":
@@ -760,7 +894,11 @@ def next_student_page(student: Dict[str, Any]) -> str:
     if not test_is_done(sid, "pre"):
         return "Pre-test"
     if db.get_recommendation(sid) is None:
-        return "Adaptive Plan"
+        try:
+            db.compute_adaptive_recommendation(sid, content.CONCEPT_TO_LESSONS)
+        except Exception:
+            pass
+        return "Learning Module"
     if not has_minimum_lesson_activity(sid):
         return "Learning Module"
     if not has_minimum_ai_interaction(sid):
@@ -871,6 +1009,7 @@ def render_student_signin() -> None:
         if student:
             db.log_event(student["id"], "student", "sign_in", "Student signed in")
             st.session_state.student_id = student["id"]
+            st.session_state.current_lesson_id = db.get_last_open_lesson(student["id"]) or first_incomplete_lesson_id(student["id"])
             st.session_state.student_page = next_student_page(student)
             st.success("Signed in successfully.")
             st.rerun()
@@ -925,6 +1064,7 @@ def render_student_registration() -> None:
             db.save_consent(student["id"], consent_text, consent_version="v1")
             db.log_event(student["id"], "student", "account_created", "Student created account and confirmed consent notice")
             st.session_state.student_id = student["id"]
+            st.session_state.current_lesson_id = content.LESSONS[0]["id"]
             st.session_state.new_participant_code = student["participant_code"]
             st.session_state.student_page = "Student Home"
             st.success(f"Account created. Your participant code is: {student['participant_code']}")
@@ -955,7 +1095,11 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
         st.success(f"{title} already submitted. Score: {existing['score']:.1f}%")
         if st.button("Continue", type="primary"):
             if kind == "pre":
-                st.session_state.student_page = "Adaptive Plan"
+                try:
+                    db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
+                except Exception:
+                    pass
+                st.session_state.student_page = "Learning Module"
             else:
                 st.session_state.student_page = "Satisfaction Survey"
             st.rerun()
@@ -1067,43 +1211,106 @@ def render_lesson_media(lesson_id: str) -> None:
     if video_name:
         video_path = LESSON_MEDIA_DIR / video_name
         if video_path.exists():
-            st.video(str(video_path))
+            try:
+                # Read bytes instead of passing only a filesystem path.
+                # This is more reliable on Streamlit Cloud and with browser video controls.
+                st.video(video_path.read_bytes(), format="video/mp4")
+            except Exception:
+                st.warning("The local micro-video could not be loaded. Please use the visual summary or the optional enrichment link below.")
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
         st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
 
 
+def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
+    st.markdown("### Learning path")
+    st.caption("Choose a module card to open it. Your last open module is remembered when you return from the AI Tutor.")
+    rows = [content.LESSONS[:3], content.LESSONS[3:]]
+    for row_lessons in rows:
+        cols = st.columns(len(row_lessons))
+        for col, lesson in zip(cols, row_lessons):
+            status = "Completed" if lesson["id"] in completed else ("Current" if lesson["id"] == selected_id else "Not completed")
+            klass = "qai-path-done" if lesson["id"] in completed else ("qai-path-current" if lesson["id"] == selected_id else "")
+            badge = "✅" if lesson["id"] in completed else ("▶" if lesson["id"] == selected_id else "○")
+            rec = " · Recommended" if lesson["id"] in recommended_set else ""
+            with col:
+                st.markdown(
+                    f"<div class='qai-path-card {klass}'><div class='qai-path-num'>{badge} Module {lesson['title'].split('.')[0]}</div><b>{lesson['title'].split('. ',1)[-1]}</b><div class='qai-path-status'>{status}{rec}</div></div>",
+                    unsafe_allow_html=True,
+                )
+                if st.button("Open" if lesson["id"] != selected_id else "Opened", key=f"open_path_{lesson['id']}", use_container_width=True, disabled=lesson["id"] == selected_id):
+                    set_current_lesson(student["id"], lesson["id"])
+                    st.rerun()
+
+
+def inline_ai_explain_button(student: Dict[str, Any], lesson: Dict[str, Any], label: str, selected_text: str, key: str) -> None:
+    st.markdown("<div class='qai-inline-ai'>Need help with this part? Use the tutor without leaving the lesson.</div>", unsafe_allow_html=True)
+    cols = st.columns([1, 1, 1])
+    actions = [
+        ("Explain simply", "Explain selected text simply"),
+        ("Give a hint", "Give a hint without full answer"),
+        ("Ask me a question", "Ask one reflective check question"),
+    ]
+    for col, (button_label, task) in zip(cols, actions):
+        if col.button(button_label, key=f"{key}_{button_label}", use_container_width=True):
+            tutor = feedback_engine.generate_tutor_response(
+                task=task,
+                concept=", ".join(lesson["concepts"]),
+                student_input=f"Selected lesson text: {selected_text}",
+                student_profile=student_profile(student),
+                lesson_context={**lesson, "source": "inline_lesson_help", "response_language": "Auto-detect"},
+            )
+            interaction_id = log_tutor_interaction(
+                student["id"], "inline_lesson_help", ", ".join(lesson["concepts"]), task,
+                f"Explain selected text: {selected_text}", tutor, lesson_id=lesson["id"], activity_id=key, selected_text=selected_text,
+            )
+            st.markdown("#### 🤖 Inline AI explanation")
+            st.write(tutor.response)
+            render_ai_usefulness_feedback(interaction_id, f"inline_{key}")
+
+
 def render_learning_module(student: Dict[str, Any]) -> None:
-    hero("Scaffolded Qiskit Learning Module", "Each section combines conceptual scaffolding, a guided Qiskit example, AI-mediated support, and a reflective prompt.")
-    rec = db.get_recommendation(student["id"])
+    hero("Learning Path", "Follow the six modules in order. Your current module is saved when you move to the AI Tutor and come back.")
+    if not test_is_done(student["id"], "pre"):
+        st.warning("Please complete the pre-test before opening the learning path.")
+        if st.button("Go to pre-test", type="primary"):
+            set_student_page("Pre-test")
+        return
+    rec = db.get_recommendation(student["id"]) or db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
     recommended_set = set(rec.get("recommended_lessons", [])) if rec else set()
     progress = db.get_lesson_progress(student["id"])
     completed = set(progress[progress["completed"] == 1]["lesson_id"].tolist()) if not progress.empty else set()
+    selected_id = current_or_resume_lesson_id(student["id"])
+    valid_ids = {l["id"] for l in content.LESSONS}
+    if selected_id not in valid_ids:
+        selected_id = first_incomplete_lesson_id(student["id"])
+    lesson = content.lesson_by_id(selected_id)
+    db.log_event(student["id"], "student", "open_module", selected_id)
 
-    lesson_titles = [lesson["title"] + (" ★" if lesson["id"] in recommended_set else "") for lesson in content.LESSONS]
-    st.progress(len(completed) / len(content.LESSONS), text=f"Learning sections completed: {len(completed)}/{len(content.LESSONS)}. Minimum required for the pilot: 1 section.")
-    selected_title = st.selectbox("Select a learning section", lesson_titles, help="Sections marked with ★ are recommended from your pre-test results. You may complete more than one section if you have time.")
-    lesson_index = lesson_titles.index(selected_title)
-    lesson = content.LESSONS[lesson_index]
+    st.progress(len(completed) / len(content.LESSONS), text=f"Learning path progress: {len(completed)}/{len(content.LESSONS)} modules completed")
+    render_learning_path_cards(student, selected_id, recommended_set, completed)
 
+    st.divider()
+    st.markdown(f"## {lesson['title']}")
     if lesson["id"] in completed:
-        st.success("This section is marked as completed.")
+        st.success("This module is completed. You may review it or continue to the next module.")
     elif lesson["id"] in recommended_set:
         st.info("Recommended based on your pre-test results.")
-
-    st.markdown(f"## {lesson['title']}")
     ux_note(
-        "<b>Page guide:</b> Read the explanation first, then review the Qiskit example, then use the interactive AI-supported activity. "
-        "Finally, write your reflection to mark the section as complete."
+        "<b>How to complete this module:</b> read the short explanation, inspect the Qiskit example, use inline AI help only when needed, then write your reflection. "
+        "Use the buttons at the bottom to continue to the next module without scrolling back to the top."
     )
-    col1, col2 = st.columns([1.1, 1])
+
+    col1, col2 = st.columns([1.05, 1])
     with col1:
         st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
         st.markdown("#### Learning objective")
         st.write(lesson["objective"])
+        inline_ai_explain_button(student, lesson, "objective", lesson["objective"], f"obj_{lesson['id']}")
         st.markdown("#### Conceptual scaffold")
         st.write(lesson["concept"])
+        inline_ai_explain_button(student, lesson, "concept", lesson["concept"], f"concept_{lesson['id']}")
         st.markdown("#### Why it matters")
         st.write(lesson["why_it_matters"])
         st.markdown("#### Misconception to avoid")
@@ -1113,6 +1320,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
         st.markdown("#### Guided Qiskit example")
         st.code(lesson["qiskit_code"], language="python")
+        inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
         st.markdown("#### Before measurement")
         st.write(lesson["before_measurement"])
         st.markdown("#### After measurement")
@@ -1122,15 +1330,15 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
     render_lesson_media(lesson["id"])
     st.markdown("</div>", unsafe_allow_html=True)
+    try:
+        db.log_event(student["id"], "student", "view_media", lesson["id"])
+    except Exception:
+        pass
 
     st.markdown("<div class='qai-microtask'><b>Mini task before asking AI:</b> Predict the output or identify the most important line in the Qiskit example. Then use the tutor to check or improve your reasoning.</div>", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("### 🤖 Interactive AI-supported activity")
-    interactive_note(
-        "This is an interactive part. Choose one button below to generate a guided explanation, a practice exercise, or a hint. "
-        "Try to understand the idea before moving to the reflection."
-    )
+    st.markdown("### 🤖 AI-supported activity inside this module")
     activity_language = st.selectbox(
         "AI response language",
         ["Auto-detect", "English", "Arabic", "French"],
@@ -1140,11 +1348,11 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     )
     c1, c2, c3 = st.columns(3)
     task = None
-    if c1.button("Generate guided explanation", use_container_width=True):
+    if c1.button("Guided explanation", use_container_width=True):
         task = "Explain a concept"
-    if c2.button("Generate practice exercise", use_container_width=True):
+    if c2.button("Practice exercise", use_container_width=True):
         task = "Generate a practice exercise"
-    if c3.button("Ask for a hint", use_container_width=True):
+    if c3.button("Hint only", use_container_width=True):
         task = "Give a hint without the full answer"
     if task:
         tutor = feedback_engine.generate_tutor_response(
@@ -1154,16 +1362,17 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             student_profile=student_profile(student),
             lesson_context={**lesson, "response_language": activity_language},
         )
-        log_tutor_interaction(
+        interaction_id = log_tutor_interaction(
             student["id"], "learning_module", ", ".join(lesson["concepts"]), task,
-            f"Lesson activity for {lesson['title']}", tutor,
+            f"Lesson activity for {lesson['title']}", tutor, lesson_id=lesson["id"], activity_id="module_ai_activity",
         )
+        st.session_state.last_ai_interaction_id = interaction_id
         st.markdown("#### 🤖 AI tutor response")
         st.write(tutor.response)
+        render_ai_usefulness_feedback(interaction_id, f"lesson_{lesson['id']}")
 
     st.divider()
-    st.markdown("### ✅ Final reflection before completing this section")
-    interactive_note("Write your own reflection here. This is required to mark the learning section as complete.")
+    st.markdown("### ✅ Reflection and completion")
     st.info(lesson["reflective_prompt"])
     reflection_default = ""
     if not progress.empty:
@@ -1171,26 +1380,40 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         if not row.empty:
             reflection_default = str(row["reflection_text"].iloc[0] or "")
     with st.form(f"reflection_{lesson['id']}"):
-        reflection = st.text_area("Write your reflection in your own words", value=reflection_default, height=140)
-        submitted = st.form_submit_button("Save reflection and mark section complete", type="primary")
+        reflection = st.text_area("Write your reflection in your own words", value=reflection_default, height=130)
+        submitted = st.form_submit_button("Save reflection and mark module complete", type="primary")
     if submitted:
         if len(reflection.strip()) < 20:
-            st.error("Please write a short reflection before marking the section complete.")
+            st.error("Please write a short reflection before marking the module complete.")
         else:
             db.save_lesson_progress(student["id"], lesson["id"], reflection, completed=True)
             db.log_event(student["id"], "student", "lesson_completed", lesson["id"])
-            st.success("Reflection saved. Section completed.")
+            completed.add(lesson["id"])
+            current_idx = [l["id"] for l in content.LESSONS].index(lesson["id"])
+            if current_idx + 1 < len(content.LESSONS):
+                st.session_state.current_lesson_id = content.LESSONS[current_idx + 1]["id"]
+            st.success("Reflection saved. Module completed.")
             st.rerun()
 
-    if has_minimum_lesson_activity(student["id"]):
-        if has_minimum_ai_interaction(student["id"]):
-            st.success("You have completed the minimum learning activity and at least one AI Tutor interaction. You can continue to the post-test, or complete more sections for extra practice.")
-            if st.button("Go to post-test", type="primary"):
-                set_student_page("Post-test")
-        else:
-            st.info("You have completed a learning section. Before the post-test, please ask the AI Tutor at least one question so the study can evaluate AI-supported learning.")
-            if st.button("Go to AI Tutor Lab", type="primary"):
-                set_student_page("AI Tutor Lab")
+    st.divider()
+    nav1, nav2, nav3 = st.columns(3)
+    ids = [l["id"] for l in content.LESSONS]
+    idx = ids.index(lesson["id"])
+    if nav1.button("← Previous module", use_container_width=True, disabled=idx == 0):
+        set_current_lesson(student["id"], ids[idx - 1])
+        st.rerun()
+    if nav2.button("Ask AI about this module", use_container_width=True):
+        st.session_state.current_lesson_id = lesson["id"]
+        st.session_state.student_page = "AI Tutor Lab"
+        st.rerun()
+    if nav3.button("Next module →", type="primary", use_container_width=True, disabled=idx >= len(ids) - 1):
+        set_current_lesson(student["id"], ids[idx + 1])
+        st.rerun()
+
+    if has_minimum_lesson_activity(student["id"]) and has_minimum_ai_interaction(student["id"]):
+        st.success("Minimum learning and AI interaction requirements are complete. You may continue to the post-test when ready.")
+        if st.button("Go to post-test", type="primary", use_container_width=True):
+            set_student_page("Post-test")
 
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
@@ -1216,8 +1439,16 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         index=0,
         help="Auto-detect uses the language of your question. Select Arabic to force Arabic responses.",
     )
+    current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
+    current_lesson = content.lesson_by_id(current_lesson_id)
+    st.info(f"Current learning context: {current_lesson['title']}. The tutor will use this context unless you choose another concept.")
+    if st.button("Return to current learning module", use_container_width=True):
+        st.session_state.student_page = "Learning Module"
+        st.rerun()
     concepts = sorted({c for lesson in content.LESSONS for c in lesson["concepts"]})
-    concept = st.selectbox("Concept focus", concepts)
+    default_concept = current_lesson["concepts"][0] if current_lesson.get("concepts") else concepts[0]
+    default_index = concepts.index(default_concept) if default_concept in concepts else 0
+    concept = st.selectbox("Concept focus", concepts, index=default_index)
     quick_prompts = {
         "Explain a concept": f"I am confused about {concept}. Explain it simply, then ask me one question to check my understanding.",
         "Generate a practice exercise": f"Give me one short beginner exercise about {concept}. Do not give the full solution first.",
@@ -1251,13 +1482,15 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
             concept=concept,
             student_input=prompt,
             student_profile=student_profile(student),
-            lesson_context={"source": "AI Tutor Lab", "response_language": tutor_language},
+            lesson_context={"source": "AI Tutor Lab", "response_language": tutor_language, "current_lesson": current_lesson},
         )
-        log_tutor_interaction(
-            student["id"], "ai_tutor_lab", concept, task, prompt, tutor
+        interaction_id = log_tutor_interaction(
+            student["id"], "ai_tutor_lab", concept, task, prompt, tutor, lesson_id=current_lesson_id, activity_id="free_tutor"
         )
+        st.session_state.last_ai_interaction_id = interaction_id
         st.markdown("### 🤖 AI tutor response")
         st.write(tutor.response)
+        render_ai_usefulness_feedback(interaction_id, "tutor_lab")
         if tutor.mode == "llm_error":
             st.info("The external LLM was unavailable. A local hint was shown and the error was logged for the evaluator.")
         if has_minimum_lesson_activity(student["id"]):
@@ -1549,6 +1782,10 @@ def render_student_details() -> None:
     progress = db.get_lesson_progress(student["id"])
     st.dataframe(progress, use_container_width=True)
 
+    st.markdown("### Learning timeline")
+    timeline = db.student_events_df(student["id"], limit=150)
+    st.dataframe(timeline, use_container_width=True, hide_index=True)
+
     st.markdown("### AI interactions")
     logs = db.ai_logs_df(limit=100, participant_code=student["participant_code"])
     st.dataframe(logs, use_container_width=True, hide_index=True)
@@ -1580,6 +1817,16 @@ def render_learning_analytics() -> None:
     numeric = show[["pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions"]].dropna(how="all")
     if not numeric.empty:
         st.write(numeric.describe())
+
+    st.markdown("### AI-supported learning observer")
+    observer = db.ai_learning_observer_df()
+    if observer.empty:
+        st.info("No AI interaction analytics available yet.")
+    else:
+        st.dataframe(observer, use_container_width=True, hide_index=True)
+        if "interactions" in observer.columns:
+            render_progress_bars(observer, "module", "interactions", "AI interactions by module")
+
     concept_df = db.concept_scores_df()
     if not concept_df.empty:
         st.markdown("### Concept-level performance")
