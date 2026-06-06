@@ -260,6 +260,7 @@ LESSONS: List[Dict] = [
         "after_measurement": "The measurement stores the result in the classical bit. In this simple case, the expected result is 0.",
         "misconception": "A quantum circuit is not just a Python function. It is a structured description of quantum and classical resources.",
         "reflective_prompt": "Explain, in your own words, the difference between the qubit and the classical bit in this circuit.",
+        "can_do": ["Identify qubit and classical registers in a circuit", "Explain what measurement adds to a circuit", "Connect a tiny Qiskit program to a circuit diagram"],
     },
     {
         "id": "qubit_measurement",
@@ -273,6 +274,7 @@ LESSONS: List[Dict] = [
         "after_measurement": "The classical bit receives the observed value. For |0>, repeated measurements should return 0.",
         "misconception": "Measurement is not just printing the state vector; it produces classical outcomes.",
         "reflective_prompt": "Why do we need a classical bit when we measure a qubit in Qiskit?",
+        "can_do": ["Describe the qubit state before measurement", "Explain why measurement produces classical data", "Interpret the role of the classical bit"],
     },
     {
         "id": "hadamard_superposition",
@@ -286,6 +288,7 @@ LESSONS: List[Dict] = [
         "after_measurement": "Each shot produces one classical outcome. Across many shots, both 0 and 1 should appear approximately equally.",
         "misconception": "Superposition is not the same as a classical variable that already has both values stored.",
         "reflective_prompt": "Explain what changes before and after measurement when H is applied to |0>.",
+        "can_do": ["Explain the effect of H on |0>", "Predict an approximately balanced distribution", "Avoid interpreting superposition as a hidden classical value"],
     },
     {
         "id": "shots_counts",
@@ -299,6 +302,7 @@ LESSONS: List[Dict] = [
         "after_measurement": "The counts dictionary summarizes observed classical strings and their frequencies.",
         "misconception": "Counts are not proof that the simulator is inconsistent; they represent repeated sampling.",
         "reflective_prompt": "If counts are {'0': 513, '1': 487}, what does that say about the underlying measurement distribution?",
+        "can_do": ["Define a shot as one circuit execution", "Read a counts dictionary", "Distinguish exact results from sampled distributions"],
     },
     {
         "id": "cnot_correlation",
@@ -312,6 +316,7 @@ LESSONS: List[Dict] = [
         "after_measurement": "Across many shots, outcomes such as 00 and 11 are expected more often than 01 and 10.",
         "misconception": "CNOT is not a simple copy operation for arbitrary quantum states.",
         "reflective_prompt": "Why can H followed by CNOT produce correlated outcomes such as 00 and 11?",
+        "can_do": ["Identify control and target qubits", "Explain when the target flips", "Interpret correlated two-qubit outcomes"],
     },
     {
         "id": "qiskit_debugging",
@@ -325,6 +330,7 @@ LESSONS: List[Dict] = [
         "after_measurement": "Correct allocation allows Qiskit to map qubit measurement outcomes to classical bits.",
         "misconception": "The second argument in measure is not another qubit; it is the classical bit index.",
         "reflective_prompt": "Explain why QuantumCircuit(1, 0) followed by qc.measure(0, 0) is problematic.",
+        "can_do": ["Detect missing classical-bit allocation", "Recognize incorrect measurement indices", "Rewrite a minimal circuit correctly"],
     },
 ]
 
