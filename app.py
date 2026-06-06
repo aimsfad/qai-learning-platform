@@ -166,37 +166,43 @@ LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 LESSON_MEDIA = {
     "orientation": {
         "image": "orientation_visual.png",
-        "caption": "Visual summary of a minimal circuit: qubit, gate, measurement, and classical output.",
+        "caption": "Minimal Qiskit circuit: one qubit is measured into one classical bit.",
+        "notice": "Notice the difference between the quantum wire, the measurement symbol, and the classical output bit.",
         "resource_label": "IBM Quantum Learning: Get started with Qiskit",
         "resource_url": "https://quantum.cloud.ibm.com/learning/en/modules/quantum-mechanics/get-started-with-qiskit",
     },
     "qubit_measurement": {
-        "video": "measurement_microvideo.mp4",
-        "caption": "Micro-video: measurement maps a qubit state to a classical outcome.",
+        "image": "measurement_visual.png",
+        "caption": "Measurement turns a prepared quantum state into a classical outcome stored in a bit.",
+        "notice": "Follow the path from state preparation to measurement and then to the classical value 0 or 1.",
         "resource_label": "IBM Quantum Learning modules",
         "resource_url": "https://quantum.cloud.ibm.com/learning/en/modules",
     },
     "hadamard_superposition": {
-        "video": "hadamard_microvideo.mp4",
-        "caption": "Micro-video: the Hadamard gate leads to approximately balanced outcomes across many shots.",
+        "image": "hadamard_visual.png",
+        "caption": "Hadamard on |0> prepares an equal superposition that gives approximately balanced counts.",
+        "notice": "Compare the before/after state and the expected histogram after many shots.",
         "resource_label": "Qiskit learning resources",
         "resource_url": "https://qiskit.qotlabs.org/learning",
     },
     "shots_counts": {
         "image": "counts_visual.png",
-        "caption": "Visual summary: repeated shots are aggregated into a counts dictionary.",
+        "caption": "Counts summarize repeated circuit executions; they are samples, not a single deterministic answer.",
+        "notice": "Observe how more shots make the distribution easier to interpret.",
         "resource_label": "Qiskit guide: construct circuits",
         "resource_url": "https://qiskit.qotlabs.org/docs/guides/construct-circuits",
     },
     "cnot_correlation": {
-        "video": "cnot_microvideo.mp4",
-        "caption": "Micro-video: CNOT uses a control-target relationship to create correlated outcomes.",
-        "resource_label": "Qiskit YouTube channel",
-        "resource_url": "https://www.youtube.com/Qiskit",
+        "image": "cnot_visual.png",
+        "caption": "CNOT has a control and a target; with H it can produce correlated outcomes such as 00 and 11.",
+        "notice": "Focus on when the target flips and how the two-bit outcomes become correlated.",
+        "resource_label": "Qiskit learning resources",
+        "resource_url": "https://qiskit.qotlabs.org/learning",
     },
     "qiskit_debugging": {
         "image": "debugging_visual.png",
-        "caption": "Visual debugging aid: measurement requires an allocated classical bit.",
+        "caption": "Most beginner errors come from missing classical bits or incorrect measurement indices.",
+        "notice": "Compare the incorrect circuit with the corrected version and identify what changed.",
         "resource_label": "Qiskit documentation",
         "resource_url": "https://qiskit.qotlabs.org/docs/guides/construct-circuits",
     },
@@ -1202,6 +1208,8 @@ def render_lesson_media(lesson_id: str) -> None:
         return
     st.markdown("### Visual explanation")
     st.caption(media.get("caption", ""))
+    if media.get("notice"):
+        st.info("What to notice: " + media.get("notice", ""))
     image_name = media.get("image")
     video_name = media.get("video")
     if image_name:
@@ -1307,6 +1315,10 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
         st.markdown("#### Learning objective")
         st.write(lesson["objective"])
+        if lesson.get("can_do"):
+            st.markdown("#### By the end of this module, you should be able to")
+            for outcome in lesson.get("can_do", []):
+                st.markdown(f"- {outcome}")
         inline_ai_explain_button(student, lesson, "objective", lesson["objective"], f"obj_{lesson['id']}")
         st.markdown("#### Conceptual scaffold")
         st.write(lesson["concept"])
@@ -1329,6 +1341,13 @@ def render_learning_module(student: Dict[str, Any]) -> None:
 
     st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
     render_lesson_media(lesson["id"])
+    media = LESSON_MEDIA.get(lesson["id"], {})
+    if media:
+        inline_ai_explain_button(
+            student, lesson, "visual",
+            f"Visual explanation for {lesson['title']}: {media.get('caption', '')} {media.get('notice', '')}",
+            f"visual_{lesson['id']}"
+        )
     st.markdown("</div>", unsafe_allow_html=True)
     try:
         db.log_event(student["id"], "student", "view_media", lesson["id"])
