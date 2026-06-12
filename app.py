@@ -508,6 +508,23 @@ def lesson_completion_count(student_id: int) -> int:
     return int((progress["completed"] == 1).sum())
 
 
+
+
+def required_lesson_count_for_posttest() -> int:
+    """Return the number of learning modules required before unlocking the post-test.
+
+    v6.1 introduced a stricter learning workflow, but the helper was missing
+    from app.py. Keeping it as a dedicated function makes the rule easy to
+    adjust later if the study protocol changes.
+    """
+    return len(content.LESSONS)
+
+
+def learning_path_ready_for_posttest(student_id: int) -> bool:
+    """Return True only when the required learning path has been completed."""
+    return lesson_completion_count(student_id) >= required_lesson_count_for_posttest()
+
+
 def has_research_consent(student_id: int) -> bool:
     return db.has_consent(student_id)
 
