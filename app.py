@@ -241,6 +241,7 @@ LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 LESSON_MEDIA = {
     "orientation": {
         "image": "orientation_professional.png",
+        "video": "orientation_microvideo.mp4",
         "caption": "Code-to-circuit map: qubit wire, measurement symbol, and classical output bit.",
         "notice": "Follow the code, then the visual circuit, then the classical output. This makes the quantum/classical boundary visible.",
         "resource_label": "IBM Quantum Learning",
@@ -248,6 +249,7 @@ LESSON_MEDIA = {
     },
     "qubit_measurement": {
         "image": "measurement_professional.png",
+        "video": "measurement_microvideo.mp4",
         "caption": "Measurement transforms a prepared quantum state into one classical outcome per shot.",
         "notice": "The important transition is not from code to printout, but from quantum state to classical data.",
         "resource_label": "IBM Quantum documentation: visualization",
@@ -255,6 +257,7 @@ LESSON_MEDIA = {
     },
     "hadamard_superposition": {
         "image": "hadamard_professional.png",
+        "video": "hadamard_microvideo.mp4",
         "caption": "Hadamard prepares a balanced probability pattern; the histogram reveals it after repeated shots.",
         "notice": "Compare the state before H, the state after H, and the approximate 50/50 counts after measurement.",
         "resource_label": "Bloch sphere explanation",
@@ -262,6 +265,7 @@ LESSON_MEDIA = {
     },
     "shots_counts": {
         "image": "counts_professional.png",
+        "video": "counts_microvideo.mp4",
         "caption": "Counts are sampled frequencies. More shots generally make the distribution clearer.",
         "notice": "Compare 10 shots with 1000 shots: both are samples, but one is much easier to interpret.",
         "resource_label": "Qiskit guide: visualize results",
@@ -269,6 +273,7 @@ LESSON_MEDIA = {
     },
     "cnot_correlation": {
         "image": "cnot_professional.png",
+        "video": "cnot_microvideo.mp4",
         "caption": "CNOT uses a control and a target; with H it can produce correlated two-bit outcomes.",
         "notice": "Use the rule table before interpreting the two-qubit histogram. The target flips only when the control is 1.",
         "resource_label": "Microsoft Quantum Katas",
@@ -276,6 +281,7 @@ LESSON_MEDIA = {
     },
     "qiskit_debugging": {
         "image": "debugging_professional.png",
+        "video": "debugging_microvideo.mp4",
         "caption": "Debugging starts with resources: qubits, classical bits, and measurement indices.",
         "notice": "The incorrect code does not allocate a classical bit; the corrected version does.",
         "resource_label": "Qiskit documentation",
@@ -1380,6 +1386,18 @@ def render_lesson_media(lesson_id: str) -> None:
         image_path = LESSON_MEDIA_DIR / image_name
         if image_path.exists():
             st.image(str(image_path), use_container_width=True)
+
+    video_name = media.get("video")
+    if video_name:
+        video_path = LESSON_MEDIA_DIR / video_name
+        if video_path.exists():
+            st.markdown("#### Micro-video explanation")
+            st.caption("Short animated explanation of the same concept. Use it after reading the visual, then ask the AI tutor to explain any unclear step.")
+            try:
+                st.video(video_path.read_bytes(), format="video/mp4")
+            except Exception:
+                st.video(str(video_path))
+
     if media.get("notice"):
         st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice')}</div>", unsafe_allow_html=True)
     resource_url = media.get("resource_url")
