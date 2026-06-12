@@ -160,49 +160,104 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
+
+PROFESSIONAL_UX_CSS = """
+<style>
+:root {
+  --qai-deep: #0f1b3d;
+  --qai-accent: #2563eb;
+  --qai-cyan: #0ea5e9;
+  --qai-soft: #eff6ff;
+  --qai-panel: #ffffff;
+  --qai-line: #dbe4ef;
+  --qai-muted: #64748b;
+}
+.qai-hero {
+  background: radial-gradient(circle at top left, #2f60ff 0%, #172554 42%, #0f172a 100%) !important;
+  border: none !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.20) !important;
+}
+.qai-hero h1 {letter-spacing: -0.035em;}
+.qai-glass-card {
+  background: rgba(255,255,255,0.92); border: 1px solid var(--qai-line);
+  border-radius: 1.25rem; padding: 1.1rem 1.2rem;
+  box-shadow: 0 16px 36px rgba(15,23,42,0.08); margin: 0.75rem 0;
+}
+.qai-hero-grid {display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin: 0.85rem 0 1rem 0;}
+.qai-stage-chip {display:inline-flex; align-items:center; gap:0.4rem; background:#eef2ff; color:#172554; border:1px solid #c7d2fe; padding:0.25rem 0.55rem; border-radius:999px; font-size:0.78rem; font-weight:800; margin:0.15rem 0.2rem 0.15rem 0;}
+.qai-learning-shell {background: linear-gradient(180deg, #f8fbff 0%, #ffffff 80%); border: 1px solid var(--qai-line); border-radius: 1.4rem; padding: 1rem; margin: 0.8rem 0 1.2rem 0; box-shadow: 0 20px 50px rgba(15,23,42,0.06);}
+.qai-module-header {display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; background:#ffffff; border:1px solid var(--qai-line); border-radius:1.15rem; padding:1rem 1.1rem; margin:0.6rem 0 1rem 0;}
+.qai-module-kicker {font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:#2563eb; font-weight:900; margin-bottom:0.25rem;}
+.qai-module-title {font-size:1.45rem; font-weight:900; color:#0f172a; letter-spacing:-0.025em;}
+.qai-module-meta {font-size:0.86rem; color:#64748b; margin-top:0.25rem;}
+.qai-concept-pill {background:#ecfeff; border:1px solid #a5f3fc; color:#155e75; border-radius:999px; padding:0.22rem 0.55rem; font-size:0.76rem; font-weight:800; display:inline-block; margin:0.15rem;}
+.qai-path-card {transition: transform .14s ease, box-shadow .14s ease;}
+.qai-path-card:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(15,23,42,0.08);}
+.qai-path-card .qai-card-title {font-weight:900; color:#0f172a; margin-top:0.2rem;}
+.qai-path-card .qai-card-mini {font-size:0.78rem; color:#64748b; margin-top:0.35rem;}
+.qai-lesson-panel {background:#ffffff; border:1px solid var(--qai-line); border-radius:1.1rem; padding:1rem 1.05rem; height:100%; box-shadow:0 12px 28px rgba(15,23,42,0.05);}
+.qai-panel-title {font-size:0.9rem; font-weight:900; color:#172554; text-transform:uppercase; letter-spacing:0.045em; margin-bottom:0.45rem;}
+.qai-big-idea {background:linear-gradient(90deg,#eef2ff,#ecfeff); border:1px solid #bfdbfe; border-left:6px solid #2563eb; border-radius:1rem; padding:0.9rem 1rem; color:#1e293b; font-weight:650; margin:0.7rem 0;}
+.qai-focus-list li {margin-bottom:0.28rem;}
+.qai-visual-card {background:#ffffff; border:1px solid var(--qai-line); border-radius:1.2rem; padding:1rem; box-shadow: 0 16px 36px rgba(15,23,42,0.06); margin:1rem 0;}
+.qai-check-card {background:#fff7ed; border:1px solid #fed7aa; border-radius:1rem; padding:0.95rem 1rem; margin:0.8rem 0;}
+.qai-ai-actions {background:#f8fafc; border:1px dashed #93c5fd; border-radius:1rem; padding:0.85rem 1rem; margin:0.75rem 0;}
+.qai-dashboard-grid {display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.8rem; margin:1rem 0;}
+.qai-dashboard-tile {background:#fff; border:1px solid var(--qai-line); border-radius:1.1rem; padding:1rem; box-shadow:0 10px 24px rgba(15,23,42,0.05);}
+.qai-tile-value {font-size:1.35rem; font-weight:900; color:#172554;}
+.qai-tile-label {font-size:0.84rem; color:#64748b; margin-top:0.2rem;}
+.qai-sticky-progress {border-radius:1.1rem !important; border:1px solid #bfdbfe !important; background:rgba(255,255,255,0.98) !important;}
+[data-testid="stSidebar"] {background: linear-gradient(180deg,#f8fbff 0%, #eef2ff 100%);} 
+[data-testid="stSidebar"] .stButton button {border: 1px solid #cbd5e1 !important; background:#ffffff !important;}
+@media (max-width: 900px) { .qai-hero-grid, .qai-dashboard-grid {grid-template-columns:1fr;} .qai-module-header {display:block;} }
+</style>
+"""
+st.markdown(PROFESSIONAL_UX_CSS, unsafe_allow_html=True)
+
+
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 
 LESSON_MEDIA = {
     "orientation": {
-        "image": "orientation_visual.png",
-        "caption": "Minimal Qiskit circuit: one qubit is measured into one classical bit.",
-        "notice": "Notice the difference between the quantum wire, the measurement symbol, and the classical output bit.",
-        "resource_label": "IBM Quantum Learning: Get started with Qiskit",
-        "resource_url": "https://quantum.cloud.ibm.com/learning/en/modules/quantum-mechanics/get-started-with-qiskit",
+        "image": "orientation_professional.png",
+        "caption": "Code-to-circuit map: qubit wire, measurement symbol, and classical output bit.",
+        "notice": "Follow the code, then the visual circuit, then the classical output. This makes the quantum/classical boundary visible.",
+        "resource_label": "IBM Quantum Learning",
+        "resource_url": "https://quantum.cloud.ibm.com/learning/en",
     },
     "qubit_measurement": {
-        "image": "measurement_visual.png",
-        "caption": "Measurement turns a prepared quantum state into a classical outcome stored in a bit.",
-        "notice": "Follow the path from state preparation to measurement and then to the classical value 0 or 1.",
-        "resource_label": "IBM Quantum Learning modules",
-        "resource_url": "https://quantum.cloud.ibm.com/learning/en/modules",
+        "image": "measurement_professional.png",
+        "caption": "Measurement transforms a prepared quantum state into one classical outcome per shot.",
+        "notice": "The important transition is not from code to printout, but from quantum state to classical data.",
+        "resource_label": "IBM Quantum documentation: visualization",
+        "resource_url": "https://quantum.cloud.ibm.com/docs/en/api/qiskit/visualization",
     },
     "hadamard_superposition": {
-        "image": "hadamard_visual.png",
-        "caption": "Hadamard on |0> prepares an equal superposition that gives approximately balanced counts.",
-        "notice": "Compare the before/after state and the expected histogram after many shots.",
-        "resource_label": "Qiskit learning resources",
-        "resource_url": "https://qiskit.qotlabs.org/learning",
+        "image": "hadamard_professional.png",
+        "caption": "Hadamard prepares a balanced probability pattern; the histogram reveals it after repeated shots.",
+        "notice": "Compare the state before H, the state after H, and the approximate 50/50 counts after measurement.",
+        "resource_label": "Bloch sphere explanation",
+        "resource_url": "https://qiskit.qotlabs.org/learning/courses/general-formulation-of-quantum-information/density-matrices/bloch-sphere",
     },
     "shots_counts": {
-        "image": "counts_visual.png",
-        "caption": "Counts summarize repeated circuit executions; they are samples, not a single deterministic answer.",
-        "notice": "Observe how more shots make the distribution easier to interpret.",
-        "resource_label": "Qiskit guide: construct circuits",
-        "resource_url": "https://qiskit.qotlabs.org/docs/guides/construct-circuits",
+        "image": "counts_professional.png",
+        "caption": "Counts are sampled frequencies. More shots generally make the distribution clearer.",
+        "notice": "Compare 10 shots with 1000 shots: both are samples, but one is much easier to interpret.",
+        "resource_label": "Qiskit guide: visualize results",
+        "resource_url": "https://qiskit.qotlabs.org/docs/guides/visualize-results",
     },
     "cnot_correlation": {
-        "image": "cnot_visual.png",
-        "caption": "CNOT has a control and a target; with H it can produce correlated outcomes such as 00 and 11.",
-        "notice": "Focus on when the target flips and how the two-bit outcomes become correlated.",
-        "resource_label": "Qiskit learning resources",
-        "resource_url": "https://qiskit.qotlabs.org/learning",
+        "image": "cnot_professional.png",
+        "caption": "CNOT uses a control and a target; with H it can produce correlated two-bit outcomes.",
+        "notice": "Use the rule table before interpreting the two-qubit histogram. The target flips only when the control is 1.",
+        "resource_label": "Microsoft Quantum Katas",
+        "resource_url": "https://quantum.microsoft.com/en-us/tools/quantum-katas",
     },
     "qiskit_debugging": {
-        "image": "debugging_visual.png",
-        "caption": "Most beginner errors come from missing classical bits or incorrect measurement indices.",
-        "notice": "Compare the incorrect circuit with the corrected version and identify what changed.",
+        "image": "debugging_professional.png",
+        "caption": "Debugging starts with resources: qubits, classical bits, and measurement indices.",
+        "notice": "The incorrect code does not allocate a classical bit; the corrected version does.",
         "resource_label": "Qiskit documentation",
         "resource_url": "https://qiskit.qotlabs.org/docs/guides/construct-circuits",
     },
@@ -513,13 +568,14 @@ def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
     done_count = sum(1 for _, ok, _ in items if ok)
     lesson_count = lesson_completion_count(student["id"])
     current_lesson = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else "not started"
-    lesson_title = next((l["title"] for l in content.LESSONS if l["id"] == current_lesson), "Learning not started")
+    lesson_title = next((l.get("short_title", l["title"]) for l in content.LESSONS if l["id"] == current_lesson), "Learning not started")
     next_action = next_action_text(student)
+    percent = int(round((done_count / len(items)) * 100)) if items else 0
     st.markdown(
         f"""
         <div class='qai-sticky-progress'>
-          <div class='qai-sticky-title'>Study progress: {done_count}/{len(items)} required stages completed</div>
-          <div class='qai-sticky-meta'>Current page: <b>{page}</b> | Learning sections: <b>{lesson_count}/{len(content.LESSONS)}</b> | Current module: <b>{lesson_title}</b></div>
+          <div class='qai-sticky-title'>QAI study progress · {percent}% complete</div>
+          <div class='qai-sticky-meta'>Page: <b>{page}</b> · Modules completed: <b>{lesson_count}/{len(content.LESSONS)}</b> · Current module: <b>{lesson_title}</b></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -844,8 +900,28 @@ def require_student(func, *args) -> None:
 
 
 def render_student_home(student: Optional[Dict[str, Any]]) -> None:
-    hero("Student Workspace", "Complete the study stages in order. Your progress is saved automatically.")
+    hero("Student Dashboard", "A guided quantum programming workspace with progress, contextual AI support, and research-grade learning analytics.")
     if not student:
+        st.markdown("""
+        <div class='qai-hero-grid'>
+          <div class='qai-glass-card'>
+            <div class='qai-module-kicker'>Guided pilot workflow</div>
+            <div class='qai-module-title'>Learn Qiskit step by step</div>
+            <p>The platform combines a structured learning path, short visual explanations, pre/post assessment, and an AI tutor that encourages reasoning rather than copy-paste answers.</p>
+            <span class='qai-stage-chip'>6 modules</span><span class='qai-stage-chip'>AI tutor</span><span class='qai-stage-chip'>Progress tracking</span>
+          </div>
+          <div class='qai-glass-card'>
+            <div class='qai-panel-title'>Recommended path</div>
+            <ol>
+              <li>Create or sign in to your account</li>
+              <li>Complete the pre-test</li>
+              <li>Follow the learning path</li>
+              <li>Use the AI tutor when needed</li>
+              <li>Complete the post-test and survey</li>
+            </ol>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
             card("Sign in", "Use your participant code, email, or exact registered name with your password.", "Returning participant")
@@ -868,29 +944,53 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
             st.session_state.student_page = next_student_page(student)
             st.rerun()
         return
-    summary = db.progress_summary_df(len(content.LESSONS))
-    row = summary[summary["student_id"] == student["id"]]
-    progress = float(row["progress_percent"].iloc[0]) if not row.empty else 0.0
-    st.progress(progress / 100, text=f"Overall progress: {progress:.0f}%")
 
+    summary = db.progress_summary_df(len(content.LESSONS))
+    row = summary[summary["student_id"] == student["id"]] if not summary.empty and "student_id" in summary.columns else pd.DataFrame()
+    progress_percent = float(row["progress_percent"].iloc[0]) if not row.empty and "progress_percent" in row.columns else 0.0
+    modules_done = lesson_completion_count(student["id"])
+    ai_count = db.ai_interaction_count(student["id"])
+    next_page = next_student_page(student)
+    current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
+    current_lesson = content.lesson_by_id(current_lesson_id)
+
+    st.markdown(
+        f"""
+        <div class='qai-dashboard-grid'>
+          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{progress_percent:.0f}%</div><div class='qai-tile-label'>Overall study workflow</div></div>
+          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{modules_done}/{len(content.LESSONS)}</div><div class='qai-tile-label'>Learning modules completed</div></div>
+          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{ai_count}</div><div class='qai-tile-label'>AI tutor interactions recorded</div></div>
+        </div>
+        <div class='qai-learning-shell'>
+          <div class='qai-module-kicker'>Resume point</div>
+          <div class='qai-module-title'>{current_lesson.get('short_title', current_lesson['title'])}</div>
+          <div class='qai-module-meta'>Next required action: <b>{next_action_text(student)}</b></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.progress(progress_percent / 100, text=f"Overall progress: {progress_percent:.0f}%")
     render_completion_requirements(student)
 
     st.divider()
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button(f"Continue: {next_student_page(student)}", type="primary", use_container_width=True):
-            next_page = next_student_page(student)
+        if st.button(f"Continue: {next_page}", type="primary", use_container_width=True):
             st.session_state.student_page = next_page
             st.rerun()
     with c2:
+        if st.button("Resume learning module", use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
+            st.session_state.student_page = "Learning Module"
+            st.rerun()
+    with c3:
         if st.button("AI Tutor Lab", use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
             set_student_page("AI Tutor Lab")
-    with c3:
-        if st.button("Sign out", use_container_width=True):
-            db.log_event(student["id"], "student", "sign_out", "Student signed out from home")
-            st.session_state.student_id = None
-            st.session_state.student_page = "Student Home"
-            st.rerun()
+
+    if st.button("Sign out", use_container_width=True):
+        db.log_event(student["id"], "student", "sign_out", "Student signed out from home")
+        st.session_state.student_id = None
+        st.session_state.student_page = "Student Home"
+        st.rerun()
 
 
 def next_student_page(student: Dict[str, Any]) -> str:
@@ -1197,63 +1297,56 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
 
 
 def render_lesson_media(lesson_id: str) -> None:
-    """Render compact visual/video support for the selected lesson.
-
-    Media files are intentionally short and locally bundled so the platform remains
-    usable even when students cannot access external video platforms. External
-    links are provided only as optional enrichment resources.
-    """
+    """Render professionally designed instructional media for the selected module."""
     media = LESSON_MEDIA.get(lesson_id)
     if not media:
         return
+    st.markdown("<div class='qai-visual-card'>", unsafe_allow_html=True)
     st.markdown("### Visual explanation")
     st.caption(media.get("caption", ""))
-    if media.get("notice"):
-        st.info("What to notice: " + media.get("notice", ""))
     image_name = media.get("image")
-    video_name = media.get("video")
     if image_name:
         image_path = LESSON_MEDIA_DIR / image_name
         if image_path.exists():
             st.image(str(image_path), use_container_width=True)
-    if video_name:
-        video_path = LESSON_MEDIA_DIR / video_name
-        if video_path.exists():
-            try:
-                # Read bytes instead of passing only a filesystem path.
-                # This is more reliable on Streamlit Cloud and with browser video controls.
-                st.video(video_path.read_bytes(), format="video/mp4")
-            except Exception:
-                st.warning("The local micro-video could not be loaded. Please use the visual summary or the optional enrichment link below.")
+    if media.get("notice"):
+        st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice')}</div>", unsafe_allow_html=True)
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
         st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
     st.markdown("### Learning path")
-    st.caption("Choose a module card to open it. Your last open module is remembered when you return from the AI Tutor.")
-    rows = [content.LESSONS[:3], content.LESSONS[3:]]
-    for row_lessons in rows:
-        cols = st.columns(len(row_lessons))
-        for col, lesson in zip(cols, row_lessons):
-            status = "Completed" if lesson["id"] in completed else ("Current" if lesson["id"] == selected_id else "Not completed")
+    st.caption("Six compact modules. Choose a card to open it; the platform remembers your latest module.")
+    cols = st.columns(3)
+    for idx, lesson in enumerate(content.LESSONS):
+        with cols[idx % 3]:
+            status = "Completed" if lesson["id"] in completed else ("Current" if lesson["id"] == selected_id else "Available")
             klass = "qai-path-done" if lesson["id"] in completed else ("qai-path-current" if lesson["id"] == selected_id else "")
-            badge = "✅" if lesson["id"] in completed else ("▶" if lesson["id"] == selected_id else "○")
-            rec = " · Recommended" if lesson["id"] in recommended_set else ""
-            with col:
-                st.markdown(
-                    f"<div class='qai-path-card {klass}'><div class='qai-path-num'>{badge} Module {lesson['title'].split('.')[0]}</div><b>{lesson['title'].split('. ',1)[-1]}</b><div class='qai-path-status'>{status}{rec}</div></div>",
-                    unsafe_allow_html=True,
-                )
-                if st.button("Open" if lesson["id"] != selected_id else "Opened", key=f"open_path_{lesson['id']}", use_container_width=True, disabled=lesson["id"] == selected_id):
-                    set_current_lesson(student["id"], lesson["id"])
-                    st.rerun()
+            badge = "✓" if lesson["id"] in completed else ("▶" if lesson["id"] == selected_id else str(idx + 1))
+            rec = "Recommended" if lesson["id"] in recommended_set else lesson.get("level", "Module")
+            concepts = "".join([f"<span class='qai-concept-pill'>{c}</span>" for c in lesson.get("concepts", [])[:2]])
+            st.markdown(
+                f"""
+                <div class='qai-path-card {klass}'>
+                  <div class='qai-path-num'>{badge} Module {idx + 1}</div>
+                  <div class='qai-card-title'>{lesson.get('short_title', lesson['title'])}</div>
+                  <div class='qai-card-mini'>{lesson.get('duration', '')} · {rec}</div>
+                  <div>{concepts}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("Open" if lesson["id"] != selected_id else "Opened", key=f"open_path_{lesson['id']}", use_container_width=True, disabled=lesson["id"] == selected_id):
+                set_current_lesson(student["id"], lesson["id"])
+                st.rerun()
 
 
 def inline_ai_explain_button(student: Dict[str, Any], lesson: Dict[str, Any], label: str, selected_text: str, key: str) -> None:
-    st.markdown("<div class='qai-inline-ai'>Need help with this part? Use the tutor without leaving the lesson.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='qai-ai-actions'><b>AI support for this part</b><br>Use the tutor for explanation, hints, or a reflective question without leaving the module.</div>", unsafe_allow_html=True)
     cols = st.columns([1, 1, 1])
     actions = [
         ("Explain simply", "Explain selected text simply"),
@@ -1273,18 +1366,19 @@ def inline_ai_explain_button(student: Dict[str, Any], lesson: Dict[str, Any], la
                 student["id"], "inline_lesson_help", ", ".join(lesson["concepts"]), task,
                 f"Explain selected text: {selected_text}", tutor, lesson_id=lesson["id"], activity_id=key, selected_text=selected_text,
             )
-            st.markdown("#### 🤖 Inline AI explanation")
+            st.markdown("#### AI tutor explanation")
             st.write(tutor.response)
             render_ai_usefulness_feedback(interaction_id, f"inline_{key}")
 
 
 def render_learning_module(student: Dict[str, Any]) -> None:
-    hero("Learning Path", "Follow the six modules in order. Your current module is saved when you move to the AI Tutor and come back.")
+    hero("Learning Path", "Professional micro-lessons: visual explanation, tiny Qiskit example, AI support, and reflection.")
     if not test_is_done(student["id"], "pre"):
         st.warning("Please complete the pre-test before opening the learning path.")
         if st.button("Go to pre-test", type="primary"):
             set_student_page("Pre-test")
         return
+
     rec = db.get_recommendation(student["id"]) or db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
     recommended_set = set(rec.get("recommended_lessons", [])) if rec else set()
     progress = db.get_lesson_progress(student["id"])
@@ -1296,68 +1390,79 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     lesson = content.lesson_by_id(selected_id)
     db.log_event(student["id"], "student", "open_module", selected_id)
 
+    st.markdown("<div class='qai-learning-shell'>", unsafe_allow_html=True)
     st.progress(len(completed) / len(content.LESSONS), text=f"Learning path progress: {len(completed)}/{len(content.LESSONS)} modules completed")
     render_learning_path_cards(student, selected_id, recommended_set, completed)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown(f"## {lesson['title']}")
+    status_msg = "Completed" if lesson["id"] in completed else ("Recommended" if lesson["id"] in recommended_set else "Available")
+    concept_html = "".join([f"<span class='qai-concept-pill'>{c}</span>" for c in lesson.get("concepts", [])])
+    st.markdown(
+        f"""
+        <div class='qai-module-header'>
+          <div>
+            <div class='qai-module-kicker'>{status_msg} · {lesson.get('level','Module')} · {lesson.get('duration','')}</div>
+            <div class='qai-module-title'>{lesson['title']}</div>
+            <div class='qai-module-meta'>{lesson['objective']}</div>
+          </div>
+          <div>{concept_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     if lesson["id"] in completed:
         st.success("This module is completed. You may review it or continue to the next module.")
-    elif lesson["id"] in recommended_set:
-        st.info("Recommended based on your pre-test results.")
-    ux_note(
-        "<b>How to complete this module:</b> read the short explanation, inspect the Qiskit example, use inline AI help only when needed, then write your reflection. "
-        "Use the buttons at the bottom to continue to the next module without scrolling back to the top."
-    )
+
+    st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
 
     col1, col2 = st.columns([1.05, 1])
     with col1:
-        st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
-        st.markdown("#### Learning objective")
-        st.write(lesson["objective"])
-        if lesson.get("can_do"):
-            st.markdown("#### By the end of this module, you should be able to")
-            for outcome in lesson.get("can_do", []):
-                st.markdown(f"- {outcome}")
-        inline_ai_explain_button(student, lesson, "objective", lesson["objective"], f"obj_{lesson['id']}")
-        st.markdown("#### Conceptual scaffold")
+        st.markdown("<div class='qai-lesson-panel'>", unsafe_allow_html=True)
+        st.markdown("<div class='qai-panel-title'>Concept scaffold</div>", unsafe_allow_html=True)
         st.write(lesson["concept"])
-        inline_ai_explain_button(student, lesson, "concept", lesson["concept"], f"concept_{lesson['id']}")
-        st.markdown("#### Why it matters")
+        st.markdown("#### Why this matters")
         st.write(lesson["why_it_matters"])
+        if lesson.get("can_do"):
+            st.markdown("#### By the end you can")
+            st.markdown("<ul class='qai-focus-list'>" + "".join([f"<li>{o}</li>" for o in lesson.get("can_do", [])]) + "</ul>", unsafe_allow_html=True)
         st.markdown("#### Misconception to avoid")
         st.warning(lesson["misconception"])
+        inline_ai_explain_button(student, lesson, "concept", lesson["concept"], f"concept_{lesson['id']}")
         st.markdown("</div>", unsafe_allow_html=True)
+
     with col2:
-        st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
-        st.markdown("#### Guided Qiskit example")
+        st.markdown("<div class='qai-lesson-panel'>", unsafe_allow_html=True)
+        st.markdown("<div class='qai-panel-title'>Tiny Qiskit example</div>", unsafe_allow_html=True)
         st.code(lesson["qiskit_code"], language="python")
-        inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
+        if lesson.get("code_focus"):
+            st.markdown("#### Code reading focus")
+            for point in lesson.get("code_focus", []):
+                st.markdown(f"- {point}")
         st.markdown("#### Before measurement")
         st.write(lesson["before_measurement"])
         st.markdown("#### After measurement")
         st.write(lesson["after_measurement"])
+        inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
     render_lesson_media(lesson["id"])
-    media = LESSON_MEDIA.get(lesson["id"], {})
-    if media:
-        inline_ai_explain_button(
-            student, lesson, "visual",
-            f"Visual explanation for {lesson['title']}: {media.get('caption', '')} {media.get('notice', '')}",
-            f"visual_{lesson['id']}"
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+    if lesson.get("visual_steps"):
+        st.markdown("### How to read the visual")
+        cols = st.columns(len(lesson.get("visual_steps", [])))
+        for i, step in enumerate(lesson.get("visual_steps", []), start=1):
+            with cols[i - 1]:
+                st.markdown(f"<div class='qai-dashboard-tile'><div class='qai-tile-value'>{i}</div><div class='qai-tile-label'>{step}</div></div>", unsafe_allow_html=True)
     try:
-        db.log_event(student["id"], "student", "view_media", lesson["id"])
+        db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
     except Exception:
         pass
 
-    st.markdown("<div class='qai-microtask'><b>Mini task before asking AI:</b> Predict the output or identify the most important line in the Qiskit example. Then use the tutor to check or improve your reasoning.</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
+    if lesson.get("check_question"):
+        st.info("Check your understanding: " + lesson.get("check_question"))
 
     st.divider()
-    st.markdown("### 🤖 AI-supported activity inside this module")
+    st.markdown("### AI-supported activity inside this module")
     activity_language = st.selectbox(
         "AI response language",
         ["Auto-detect", "English", "Arabic", "French"],
@@ -1365,19 +1470,21 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         key=f"lesson_ai_language_{lesson['id']}",
         help="Choose Arabic if you want the tutor to explain this learning activity in Arabic.",
     )
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     task = None
-    if c1.button("Guided explanation", use_container_width=True):
-        task = "Explain a concept"
+    if c1.button("Explain visual", use_container_width=True):
+        task = "Explain the lesson visual"
     if c2.button("Practice exercise", use_container_width=True):
         task = "Generate a practice exercise"
     if c3.button("Hint only", use_container_width=True):
         task = "Give a hint without the full answer"
+    if c4.button("Ask one question", use_container_width=True):
+        task = "Ask one reflective check question"
     if task:
         tutor = feedback_engine.generate_tutor_response(
             task=task,
             concept=", ".join(lesson["concepts"]),
-            student_input=f"Lesson: {lesson['title']}",
+            student_input=f"Lesson: {lesson['title']}. Mini task: {lesson.get('mini_task','')}",
             student_profile=student_profile(student),
             lesson_context={**lesson, "response_language": activity_language},
         )
@@ -1386,12 +1493,12 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             f"Lesson activity for {lesson['title']}", tutor, lesson_id=lesson["id"], activity_id="module_ai_activity",
         )
         st.session_state.last_ai_interaction_id = interaction_id
-        st.markdown("#### 🤖 AI tutor response")
+        st.markdown("#### AI tutor response")
         st.write(tutor.response)
         render_ai_usefulness_feedback(interaction_id, f"lesson_{lesson['id']}")
 
     st.divider()
-    st.markdown("### ✅ Reflection and completion")
+    st.markdown("### Reflection and completion")
     st.info(lesson["reflective_prompt"])
     reflection_default = ""
     if not progress.empty:
