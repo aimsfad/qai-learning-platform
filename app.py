@@ -207,8 +207,28 @@ PROFESSIONAL_UX_CSS = """
 .qai-tile-value {font-size:1.35rem; font-weight:900; color:#172554;}
 .qai-tile-label {font-size:0.84rem; color:#64748b; margin-top:0.2rem;}
 .qai-sticky-progress {border-radius:1.1rem !important; border:1px solid #bfdbfe !important; background:rgba(255,255,255,0.98) !important;}
-[data-testid="stSidebar"] {background: linear-gradient(180deg,#f8fbff 0%, #eef2ff 100%);} 
-[data-testid="stSidebar"] .stButton button {border: 1px solid #cbd5e1 !important; background:#ffffff !important;}
+[data-testid="stSidebar"] {background: linear-gradient(180deg,#f7faff 0%, #eef4ff 100%) !important; border-right: 1px solid #d8e2ef !important;} 
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding: 1rem 0.9rem !important;}
+[data-testid="stSidebar"] h1 {font-size: 1.05rem !important; font-weight: 900 !important; color:#0f172a !important; margin-bottom:0.35rem !important;}
+[data-testid="stSidebar"] .stButton button {
+  border: 1px solid #cbd5e1 !important; background:#ffffff !important; color:#172042 !important;
+  min-height: 2.55rem !important; padding: 0.42rem 0.65rem !important; font-size: 0.88rem !important;
+  border-radius: 0.85rem !important; text-align: left !important; justify-content: flex-start !important;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.04) !important;
+}
+[data-testid="stSidebar"] .stButton button:hover {border-color:#2563eb !important; background:#eff6ff !important;}
+.qai-side-brand {font-weight:900; letter-spacing:-0.02em; color:#0f172a; font-size:1.05rem; margin-bottom:0.3rem;}
+.qai-side-sub {font-size:0.78rem; color:#64748b; margin-bottom:0.8rem;}
+.qai-side-profile {background:#ffffff; border:1px solid #dbe4ef; border-radius:1rem; padding:0.8rem 0.9rem; margin:0.65rem 0; box-shadow:0 10px 24px rgba(15,23,42,0.06);}
+.qai-side-code {font-size:0.85rem; color:#0f766e; font-weight:900; margin-bottom:0.35rem;}
+.qai-side-progress-label {display:flex; justify-content:space-between; font-size:0.78rem; color:#475569; margin-bottom:0.25rem;}
+.qai-side-bar {height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin:0.25rem 0 0.45rem 0;}
+.qai-side-fill {height:100%; background:linear-gradient(90deg,#2563eb,#06b6d4); border-radius:999px;}
+.qai-side-next {background:#eff6ff; border:1px solid #bfdbfe; border-left:4px solid #2563eb; border-radius:0.9rem; padding:0.65rem 0.75rem; color:#1e3a8a; font-size:0.8rem; line-height:1.3; margin:0.6rem 0;}
+.qai-side-section {font-size:0.72rem; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; font-weight:900; margin:0.9rem 0 0.35rem 0;}
+.qai-side-lock {font-size:0.76rem; color:#94a3b8; padding:0.38rem 0.15rem;}
+.qai-side-active-note {font-size:0.75rem; color:#2563eb; font-weight:800; margin:-0.15rem 0 0.35rem 0.2rem;}
+.qai-side-footer {font-size:0.72rem; color:#64748b; margin-top:0.7rem;}
 @media (max-width: 900px) { .qai-hero-grid, .qai-dashboard-grid {grid-template-columns:1fr;} .qai-module-header {display:block;} }
 </style>
 """
@@ -502,12 +522,13 @@ def render_participant_code_box(code: str) -> None:
 def completion_items(student: Dict[str, Any]) -> List[tuple[str, bool, str]]:
     sid = student["id"]
     lesson_count = lesson_completion_count(sid)
+    required_lessons = required_lesson_count_for_posttest()
     return [
         ("1. Consent", has_research_consent(sid), "Read and confirm the study notice"),
         ("2. Pre-test", test_is_done(sid, "pre"), "Answer the initial questions"),
-        ("3. Learning", lesson_count >= 1, f"Complete at least one lesson reflection ({lesson_count}/{len(content.LESSONS)})"),
-        ("4. AI Tutor", has_minimum_ai_interaction(sid), "Ask the tutor at least once"),
-        ("5. Post-test", test_is_done(sid, "post"), "Answer the final questions"),
+        ("3. Learning path", lesson_count >= required_lessons, f"Complete all learning modules ({lesson_count}/{required_lessons})"),
+        ("4. AI Tutor", has_minimum_ai_interaction(sid), "Ask the tutor at least once inside a module or in the AI lab"),
+        ("5. Post-test", test_is_done(sid, "post"), "Unlocked after completing the learning path"),
         ("6. Survey", db.get_survey(sid) is not None, "Submit usability feedback"),
     ]
 
@@ -518,9 +539,9 @@ def next_action_text(student: Dict[str, Any]) -> str:
         "Research Notice": "Next: read and confirm the research notice.",
         "Pre-test": "Next: complete the pre-test. Do not worry about the score; it only helps personalize the learning path.",
         "Adaptive Plan": "Next: review your adaptive learning plan, then start the recommended learning section.",
-        "Learning Module": "Next: complete at least one learning section and write the final reflection.",
+        "Learning Module": "Next: continue the learning path and complete the remaining module reflections.",
         "AI Tutor Lab": "Next: ask the AI Tutor at least one question about a concept you found difficult.",
-        "Post-test": "Next: complete the post-test to finish the learning-outcome part of the study.",
+        "Post-test": "Next: complete the post-test after finishing all learning modules.",
         "Satisfaction Survey": "Next: submit the short satisfaction survey.",
         "Student Home": "All required stages are complete. Thank you for participating.",
     }
@@ -567,20 +588,22 @@ def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
     items = completion_items(student)
     done_count = sum(1 for _, ok, _ in items if ok)
     lesson_count = lesson_completion_count(student["id"])
+    required_lessons = required_lesson_count_for_posttest()
     current_lesson = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else "not started"
     lesson_title = next((l.get("short_title", l["title"]) for l in content.LESSONS if l["id"] == current_lesson), "Learning not started")
     next_action = next_action_text(student)
-    percent = int(round((done_count / len(items)) * 100)) if items else 0
+    study_percent = int(round((done_count / len(items)) * 100)) if items else 0
+    learning_percent = int(round((lesson_count / max(required_lessons, 1)) * 100))
     st.markdown(
         f"""
         <div class='qai-sticky-progress'>
-          <div class='qai-sticky-title'>QAI study progress · {percent}% complete</div>
-          <div class='qai-sticky-meta'>Page: <b>{page}</b> · Modules completed: <b>{lesson_count}/{len(content.LESSONS)}</b> · Current module: <b>{lesson_title}</b></div>
+          <div class='qai-sticky-title'>QAI guided study · {study_percent}% study workflow · {learning_percent}% learning path</div>
+          <div class='qai-sticky-meta'>Current page: <b>{page}</b> · Completed modules: <b>{lesson_count}/{required_lessons}</b> · Resume: <b>{lesson_title}</b></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.progress(done_count / len(items), text=next_action)
+    st.progress(lesson_count / max(required_lessons, 1), text=next_action)
 
 
 def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
@@ -722,38 +745,66 @@ def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title
 # -----------------------------------------------------------------------------
 
 def render_sidebar() -> None:
-    st.sidebar.title("QAI Platform")
     role = st.session_state.get("role")
+    st.sidebar.markdown("<div class='qai-side-brand'>QAI Learning Platform</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='qai-side-sub'>Guided quantum programming study with contextual AI support.</div>", unsafe_allow_html=True)
 
     if role == "student":
         student = current_student()
         if student:
-            st.sidebar.success(f"Student: {student['participant_code']}")
+            lesson_count = lesson_completion_count(student["id"])
+            required_lessons = required_lesson_count_for_posttest()
+            learning_pct = int(round(100 * lesson_count / max(required_lessons, 1)))
+            current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else None
+            current_title = next((l.get("short_title", l["title"]) for l in content.LESSONS if l["id"] == current_id), "Not started")
+            st.sidebar.markdown(
+                f"""
+                <div class='qai-side-profile'>
+                  <div class='qai-side-code'>Student · {student['participant_code']}</div>
+                  <div class='qai-side-progress-label'><span>Learning path</span><b>{lesson_count}/{required_lessons}</b></div>
+                  <div class='qai-side-bar'><div class='qai-side-fill' style='width:{learning_pct}%;'></div></div>
+                  <div style='font-size:0.78rem;color:#64748b;'>Current module: <b>{current_title}</b></div>
+                </div>
+                <div class='qai-side-next'><b>Next step</b><br>{next_action_text(student)}</div>
+                """,
+                unsafe_allow_html=True,
+            )
         else:
-            st.sidebar.info("No student signed in")
-        st.sidebar.caption("Student menu")
-        if student and st.sidebar.button("▶ Continue Learning", key="student_continue_learning", type="primary", use_container_width=True):
+            st.sidebar.markdown("<div class='qai-side-profile'><b>No student signed in</b><br><span style='color:#64748b;font-size:0.8rem;'>Create an account or sign in to start the study.</span></div>", unsafe_allow_html=True)
+
+        allowed = student_pages_allowed(student)
+        current_page = st.session_state.get("student_page", "Student Home")
+        nav_items = [
+            ("Student Home", "Dashboard", "Overview and next action"),
+            ("Research Notice", "Research notice", "Consent step"),
+            ("Pre-test", "Pre-test", "Initial knowledge check"),
+            ("Learning Module", "Learning path", "Six guided modules"),
+            ("AI Tutor Lab", "AI tutor", "Ask for hints and explanations"),
+            ("Post-test", "Post-test", "Unlocked after learning path"),
+            ("Satisfaction Survey", "Survey", "Final feedback"),
+        ]
+        st.sidebar.markdown("<div class='qai-side-section'>Student navigation</div>", unsafe_allow_html=True)
+        if student and st.sidebar.button("▶ Resume recommended step", key="student_resume_step", type="primary", use_container_width=True):
             st.session_state.student_page = next_student_page(student)
             st.rerun()
-        student_menu = student_pages_allowed(student)
-        compact_labels = {
-            "Student Home": "Dashboard",
-            "Research Notice": "Research Notice",
-            "Pre-test": "Pre-test",
-            "Adaptive Plan": "Adaptive Plan",
-            "Learning Module": "Learning Path",
-            "AI Tutor Lab": "AI Tutor",
-            "Post-test": "Post-test",
-            "Satisfaction Survey": "Survey",
-            "Sign in": "Sign in",
-            "Create account": "Create account",
-        }
-        for page in student_menu:
-            label_text = compact_labels.get(page, page)
-            label = f"● {label_text}" if st.session_state.student_page == page else label_text
-            if st.sidebar.button(label, key=f"student_nav_btn_{page}", use_container_width=True):
-                st.session_state.student_page = page
-                st.rerun()
+        if not student:
+            for page, label, _ in [("Sign in", "Sign in", ""), ("Create account", "Create account", "")]:
+                prefix = "● " if current_page == page else ""
+                if st.sidebar.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
+                    st.session_state.student_page = page
+                    st.rerun()
+        else:
+            for page, label, detail in nav_items:
+                if page in allowed:
+                    prefix = "● " if current_page == page else ""
+                    if st.sidebar.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
+                        st.session_state.student_page = page
+                        st.rerun()
+                    if current_page == page:
+                        st.sidebar.markdown(f"<div class='qai-side-active-note'>{detail}</div>", unsafe_allow_html=True)
+                else:
+                    if page in {"Post-test", "Satisfaction Survey"}:
+                        st.sidebar.markdown(f"<div class='qai-side-lock'>Locked · {label} · {detail}</div>", unsafe_allow_html=True)
         st.sidebar.divider()
         if student and st.sidebar.button("Sign out", use_container_width=True):
             db.log_event(student["id"], "student", "sign_out", "Student signed out from sidebar")
@@ -761,45 +812,48 @@ def render_sidebar() -> None:
             st.session_state.student_page = "Student Home"
             st.session_state.student_access_page = "Sign in"
             st.rerun()
-        if st.sidebar.button("Switch role", use_container_width=True):
+        if st.sidebar.button("Switch workspace", use_container_width=True):
             switch_role(None)
+        st.sidebar.markdown("<div class='qai-side-footer'>AI tutor interactions and progress events are logged for the evaluator dashboard.</div>", unsafe_allow_html=True)
         render_status_badge()
 
     elif role == "evaluator":
-        st.sidebar.info("Evaluator workspace")
+        st.sidebar.markdown("<div class='qai-side-profile'><b>Evaluator workspace</b><br><span style='color:#64748b;font-size:0.8rem;'>Monitor progress, AI usage, and exports.</span></div>", unsafe_allow_html=True)
         if st.session_state.evaluator_logged_in:
             pages = [
                 "Evaluator Dashboard",
                 "Students",
                 "Registration Accounts",
                 "Student Details",
-                "Progress Monitor",
-                "Learning Analytics",
-                "Paper-ready Analysis",
-                "LLM Performance Evaluation",
-                "Feedback Logs",
-                "Survey Results",
-                "Event Logs",
-                "System Readiness",
-                "Results Export",
+                "AI Tutor Logs",
+                "AI Response Evaluation",
+                "AI Metrics",
+                "Exports",
             ]
-            st.sidebar.caption("Evaluator menu")
+            compact_labels = {
+                "Evaluator Dashboard": "Dashboard",
+                "Registration Accounts": "Accounts",
+                "Student Details": "Student details",
+                "AI Tutor Logs": "AI logs",
+                "AI Response Evaluation": "Response evaluation",
+                "AI Metrics": "AI metrics",
+            }
+            st.sidebar.markdown("<div class='qai-side-section'>Evaluator navigation</div>", unsafe_allow_html=True)
             for page in pages:
-                label = f"● {page}" if st.session_state.evaluator_page == page else page
-                if st.sidebar.button(label, key=f"eval_nav_btn_{page}", use_container_width=True):
+                label_text = compact_labels.get(page, page)
+                prefix = "● " if st.session_state.evaluator_page == page else ""
+                if st.sidebar.button(prefix + label_text, key=f"eval_nav_btn_{page}", use_container_width=True):
                     st.session_state.evaluator_page = page
                     st.rerun()
             st.sidebar.divider()
             if st.sidebar.button("Sign out", use_container_width=True):
-                db.log_event(None, "evaluator", "sign_out", "Evaluator signed out")
                 st.session_state.evaluator_logged_in = False
                 st.session_state.evaluator_page = "Evaluator Dashboard"
                 st.rerun()
-        if st.sidebar.button("Switch role", use_container_width=True):
+        if st.sidebar.button("Switch workspace", use_container_width=True):
             switch_role(None)
-        render_status_badge()
     else:
-        st.sidebar.info("Select a workspace to start.")
+        st.sidebar.markdown("<div class='qai-side-profile'>Select a workspace to start.</div>", unsafe_allow_html=True)
 
 
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
@@ -813,7 +867,7 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
         pages.append("Pre-test")
         return pages
     pages += ["Learning Module", "AI Tutor Lab"]
-    if has_minimum_lesson_activity(student["id"]) and has_minimum_ai_interaction(student["id"]):
+    if learning_path_ready_for_posttest(student["id"]) and has_minimum_ai_interaction(student["id"]):
         pages.append("Post-test")
     if test_is_done(student["id"], "post"):
         pages.append("Satisfaction Survey")
@@ -1005,7 +1059,7 @@ def next_student_page(student: Dict[str, Any]) -> str:
         except Exception:
             pass
         return "Learning Module"
-    if not has_minimum_lesson_activity(sid):
+    if not learning_path_ready_for_posttest(sid):
         return "Learning Module"
     if not has_minimum_ai_interaction(sid):
         return "AI Tutor Lab"
@@ -1303,7 +1357,7 @@ def render_lesson_media(lesson_id: str) -> None:
         return
     st.markdown("<div class='qai-visual-card'>", unsafe_allow_html=True)
     st.markdown("### Visual explanation")
-    st.caption(media.get("caption", ""))
+    st.markdown(f"<div class='qai-big-idea'><b>Visual purpose:</b> {media.get('caption', '')}</div>", unsafe_allow_html=True)
     image_name = media.get("image")
     if image_name:
         image_path = LESSON_MEDIA_DIR / image_name
@@ -1536,10 +1590,16 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         set_current_lesson(student["id"], ids[idx + 1])
         st.rerun()
 
-    if has_minimum_lesson_activity(student["id"]) and has_minimum_ai_interaction(student["id"]):
-        st.success("Minimum learning and AI interaction requirements are complete. You may continue to the post-test when ready.")
+    if learning_path_ready_for_posttest(student["id"]) and has_minimum_ai_interaction(student["id"]):
+        st.success("Learning path and AI interaction requirements are complete. You may continue to the post-test when ready.")
         if st.button("Go to post-test", type="primary", use_container_width=True):
             set_student_page("Post-test")
+    else:
+        remaining = required_lesson_count_for_posttest() - lesson_completion_count(student["id"])
+        if remaining > 0:
+            st.info(f"Post-test is locked until the full learning path is complete. Remaining modules: {remaining}.")
+        elif not has_minimum_ai_interaction(student["id"]):
+            st.info("Post-test is locked until at least one AI Tutor interaction is recorded.")
 
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
@@ -1619,10 +1679,12 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         render_ai_usefulness_feedback(interaction_id, "tutor_lab")
         if tutor.mode == "llm_error":
             st.info("The external LLM was unavailable. A local hint was shown and the error was logged for the evaluator.")
-        if has_minimum_lesson_activity(student["id"]):
-            st.success("AI interaction recorded. If you have completed at least one learning reflection, you may continue to the post-test.")
+        if learning_path_ready_for_posttest(student["id"]):
+            st.success("AI interaction recorded. Your learning path is complete, so the post-test is available.")
             if st.button("Go to post-test", type="primary"):
                 set_student_page("Post-test")
+        else:
+            st.info("AI interaction recorded. Continue the learning path; the post-test unlocks after all modules are complete.")
 
 
 def render_survey(student: Dict[str, Any]) -> None:
