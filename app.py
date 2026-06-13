@@ -359,6 +359,100 @@ PROFESSIONAL_UX_CSS = """
 """
 st.markdown(PROFESSIONAL_UX_CSS, unsafe_allow_html=True)
 
+# -----------------------------------------------------------------------------
+# V7.1 visual hotfix: resolve duplicated CSS conflicts from v6/v7 layering
+# -----------------------------------------------------------------------------
+V7_1_VISUAL_HOTFIX_CSS = """
+<style>
+/* Remove Streamlit public toolbar/icons that appear as scattered marks in the UI. */
+[data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {display:none !important; visibility:hidden !important;}
+[data-testid="stHeader"] {background: rgba(7,7,26,0.92) !important; box-shadow:none !important;}
+
+/* Make the sidebar a single coherent dark navigation surface. */
+[data-testid="stSidebar"] {
+  background: #0d0d2b !important;
+  border-left: 1px solid rgba(255,255,255,0.10) !important;
+  border-right: none !important;
+  box-shadow: none !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+  background: #0d0d2b !important;
+  padding: 1rem 0.9rem !important;
+}
+[data-testid="stSidebar"] * {color: rgba(240,238,255,0.72) !important; opacity:1 !important;}
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] .qai-side-brand {
+  color: #f0eeff !important;
+  font-weight: 900 !important;
+}
+[data-testid="stSidebar"] .qai-side-sub,
+[data-testid="stSidebar"] .qai-side-section,
+[data-testid="stSidebar"] .qai-side-footer {
+  color: rgba(240,238,255,0.50) !important;
+}
+[data-testid="stSidebar"] .qai-side-profile {
+  background: rgba(255,255,255,0.055) !important;
+  border: 1px solid rgba(255,255,255,0.11) !important;
+  box-shadow: none !important;
+}
+[data-testid="stSidebar"] .qai-side-code {color:#a98fff !important; font-weight:900 !important;}
+[data-testid="stSidebar"] .qai-side-progress-label {color: rgba(240,238,255,0.62) !important;}
+[data-testid="stSidebar"] .qai-side-bar {background: rgba(255,255,255,0.12) !important; height: 7px !important;}
+[data-testid="stSidebar"] .qai-side-fill {background: linear-gradient(90deg,#7c5cff,#00d4aa) !important;}
+[data-testid="stSidebar"] .qai-side-next {
+  background: rgba(124,92,255,0.13) !important;
+  border: 1px solid rgba(124,92,255,0.32) !important;
+  border-left: 4px solid #7c5cff !important;
+  color: rgba(240,238,255,0.82) !important;
+}
+[data-testid="stSidebar"] .qai-side-lock {
+  color: rgba(240,238,255,0.38) !important;
+  border: 1px dashed rgba(255,255,255,0.12) !important;
+  border-radius: .7rem !important;
+  padding: .45rem !important;
+}
+[data-testid="stSidebar"] .qai-side-active-note {
+  color:#a98fff !important;
+  background: rgba(124,92,255,0.16) !important;
+  border-radius:.65rem !important;
+  padding:.35rem .55rem !important;
+}
+[data-testid="stSidebar"] .stButton button {
+  background: rgba(255,255,255,0.045) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  color: rgba(240,238,255,0.82) !important;
+  box-shadow: none !important;
+  border-radius: .85rem !important;
+  min-height: 2.45rem !important;
+  justify-content: flex-start !important;
+}
+[data-testid="stSidebar"] .stButton button:hover {
+  background: rgba(124,92,255,0.18) !important;
+  border-color: rgba(124,92,255,0.52) !important;
+  color: #ffffff !important;
+}
+
+/* Remove decorative quantum watermark that looked like stray symbols. */
+.qai-v7-banner::before {content: none !important; display:none !important;}
+.qai-side-brand::before {content:'ψ' !important; margin-right:8px !important;}
+
+/* Keep main surfaces dark and readable after older CSS blocks. */
+html, body, [data-testid="stAppViewContainer"], .stApp {
+  background: radial-gradient(circle at top left, rgba(124,92,255,0.14), transparent 34%), #07071a !important;
+  color:#f0eeff !important;
+}
+.block-container {max-width: 1180px !important; padding-top: 1.35rem !important;}
+.qai-hero, .qai-v7-banner {
+  background: linear-gradient(135deg, rgba(47,96,255,0.92), rgba(17,17,58,0.98)) !important;
+  border: 1px solid rgba(169,143,255,0.22) !important;
+  box-shadow: 0 24px 75px rgba(0,0,0,0.28) !important;
+}
+.qai-hero h1, .qai-hero p, .qai-v7-title, .qai-v7-sub {color:#ffffff !important; opacity:1 !important;}
+</style>
+"""
+st.markdown(V7_1_VISUAL_HOTFIX_CSS, unsafe_allow_html=True)
+
+
 
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
