@@ -1,1 +1,1 @@
-from main_app import render_test as render
+"""Student test page placeholder for pre/post-test migration."""

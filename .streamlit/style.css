@@ -188,3 +188,35 @@ html, body, .stApp {background:#f3f7fb !important; color:#0f172a !important;}
 .qai-v73-step {background:#f8fafc !important; color:#0f172a !important; border:1px solid #e2e8f0 !important;}
 .qai-v73-note {background:#ecfeff !important; color:#155e75 !important; border:1px solid #99f6e4 !important;}
 @media (max-width: 900px) {.qai-v74-grid{grid-template-columns:1fr;} [data-testid="stSidebar"]{display:block!important;}}
+
+/* V8.1 chat tutor and externalized-CSS cleanup */
+.qai-chat-context {
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 5px solid #2563eb;
+  color: #1e3a8a;
+  padding: 0.85rem 1rem;
+  border-radius: 0.95rem;
+  margin: 0.85rem 0 1rem 0;
+}
+.qai-chat-context span {color:#334155; font-size:.92rem;}
+.qai-chat-draft {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: .8rem .8rem 0 0;
+  padding: .65rem .8rem;
+  margin-top: .7rem;
+  color: #0f172a;
+}
+[data-testid="stChatMessage"] {
+  background: #ffffff;
+  border: 1px solid #dbe5f0;
+  border-radius: 1rem;
+  padding: .35rem .5rem;
+  margin: .45rem 0;
+  box-shadow: 0 6px 18px rgba(15,23,42,.04);
+}
+[data-testid="stChatInput"] textarea {
+  border-radius: 1rem !important;
+  border: 1px solid #bfdbfe !important;
+}

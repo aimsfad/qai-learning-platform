@@ -1,1 +1,1 @@
-from main_app import render_learning_module as render
+"""Student lesson page placeholder. Media helpers live in media_utils; full rendering will move here in V8.2."""
