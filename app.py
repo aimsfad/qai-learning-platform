@@ -1374,37 +1374,70 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
 
 
 def render_lesson_media(lesson_id: str) -> None:
-    """Render professionally designed instructional media for the selected module."""
+    """Render instructional media in separated blocks so visuals are easier to read."""
     media = LESSON_MEDIA.get(lesson_id)
+    lesson = content.lesson_by_id(lesson_id)
     if not media:
         return
-    st.markdown("<div class='qai-visual-card'>", unsafe_allow_html=True)
-    st.markdown("### Visual explanation")
-    st.markdown(f"<div class='qai-big-idea'><b>Visual purpose:</b> {media.get('caption', '')}</div>", unsafe_allow_html=True)
-    image_name = media.get("image")
-    if image_name:
-        image_path = LESSON_MEDIA_DIR / image_name
-        if image_path.exists():
-            st.image(str(image_path), use_container_width=True)
 
+    st.markdown("### Visual and media support")
+    st.caption("Each support item is separated into small blocks: first inspect the diagram, then compare it with code, then watch the short video.")
+
+    image_name = media.get("image")
+    image_path = LESSON_MEDIA_DIR / image_name if image_name else None
     video_name = media.get("video")
-    if video_name:
-        video_path = LESSON_MEDIA_DIR / video_name
-        if video_path.exists():
-            st.markdown("#### Micro-video explanation")
-            st.caption("Short animated explanation of the same concept. Use it after reading the visual, then ask the AI tutor to explain any unclear step.")
+    video_path = LESSON_MEDIA_DIR / video_name if video_name else None
+
+    tab_labels = ["Diagram", "Code map", "Micro-video", "What to notice"]
+    tabs = st.tabs(tab_labels)
+
+    with tabs[0]:
+        st.markdown(f"<div class='qai-big-idea'><b>Visual purpose:</b> {media.get('caption', '')}</div>", unsafe_allow_html=True)
+        if image_path and image_path.exists():
+            st.image(str(image_path), use_container_width=True)
+        if lesson.get("visual_steps"):
+            st.markdown("#### Read the diagram in this order")
+            cols = st.columns(len(lesson.get("visual_steps", [])))
+            for i, step in enumerate(lesson.get("visual_steps", []), start=1):
+                with cols[i - 1]:
+                    st.markdown(
+                        f"<div class='qai-dashboard-tile'><div class='qai-tile-value'>{i}</div><div class='qai-tile-label'>{step}</div></div>",
+                        unsafe_allow_html=True,
+                    )
+
+    with tabs[1]:
+        left, right = st.columns([1.05, 0.95])
+        with left:
+            st.markdown("#### Tiny Qiskit code")
+            st.code(lesson["qiskit_code"], language="python")
+        with right:
+            st.markdown("#### Code reading guide")
+            for point in lesson.get("code_focus", []):
+                st.markdown(f"- {point}")
+            st.markdown("#### State before measurement")
+            st.write(lesson.get("before_measurement", ""))
+            st.markdown("#### Classical output after measurement")
+            st.write(lesson.get("after_measurement", ""))
+
+    with tabs[2]:
+        st.markdown("#### Short animated explanation")
+        st.caption("Use the video after the diagram. If it does not load on Streamlit Cloud, open the browser controls or refresh once.")
+        if video_path and video_path.exists():
             try:
                 st.video(video_path.read_bytes(), format="video/mp4")
             except Exception:
                 st.video(str(video_path))
+        else:
+            st.info("No micro-video file was found for this module.")
 
-    if media.get("notice"):
-        st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice')}</div>", unsafe_allow_html=True)
-    resource_url = media.get("resource_url")
-    resource_label = media.get("resource_label", "Optional external resource")
-    if resource_url:
-        st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with tabs[3]:
+        st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
+        st.warning(lesson.get("misconception", ""))
+        st.info("Study tip: read the visual first, then inspect the code, then watch the short video, then ask the AI tutor only about the step you still find unclear.")
+        resource_url = media.get("resource_url")
+        resource_label = media.get("resource_label", "Optional external resource")
+        if resource_url:
+            st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
 
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
@@ -1502,53 +1535,71 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     if lesson["id"] in completed:
         st.success("This module is completed. You may review it or continue to the next module.")
 
-    st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
+    overview, concepts_tab, code_tab, media_tab, check_tab = st.tabs([
+        "Overview",
+        "Concept",
+        "Code and output",
+        "Visual and video",
+        "Check and reflect",
+    ])
 
-    col1, col2 = st.columns([1.05, 1])
-    with col1:
-        st.markdown("<div class='qai-lesson-panel'>", unsafe_allow_html=True)
-        st.markdown("<div class='qai-panel-title'>Concept scaffold</div>", unsafe_allow_html=True)
-        st.write(lesson["concept"])
-        st.markdown("#### Why this matters")
-        st.write(lesson["why_it_matters"])
-        if lesson.get("can_do"):
-            st.markdown("#### By the end you can")
-            st.markdown("<ul class='qai-focus-list'>" + "".join([f"<li>{o}</li>" for o in lesson.get("can_do", [])]) + "</ul>", unsafe_allow_html=True)
-        st.markdown("#### Misconception to avoid")
-        st.warning(lesson["misconception"])
+    with overview:
+        st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
+        a, b = st.columns([1.1, 0.9])
+        with a:
+            st.markdown("#### Core explanation")
+            st.write(lesson["concept"])
+            st.markdown("#### Why this matters")
+            st.write(lesson["why_it_matters"])
+        with b:
+            if lesson.get("can_do"):
+                st.markdown("#### By the end of this module you can")
+                st.markdown("<ul class='qai-focus-list'>" + "".join([f"<li>{o}</li>" for o in lesson.get("can_do", [])]) + "</ul>", unsafe_allow_html=True)
+            st.markdown("#### Misconception to avoid")
+            st.warning(lesson["misconception"])
         inline_ai_explain_button(student, lesson, "concept", lesson["concept"], f"concept_{lesson['id']}")
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    with col2:
-        st.markdown("<div class='qai-lesson-panel'>", unsafe_allow_html=True)
-        st.markdown("<div class='qai-panel-title'>Tiny Qiskit example</div>", unsafe_allow_html=True)
-        st.code(lesson["qiskit_code"], language="python")
-        if lesson.get("code_focus"):
+    with concepts_tab:
+        st.markdown("#### Concept scaffold")
+        st.info(lesson["objective"])
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("#### Before measurement")
+            st.write(lesson["before_measurement"])
+        with c2:
+            st.markdown("#### After measurement")
+            st.write(lesson["after_measurement"])
+        if lesson.get("visual_steps"):
+            st.markdown("#### Learn it step by step")
+            cols = st.columns(len(lesson.get("visual_steps", [])))
+            for i, step in enumerate(lesson.get("visual_steps", []), start=1):
+                with cols[i - 1]:
+                    st.markdown(f"<div class='qai-dashboard-tile'><div class='qai-tile-value'>{i}</div><div class='qai-tile-label'>{step}</div></div>", unsafe_allow_html=True)
+
+    with code_tab:
+        c1, c2 = st.columns([1.05, 0.95])
+        with c1:
+            st.markdown("#### Tiny Qiskit example")
+            st.code(lesson["qiskit_code"], language="python")
+        with c2:
             st.markdown("#### Code reading focus")
             for point in lesson.get("code_focus", []):
                 st.markdown(f"- {point}")
-        st.markdown("#### Before measurement")
-        st.write(lesson["before_measurement"])
-        st.markdown("#### After measurement")
-        st.write(lesson["after_measurement"])
-        inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
-        st.markdown("</div>", unsafe_allow_html=True)
+            inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
 
-    render_lesson_media(lesson["id"])
-    if lesson.get("visual_steps"):
-        st.markdown("### How to read the visual")
-        cols = st.columns(len(lesson.get("visual_steps", [])))
-        for i, step in enumerate(lesson.get("visual_steps", []), start=1):
-            with cols[i - 1]:
-                st.markdown(f"<div class='qai-dashboard-tile'><div class='qai-tile-value'>{i}</div><div class='qai-tile-label'>{step}</div></div>", unsafe_allow_html=True)
-    try:
-        db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
-    except Exception:
-        pass
+    with media_tab:
+        render_lesson_media(lesson["id"])
+        try:
+            db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
+        except Exception:
+            pass
 
-    st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
-    if lesson.get("check_question"):
-        st.info("Check your understanding: " + lesson.get("check_question"))
+    with check_tab:
+        st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
+        if lesson.get("check_question"):
+            st.info("Check your understanding: " + lesson.get("check_question"))
+        st.markdown("#### Reflection prompt")
+        st.write(lesson["reflective_prompt"])
 
     st.divider()
     st.markdown("### AI-supported activity inside this module")
