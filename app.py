@@ -161,6 +161,131 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
+V7_DESIGN_CSS = """
+<style>
+:root {
+  --v7-bg: #07071a;
+  --v7-bg2: #0d0d2b;
+  --v7-bg3: #11113a;
+  --v7-surface: rgba(255,255,255,0.055);
+  --v7-surface2: rgba(255,255,255,0.085);
+  --v7-border: rgba(255,255,255,0.11);
+  --v7-border2: rgba(255,255,255,0.18);
+  --v7-text1: #f0eeff;
+  --v7-text2: rgba(240,238,255,0.72);
+  --v7-text3: rgba(240,238,255,0.46);
+  --v7-purple: #7c5cff;
+  --v7-purple2: #a98fff;
+  --v7-teal: #00d4aa;
+  --v7-amber: #ffb547;
+  --v7-coral: #ff6b6b;
+}
+html, body, [data-testid="stAppViewContainer"] {
+  background: radial-gradient(circle at top left, rgba(124,92,255,0.18), transparent 36%), var(--v7-bg) !important;
+  color: var(--v7-text1) !important;
+}
+.block-container {max-width: 1280px !important; padding-top: 1.35rem !important;}
+[data-testid="stHeader"] {background: rgba(7,7,26,0.78) !important; backdrop-filter: blur(12px);}
+[data-testid="stSidebar"] {background: var(--v7-bg2) !important; border-left: 1px solid var(--v7-border) !important; border-right: none !important;}
+[data-testid="stSidebar"] * {color: var(--v7-text2) !important;}
+[data-testid="stSidebar"] .stButton button {
+  background: var(--v7-surface) !important;
+  border: 1px solid var(--v7-border) !important;
+  color: var(--v7-text2) !important;
+  border-radius: 0.75rem !important;
+  min-height: 2.35rem !important;
+  font-weight: 500 !important;
+}
+[data-testid="stSidebar"] .stButton button:hover {
+  background: rgba(124,92,255,0.16) !important;
+  border-color: rgba(124,92,255,0.45) !important;
+  color: var(--v7-purple2) !important;
+}
+div.stButton > button {
+  border-radius: 0.85rem !important;
+  border: 1px solid var(--v7-border2) !important;
+  background: var(--v7-surface) !important;
+  color: var(--v7-text1) !important;
+}
+div.stButton > button[kind="primary"], div.stButton > button[data-testid="baseButton-primary"] {
+  background: linear-gradient(135deg, var(--v7-purple), #5b50ff) !important;
+  border: none !important;
+  color: white !important;
+}
+.stTabs [data-baseweb="tab-list"] {gap: 0.45rem; background: var(--v7-bg2); border: 1px solid var(--v7-border); border-radius: 0.95rem; padding: 0.35rem;}
+.stTabs [data-baseweb="tab"] {border-radius: 0.75rem; color: var(--v7-text3) !important; padding: 0.45rem 0.85rem;}
+.stTabs [aria-selected="true"] {background: rgba(124,92,255,0.18) !important; color: var(--v7-purple2) !important;}
+[data-testid="stMetric"], .qai-card, .qai-lesson-panel, .qai-learning-shell, .qai-visual-card,
+.qai-dashboard-tile, .qai-path-card, .qai-check-card {
+  background: var(--v7-surface) !important;
+  border: 1px solid var(--v7-border) !important;
+  color: var(--v7-text1) !important;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.22) !important;
+}
+.qai-hero {
+  background: linear-gradient(135deg, rgba(124,92,255,0.95), rgba(17,17,58,0.98)) !important;
+  border: 1px solid rgba(169,143,255,0.25) !important;
+  box-shadow: 0 24px 75px rgba(0,0,0,0.34) !important;
+}
+.qai-hero h1, .qai-hero p {color: #fff !important;}
+.qai-side-brand {
+  font-size: 1.05rem; font-weight: 800; color: var(--v7-text1) !important;
+  padding: 0.7rem 0 0.1rem; letter-spacing: -0.02em;
+}
+.qai-side-brand::before {content:'ψ'; display:inline-flex; width:32px; height:32px; align-items:center; justify-content:center; margin-right:8px; border-radius:10px; background:rgba(124,92,255,0.18); color:var(--v7-purple2); border:1px solid rgba(124,92,255,0.45);}
+.qai-side-sub {font-size:0.77rem; color:var(--v7-text3) !important; line-height:1.45; padding-bottom:0.75rem; border-bottom:1px solid var(--v7-border);}
+.qai-side-profile {
+  background: var(--v7-surface) !important; border: 1px solid var(--v7-border) !important;
+  border-radius: 1rem; padding: 0.85rem; margin: 0.8rem 0; color: var(--v7-text2) !important;
+}
+.qai-side-code {font-size:0.72rem; color:var(--v7-purple2) !important; font-weight:700; margin-bottom:0.45rem;}
+.qai-side-progress-label {display:flex; justify-content:space-between; font-size:0.72rem; color:var(--v7-text3) !important; margin:0.35rem 0;}
+.qai-side-bar {height:5px; background:var(--v7-surface2); border-radius:99px; overflow:hidden; margin-bottom:0.55rem;}
+.qai-side-fill {height:100%; background:linear-gradient(90deg,var(--v7-purple),var(--v7-teal)); border-radius:99px;}
+.qai-side-next {background:rgba(0,212,170,0.10); border:1px solid rgba(0,212,170,0.22); color:var(--v7-text2) !important; border-radius:0.9rem; padding:0.75rem; font-size:0.78rem; margin-bottom:0.8rem;}
+.qai-side-section {font-size:0.68rem; color:var(--v7-text3) !important; text-transform:uppercase; letter-spacing:0.12em; margin:0.75rem 0 0.3rem;}
+.qai-side-active-note {font-size:0.72rem; color:var(--v7-purple2) !important; background:rgba(124,92,255,0.11); border-radius:0.65rem; padding:0.38rem 0.55rem; margin:0.2rem 0 0.35rem;}
+.qai-side-lock {font-size:0.72rem; color:var(--v7-text3) !important; border:1px dashed var(--v7-border); border-radius:0.7rem; padding:0.45rem; margin:0.25rem 0;}
+.qai-side-footer {font-size:0.68rem; color:var(--v7-text3) !important; line-height:1.4; margin-top:0.8rem;}
+.qai-v7-banner {
+  position: relative; overflow: hidden; border-radius: 1.25rem; padding: 1.45rem 1.6rem;
+  background: linear-gradient(135deg, var(--v7-bg3), rgba(124,92,255,0.16));
+  border: 1px solid var(--v7-border2); margin-bottom: 1rem;
+}
+.qai-v7-banner::before {content:'⟨ψ|φ⟩'; position:absolute; left:1.1rem; top:0.7rem; font-family:monospace; font-size:4rem; color:rgba(124,92,255,0.16); letter-spacing:-0.08em;}
+.qai-v7-kicker {font-family:monospace; color:var(--v7-purple2); font-size:0.76rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;}
+.qai-v7-title {font-size:1.35rem; font-weight:800; color:var(--v7-text1); margin:0.25rem 0;}
+.qai-v7-sub {font-size:0.92rem; color:var(--v7-text2); line-height:1.55;}
+.qai-v7-grid {display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.85rem; margin:1rem 0;}
+.qai-v7-stat {background:var(--v7-surface); border:1px solid var(--v7-border); border-radius:1rem; padding:1rem;}
+.qai-v7-stat-value {font-size:1.55rem; font-family:monospace; font-weight:800; color:var(--v7-text1);}
+.qai-v7-stat-label {font-size:0.78rem; color:var(--v7-text3); margin-top:0.15rem;}
+.qai-v7-module-grid {display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.85rem; margin:1rem 0;}
+.qai-v7-module {background:var(--v7-surface); border:1px solid var(--v7-border); border-radius:1rem; padding:1rem; min-height:8rem;}
+.qai-v7-module-active {border-color:rgba(124,92,255,0.55); background:rgba(124,92,255,0.13);}
+.qai-v7-module-done {border-color:rgba(0,212,170,0.35); background:rgba(0,212,170,0.08);}
+.qai-v7-module-num {font-family:monospace; font-size:0.72rem; color:var(--v7-purple2); font-weight:800;}
+.qai-v7-module-title {font-weight:800; margin:0.28rem 0; color:var(--v7-text1);}
+.qai-v7-module-meta {font-size:0.76rem; color:var(--v7-text3);}
+.qai-v7-progress {height:4px; background:var(--v7-surface2); border-radius:99px; margin-top:0.75rem; overflow:hidden;}
+.qai-v7-progress > div {height:100%; background:linear-gradient(90deg,var(--v7-purple),var(--v7-teal)); border-radius:99px;}
+.qai-v7-two-col {display:grid; grid-template-columns:1fr 380px; gap:1rem; margin-top:1rem;}
+.qai-v7-ai-card {background:linear-gradient(135deg, rgba(124,92,255,0.12), rgba(0,212,170,0.08)); border:1px solid var(--v7-border); border-radius:1rem; padding:1rem;}
+.qai-v7-ai-title {font-weight:800; color:var(--v7-text1); margin-bottom:0.45rem;}
+.qai-v7-ai-bubble {background:rgba(124,92,255,0.12); border:1px solid rgba(124,92,255,0.25); border-radius:0.9rem; padding:0.85rem; color:var(--v7-text2); font-size:0.88rem; line-height:1.55;}
+.qai-v7-chip {display:inline-flex; padding:0.22rem 0.6rem; border-radius:999px; background:rgba(124,92,255,0.16); color:var(--v7-purple2); border:1px solid rgba(124,92,255,0.30); font-size:0.72rem; margin:0.15rem 0.25rem 0.15rem 0;}
+.qai-module-title, .qai-panel-title, .qai-card-title, .qai-tile-value {color:var(--v7-text1) !important;}
+.qai-module-meta, .qai-tile-label, .qai-card-mini, .qai-small-muted, .qai-muted {color:var(--v7-text3) !important;}
+.qai-big-idea {background:rgba(124,92,255,0.12) !important; border:1px solid rgba(124,92,255,0.25) !important; color:var(--v7-text2) !important; border-radius:1rem !important; padding:1rem !important;}
+.qai-check-card {background:rgba(0,212,170,0.09) !important; border-color:rgba(0,212,170,0.28) !important;}
+.stAlert {background:var(--v7-surface) !important; color:var(--v7-text2) !important; border:1px solid var(--v7-border) !important; border-radius:0.95rem !important;}
+code, pre {background:#0a0a20 !important; color:#a98fff !important; border-color:var(--v7-border) !important;}
+@media (max-width: 1050px) {.qai-v7-grid,.qai-v7-module-grid,.qai-v7-two-col{grid-template-columns:1fr;} .block-container{padding-left:0.8rem!important;padding-right:0.8rem!important;}}
+</style>
+"""
+st.markdown(V7_DESIGN_CSS, unsafe_allow_html=True)
+
+
 PROFESSIONAL_UX_CSS = """
 <style>
 :root {
@@ -977,26 +1102,19 @@ def require_student(func, *args) -> None:
 
 
 def render_student_home(student: Optional[Dict[str, Any]]) -> None:
-    hero("Student Dashboard", "A guided quantum programming workspace with progress, contextual AI support, and research-grade learning analytics.")
+    hero("Student Dashboard", "A professional quantum programming workspace with guided learning, contextual AI support, and research-grade analytics.")
     if not student:
         st.markdown("""
-        <div class='qai-hero-grid'>
-          <div class='qai-glass-card'>
-            <div class='qai-module-kicker'>Guided pilot workflow</div>
-            <div class='qai-module-title'>Learn Qiskit step by step</div>
-            <p>The platform combines a structured learning path, short visual explanations, pre/post assessment, and an AI tutor that encourages reasoning rather than copy-paste answers.</p>
-            <span class='qai-stage-chip'>6 modules</span><span class='qai-stage-chip'>AI tutor</span><span class='qai-stage-chip'>Progress tracking</span>
-          </div>
-          <div class='qai-glass-card'>
-            <div class='qai-panel-title'>Recommended path</div>
-            <ol>
-              <li>Create or sign in to your account</li>
-              <li>Complete the pre-test</li>
-              <li>Follow the learning path</li>
-              <li>Use the AI tutor when needed</li>
-              <li>Complete the post-test and survey</li>
-            </ol>
-          </div>
+        <div class='qai-v7-banner'>
+          <div class='qai-v7-kicker'>Guided pilot workflow</div>
+          <div class='qai-v7-title'>Learn introductory Qiskit through a structured AI-supported path</div>
+          <div class='qai-v7-sub'>Start with the pre-test, complete six compact modules, use the AI tutor for hints and explanations, then complete the post-test and survey.</div>
+        </div>
+        <div class='qai-v7-grid'>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>6</div><div class='qai-v7-stat-label'>Guided modules</div></div>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>AI</div><div class='qai-v7-stat-label'>Contextual tutor</div></div>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>Pre/Post</div><div class='qai-v7-stat-label'>Learning evidence</div></div>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>Logs</div><div class='qai-v7-stat-label'>Research analytics</div></div>
         </div>
         """, unsafe_allow_html=True)
         c1, c2 = st.columns(2)
@@ -1012,7 +1130,6 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
                 st.rerun()
         return
 
-    st.markdown(f"<div class='qai-ok'><b>Signed in:</b> {student['full_name']} ({student['participant_code']})</div>", unsafe_allow_html=True)
     if st.session_state.get("new_participant_code"):
         st.success("Account created successfully. Save your participant code before continuing.")
         render_participant_code_box(st.session_state["new_participant_code"])
@@ -1030,26 +1147,30 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     next_page = next_student_page(student)
     current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
     current_lesson = content.lesson_by_id(current_lesson_id)
+    learning_pct = int(round(100 * modules_done / max(len(content.LESSONS), 1)))
 
     st.markdown(
         f"""
-        <div class='qai-dashboard-grid'>
-          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{progress_percent:.0f}%</div><div class='qai-tile-label'>Overall study workflow</div></div>
-          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{modules_done}/{len(content.LESSONS)}</div><div class='qai-tile-label'>Learning modules completed</div></div>
-          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{ai_count}</div><div class='qai-tile-label'>AI tutor interactions recorded</div></div>
+        <div class='qai-v7-banner'>
+          <div class='qai-v7-kicker'>Signed in · {student['participant_code']}</div>
+          <div class='qai-v7-title'>Continue from: {current_lesson.get('short_title', current_lesson['title'])}</div>
+          <div class='qai-v7-sub'>Next required action: <b>{next_action_text(student)}</b></div>
+          <div style='margin-top:.85rem;'>
+            <span class='qai-v7-chip'>Workflow {progress_percent:.0f}%</span>
+            <span class='qai-v7-chip'>Learning path {modules_done}/{len(content.LESSONS)}</span>
+            <span class='qai-v7-chip'>AI interactions {ai_count}</span>
+          </div>
         </div>
-        <div class='qai-learning-shell'>
-          <div class='qai-module-kicker'>Resume point</div>
-          <div class='qai-module-title'>{current_lesson.get('short_title', current_lesson['title'])}</div>
-          <div class='qai-module-meta'>Next required action: <b>{next_action_text(student)}</b></div>
+        <div class='qai-v7-grid'>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{progress_percent:.0f}%</div><div class='qai-v7-stat-label'>Overall study workflow</div></div>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{modules_done}/{len(content.LESSONS)}</div><div class='qai-v7-stat-label'>Learning modules completed</div></div>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{learning_pct}%</div><div class='qai-v7-stat-label'>Learning path progress</div></div>
+          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{ai_count}</div><div class='qai-v7-stat-label'>AI tutor interactions recorded</div></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.progress(progress_percent / 100, text=f"Overall progress: {progress_percent:.0f}%")
-    render_completion_requirements(student)
 
-    st.divider()
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button(f"Continue: {next_page}", type="primary", use_container_width=True):
@@ -1063,12 +1184,47 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         if st.button("AI Tutor Lab", use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
             set_student_page("AI Tutor Lab")
 
+    render_completion_requirements(student)
+
+    progress = db.get_lesson_progress(student["id"])
+    completed = set(progress[progress["completed"] == 1]["lesson_id"].tolist()) if not progress.empty else set()
+    module_cards = []
+    ids = [lesson["id"] for lesson in content.LESSONS]
+    for idx, lesson in enumerate(content.LESSONS, start=1):
+        status_class = "qai-v7-module-done" if lesson["id"] in completed else ("qai-v7-module-active" if lesson["id"] == current_lesson_id else "")
+        pct = 100 if lesson["id"] in completed else (45 if lesson["id"] == current_lesson_id else 0)
+        badge = "Completed" if lesson["id"] in completed else ("Current" if lesson["id"] == current_lesson_id else lesson.get("level", "Module"))
+        module_cards.append(f"""
+        <div class='qai-v7-module {status_class}'>
+          <div class='qai-v7-module-num'>Module {idx} · {badge}</div>
+          <div class='qai-v7-module-title'>{lesson.get('short_title', lesson['title'])}</div>
+          <div class='qai-v7-module-meta'>{lesson.get('duration','')} · {', '.join(lesson.get('concepts', [])[:2])}</div>
+          <div class='qai-v7-progress'><div style='width:{pct}%;'></div></div>
+        </div>
+        """)
+    st.markdown("<h3 style='margin-top:1.2rem;color:var(--v7-text1);'>Learning modules</h3><div class='qai-v7-module-grid'>" + "".join(module_cards) + "</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <div class='qai-v7-two-col'>
+          <div class='qai-v7-ai-card'>
+            <div class='qai-v7-ai-title'>Recent learning activity</div>
+            <div class='qai-v7-ai-bubble'>The platform tracks pre-test, module progress, AI use, post-test, and survey completion. This keeps the learning path clear and gives the evaluator research-grade evidence of student progress.</div>
+          </div>
+          <div class='qai-v7-ai-card'>
+            <div class='qai-v7-ai-title'>AI Tutor context</div>
+            <div class='qai-v7-ai-bubble'>Current context: <b>{current_lesson.get('short_title', current_lesson['title'])}</b><br>Use AI for explanations, hints, visual interpretation, or one reflective question.</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if st.button("Sign out", use_container_width=True):
         db.log_event(student["id"], "student", "sign_out", "Student signed out from home")
         st.session_state.student_id = None
         st.session_state.student_page = "Student Home"
         st.rerun()
-
 
 def next_student_page(student: Dict[str, Any]) -> str:
     sid = student["id"]
