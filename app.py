@@ -285,6 +285,47 @@ code, pre {background:#0a0a20 !important; color:#a98fff !important; border-color
 """
 st.markdown(V7_DESIGN_CSS, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* v7.2 media and readability corrections */
+.qai-side-brand::before {content:'QAI' !important; font-size:0.62rem !important; letter-spacing:0.02em !important;}
+.qai-v7-banner::before {content:'' !important; display:none !important;}
+:root {
+  --v7-bg: #10142a;
+  --v7-bg2: #151a35;
+  --v7-bg3: #1b2140;
+  --v7-surface: rgba(255,255,255,0.075);
+  --v7-surface2: rgba(255,255,255,0.115);
+  --v7-border: rgba(255,255,255,0.16);
+  --v7-border2: rgba(255,255,255,0.24);
+  --v7-text1: #fbfcff;
+  --v7-text2: #d7def5;
+  --v7-text3: #aeb8d6;
+}
+html, body, [data-testid="stAppViewContainer"] {background:#10142a !important;}
+section[data-testid="stSidebar"] {background:#151a35 !important;}
+section[data-testid="stSidebar"] * {color:#f2f5ff !important; opacity:1 !important;}
+.block-container p, .block-container li, .block-container span, .block-container div {color:inherit;}
+.qai-big-idea, .qai-ux-note, .qai-interactive, .qai-check-card, .qai-ai-actions {
+  color:#eef3ff !important;
+  background:rgba(255,255,255,0.08) !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+}
+.stTabs [data-baseweb="tab-list"] {gap:0.4rem;}
+.stTabs [data-baseweb="tab"] {
+  background:rgba(255,255,255,0.06) !important;
+  border:1px solid rgba(255,255,255,0.16) !important;
+  border-radius:0.8rem !important;
+  color:#eef3ff !important;
+  padding:0.55rem 0.8rem !important;
+}
+.stTabs [aria-selected="true"] {background:rgba(124,92,255,0.35) !important;}
+[data-testid="stImage"] img, video {border-radius:1rem !important; border:1px solid rgba(255,255,255,0.14) !important; background:#ffffff !important;}
+[data-testid="stAlert"] {color:#eef3ff !important; background:rgba(255,255,255,0.08) !important; border-color:rgba(255,255,255,0.18) !important;}
+</style>
+""", unsafe_allow_html=True)
+
+
 
 PROFESSIONAL_UX_CSS = """
 <style>
@@ -1624,70 +1665,53 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
 
 
 def render_lesson_media(lesson_id: str) -> None:
-    """Render instructional media in separated blocks so visuals are easier to read."""
+    """Render the real lesson image and the real MP4 video prominently."""
     media = LESSON_MEDIA.get(lesson_id)
     lesson = content.lesson_by_id(lesson_id)
     if not media:
+        st.warning(f"No media mapping was found for lesson: {lesson_id}")
         return
 
-    st.markdown("### Visual and media support")
-    st.caption("Each support item is separated into small blocks: first inspect the diagram, then compare it with code, then watch the short video.")
-
     image_name = media.get("image")
-    image_path = LESSON_MEDIA_DIR / image_name if image_name else None
     video_name = media.get("video")
+    image_path = LESSON_MEDIA_DIR / image_name if image_name else None
     video_path = LESSON_MEDIA_DIR / video_name if video_name else None
 
-    tab_labels = ["Diagram", "Code map", "Micro-video", "What to notice"]
-    tabs = st.tabs(tab_labels)
+    st.markdown("### Visual and video explanation")
+    st.markdown(
+        f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', '')}</div>",
+        unsafe_allow_html=True,
+    )
 
-    with tabs[0]:
-        st.markdown(f"<div class='qai-big-idea'><b>Visual purpose:</b> {media.get('caption', '')}</div>", unsafe_allow_html=True)
+    media_col, video_col = st.columns([1.08, 0.92])
+    with media_col:
+        st.markdown("#### Diagram / visual support")
         if image_path and image_path.exists():
-            st.image(str(image_path), use_container_width=True)
+            st.image(str(image_path), use_container_width=True, caption=f"{lesson.get('title', 'Lesson')} visual")
+        else:
+            st.error(f"Image file not found: {image_name}")
         if lesson.get("visual_steps"):
-            st.markdown("#### Read the diagram in this order")
-            cols = st.columns(len(lesson.get("visual_steps", [])))
+            st.markdown("##### Read it in this order")
             for i, step in enumerate(lesson.get("visual_steps", []), start=1):
-                with cols[i - 1]:
-                    st.markdown(
-                        f"<div class='qai-dashboard-tile'><div class='qai-tile-value'>{i}</div><div class='qai-tile-label'>{step}</div></div>",
-                        unsafe_allow_html=True,
-                    )
+                st.markdown(f"**{i}.** {step}")
 
-    with tabs[1]:
-        left, right = st.columns([1.05, 0.95])
-        with left:
-            st.markdown("#### Tiny Qiskit code")
-            st.code(lesson["qiskit_code"], language="python")
-        with right:
-            st.markdown("#### Code reading guide")
-            for point in lesson.get("code_focus", []):
-                st.markdown(f"- {point}")
-            st.markdown("#### State before measurement")
-            st.write(lesson.get("before_measurement", ""))
-            st.markdown("#### Classical output after measurement")
-            st.write(lesson.get("after_measurement", ""))
-
-    with tabs[2]:
-        st.markdown("#### Short animated explanation")
-        st.caption("Use the video after the diagram. If it does not load on Streamlit Cloud, open the browser controls or refresh once.")
+    with video_col:
+        st.markdown("#### Micro-video")
         if video_path and video_path.exists():
             try:
                 st.video(video_path.read_bytes(), format="video/mp4")
             except Exception:
                 st.video(str(video_path))
+            st.caption(f"Loaded video: `{video_name}`")
         else:
-            st.info("No micro-video file was found for this module.")
+            st.error(f"Video file not found: {video_name}")
 
-    with tabs[3]:
-        st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
-        st.warning(lesson.get("misconception", ""))
-        st.info("Study tip: read the visual first, then inspect the code, then watch the short video, then ask the AI tutor only about the step you still find unclear.")
-        resource_url = media.get("resource_url")
-        resource_label = media.get("resource_label", "Optional external resource")
-        if resource_url:
-            st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
+    st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
+    st.info("The diagram and the video are now displayed directly in the lesson, not hidden inside a separate storyboard image.")
+    resource_url = media.get("resource_url")
+    resource_label = media.get("resource_label", "Optional external resource")
+    if resource_url:
+        st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
 
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
@@ -1785,13 +1809,20 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     if lesson["id"] in completed:
         st.success("This module is completed. You may review it or continue to the next module.")
 
-    overview, concepts_tab, code_tab, media_tab, check_tab = st.tabs([
+    media_tab, overview, concepts_tab, code_tab, check_tab = st.tabs([
+        "Visual and video",
         "Overview",
         "Concept",
         "Code and output",
-        "Visual and video",
         "Check and reflect",
     ])
+
+    with media_tab:
+        render_lesson_media(lesson["id"])
+        try:
+            db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
+        except Exception:
+            pass
 
     with overview:
         st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
@@ -1836,13 +1867,6 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             for point in lesson.get("code_focus", []):
                 st.markdown(f"- {point}")
             inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
-
-    with media_tab:
-        render_lesson_media(lesson["id"])
-        try:
-            db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
-        except Exception:
-            pass
 
     with check_tab:
         st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
