@@ -1,1 +1,1 @@
-from main_app import render_results_dashboard as render
+"""Evaluator analytics page placeholder for staged modularization."""

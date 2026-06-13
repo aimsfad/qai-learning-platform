@@ -15,3 +15,8 @@ Upload the package files to the existing GitHub branch, merge, and reboot Stream
 
 ## Next step
 In v8.1, page functions can be gradually moved from `main_app.py` into `pages/student/` and `pages/evaluator/` without changing the database layer.
+
+
+## v8.1 update
+
+CSS is now fully externalized and the AI Tutor Lab uses a continuous chat interface while preserving research logging.

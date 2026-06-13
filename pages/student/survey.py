@@ -1,1 +1,1 @@
-from main_app import render_survey as render
+"""Student survey page placeholder for staged modularization."""

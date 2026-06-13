@@ -17,144 +17,6 @@ import db
 import feedback_engine
 from security import hash_password, verify_password
 
-PROFESSIONAL_UX_CSS = """
-<style>
-:root {
-  --qai-deep: #0f1b3d;
-  --qai-accent: #2563eb;
-  --qai-cyan: #0ea5e9;
-  --qai-soft: #eff6ff;
-  --qai-panel: #ffffff;
-  --qai-line: #dbe4ef;
-  --qai-muted: #64748b;
-}
-.qai-hero {
-  background: radial-gradient(circle at top left, #2f60ff 0%, #172554 42%, #0f172a 100%) !important;
-  border: none !important;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.20) !important;
-}
-.qai-hero h1 {letter-spacing: -0.035em;}
-.qai-glass-card {
-  background: rgba(255,255,255,0.92); border: 1px solid var(--qai-line);
-  border-radius: 1.25rem; padding: 1.1rem 1.2rem;
-  box-shadow: 0 16px 36px rgba(15,23,42,0.08); margin: 0.75rem 0;
-}
-.qai-hero-grid {display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin: 0.85rem 0 1rem 0;}
-.qai-stage-chip {display:inline-flex; align-items:center; gap:0.4rem; background:#eef2ff; color:#172554; border:1px solid #c7d2fe; padding:0.25rem 0.55rem; border-radius:999px; font-size:0.78rem; font-weight:800; margin:0.15rem 0.2rem 0.15rem 0;}
-.qai-learning-shell {background: linear-gradient(180deg, #f8fbff 0%, #ffffff 80%); border: 1px solid var(--qai-line); border-radius: 1.4rem; padding: 1rem; margin: 0.8rem 0 1.2rem 0; box-shadow: 0 20px 50px rgba(15,23,42,0.06);}
-.qai-module-header {display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; background:#ffffff; border:1px solid var(--qai-line); border-radius:1.15rem; padding:1rem 1.1rem; margin:0.6rem 0 1rem 0;}
-.qai-module-kicker {font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:#2563eb; font-weight:900; margin-bottom:0.25rem;}
-.qai-module-title {font-size:1.45rem; font-weight:900; color:#0f172a; letter-spacing:-0.025em;}
-.qai-module-meta {font-size:0.86rem; color:#64748b; margin-top:0.25rem;}
-.qai-concept-pill {background:#ecfeff; border:1px solid #a5f3fc; color:#155e75; border-radius:999px; padding:0.22rem 0.55rem; font-size:0.76rem; font-weight:800; display:inline-block; margin:0.15rem;}
-.qai-path-card {transition: transform .14s ease, box-shadow .14s ease;}
-.qai-path-card:hover {transform: translateY(-2px); box-shadow: 0 14px 32px rgba(15,23,42,0.08);}
-.qai-path-card .qai-card-title {font-weight:900; color:#0f172a; margin-top:0.2rem;}
-.qai-path-card .qai-card-mini {font-size:0.78rem; color:#64748b; margin-top:0.35rem;}
-.qai-lesson-panel {background:#ffffff; border:1px solid var(--qai-line); border-radius:1.1rem; padding:1rem 1.05rem; height:100%; box-shadow:0 12px 28px rgba(15,23,42,0.05);}
-.qai-panel-title {font-size:0.9rem; font-weight:900; color:#172554; text-transform:uppercase; letter-spacing:0.045em; margin-bottom:0.45rem;}
-.qai-big-idea {background:linear-gradient(90deg,#eef2ff,#ecfeff); border:1px solid #bfdbfe; border-left:6px solid #2563eb; border-radius:1rem; padding:0.9rem 1rem; color:#1e293b; font-weight:650; margin:0.7rem 0;}
-.qai-focus-list li {margin-bottom:0.28rem;}
-.qai-visual-card {background:#ffffff; border:1px solid var(--qai-line); border-radius:1.2rem; padding:1rem; box-shadow: 0 16px 36px rgba(15,23,42,0.06); margin:1rem 0;}
-.qai-check-card {background:#fff7ed; border:1px solid #fed7aa; border-radius:1rem; padding:0.95rem 1rem; margin:0.8rem 0;}
-.qai-ai-actions {background:#f8fafc; border:1px dashed #93c5fd; border-radius:1rem; padding:0.85rem 1rem; margin:0.75rem 0;}
-.qai-dashboard-grid {display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.8rem; margin:1rem 0;}
-.qai-dashboard-tile {background:#fff; border:1px solid var(--qai-line); border-radius:1.1rem; padding:1rem; box-shadow:0 10px 24px rgba(15,23,42,0.05);}
-.qai-tile-value {font-size:1.35rem; font-weight:900; color:#172554;}
-.qai-tile-label {font-size:0.84rem; color:#64748b; margin-top:0.2rem;}
-.qai-sticky-progress {border-radius:1.1rem !important; border:1px solid #bfdbfe !important; background:rgba(255,255,255,0.98) !important;}
-[data-testid="stSidebar"] {background: linear-gradient(180deg,#f7faff 0%, #eef4ff 100%) !important; border-right: 1px solid #d8e2ef !important;} 
-[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding: 1rem 0.9rem !important;}
-[data-testid="stSidebar"] h1 {font-size: 1.05rem !important; font-weight: 900 !important; color:#0f172a !important; margin-bottom:0.35rem !important;}
-[data-testid="stSidebar"] .stButton button {
-  border: 1px solid #cbd5e1 !important; background:#ffffff !important; color:#172042 !important;
-  min-height: 2.55rem !important; padding: 0.42rem 0.65rem !important; font-size: 0.88rem !important;
-  border-radius: 0.85rem !important; text-align: left !important; justify-content: flex-start !important;
-  box-shadow: 0 6px 14px rgba(15,23,42,0.04) !important;
-}
-[data-testid="stSidebar"] .stButton button:hover {border-color:#2563eb !important; background:#eff6ff !important;}
-.qai-side-brand {font-weight:900; letter-spacing:-0.02em; color:#0f172a; font-size:1.05rem; margin-bottom:0.3rem;}
-.qai-side-sub {font-size:0.78rem; color:#64748b; margin-bottom:0.8rem;}
-.qai-side-profile {background:#ffffff; border:1px solid #dbe4ef; border-radius:1rem; padding:0.8rem 0.9rem; margin:0.65rem 0; box-shadow:0 10px 24px rgba(15,23,42,0.06);}
-.qai-side-code {font-size:0.85rem; color:#0f766e; font-weight:900; margin-bottom:0.35rem;}
-.qai-side-progress-label {display:flex; justify-content:space-between; font-size:0.78rem; color:#475569; margin-bottom:0.25rem;}
-.qai-side-bar {height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin:0.25rem 0 0.45rem 0;}
-.qai-side-fill {height:100%; background:linear-gradient(90deg,#2563eb,#06b6d4); border-radius:999px;}
-.qai-side-next {background:#eff6ff; border:1px solid #bfdbfe; border-left:4px solid #2563eb; border-radius:0.9rem; padding:0.65rem 0.75rem; color:#1e3a8a; font-size:0.8rem; line-height:1.3; margin:0.6rem 0;}
-.qai-side-section {font-size:0.72rem; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; font-weight:900; margin:0.9rem 0 0.35rem 0;}
-.qai-side-lock {font-size:0.76rem; color:#94a3b8; padding:0.38rem 0.15rem;}
-.qai-side-active-note {font-size:0.75rem; color:#2563eb; font-weight:800; margin:-0.15rem 0 0.35rem 0.2rem;}
-.qai-side-footer {font-size:0.72rem; color:#64748b; margin-top:0.7rem;}
-@media (max-width: 900px) { .qai-hero-grid, .qai-dashboard-grid {grid-template-columns:1fr;} .qai-module-header {display:block;} }
-</style>
-"""
-st.markdown(PROFESSIONAL_UX_CSS, unsafe_allow_html=True)
-
-
-
-
-CLEAN_V73_CSS = """
-<style>
-/* v7.3 clean professional readable theme */
-:root {
-  --qai-bg-main: #f4f7fb;
-  --qai-bg-side: #eef3fb;
-  --qai-card-bg: #ffffff;
-  --qai-text-strong: #0f172a;
-  --qai-text-soft: #475569;
-  --qai-brand-blue: #2563eb;
-  --qai-brand-indigo: #4338ca;
-  --qai-brand-teal: #0f766e;
-}
-html, body, .stApp, [data-testid="stAppViewContainer"] {
-  background: var(--qai-bg-main) !important;
-  color: var(--qai-text-strong) !important;
-}
-[data-testid="stHeader"] {background: rgba(244,247,251,.92) !important; backdrop-filter: blur(10px) !important;}
-[data-testid="stToolbar"] {display:none !important;}
-.block-container {max-width: 1160px !important; padding-top: 1rem !important;}
-[data-testid="stSidebar"] {background: var(--qai-bg-side) !important; border-right: 1px solid #d8e2ef !important;}
-[data-testid="stSidebar"] * {color: var(--qai-text-strong) !important; opacity: 1 !important;}
-.qai-side-brand {display:flex; align-items:center; gap:.65rem; font-weight:900 !important; color:#0f172a !important; margin-bottom:.25rem;}
-.qai-side-brand::before {content:'QAI' !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; width:38px !important; height:38px !important; border-radius:12px !important; background:linear-gradient(135deg,#2563eb,#0f766e) !important; color:white !important; font-size:.72rem !important; font-weight:900 !important; margin-right:0 !important;}
-.qai-side-sub {color:#475569 !important; font-size:.82rem !important; line-height:1.55 !important;}
-.qai-side-profile, .qai-side-next, .qai-side-lock, .qai-side-active-note {
-  background:#ffffff !important; border:1px solid #d8e2ef !important; color:#0f172a !important; border-radius:1rem !important; box-shadow:0 8px 24px rgba(15,23,42,.05) !important;
-}
-.qai-side-code {color:#2563eb !important;}
-.qai-side-progress-label, .qai-side-profile div, .qai-side-next, .qai-side-active-note {color:#334155 !important;}
-[data-testid="stSidebar"] .stButton button {
-  background:#ffffff !important; border:1px solid #cbd5e1 !important; color:#0f172a !important; box-shadow:none !important; min-height:2.35rem !important; border-radius:.85rem !important; font-weight:650 !important;
-}
-[data-testid="stSidebar"] .stButton button:hover {background:#eef6ff !important; border-color:#2563eb !important; color:#1d4ed8 !important;}
-.qai-hero, .qai-v7-banner {background:linear-gradient(135deg,#2563eb,#172554) !important; color:#ffffff !important; border:none !important;}
-.qai-hero h1, .qai-hero p, .qai-v7-title, .qai-v7-sub {color:white !important; opacity:1 !important;}
-.qai-card, .qai-learning-shell, .qai-module-header, .qai-lesson-panel, .qai-visual-card, .qai-dashboard-tile, .qai-path-card, .qai-v73-card, .qai-v73-media-card {
-  background:#ffffff !important; border:1px solid #d8e2ef !important; color:#0f172a !important; box-shadow:0 10px 28px rgba(15,23,42,.06) !important;
-}
-.qai-module-title, .qai-panel-title, .qai-card-title, .qai-tile-value, h1, h2, h3, h4 {color:#0f172a !important;}
-.qai-module-meta, .qai-tile-label, .qai-card-mini, .qai-muted, .qai-small-muted, p, li {color:#475569 !important;}
-.qai-big-idea {background:#eef6ff !important; border:1px solid #bfdbfe !important; border-left:6px solid #2563eb !important; color:#1e3a8a !important; border-radius:1rem !important;}
-.qai-concept-pill {background:#ecfeff !important; border:1px solid #99f6e4 !important; color:#0f766e !important;}
-.qai-check-card {background:#fff7ed !important; border:1px solid #fed7aa !important; color:#7c2d12 !important;}
-.qai-ai-actions {background:#f8fafc !important; border:1px dashed #93c5fd !important; color:#334155 !important;}
-.stTabs [data-baseweb="tab-list"] {background:#ffffff !important; border:1px solid #d8e2ef !important; border-radius:1rem !important; padding:.35rem !important;}
-.stTabs [data-baseweb="tab"] {background:#f8fafc !important; color:#334155 !important; border-radius:.8rem !important; border:1px solid #e2e8f0 !important;}
-.stTabs [aria-selected="true"] {background:#2563eb !important; color:white !important;}
-.qai-v73-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin:1rem 0;}
-.qai-v73-card {border-radius:1.1rem; padding:1rem;}
-.qai-v73-card h4 {margin:.1rem 0 .55rem 0; font-size:1rem;}
-.qai-v73-card p {margin:.2rem 0; line-height:1.65;}
-.qai-v73-step {display:flex; gap:.65rem; align-items:flex-start; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.85rem; padding:.75rem; margin:.45rem 0;}
-.qai-v73-badge {min-width:28px; height:28px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:#2563eb; color:#fff; font-weight:900; font-size:.82rem;}
-.qai-v73-diagram {font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:#0f172a; color:#e0f2fe; border-radius:.9rem; padding:1rem; line-height:1.85; overflow:auto; border:1px solid #334155;}
-.qai-v73-video-box {background:#ffffff; border:1px solid #d8e2ef; border-radius:1rem; padding:.8rem;}
-.qai-v73-note {background:#ecfeff; color:#155e75; border:1px solid #99f6e4; border-radius:.9rem; padding:.8rem; margin:.7rem 0;}
-@media (max-width: 900px) {.qai-v73-grid{grid-template-columns:1fr;} .block-container{padding-left:.8rem!important; padding-right:.8rem!important;}}
-</style>
-"""
-st.markdown(CLEAN_V73_CSS, unsafe_allow_html=True)
-
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 
@@ -1647,89 +1509,135 @@ def render_learning_module(student: Dict[str, Any]) -> None:
 
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
-    hero("AI Tutor Lab", "Use the tutor for explanation, feedback, exercise generation, and Qiskit interpretation. Write your own reasoning before relying on generated answers.")
+    hero(
+        "AI Tutor Lab",
+        "A continuous learning conversation with context from the current module. The tutor is designed to guide, not replace, your reasoning.",
+    )
     ux_note(
         "<b>How to use the AI Tutor:</b><br>"
-        "First write your own attempt, question, or confusion. Then ask the tutor for explanation, feedback, or hints. "
-        "The tutor is a learning support tool, not a replacement for your reasoning."
+        "Ask a specific question, paste a small Qiskit snippet, or write your current explanation first. "
+        "The tutor will keep the visible conversation history during the session and log each interaction for research analytics."
     )
+
     status = feedback_engine.provider_status()
     if status["available"]:
         st.success(f"LLM provider configured: {status['provider']} ({status['model']})")
     else:
         st.info("No external LLM is configured. The lab will use a local formative fallback.")
 
-    task = st.selectbox(
-        "Tutor task",
-        ["Explain a concept", "Generate a practice exercise", "Check my explanation", "Debug or interpret Qiskit code"],
-    )
-    tutor_language = st.selectbox(
-        "Tutor response language",
-        ["Auto-detect", "English", "Arabic", "French"],
-        index=0,
-        help="Auto-detect uses the language of your question. Select Arabic to force Arabic responses.",
-    )
     current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
     current_lesson = content.lesson_by_id(current_lesson_id)
-    st.info(f"Current learning context: {current_lesson['title']}. The tutor will use this context unless you choose another concept.")
-    if st.button("Return to current learning module", use_container_width=True):
-        st.session_state.student_page = "Learning Module"
-        st.rerun()
     concepts = sorted({c for lesson in content.LESSONS for c in lesson["concepts"]})
     default_concept = current_lesson["concepts"][0] if current_lesson.get("concepts") else concepts[0]
     default_index = concepts.index(default_concept) if default_concept in concepts else 0
-    concept = st.selectbox("Concept focus", concepts, index=default_index)
+
+    c1, c2, c3 = st.columns([1.15, 1, 1])
+    with c1:
+        task = st.selectbox(
+            "Tutor task",
+            ["Explain a concept", "Generate a practice exercise", "Check my explanation", "Debug or interpret Qiskit code"],
+        )
+    with c2:
+        concept = st.selectbox("Concept focus", concepts, index=default_index)
+    with c3:
+        tutor_language = st.selectbox(
+            "Response language",
+            ["Auto-detect", "English", "Arabic", "French"],
+            index=0,
+            help="Auto-detect uses the language of your question. Select Arabic to force Arabic responses.",
+        )
+
+    st.markdown(
+        f"""
+        <div class="qai-chat-context">
+          <b>Current learning context:</b> {current_lesson['title']}<br>
+          <span>The tutor will connect answers to this module unless your question asks for something else.</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Return to current learning module", use_container_width=True):
+        st.session_state.student_page = "Learning Module"
+        st.rerun()
+
+    chat_key = f"ai_chat_history_{student['id']}"
+    if chat_key not in st.session_state:
+        st.session_state[chat_key] = []
+
     quick_prompts = {
-        "Explain a concept": f"I am confused about {concept}. Explain it simply, then ask me one question to check my understanding.",
-        "Generate a practice exercise": f"Give me one short beginner exercise about {concept}. Do not give the full solution first.",
-        "Check my explanation": f"Here is my explanation of {concept}: ... Please tell me what is correct and what I should improve.",
-        "Debug or interpret Qiskit code": "Here is my Qiskit code:\n\n# paste code here\n\nPlease help me interpret it or find the mistake without giving a long answer.",
+        "Explain simply": f"I am confused about {concept}. Explain it simply, then ask me one question to check my understanding.",
+        "Give practice": f"Give me one short beginner exercise about {concept}. Do not give the full solution first.",
+        "Check my idea": f"Here is my explanation of {concept}: ... Please tell me what is correct and what I should improve.",
+        "Help with code": "Here is my Qiskit code:\n\n# paste code here\n\nPlease help me interpret it or find the mistake without giving a long answer.",
     }
+
     st.markdown("#### Quick-start prompts")
-    st.caption("These examples help students who do not know what to ask. You can edit the text before sending.")
-    if "tutor_prompt_draft" not in st.session_state:
-        st.session_state.tutor_prompt_draft = ""
-    qcols = st.columns(2)
-    for i, (label, example) in enumerate([
-        ("Explain simply", quick_prompts["Explain a concept"]),
-        ("Give practice", quick_prompts["Generate a practice exercise"]),
-        ("Check my idea", quick_prompts["Check my explanation"]),
-        ("Help with code", quick_prompts["Debug or interpret Qiskit code"]),
-    ]):
-        with qcols[i % 2]:
-            if st.button(label, key=f"quick_prompt_{i}", use_container_width=True):
-                st.session_state.tutor_prompt_draft = example
+    qcols = st.columns(4)
+    for i, (label, example) in enumerate(quick_prompts.items()):
+        with qcols[i]:
+            if st.button(label, key=f"chat_quick_{i}", use_container_width=True):
+                st.session_state.pending_chat_prompt = example
                 st.rerun()
-    prompt = st.text_area("Write your attempt, question, explanation, or Qiskit code before asking the tutor", value=st.session_state.get("tutor_prompt_draft", ""), height=180, placeholder="Example: I think Hadamard creates a 50/50 probability, but I do not understand why measurement is random. Please explain in Arabic.")
-    st.caption("For research validity, write your current understanding first. The tutor is designed to guide, not replace, your reasoning. The tutor should answer in the selected language or the language of your question.")
-    interactive_note("Interactive step: after writing your attempt or question, click the button below to ask the AI tutor.")
-    if st.button("Ask AI tutor", type="primary", use_container_width=True):
+
+    pending = st.session_state.get("pending_chat_prompt", "")
+    if pending:
+        st.markdown("<div class='qai-chat-draft'><b>Draft prompt selected:</b></div>", unsafe_allow_html=True)
+        st.text_area("Edit the selected prompt before sending", key="pending_chat_prompt", height=120)
+        send_draft = st.button("Send selected prompt", type="primary", use_container_width=True)
+    else:
+        send_draft = False
+
+    st.markdown("### Conversation")
+    if not st.session_state[chat_key]:
+        st.caption("No messages yet. Ask a question below or start from one of the prompt buttons.")
+    for msg in st.session_state[chat_key]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            if msg.get("interaction_id") and msg["role"] == "assistant":
+                render_ai_usefulness_feedback(msg["interaction_id"], f"chat_{msg['interaction_id']}")
+
+    prompt = st.chat_input("Ask about the current module, a concept, or a Qiskit code snippet...")
+    if send_draft:
+        prompt = st.session_state.get("pending_chat_prompt", "")
+        st.session_state.pending_chat_prompt = ""
+
+    if prompt:
         if len(prompt.strip()) < 10:
             st.warning("Please write at least a short attempt or question before asking the AI tutor.")
             return
-        tutor = feedback_engine.generate_tutor_response(
-            task=task,
-            concept=concept,
-            student_input=prompt,
-            student_profile=student_profile(student),
-            lesson_context={"source": "AI Tutor Lab", "response_language": tutor_language, "current_lesson": current_lesson},
-        )
+
+        st.session_state[chat_key].append({"role": "user", "content": prompt})
+        with st.spinner("AI tutor is thinking..."):
+            tutor = feedback_engine.generate_tutor_response(
+                task=task,
+                concept=concept,
+                student_input=prompt,
+                student_profile=student_profile(student),
+                lesson_context={
+                    "source": "AI Tutor Lab",
+                    "response_language": tutor_language,
+                    "current_lesson": current_lesson,
+                    "chat_history": st.session_state[chat_key][-6:],
+                },
+            )
         interaction_id = log_tutor_interaction(
-            student["id"], "ai_tutor_lab", concept, task, prompt, tutor, lesson_id=current_lesson_id, activity_id="free_tutor"
+            student["id"], "ai_tutor_lab", concept, task, prompt, tutor, lesson_id=current_lesson_id, activity_id="free_tutor_chat"
         )
         st.session_state.last_ai_interaction_id = interaction_id
-        st.markdown("### 🤖 AI tutor response")
-        st.write(tutor.response)
-        render_ai_usefulness_feedback(interaction_id, "tutor_lab")
+        st.session_state[chat_key].append({"role": "assistant", "content": tutor.response, "interaction_id": interaction_id})
         if tutor.mode == "llm_error":
             st.info("The external LLM was unavailable. A local hint was shown and the error was logged for the evaluator.")
         if learning_path_ready_for_posttest(student["id"]):
             st.success("AI interaction recorded. Your learning path is complete, so the post-test is available.")
-            if st.button("Go to post-test", type="primary"):
-                set_student_page("Post-test")
         else:
             st.info("AI interaction recorded. Continue the learning path; the post-test unlocks after all modules are complete.")
+        st.rerun()
 
+    st.divider()
+    if st.button("Clear visible chat history", use_container_width=True):
+        st.session_state[chat_key] = []
+        st.rerun()
 
 def render_survey(student: Dict[str, Any]) -> None:
     hero("Usability Questionnaire and Open-ended Feedback", "Your feedback helps evaluate the AI-supported learning framework.")
