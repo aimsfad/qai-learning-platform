@@ -161,172 +161,6 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
-V7_DESIGN_CSS = """
-<style>
-:root {
-  --v7-bg: #07071a;
-  --v7-bg2: #0d0d2b;
-  --v7-bg3: #11113a;
-  --v7-surface: rgba(255,255,255,0.055);
-  --v7-surface2: rgba(255,255,255,0.085);
-  --v7-border: rgba(255,255,255,0.11);
-  --v7-border2: rgba(255,255,255,0.18);
-  --v7-text1: #f0eeff;
-  --v7-text2: rgba(240,238,255,0.72);
-  --v7-text3: rgba(240,238,255,0.46);
-  --v7-purple: #7c5cff;
-  --v7-purple2: #a98fff;
-  --v7-teal: #00d4aa;
-  --v7-amber: #ffb547;
-  --v7-coral: #ff6b6b;
-}
-html, body, [data-testid="stAppViewContainer"] {
-  background: radial-gradient(circle at top left, rgba(124,92,255,0.18), transparent 36%), var(--v7-bg) !important;
-  color: var(--v7-text1) !important;
-}
-.block-container {max-width: 1280px !important; padding-top: 1.35rem !important;}
-[data-testid="stHeader"] {background: rgba(7,7,26,0.78) !important; backdrop-filter: blur(12px);}
-[data-testid="stSidebar"] {background: var(--v7-bg2) !important; border-left: 1px solid var(--v7-border) !important; border-right: none !important;}
-[data-testid="stSidebar"] * {color: var(--v7-text2) !important;}
-[data-testid="stSidebar"] .stButton button {
-  background: var(--v7-surface) !important;
-  border: 1px solid var(--v7-border) !important;
-  color: var(--v7-text2) !important;
-  border-radius: 0.75rem !important;
-  min-height: 2.35rem !important;
-  font-weight: 500 !important;
-}
-[data-testid="stSidebar"] .stButton button:hover {
-  background: rgba(124,92,255,0.16) !important;
-  border-color: rgba(124,92,255,0.45) !important;
-  color: var(--v7-purple2) !important;
-}
-div.stButton > button {
-  border-radius: 0.85rem !important;
-  border: 1px solid var(--v7-border2) !important;
-  background: var(--v7-surface) !important;
-  color: var(--v7-text1) !important;
-}
-div.stButton > button[kind="primary"], div.stButton > button[data-testid="baseButton-primary"] {
-  background: linear-gradient(135deg, var(--v7-purple), #5b50ff) !important;
-  border: none !important;
-  color: white !important;
-}
-.stTabs [data-baseweb="tab-list"] {gap: 0.45rem; background: var(--v7-bg2); border: 1px solid var(--v7-border); border-radius: 0.95rem; padding: 0.35rem;}
-.stTabs [data-baseweb="tab"] {border-radius: 0.75rem; color: var(--v7-text3) !important; padding: 0.45rem 0.85rem;}
-.stTabs [aria-selected="true"] {background: rgba(124,92,255,0.18) !important; color: var(--v7-purple2) !important;}
-[data-testid="stMetric"], .qai-card, .qai-lesson-panel, .qai-learning-shell, .qai-visual-card,
-.qai-dashboard-tile, .qai-path-card, .qai-check-card {
-  background: var(--v7-surface) !important;
-  border: 1px solid var(--v7-border) !important;
-  color: var(--v7-text1) !important;
-  box-shadow: 0 18px 45px rgba(0,0,0,0.22) !important;
-}
-.qai-hero {
-  background: linear-gradient(135deg, rgba(124,92,255,0.95), rgba(17,17,58,0.98)) !important;
-  border: 1px solid rgba(169,143,255,0.25) !important;
-  box-shadow: 0 24px 75px rgba(0,0,0,0.34) !important;
-}
-.qai-hero h1, .qai-hero p {color: #fff !important;}
-.qai-side-brand {
-  font-size: 1.05rem; font-weight: 800; color: var(--v7-text1) !important;
-  padding: 0.7rem 0 0.1rem; letter-spacing: -0.02em;
-}
-.qai-side-brand::before {content:'ψ'; display:inline-flex; width:32px; height:32px; align-items:center; justify-content:center; margin-right:8px; border-radius:10px; background:rgba(124,92,255,0.18); color:var(--v7-purple2); border:1px solid rgba(124,92,255,0.45);}
-.qai-side-sub {font-size:0.77rem; color:var(--v7-text3) !important; line-height:1.45; padding-bottom:0.75rem; border-bottom:1px solid var(--v7-border);}
-.qai-side-profile {
-  background: var(--v7-surface) !important; border: 1px solid var(--v7-border) !important;
-  border-radius: 1rem; padding: 0.85rem; margin: 0.8rem 0; color: var(--v7-text2) !important;
-}
-.qai-side-code {font-size:0.72rem; color:var(--v7-purple2) !important; font-weight:700; margin-bottom:0.45rem;}
-.qai-side-progress-label {display:flex; justify-content:space-between; font-size:0.72rem; color:var(--v7-text3) !important; margin:0.35rem 0;}
-.qai-side-bar {height:5px; background:var(--v7-surface2); border-radius:99px; overflow:hidden; margin-bottom:0.55rem;}
-.qai-side-fill {height:100%; background:linear-gradient(90deg,var(--v7-purple),var(--v7-teal)); border-radius:99px;}
-.qai-side-next {background:rgba(0,212,170,0.10); border:1px solid rgba(0,212,170,0.22); color:var(--v7-text2) !important; border-radius:0.9rem; padding:0.75rem; font-size:0.78rem; margin-bottom:0.8rem;}
-.qai-side-section {font-size:0.68rem; color:var(--v7-text3) !important; text-transform:uppercase; letter-spacing:0.12em; margin:0.75rem 0 0.3rem;}
-.qai-side-active-note {font-size:0.72rem; color:var(--v7-purple2) !important; background:rgba(124,92,255,0.11); border-radius:0.65rem; padding:0.38rem 0.55rem; margin:0.2rem 0 0.35rem;}
-.qai-side-lock {font-size:0.72rem; color:var(--v7-text3) !important; border:1px dashed var(--v7-border); border-radius:0.7rem; padding:0.45rem; margin:0.25rem 0;}
-.qai-side-footer {font-size:0.68rem; color:var(--v7-text3) !important; line-height:1.4; margin-top:0.8rem;}
-.qai-v7-banner {
-  position: relative; overflow: hidden; border-radius: 1.25rem; padding: 1.45rem 1.6rem;
-  background: linear-gradient(135deg, var(--v7-bg3), rgba(124,92,255,0.16));
-  border: 1px solid var(--v7-border2); margin-bottom: 1rem;
-}
-.qai-v7-banner::before {content:'⟨ψ|φ⟩'; position:absolute; left:1.1rem; top:0.7rem; font-family:monospace; font-size:4rem; color:rgba(124,92,255,0.16); letter-spacing:-0.08em;}
-.qai-v7-kicker {font-family:monospace; color:var(--v7-purple2); font-size:0.76rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;}
-.qai-v7-title {font-size:1.35rem; font-weight:800; color:var(--v7-text1); margin:0.25rem 0;}
-.qai-v7-sub {font-size:0.92rem; color:var(--v7-text2); line-height:1.55;}
-.qai-v7-grid {display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.85rem; margin:1rem 0;}
-.qai-v7-stat {background:var(--v7-surface); border:1px solid var(--v7-border); border-radius:1rem; padding:1rem;}
-.qai-v7-stat-value {font-size:1.55rem; font-family:monospace; font-weight:800; color:var(--v7-text1);}
-.qai-v7-stat-label {font-size:0.78rem; color:var(--v7-text3); margin-top:0.15rem;}
-.qai-v7-module-grid {display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.85rem; margin:1rem 0;}
-.qai-v7-module {background:var(--v7-surface); border:1px solid var(--v7-border); border-radius:1rem; padding:1rem; min-height:8rem;}
-.qai-v7-module-active {border-color:rgba(124,92,255,0.55); background:rgba(124,92,255,0.13);}
-.qai-v7-module-done {border-color:rgba(0,212,170,0.35); background:rgba(0,212,170,0.08);}
-.qai-v7-module-num {font-family:monospace; font-size:0.72rem; color:var(--v7-purple2); font-weight:800;}
-.qai-v7-module-title {font-weight:800; margin:0.28rem 0; color:var(--v7-text1);}
-.qai-v7-module-meta {font-size:0.76rem; color:var(--v7-text3);}
-.qai-v7-progress {height:4px; background:var(--v7-surface2); border-radius:99px; margin-top:0.75rem; overflow:hidden;}
-.qai-v7-progress > div {height:100%; background:linear-gradient(90deg,var(--v7-purple),var(--v7-teal)); border-radius:99px;}
-.qai-v7-two-col {display:grid; grid-template-columns:1fr 380px; gap:1rem; margin-top:1rem;}
-.qai-v7-ai-card {background:linear-gradient(135deg, rgba(124,92,255,0.12), rgba(0,212,170,0.08)); border:1px solid var(--v7-border); border-radius:1rem; padding:1rem;}
-.qai-v7-ai-title {font-weight:800; color:var(--v7-text1); margin-bottom:0.45rem;}
-.qai-v7-ai-bubble {background:rgba(124,92,255,0.12); border:1px solid rgba(124,92,255,0.25); border-radius:0.9rem; padding:0.85rem; color:var(--v7-text2); font-size:0.88rem; line-height:1.55;}
-.qai-v7-chip {display:inline-flex; padding:0.22rem 0.6rem; border-radius:999px; background:rgba(124,92,255,0.16); color:var(--v7-purple2); border:1px solid rgba(124,92,255,0.30); font-size:0.72rem; margin:0.15rem 0.25rem 0.15rem 0;}
-.qai-module-title, .qai-panel-title, .qai-card-title, .qai-tile-value {color:var(--v7-text1) !important;}
-.qai-module-meta, .qai-tile-label, .qai-card-mini, .qai-small-muted, .qai-muted {color:var(--v7-text3) !important;}
-.qai-big-idea {background:rgba(124,92,255,0.12) !important; border:1px solid rgba(124,92,255,0.25) !important; color:var(--v7-text2) !important; border-radius:1rem !important; padding:1rem !important;}
-.qai-check-card {background:rgba(0,212,170,0.09) !important; border-color:rgba(0,212,170,0.28) !important;}
-.stAlert {background:var(--v7-surface) !important; color:var(--v7-text2) !important; border:1px solid var(--v7-border) !important; border-radius:0.95rem !important;}
-code, pre {background:#0a0a20 !important; color:#a98fff !important; border-color:var(--v7-border) !important;}
-@media (max-width: 1050px) {.qai-v7-grid,.qai-v7-module-grid,.qai-v7-two-col{grid-template-columns:1fr;} .block-container{padding-left:0.8rem!important;padding-right:0.8rem!important;}}
-</style>
-"""
-st.markdown(V7_DESIGN_CSS, unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-/* v7.2 media and readability corrections */
-.qai-side-brand::before {content:'QAI' !important; font-size:0.62rem !important; letter-spacing:0.02em !important;}
-.qai-v7-banner::before {content:'' !important; display:none !important;}
-:root {
-  --v7-bg: #10142a;
-  --v7-bg2: #151a35;
-  --v7-bg3: #1b2140;
-  --v7-surface: rgba(255,255,255,0.075);
-  --v7-surface2: rgba(255,255,255,0.115);
-  --v7-border: rgba(255,255,255,0.16);
-  --v7-border2: rgba(255,255,255,0.24);
-  --v7-text1: #fbfcff;
-  --v7-text2: #d7def5;
-  --v7-text3: #aeb8d6;
-}
-html, body, [data-testid="stAppViewContainer"] {background:#10142a !important;}
-section[data-testid="stSidebar"] {background:#151a35 !important;}
-section[data-testid="stSidebar"] * {color:#f2f5ff !important; opacity:1 !important;}
-.block-container p, .block-container li, .block-container span, .block-container div {color:inherit;}
-.qai-big-idea, .qai-ux-note, .qai-interactive, .qai-check-card, .qai-ai-actions {
-  color:#eef3ff !important;
-  background:rgba(255,255,255,0.08) !important;
-  border:1px solid rgba(255,255,255,0.18) !important;
-}
-.stTabs [data-baseweb="tab-list"] {gap:0.4rem;}
-.stTabs [data-baseweb="tab"] {
-  background:rgba(255,255,255,0.06) !important;
-  border:1px solid rgba(255,255,255,0.16) !important;
-  border-radius:0.8rem !important;
-  color:#eef3ff !important;
-  padding:0.55rem 0.8rem !important;
-}
-.stTabs [aria-selected="true"] {background:rgba(124,92,255,0.35) !important;}
-[data-testid="stImage"] img, video {border-radius:1rem !important; border:1px solid rgba(255,255,255,0.14) !important; background:#ffffff !important;}
-[data-testid="stAlert"] {color:#eef3ff !important; background:rgba(255,255,255,0.08) !important; border-color:rgba(255,255,255,0.18) !important;}
-</style>
-""", unsafe_allow_html=True)
-
-
-
 PROFESSIONAL_UX_CSS = """
 <style>
 :root {
@@ -400,100 +234,70 @@ PROFESSIONAL_UX_CSS = """
 """
 st.markdown(PROFESSIONAL_UX_CSS, unsafe_allow_html=True)
 
-# -----------------------------------------------------------------------------
-# V7.1 visual hotfix: resolve duplicated CSS conflicts from v6/v7 layering
-# -----------------------------------------------------------------------------
-V7_1_VISUAL_HOTFIX_CSS = """
+
+
+
+CLEAN_V73_CSS = """
 <style>
-/* Remove Streamlit public toolbar/icons that appear as scattered marks in the UI. */
-[data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {display:none !important; visibility:hidden !important;}
-[data-testid="stHeader"] {background: rgba(7,7,26,0.92) !important; box-shadow:none !important;}
-
-/* Make the sidebar a single coherent dark navigation surface. */
-[data-testid="stSidebar"] {
-  background: #0d0d2b !important;
-  border-left: 1px solid rgba(255,255,255,0.10) !important;
-  border-right: none !important;
-  box-shadow: none !important;
+/* v7.3 clean professional readable theme */
+:root {
+  --qai-bg-main: #f4f7fb;
+  --qai-bg-side: #eef3fb;
+  --qai-card-bg: #ffffff;
+  --qai-text-strong: #0f172a;
+  --qai-text-soft: #475569;
+  --qai-brand-blue: #2563eb;
+  --qai-brand-indigo: #4338ca;
+  --qai-brand-teal: #0f766e;
 }
-[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-  background: #0d0d2b !important;
-  padding: 1rem 0.9rem !important;
+html, body, .stApp, [data-testid="stAppViewContainer"] {
+  background: var(--qai-bg-main) !important;
+  color: var(--qai-text-strong) !important;
 }
-[data-testid="stSidebar"] * {color: rgba(240,238,255,0.72) !important; opacity:1 !important;}
-[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] .qai-side-brand {
-  color: #f0eeff !important;
-  font-weight: 900 !important;
+[data-testid="stHeader"] {background: rgba(244,247,251,.92) !important; backdrop-filter: blur(10px) !important;}
+[data-testid="stToolbar"] {display:none !important;}
+.block-container {max-width: 1160px !important; padding-top: 1rem !important;}
+[data-testid="stSidebar"] {background: var(--qai-bg-side) !important; border-right: 1px solid #d8e2ef !important;}
+[data-testid="stSidebar"] * {color: var(--qai-text-strong) !important; opacity: 1 !important;}
+.qai-side-brand {display:flex; align-items:center; gap:.65rem; font-weight:900 !important; color:#0f172a !important; margin-bottom:.25rem;}
+.qai-side-brand::before {content:'QAI' !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; width:38px !important; height:38px !important; border-radius:12px !important; background:linear-gradient(135deg,#2563eb,#0f766e) !important; color:white !important; font-size:.72rem !important; font-weight:900 !important; margin-right:0 !important;}
+.qai-side-sub {color:#475569 !important; font-size:.82rem !important; line-height:1.55 !important;}
+.qai-side-profile, .qai-side-next, .qai-side-lock, .qai-side-active-note {
+  background:#ffffff !important; border:1px solid #d8e2ef !important; color:#0f172a !important; border-radius:1rem !important; box-shadow:0 8px 24px rgba(15,23,42,.05) !important;
 }
-[data-testid="stSidebar"] .qai-side-sub,
-[data-testid="stSidebar"] .qai-side-section,
-[data-testid="stSidebar"] .qai-side-footer {
-  color: rgba(240,238,255,0.50) !important;
-}
-[data-testid="stSidebar"] .qai-side-profile {
-  background: rgba(255,255,255,0.055) !important;
-  border: 1px solid rgba(255,255,255,0.11) !important;
-  box-shadow: none !important;
-}
-[data-testid="stSidebar"] .qai-side-code {color:#a98fff !important; font-weight:900 !important;}
-[data-testid="stSidebar"] .qai-side-progress-label {color: rgba(240,238,255,0.62) !important;}
-[data-testid="stSidebar"] .qai-side-bar {background: rgba(255,255,255,0.12) !important; height: 7px !important;}
-[data-testid="stSidebar"] .qai-side-fill {background: linear-gradient(90deg,#7c5cff,#00d4aa) !important;}
-[data-testid="stSidebar"] .qai-side-next {
-  background: rgba(124,92,255,0.13) !important;
-  border: 1px solid rgba(124,92,255,0.32) !important;
-  border-left: 4px solid #7c5cff !important;
-  color: rgba(240,238,255,0.82) !important;
-}
-[data-testid="stSidebar"] .qai-side-lock {
-  color: rgba(240,238,255,0.38) !important;
-  border: 1px dashed rgba(255,255,255,0.12) !important;
-  border-radius: .7rem !important;
-  padding: .45rem !important;
-}
-[data-testid="stSidebar"] .qai-side-active-note {
-  color:#a98fff !important;
-  background: rgba(124,92,255,0.16) !important;
-  border-radius:.65rem !important;
-  padding:.35rem .55rem !important;
-}
+.qai-side-code {color:#2563eb !important;}
+.qai-side-progress-label, .qai-side-profile div, .qai-side-next, .qai-side-active-note {color:#334155 !important;}
 [data-testid="stSidebar"] .stButton button {
-  background: rgba(255,255,255,0.045) !important;
-  border: 1px solid rgba(255,255,255,0.13) !important;
-  color: rgba(240,238,255,0.82) !important;
-  box-shadow: none !important;
-  border-radius: .85rem !important;
-  min-height: 2.45rem !important;
-  justify-content: flex-start !important;
+  background:#ffffff !important; border:1px solid #cbd5e1 !important; color:#0f172a !important; box-shadow:none !important; min-height:2.35rem !important; border-radius:.85rem !important; font-weight:650 !important;
 }
-[data-testid="stSidebar"] .stButton button:hover {
-  background: rgba(124,92,255,0.18) !important;
-  border-color: rgba(124,92,255,0.52) !important;
-  color: #ffffff !important;
+[data-testid="stSidebar"] .stButton button:hover {background:#eef6ff !important; border-color:#2563eb !important; color:#1d4ed8 !important;}
+.qai-hero, .qai-v7-banner {background:linear-gradient(135deg,#2563eb,#172554) !important; color:#ffffff !important; border:none !important;}
+.qai-hero h1, .qai-hero p, .qai-v7-title, .qai-v7-sub {color:white !important; opacity:1 !important;}
+.qai-card, .qai-learning-shell, .qai-module-header, .qai-lesson-panel, .qai-visual-card, .qai-dashboard-tile, .qai-path-card, .qai-v73-card, .qai-v73-media-card {
+  background:#ffffff !important; border:1px solid #d8e2ef !important; color:#0f172a !important; box-shadow:0 10px 28px rgba(15,23,42,.06) !important;
 }
-
-/* Remove decorative quantum watermark that looked like stray symbols. */
-.qai-v7-banner::before {content: none !important; display:none !important;}
-.qai-side-brand::before {content:'ψ' !important; margin-right:8px !important;}
-
-/* Keep main surfaces dark and readable after older CSS blocks. */
-html, body, [data-testid="stAppViewContainer"], .stApp {
-  background: radial-gradient(circle at top left, rgba(124,92,255,0.14), transparent 34%), #07071a !important;
-  color:#f0eeff !important;
-}
-.block-container {max-width: 1180px !important; padding-top: 1.35rem !important;}
-.qai-hero, .qai-v7-banner {
-  background: linear-gradient(135deg, rgba(47,96,255,0.92), rgba(17,17,58,0.98)) !important;
-  border: 1px solid rgba(169,143,255,0.22) !important;
-  box-shadow: 0 24px 75px rgba(0,0,0,0.28) !important;
-}
-.qai-hero h1, .qai-hero p, .qai-v7-title, .qai-v7-sub {color:#ffffff !important; opacity:1 !important;}
+.qai-module-title, .qai-panel-title, .qai-card-title, .qai-tile-value, h1, h2, h3, h4 {color:#0f172a !important;}
+.qai-module-meta, .qai-tile-label, .qai-card-mini, .qai-muted, .qai-small-muted, p, li {color:#475569 !important;}
+.qai-big-idea {background:#eef6ff !important; border:1px solid #bfdbfe !important; border-left:6px solid #2563eb !important; color:#1e3a8a !important; border-radius:1rem !important;}
+.qai-concept-pill {background:#ecfeff !important; border:1px solid #99f6e4 !important; color:#0f766e !important;}
+.qai-check-card {background:#fff7ed !important; border:1px solid #fed7aa !important; color:#7c2d12 !important;}
+.qai-ai-actions {background:#f8fafc !important; border:1px dashed #93c5fd !important; color:#334155 !important;}
+.stTabs [data-baseweb="tab-list"] {background:#ffffff !important; border:1px solid #d8e2ef !important; border-radius:1rem !important; padding:.35rem !important;}
+.stTabs [data-baseweb="tab"] {background:#f8fafc !important; color:#334155 !important; border-radius:.8rem !important; border:1px solid #e2e8f0 !important;}
+.stTabs [aria-selected="true"] {background:#2563eb !important; color:white !important;}
+.qai-v73-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin:1rem 0;}
+.qai-v73-card {border-radius:1.1rem; padding:1rem;}
+.qai-v73-card h4 {margin:.1rem 0 .55rem 0; font-size:1rem;}
+.qai-v73-card p {margin:.2rem 0; line-height:1.65;}
+.qai-v73-step {display:flex; gap:.65rem; align-items:flex-start; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.85rem; padding:.75rem; margin:.45rem 0;}
+.qai-v73-badge {min-width:28px; height:28px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:#2563eb; color:#fff; font-weight:900; font-size:.82rem;}
+.qai-v73-diagram {font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:#0f172a; color:#e0f2fe; border-radius:.9rem; padding:1rem; line-height:1.85; overflow:auto; border:1px solid #334155;}
+.qai-v73-video-box {background:#ffffff; border:1px solid #d8e2ef; border-radius:1rem; padding:.8rem;}
+.qai-v73-note {background:#ecfeff; color:#155e75; border:1px solid #99f6e4; border-radius:.9rem; padding:.8rem; margin:.7rem 0;}
+@media (max-width: 900px) {.qai-v73-grid{grid-template-columns:1fr;} .block-container{padding-left:.8rem!important; padding-right:.8rem!important;}}
 </style>
 """
-st.markdown(V7_1_VISUAL_HOTFIX_CSS, unsafe_allow_html=True)
-
-
+st.markdown(CLEAN_V73_CSS, unsafe_allow_html=True)
 
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
@@ -1237,19 +1041,26 @@ def require_student(func, *args) -> None:
 
 
 def render_student_home(student: Optional[Dict[str, Any]]) -> None:
-    hero("Student Dashboard", "A professional quantum programming workspace with guided learning, contextual AI support, and research-grade analytics.")
+    hero("Student Dashboard", "A guided quantum programming workspace with progress, contextual AI support, and research-grade learning analytics.")
     if not student:
         st.markdown("""
-        <div class='qai-v7-banner'>
-          <div class='qai-v7-kicker'>Guided pilot workflow</div>
-          <div class='qai-v7-title'>Learn introductory Qiskit through a structured AI-supported path</div>
-          <div class='qai-v7-sub'>Start with the pre-test, complete six compact modules, use the AI tutor for hints and explanations, then complete the post-test and survey.</div>
-        </div>
-        <div class='qai-v7-grid'>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>6</div><div class='qai-v7-stat-label'>Guided modules</div></div>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>AI</div><div class='qai-v7-stat-label'>Contextual tutor</div></div>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>Pre/Post</div><div class='qai-v7-stat-label'>Learning evidence</div></div>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>Logs</div><div class='qai-v7-stat-label'>Research analytics</div></div>
+        <div class='qai-hero-grid'>
+          <div class='qai-glass-card'>
+            <div class='qai-module-kicker'>Guided pilot workflow</div>
+            <div class='qai-module-title'>Learn Qiskit step by step</div>
+            <p>The platform combines a structured learning path, short visual explanations, pre/post assessment, and an AI tutor that encourages reasoning rather than copy-paste answers.</p>
+            <span class='qai-stage-chip'>6 modules</span><span class='qai-stage-chip'>AI tutor</span><span class='qai-stage-chip'>Progress tracking</span>
+          </div>
+          <div class='qai-glass-card'>
+            <div class='qai-panel-title'>Recommended path</div>
+            <ol>
+              <li>Create or sign in to your account</li>
+              <li>Complete the pre-test</li>
+              <li>Follow the learning path</li>
+              <li>Use the AI tutor when needed</li>
+              <li>Complete the post-test and survey</li>
+            </ol>
+          </div>
         </div>
         """, unsafe_allow_html=True)
         c1, c2 = st.columns(2)
@@ -1265,6 +1076,7 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
                 st.rerun()
         return
 
+    st.markdown(f"<div class='qai-ok'><b>Signed in:</b> {student['full_name']} ({student['participant_code']})</div>", unsafe_allow_html=True)
     if st.session_state.get("new_participant_code"):
         st.success("Account created successfully. Save your participant code before continuing.")
         render_participant_code_box(st.session_state["new_participant_code"])
@@ -1282,30 +1094,26 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     next_page = next_student_page(student)
     current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
     current_lesson = content.lesson_by_id(current_lesson_id)
-    learning_pct = int(round(100 * modules_done / max(len(content.LESSONS), 1)))
 
     st.markdown(
         f"""
-        <div class='qai-v7-banner'>
-          <div class='qai-v7-kicker'>Signed in · {student['participant_code']}</div>
-          <div class='qai-v7-title'>Continue from: {current_lesson.get('short_title', current_lesson['title'])}</div>
-          <div class='qai-v7-sub'>Next required action: <b>{next_action_text(student)}</b></div>
-          <div style='margin-top:.85rem;'>
-            <span class='qai-v7-chip'>Workflow {progress_percent:.0f}%</span>
-            <span class='qai-v7-chip'>Learning path {modules_done}/{len(content.LESSONS)}</span>
-            <span class='qai-v7-chip'>AI interactions {ai_count}</span>
-          </div>
+        <div class='qai-dashboard-grid'>
+          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{progress_percent:.0f}%</div><div class='qai-tile-label'>Overall study workflow</div></div>
+          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{modules_done}/{len(content.LESSONS)}</div><div class='qai-tile-label'>Learning modules completed</div></div>
+          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{ai_count}</div><div class='qai-tile-label'>AI tutor interactions recorded</div></div>
         </div>
-        <div class='qai-v7-grid'>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{progress_percent:.0f}%</div><div class='qai-v7-stat-label'>Overall study workflow</div></div>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{modules_done}/{len(content.LESSONS)}</div><div class='qai-v7-stat-label'>Learning modules completed</div></div>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{learning_pct}%</div><div class='qai-v7-stat-label'>Learning path progress</div></div>
-          <div class='qai-v7-stat'><div class='qai-v7-stat-value'>{ai_count}</div><div class='qai-v7-stat-label'>AI tutor interactions recorded</div></div>
+        <div class='qai-learning-shell'>
+          <div class='qai-module-kicker'>Resume point</div>
+          <div class='qai-module-title'>{current_lesson.get('short_title', current_lesson['title'])}</div>
+          <div class='qai-module-meta'>Next required action: <b>{next_action_text(student)}</b></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    st.progress(progress_percent / 100, text=f"Overall progress: {progress_percent:.0f}%")
+    render_completion_requirements(student)
 
+    st.divider()
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button(f"Continue: {next_page}", type="primary", use_container_width=True):
@@ -1319,47 +1127,12 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         if st.button("AI Tutor Lab", use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
             set_student_page("AI Tutor Lab")
 
-    render_completion_requirements(student)
-
-    progress = db.get_lesson_progress(student["id"])
-    completed = set(progress[progress["completed"] == 1]["lesson_id"].tolist()) if not progress.empty else set()
-    module_cards = []
-    ids = [lesson["id"] for lesson in content.LESSONS]
-    for idx, lesson in enumerate(content.LESSONS, start=1):
-        status_class = "qai-v7-module-done" if lesson["id"] in completed else ("qai-v7-module-active" if lesson["id"] == current_lesson_id else "")
-        pct = 100 if lesson["id"] in completed else (45 if lesson["id"] == current_lesson_id else 0)
-        badge = "Completed" if lesson["id"] in completed else ("Current" if lesson["id"] == current_lesson_id else lesson.get("level", "Module"))
-        module_cards.append(f"""
-        <div class='qai-v7-module {status_class}'>
-          <div class='qai-v7-module-num'>Module {idx} · {badge}</div>
-          <div class='qai-v7-module-title'>{lesson.get('short_title', lesson['title'])}</div>
-          <div class='qai-v7-module-meta'>{lesson.get('duration','')} · {', '.join(lesson.get('concepts', [])[:2])}</div>
-          <div class='qai-v7-progress'><div style='width:{pct}%;'></div></div>
-        </div>
-        """)
-    st.markdown("<h3 style='margin-top:1.2rem;color:var(--v7-text1);'>Learning modules</h3><div class='qai-v7-module-grid'>" + "".join(module_cards) + "</div>", unsafe_allow_html=True)
-
-    st.markdown(
-        f"""
-        <div class='qai-v7-two-col'>
-          <div class='qai-v7-ai-card'>
-            <div class='qai-v7-ai-title'>Recent learning activity</div>
-            <div class='qai-v7-ai-bubble'>The platform tracks pre-test, module progress, AI use, post-test, and survey completion. This keeps the learning path clear and gives the evaluator research-grade evidence of student progress.</div>
-          </div>
-          <div class='qai-v7-ai-card'>
-            <div class='qai-v7-ai-title'>AI Tutor context</div>
-            <div class='qai-v7-ai-bubble'>Current context: <b>{current_lesson.get('short_title', current_lesson['title'])}</b><br>Use AI for explanations, hints, visual interpretation, or one reflective question.</div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     if st.button("Sign out", use_container_width=True):
         db.log_event(student["id"], "student", "sign_out", "Student signed out from home")
         st.session_state.student_id = None
         st.session_state.student_page = "Student Home"
         st.rerun()
+
 
 def next_student_page(student: Dict[str, Any]) -> str:
     sid = student["id"]
@@ -1664,50 +1437,80 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
 
 
 
+def lesson_diagram_html(lesson_id: str) -> str:
+    """Return a small text-based diagram for the concept instead of one crowded image."""
+    diagrams = {
+        "orientation": "Qiskit code\n  QuantumCircuit(1, 1)\n        ↓\nCircuit\n  q0 ── M ──\n        │\n  c0 ◄──0\n        ↓\nClassical output: {'0': shots}",
+        "qubit_measurement": "Before measurement\n  qubit state: |0⟩ or α|0⟩ + β|1⟩\n        ↓ measurement\nAfter measurement\n  one classical result per shot: 0 or 1",
+        "hadamard_superposition": "Start\n  |0⟩\n        ↓ H gate\nBefore measurement\n  (|0⟩ + |1⟩) / √2\n        ↓ many shots\nCounts\n  0 ≈ 50%   1 ≈ 50%",
+        "shots_counts": "Run circuit once = one shot\n        ↓\nRun 10 shots → small noisy sample\n        ↓\nRun 1000 shots → clearer distribution\n        ↓\nCounts are frequencies, not certainty",
+        "cnot_correlation": "q0: ── H ── ● ── M ──\n             │\nq1: ─────── ⊕ ── M ──\n\nRule: if control q0 = 1, target q1 flips\nBell-style output: mostly 00 and 11",
+        "qiskit_debugging": "Common error\n  QuantumCircuit(1, 0)\n  qc.measure(0, 0)  ← no classical bit exists\n\nFix\n  QuantumCircuit(1, 1)\n  qc.measure(0, 0)",
+    }
+    return diagrams.get(lesson_id, "Diagram is being prepared for this lesson.")
+
+
 def render_lesson_media(lesson_id: str) -> None:
-    """Render the real lesson image and the real MP4 video prominently."""
+    """Render media as separated learning blocks: diagram, code, output, video, and optional full image."""
     media = LESSON_MEDIA.get(lesson_id)
     lesson = content.lesson_by_id(lesson_id)
     if not media:
         st.warning(f"No media mapping was found for lesson: {lesson_id}")
         return
 
-    image_name = media.get("image")
     video_name = media.get("video")
-    image_path = LESSON_MEDIA_DIR / image_name if image_name else None
+    image_name = media.get("image")
     video_path = LESSON_MEDIA_DIR / video_name if video_name else None
+    image_path = LESSON_MEDIA_DIR / image_name if image_name else None
 
-    st.markdown("### Visual and video explanation")
+    st.markdown("### Visual learning support")
     st.markdown(
         f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', '')}</div>",
         unsafe_allow_html=True,
     )
 
-    media_col, video_col = st.columns([1.08, 0.92])
-    with media_col:
-        st.markdown("#### Diagram / visual support")
+    diagram_col, code_col = st.columns([1.05, 0.95])
+    with diagram_col:
+        st.markdown("<div class='qai-v73-card'><h4>1. Concept diagram</h4><p>This compact diagram replaces the old crowded image. Read it slowly from top to bottom.</p></div>", unsafe_allow_html=True)
+        st.code(lesson_diagram_html(lesson_id), language="text")
+    with code_col:
+        st.markdown("<div class='qai-v73-card'><h4>2. Tiny Qiskit code</h4><p>The code is shown as a separate object so it remains readable.</p></div>", unsafe_allow_html=True)
+        st.code(lesson.get("qiskit_code", ""), language="python")
+        if lesson.get("code_focus"):
+            st.markdown("**Code reading focus**")
+            for point in lesson.get("code_focus", []):
+                st.markdown(f"- {point}")
+
+    st.markdown("#### Read it in this order")
+    for i, step in enumerate(lesson.get("visual_steps", []), start=1):
+        st.markdown(
+            f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    before_col, after_col = st.columns(2)
+    with before_col:
+        st.markdown(f"<div class='qai-v73-card'><h4>3. Before measurement</h4><p>{lesson.get('before_measurement', '')}</p></div>", unsafe_allow_html=True)
+    with after_col:
+        st.markdown(f"<div class='qai-v73-card'><h4>4. After measurement / output</h4><p>{lesson.get('after_measurement', '')}</p></div>", unsafe_allow_html=True)
+
+    st.markdown("### Micro-video")
+    st.markdown("<div class='qai-v73-video-box'>", unsafe_allow_html=True)
+    if video_path and video_path.exists() and video_path.stat().st_size > 0:
+        st.video(video_path.read_bytes(), format="video/mp4")
+        st.caption(f"Loaded MP4 file: {video_name} · size: {video_path.stat().st_size // 1024} KB")
+    else:
+        st.error(f"Video file not found or empty: {video_name}")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
+
+    with st.expander("Optional: open the full reference visual image"):
         if image_path and image_path.exists():
-            st.image(str(image_path), use_container_width=True, caption=f"{lesson.get('title', 'Lesson')} visual")
+            st.image(str(image_path), use_container_width=True, caption=f"Full reference visual: {image_name}")
         else:
-            st.error(f"Image file not found: {image_name}")
-        if lesson.get("visual_steps"):
-            st.markdown("##### Read it in this order")
-            for i, step in enumerate(lesson.get("visual_steps", []), start=1):
-                st.markdown(f"**{i}.** {step}")
+            st.warning(f"Full visual image not found: {image_name}")
 
-    with video_col:
-        st.markdown("#### Micro-video")
-        if video_path and video_path.exists():
-            try:
-                st.video(video_path.read_bytes(), format="video/mp4")
-            except Exception:
-                st.video(str(video_path))
-            st.caption(f"Loaded video: `{video_name}`")
-        else:
-            st.error(f"Video file not found: {video_name}")
-
-    st.markdown(f"<div class='qai-big-idea'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
-    st.info("The diagram and the video are now displayed directly in the lesson, not hidden inside a separate storyboard image.")
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
@@ -1817,13 +1620,6 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         "Check and reflect",
     ])
 
-    with media_tab:
-        render_lesson_media(lesson["id"])
-        try:
-            db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
-        except Exception:
-            pass
-
     with overview:
         st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
         a, b = st.columns([1.1, 0.9])
@@ -1867,6 +1663,13 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             for point in lesson.get("code_focus", []):
                 st.markdown(f"- {point}")
             inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
+
+    with media_tab:
+        render_lesson_media(lesson["id"])
+        try:
+            db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
+        except Exception:
+            pass
 
     with check_tab:
         st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
