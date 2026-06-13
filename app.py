@@ -156,6 +156,39 @@ div.stButton > button {border-radius: 0.8rem; min-height: 2.7rem;}
   [data-testid="stMetric"] {padding: 0.65rem;}
   div.stButton > button {min-height: 2.25rem;}
 }
+
+
+/* V7.4 sidebar and media restoration */
+html, body, .stApp {background:#f3f7fb !important; color:#0f172a !important;}
+.block-container {max-width:1180px !important; padding-top:1rem !important;}
+[data-testid="stSidebar"] {background:#ffffff !important; border-right:1px solid #dbe5f0 !important; box-shadow:8px 0 28px rgba(15,23,42,.06) !important;}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding:1rem .9rem !important;}
+[data-testid="stSidebar"] * {color:#0f172a !important; opacity:1 !important; text-shadow:none !important;}
+.qai-side-brand {display:flex !important; align-items:center !important; gap:.7rem !important; font-weight:900 !important; color:#0f172a !important; font-size:1.05rem !important; margin-bottom:.35rem !important;}
+.qai-side-brand::before {content:'QAI' !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; width:42px !important; height:42px !important; border-radius:14px !important; background:linear-gradient(135deg,#2563eb,#14b8a6) !important; color:white !important; font-size:.78rem !important; font-weight:900 !important; box-shadow:0 10px 26px rgba(37,99,235,.25) !important;}
+.qai-side-sub {color:#475569 !important; font-size:.82rem !important; line-height:1.55 !important; margin-bottom:1rem !important;}
+.qai-side-profile, .qai-side-next {background:#f8fafc !important; border:1px solid #dbe5f0 !important; border-radius:1rem !important; padding:1rem !important; margin:.75rem 0 !important; color:#0f172a !important;}
+.qai-side-code {color:#1d4ed8 !important; font-weight:800 !important; font-size:.82rem !important;}
+.qai-side-progress-label {display:flex; justify-content:space-between; align-items:center; margin:.5rem 0 .35rem; color:#475569!important; font-size:.78rem;}
+.qai-side-bar {height:7px !important; background:#e2e8f0 !important; border-radius:999px !important; overflow:hidden !important; margin:.2rem 0 .5rem !important;}
+.qai-side-fill {height:100% !important; background:linear-gradient(90deg,#2563eb,#14b8a6) !important; border-radius:999px !important;}
+.qai-side-next {border-left:4px solid #2563eb !important; background:#eef6ff !important; color:#1e3a8a !important;}
+.qai-side-section {font-size:.72rem !important; letter-spacing:.09em !important; text-transform:uppercase !important; color:#64748b !important; font-weight:900 !important; margin:1rem 0 .45rem !important;}
+[data-testid="stSidebar"] .stButton button {background:#ffffff !important; color:#0f172a !important; border:1px solid #cbd5e1 !important; border-radius:.85rem !important; min-height:2.35rem !important; font-weight:700 !important; box-shadow:0 2px 7px rgba(15,23,42,.03) !important;}
+[data-testid="stSidebar"] .stButton button[kind="primary"], [data-testid="stSidebar"] .stButton button:hover {background:#2563eb !important; color:#ffffff !important; border-color:#2563eb !important;}
+.qai-hero {background:linear-gradient(120deg,#2563eb,#0f766e) !important; color:white !important; box-shadow:0 16px 36px rgba(37,99,235,.14) !important;}
+.qai-card, .qai-learning-shell, .qai-module-header, .qai-lesson-panel, .qai-visual-card, .qai-dashboard-tile, .qai-path-card, .qai-v73-card, .qai-v73-media-card, .qai-v74-media-card {background:#ffffff !important; color:#0f172a !important; border:1px solid #dbe5f0 !important; box-shadow:0 8px 22px rgba(15,23,42,.05) !important;}
+.qai-module-title, .qai-panel-title, .qai-card-title, .qai-v73-card h4, .qai-v74-media-card h4 {color:#0f172a !important;}
+.qai-module-meta, .qai-card-mini, .qai-v73-card p, .qai-v74-media-card p {color:#475569 !important;}
+.qai-big-idea {background:#eef6ff !important; color:#1e3a8a !important; border:1px solid #bfdbfe !important;}
+.qai-concept-pill {background:#e0f2fe !important; color:#075985 !important; border:1px solid #bae6fd !important;}
+.qai-v74-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin:1rem 0;}
+.qai-v74-media-card {border-radius:1.1rem; padding:1rem; overflow:hidden;}
+.qai-v74-media-card img {border-radius:.9rem !important; border:1px solid #e2e8f0 !important;}
+.qai-v74-video-box {background:#ffffff !important; border:1px solid #dbe5f0 !important; border-radius:1.1rem !important; padding:1rem !important;}
+.qai-v73-step {background:#f8fafc !important; color:#0f172a !important; border:1px solid #e2e8f0 !important;}
+.qai-v73-note {background:#ecfeff !important; color:#155e75 !important; border:1px solid #99f6e4 !important;}
+@media (max-width: 900px) {.qai-v74-grid{grid-template-columns:1fr;} [data-testid="stSidebar"]{display:block!important;}}
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -1450,8 +1483,14 @@ def lesson_diagram_html(lesson_id: str) -> str:
     return diagrams.get(lesson_id, "Diagram is being prepared for this lesson.")
 
 
+
+def lesson_segment_path(lesson_id: str, kind: str) -> Path:
+    """Return path to a cropped visual segment generated from the professional image."""
+    return LESSON_MEDIA_DIR / "segments" / f"{lesson_id}_{kind}_visual.png"
+
+
 def render_lesson_media(lesson_id: str) -> None:
-    """Render media as separated learning blocks: diagram, code, output, video, and optional full image."""
+    """Render the real lesson visuals as separated, readable blocks plus the MP4 micro-video."""
     media = LESSON_MEDIA.get(lesson_id)
     lesson = content.lesson_by_id(lesson_id)
     if not media:
@@ -1462,6 +1501,9 @@ def render_lesson_media(lesson_id: str) -> None:
     image_name = media.get("image")
     video_path = LESSON_MEDIA_DIR / video_name if video_name else None
     image_path = LESSON_MEDIA_DIR / image_name if image_name else None
+    main_visual = lesson_segment_path(lesson_id, "main")
+    detail_visual = lesson_segment_path(lesson_id, "detail")
+    notice_visual = lesson_segment_path(lesson_id, "notice")
 
     st.markdown("### Visual learning support")
     st.markdown(
@@ -1469,33 +1511,50 @@ def render_lesson_media(lesson_id: str) -> None:
         unsafe_allow_html=True,
     )
 
-    diagram_col, code_col = st.columns([1.05, 0.95])
-    with diagram_col:
-        st.markdown("<div class='qai-v73-card'><h4>1. Concept diagram</h4><p>This compact diagram replaces the old crowded image. Read it slowly from top to bottom.</p></div>", unsafe_allow_html=True)
-        st.code(lesson_diagram_html(lesson_id), language="text")
-    with code_col:
-        st.markdown("<div class='qai-v73-card'><h4>2. Tiny Qiskit code</h4><p>The code is shown as a separate object so it remains readable.</p></div>", unsafe_allow_html=True)
+    st.markdown("#### 1. Read the visual in smaller parts")
+    top_left, top_right = st.columns([1.1, 0.9])
+    with top_left:
+        st.markdown("<div class='qai-v74-media-card'><h4>Concept visual</h4><p>The professional image is cropped here so the main idea is readable instead of being squeezed.</p>", unsafe_allow_html=True)
+        if main_visual.exists():
+            st.image(str(main_visual), use_container_width=True, caption="Main concept visual")
+        elif image_path and image_path.exists():
+            st.image(str(image_path), use_container_width=True, caption="Full visual fallback")
+        else:
+            st.warning(f"Visual image not found: {image_name}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with top_right:
+        st.markdown("<div class='qai-v74-media-card'><h4>Reading order</h4><p>Follow the visual step by step before asking the AI tutor.</p>", unsafe_allow_html=True)
+        for i, step in enumerate(lesson.get("visual_steps", []), start=1):
+            st.markdown(
+                f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("#### 2. Connect the picture to code and output")
+    grid_left, grid_right = st.columns([1, 1])
+    with grid_left:
+        st.markdown("<div class='qai-v74-media-card'><h4>Code / circuit focus</h4>", unsafe_allow_html=True)
+        if detail_visual.exists():
+            st.image(str(detail_visual), use_container_width=True, caption="Detailed code/circuit crop")
         st.code(lesson.get("qiskit_code", ""), language="python")
         if lesson.get("code_focus"):
             st.markdown("**Code reading focus**")
             for point in lesson.get("code_focus", []):
                 st.markdown(f"- {point}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("#### Read it in this order")
-    for i, step in enumerate(lesson.get("visual_steps", []), start=1):
-        st.markdown(
-            f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
-            unsafe_allow_html=True,
-        )
+    with grid_right:
+        st.markdown("<div class='qai-v74-media-card'><h4>Output / interpretation focus</h4>", unsafe_allow_html=True)
+        if notice_visual.exists():
+            st.image(str(notice_visual), use_container_width=True, caption="Output and notice crop")
+        st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
+        st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    before_col, after_col = st.columns(2)
-    with before_col:
-        st.markdown(f"<div class='qai-v73-card'><h4>3. Before measurement</h4><p>{lesson.get('before_measurement', '')}</p></div>", unsafe_allow_html=True)
-    with after_col:
-        st.markdown(f"<div class='qai-v73-card'><h4>4. After measurement / output</h4><p>{lesson.get('after_measurement', '')}</p></div>", unsafe_allow_html=True)
-
-    st.markdown("### Micro-video")
-    st.markdown("<div class='qai-v73-video-box'>", unsafe_allow_html=True)
+    st.markdown("#### 3. Micro-video")
+    st.markdown("<div class='qai-v74-video-box'>", unsafe_allow_html=True)
     if video_path and video_path.exists() and video_path.stat().st_size > 0:
         st.video(video_path.read_bytes(), format="video/mp4")
         st.caption(f"Loaded MP4 file: {video_name} · size: {video_path.stat().st_size // 1024} KB")
@@ -1505,9 +1564,9 @@ def render_lesson_media(lesson_id: str) -> None:
 
     st.markdown(f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
 
-    with st.expander("Optional: open the full reference visual image"):
+    with st.expander("Optional: open the complete reference image"):
         if image_path and image_path.exists():
-            st.image(str(image_path), use_container_width=True, caption=f"Full reference visual: {image_name}")
+            st.image(str(image_path), use_container_width=True, caption=f"Complete reference visual: {image_name}")
         else:
             st.warning(f"Full visual image not found: {image_name}")
 
@@ -1515,7 +1574,6 @@ def render_lesson_media(lesson_id: str) -> None:
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
         st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
-
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
     st.markdown("### Learning path")
