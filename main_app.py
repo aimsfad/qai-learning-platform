@@ -1199,7 +1199,7 @@ def render_lesson_media(lesson_id: str) -> None:
     st.markdown("#### 1. Read the visual in smaller parts")
     top_left, top_right = st.columns([1.1, 0.9])
     with top_left:
-        st.markdown("<div class='qai-v74-media-card'><h4>Concept visual</h4><p>The professional image is cropped here so the main idea is readable instead of being squeezed.</p>", unsafe_allow_html=True)
+        st.markdown("<div class='qai-v74-media-card'><h4>Concept visual</h4><p>A newly rebuilt high-resolution visual explains only the main idea, without crowded text.</p>", unsafe_allow_html=True)
         if main_visual.exists():
             st.image(str(main_visual), use_container_width=True, caption="Main concept visual")
         elif image_path and image_path.exists():
@@ -1222,7 +1222,7 @@ def render_lesson_media(lesson_id: str) -> None:
     with grid_left:
         st.markdown("<div class='qai-v74-media-card'><h4>Code / circuit focus</h4>", unsafe_allow_html=True)
         if detail_visual.exists():
-            st.image(str(detail_visual), use_container_width=True, caption="Detailed code/circuit crop")
+            st.image(str(detail_visual), use_container_width=True, caption="Code and circuit visual")
         st.code(lesson.get("qiskit_code", ""), language="python")
         if lesson.get("code_focus"):
             st.markdown("**Code reading focus**")
@@ -1233,7 +1233,7 @@ def render_lesson_media(lesson_id: str) -> None:
     with grid_right:
         st.markdown("<div class='qai-v74-media-card'><h4>Output / interpretation focus</h4>", unsafe_allow_html=True)
         if notice_visual.exists():
-            st.image(str(notice_visual), use_container_width=True, caption="Output and notice crop")
+            st.image(str(notice_visual), use_container_width=True, caption="Output interpretation visual")
         st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
         st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1249,9 +1249,9 @@ def render_lesson_media(lesson_id: str) -> None:
 
     st.markdown(f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
 
-    with st.expander("Optional: open the complete reference image"):
+    with st.expander("Optional: open the older complete reference image"):
         if image_path and image_path.exists():
-            st.image(str(image_path), use_container_width=True, caption=f"Complete reference visual: {image_name}")
+            st.image(str(image_path), use_container_width=True, caption=f"Older complete reference visual: {image_name}")
         else:
             st.warning(f"Full visual image not found: {image_name}")
 
