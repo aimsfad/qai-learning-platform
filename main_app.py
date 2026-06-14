@@ -23,7 +23,7 @@ LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 
 LESSON_MEDIA = {
     "orientation": {
-        "image": "orientation_professional.png",
+        "image": "clean/orientation_clean_visual.png",
         "video": "orientation_microvideo.mp4",
         "caption": "Code-to-circuit map: qubit wire, measurement symbol, and classical output bit.",
         "notice": "Follow the code, then the visual circuit, then the classical output. This makes the quantum/classical boundary visible.",
@@ -31,7 +31,7 @@ LESSON_MEDIA = {
         "resource_url": "https://quantum.cloud.ibm.com/learning/en",
     },
     "qubit_measurement": {
-        "image": "measurement_professional.png",
+        "image": "clean/measurement_clean_visual.png",
         "video": "measurement_microvideo.mp4",
         "caption": "Measurement transforms a prepared quantum state into one classical outcome per shot.",
         "notice": "The important transition is not from code to printout, but from quantum state to classical data.",
@@ -39,7 +39,7 @@ LESSON_MEDIA = {
         "resource_url": "https://quantum.cloud.ibm.com/docs/en/api/qiskit/visualization",
     },
     "hadamard_superposition": {
-        "image": "hadamard_professional.png",
+        "image": "clean/hadamard_clean_visual.png",
         "video": "hadamard_microvideo.mp4",
         "caption": "Hadamard prepares a balanced probability pattern; the histogram reveals it after repeated shots.",
         "notice": "Compare the state before H, the state after H, and the approximate 50/50 counts after measurement.",
@@ -47,7 +47,7 @@ LESSON_MEDIA = {
         "resource_url": "https://qiskit.qotlabs.org/learning/courses/general-formulation-of-quantum-information/density-matrices/bloch-sphere",
     },
     "shots_counts": {
-        "image": "counts_professional.png",
+        "image": "clean/counts_clean_visual.png",
         "video": "counts_microvideo.mp4",
         "caption": "Counts are sampled frequencies. More shots generally make the distribution clearer.",
         "notice": "Compare 10 shots with 1000 shots: both are samples, but one is much easier to interpret.",
@@ -55,7 +55,7 @@ LESSON_MEDIA = {
         "resource_url": "https://qiskit.qotlabs.org/docs/guides/visualize-results",
     },
     "cnot_correlation": {
-        "image": "cnot_professional.png",
+        "image": "clean/cnot_clean_visual.png",
         "video": "cnot_microvideo.mp4",
         "caption": "CNOT uses a control and a target; with H it can produce correlated two-bit outcomes.",
         "notice": "Use the rule table before interpreting the two-qubit histogram. The target flips only when the control is 1.",
@@ -63,7 +63,7 @@ LESSON_MEDIA = {
         "resource_url": "https://quantum.microsoft.com/en-us/tools/quantum-katas",
     },
     "qiskit_debugging": {
-        "image": "debugging_professional.png",
+        "image": "clean/debugging_clean_visual.png",
         "video": "debugging_microvideo.mp4",
         "caption": "Debugging starts with resources: qubits, classical bits, and measurement indices.",
         "notice": "The incorrect code does not allocate a classical bit; the corrected version does.",
@@ -1186,7 +1186,7 @@ def render_lesson_media(lesson_id: str) -> None:
     image_path = LESSON_MEDIA_DIR / image_name
     video_path = LESSON_MEDIA_DIR / video_name
 
-    st.markdown("### Visual and video support")
+    st.markdown("### Focused visual and micro-video")
     st.markdown(
         f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', '')}</div>",
         unsafe_allow_html=True,
@@ -1194,12 +1194,12 @@ def render_lesson_media(lesson_id: str) -> None:
 
     visual_col, video_col = st.columns([1.15, 0.85])
     with visual_col:
-        st.markdown("#### Lesson visual")
+        st.markdown("#### Focused concept visual")
         render_image(image_path, caption=media.get("caption", "Lesson visual"))
 
         steps = lesson.get("visual_steps", [])
         if steps:
-            st.markdown("**Read the visual in this order**")
+            st.markdown("**Use the visual with these steps**")
             for i, step in enumerate(steps, start=1):
                 st.markdown(
                     f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
