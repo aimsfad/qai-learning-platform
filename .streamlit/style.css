@@ -198,3 +198,48 @@ div.stButton > button:hover { border-color:#93c5fd !important; background:#eaf3f
 .qai-ai-protocol { background:#fff7ed !important; border:1px solid #fed7aa !important; color:#7c2d12 !important; border-radius:1rem !important; padding:1rem 1.1rem !important; margin:.8rem 0 1rem 0 !important; }
 .qai-ai-protocol ol { margin:.55rem 0 0 1.2rem !important; }
 .qai-ai-reminder { background:#f5f3ff !important; border:1px solid #ddd6fe !important; color:#4c1d95 !important; border-radius:.95rem !important; padding:.9rem 1rem !important; margin:.85rem 0 !important; }
+
+/* v9.0 guided concept journey and sequential media */
+.qai-route-strip { margin: .75rem 0 1.1rem 0 !important; }
+.qai-route-step {
+  background: #ffffff !important;
+  border: 1px solid #dbe7f5 !important;
+  border-radius: 1rem !important;
+  padding: .95rem !important;
+  min-height: 145px !important;
+  box-shadow: 0 8px 22px rgba(15,23,42,.045) !important;
+}
+.qai-route-label {
+  display:inline-block !important;
+  color:#1d4ed8 !important;
+  background:#dbeafe !important;
+  border-radius:999px !important;
+  font-weight:900 !important;
+  padding:.25rem .65rem !important;
+  font-size:.78rem !important;
+  margin-bottom:.55rem !important;
+}
+.qai-route-title { color:#0f172a !important; font-weight:950 !important; font-size:.98rem !important; margin-bottom:.45rem !important; }
+.qai-route-action { color:#475569 !important; line-height:1.45 !important; font-size:.88rem !important; }
+.qai-sequence-card {
+  background:#fff !important;
+  border:1px solid #dbe7f5 !important;
+  border-radius:1.05rem !important;
+  padding:1rem 1.05rem !important;
+  margin:.35rem 0 1rem 0 !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.045) !important;
+}
+.qai-sequence-label { color:#0f766e !important; font-weight:950 !important; letter-spacing:.04em !important; text-transform:uppercase !important; font-size:.78rem !important; margin-bottom:.35rem !important; }
+.qai-sequence-title { color:#0f172a !important; font-size:1.15rem !important; font-weight:950 !important; margin-bottom:.45rem !important; }
+.qai-sequence-body { color:#334155 !important; line-height:1.55 !important; margin-bottom:.75rem !important; }
+.qai-student-action { background:#f8fafc !important; border:1px solid #e2e8f0 !important; border-radius:.8rem !important; padding:.65rem .75rem !important; margin:.55rem 0 !important; color:#0f172a !important; }
+.qai-ai-rule { background:#f5f3ff !important; border:1px dashed #c4b5fd !important; border-radius:.8rem !important; padding:.65rem .75rem !important; color:#4c1d95 !important; }
+.qai-media-guidance {
+  background:#ffffff !important;
+  border:1px solid #dbe7f5 !important;
+  border-radius:1rem !important;
+  padding:1rem !important;
+  color:#1e293b !important;
+  line-height:1.55 !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.045) !important;
+}
