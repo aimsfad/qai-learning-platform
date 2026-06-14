@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 import content
 import db
@@ -1445,6 +1446,17 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
         render_ai_usefulness_feedback(interaction_id, f"genai_coach_{lesson['id']}_{interaction_id}")
 
 
+def render_hadamard_interactive_simulator() -> None:
+    """Embed the standalone Hadamard/Bloch-sphere simulator supplied as an HTML learning object."""
+    html_path = APP_DIR / "assets" / "interactive" / "hadamard_superposition_simulator.html"
+    if not html_path.exists():
+        st.info("Interactive simulator is not available in this build.")
+        return
+    st.markdown("### Interactive Hadamard simulator")
+    st.caption("Use the step buttons, the shots slider, and the measurement histogram to connect state, gate, and counts.")
+    components.html(html_path.read_text(encoding="utf-8"), height=680, scrolling=True)
+
+
 def render_lesson_media(lesson_id: str) -> None:
     """Render professional sequential media instead of a crowded all-in-one image."""
     media = LESSON_MEDIA.get(lesson_id, {})
@@ -1455,6 +1467,13 @@ def render_lesson_media(lesson_id: str) -> None:
     st.markdown("### Professional sequential media")
     st.caption("The media is split into four short frames. Each frame has one job: observe, model, code, or interpret.")
     render_learning_route_overview(lesson)
+
+    if lesson_id == "hadamard_superposition":
+        render_hadamard_interactive_simulator()
+        demo_video = LESSON_MEDIA_DIR / "sequence" / "hadamard_superposition_professional_demo.mp4"
+        if demo_video.exists():
+            st.markdown("### Professional demonstration video")
+            render_video(demo_video, caption="Hadamard and superposition demonstration video")
 
     for item in frames:
         st.markdown(f"#### {item['label']} — {item['title']}")
