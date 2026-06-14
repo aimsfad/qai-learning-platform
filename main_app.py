@@ -5,6 +5,7 @@ import json
 import secrets as py_secrets
 import smtplib
 import ssl
+import time
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -23,48 +24,36 @@ LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 
 LESSON_MEDIA = {
     "orientation": {
-        "image": "clean/orientation_clean_visual.png",
-        "video": "orientation_microvideo.mp4",
         "caption": "Code-to-circuit map: qubit wire, measurement symbol, and classical output bit.",
         "notice": "Follow the code, then the visual circuit, then the classical output. This makes the quantum/classical boundary visible.",
         "resource_label": "IBM Quantum Learning",
         "resource_url": "https://quantum.cloud.ibm.com/learning/en",
     },
     "qubit_measurement": {
-        "image": "clean/measurement_clean_visual.png",
-        "video": "measurement_microvideo.mp4",
         "caption": "Measurement transforms a prepared quantum state into one classical outcome per shot.",
         "notice": "The important transition is not from code to printout, but from quantum state to classical data.",
         "resource_label": "IBM Quantum documentation: visualization",
         "resource_url": "https://quantum.cloud.ibm.com/docs/en/api/qiskit/visualization",
     },
     "hadamard_superposition": {
-        "image": "clean/hadamard_clean_visual.png",
-        "video": "hadamard_microvideo.mp4",
         "caption": "Hadamard prepares a balanced probability pattern; the histogram reveals it after repeated shots.",
         "notice": "Compare the state before H, the state after H, and the approximate 50/50 counts after measurement.",
         "resource_label": "Bloch sphere explanation",
         "resource_url": "https://qiskit.qotlabs.org/learning/courses/general-formulation-of-quantum-information/density-matrices/bloch-sphere",
     },
     "shots_counts": {
-        "image": "clean/counts_clean_visual.png",
-        "video": "counts_microvideo.mp4",
         "caption": "Counts are sampled frequencies. More shots generally make the distribution clearer.",
         "notice": "Compare 10 shots with 1000 shots: both are samples, but one is much easier to interpret.",
         "resource_label": "Qiskit guide: visualize results",
         "resource_url": "https://qiskit.qotlabs.org/docs/guides/visualize-results",
     },
     "cnot_correlation": {
-        "image": "clean/cnot_clean_visual.png",
-        "video": "cnot_microvideo.mp4",
         "caption": "CNOT uses a control and a target; with H it can produce correlated two-bit outcomes.",
         "notice": "Use the rule table before interpreting the two-qubit histogram. The target flips only when the control is 1.",
         "resource_label": "Microsoft Quantum Katas",
         "resource_url": "https://quantum.microsoft.com/en-us/tools/quantum-katas",
     },
     "qiskit_debugging": {
-        "image": "clean/debugging_clean_visual.png",
-        "video": "debugging_microvideo.mp4",
         "caption": "Debugging starts with resources: qubits, classical bits, and measurement indices.",
         "notice": "The incorrect code does not allocate a classical bit; the corrected version does.",
         "resource_label": "Qiskit documentation",
@@ -445,6 +434,82 @@ def render_status_badge(target=st) -> None:
     else:
         target.info("AI tutor: local fallback mode")
 
+
+
+
+def record_lesson_entry(student_id: int, lesson_id: str) -> None:
+    """Remember when a student first opened the current lesson during this session.
+
+    This supports research analysis of whether learners request GenAI support
+    immediately or after spending time with the concept activity.
+    """
+    key = f"lesson_entry_ts_{lesson_id}"
+    if key not in st.session_state:
+        st.session_state[key] = time.time()
+        try:
+            db.log_event(
+                student_id,
+                "student",
+                "lesson_entry",
+                json.dumps({"lesson_id": lesson_id}),
+            )
+        except Exception:
+            pass
+
+
+def log_ai_request_timing(student_id: int, lesson_id: str, source: str, task: str = "", step: str = "") -> None:
+    """Log time spent in the lesson before a GenAI request is made."""
+    key = f"lesson_entry_ts_{lesson_id}"
+    start = st.session_state.get(key)
+    seconds = round(time.time() - start, 1) if start else None
+    detail = {
+        "lesson_id": lesson_id,
+        "source": source,
+        "task": task,
+        "step": step,
+        "seconds_before_ai": seconds,
+    }
+    try:
+        db.log_event(student_id, "student", "ai_request_timing", json.dumps(detail))
+    except Exception:
+        pass
+
+
+def inline_ai_explain_button(student: Dict[str, Any], lesson: Dict[str, Any], focus: str, text: str, key: str) -> None:
+    """Small contextual AI helper used inside concept and code panels.
+
+    It is intentionally limited: it asks for a scaffolded explanation of the
+    selected panel rather than a full answer. Timing is logged for research.
+    """
+    st.markdown("<div class='qai-inline-ai-box'>", unsafe_allow_html=True)
+    st.caption("Use after reading this part: the AI should clarify the idea, not replace your reasoning.")
+    if st.button("Ask AI to clarify this part", key=f"inline_ai_{key}", use_container_width=True):
+        log_ai_request_timing(student["id"], lesson["id"], "inline_ai_explain", task=focus, step=focus)
+        tutor = feedback_engine.generate_tutor_response(
+            task=f"Clarify this {focus} panel with one short explanation and one check question. Do not give a full solution.",
+            concept=", ".join(lesson.get("concepts", [])),
+            student_input=text,
+            student_profile=student_profile(student),
+            lesson_context={
+                **lesson,
+                "pedagogical_mode": "inline concept clarification",
+                "ai_use_policy": "Clarify, ask a check question, and avoid answer dumping.",
+            },
+        )
+        interaction_id = log_tutor_interaction(
+            student["id"],
+            "inline_lesson_support",
+            ", ".join(lesson.get("concepts", [])),
+            f"clarify_{focus}",
+            text,
+            tutor,
+            lesson_id=lesson["id"],
+            activity_id="inline_ai_explain",
+            selected_text=focus,
+        )
+        st.write(tutor.response)
+        render_ai_usefulness_feedback(interaction_id, f"inline_ai_{key}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 def evaluator_password_is_valid(username: str, password: str) -> bool:
     expected_user = secret("EVALUATOR_USERNAME", "evaluator")
@@ -1344,6 +1409,13 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
         if len((attempt or "").strip()) < 8 and selected_mode in {"Ask me one question", "Give one hint", "Check my explanation"}:
             st.warning("Write a short attempt first. This keeps the AI tutor formative rather than answer-giving.")
             return
+        log_ai_request_timing(
+            student["id"],
+            lesson["id"],
+            "genai_learning_coach",
+            task=selected_mode,
+            step=selected_step.get("label", ""),
+        )
         tutor = feedback_engine.generate_tutor_response(
             task=f"{selected_mode}: {selected_instruction}",
             concept=", ".join(lesson.get("concepts", [])),
@@ -1462,6 +1534,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     if selected_id not in valid_ids:
         selected_id = first_incomplete_lesson_id(student["id"])
     lesson = content.lesson_by_id(selected_id)
+    record_lesson_entry(student["id"], selected_id)
     db.log_event(student["id"], "student", "open_module", selected_id)
 
     st.markdown("<div class='qai-learning-shell'>", unsafe_allow_html=True)

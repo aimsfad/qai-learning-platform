@@ -88,3 +88,12 @@
 - Rebuilt lesson media as professional sequential frames instead of crowded all-in-one images.
 - Added step-aware GenAI learning coach: student selects the current step and writes an attempt before AI support.
 - Added short MP4 concept-sequence videos generated from the four pedagogical frames.
+
+## v9.2 - Research hygiene and AI timing instrumentation
+
+- Removed unused legacy documentation files from the release package; keep only README.md and CHANGELOG.md at the root.
+- Removed Python cache files and updated .gitignore.
+- Removed legacy clean PNG and old micro-video duplicates; the active lesson media now uses the sequential concept frames and concept-sequence MP4 files.
+- Added research event logging for `lesson_entry` and `ai_request_timing`, including seconds spent in a lesson before requesting GenAI support.
+- Restored a safe inline AI clarification helper used by the concept and Qiskit panels.
+- Kept database, security, evaluator export, and authentication behavior unchanged.
