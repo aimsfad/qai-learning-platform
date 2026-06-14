@@ -1406,6 +1406,45 @@ def render_lesson_media(lesson_id: str) -> None:
         unsafe_allow_html=True,
     )
 
+
+def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
+    """Render the lesson selector used by the learning path page.
+
+    This function was accidentally omitted in v9.0 when the Guided Concept
+    Journey was added, which caused a NameError on Streamlit Cloud.
+    """
+    st.markdown("### Learning path")
+    st.caption("Six compact modules. Choose a card to open it; the platform remembers your latest module.")
+
+    rows = [content.LESSONS[i:i + 3] for i in range(0, len(content.LESSONS), 3)]
+    for row in rows:
+        cols = st.columns(len(row))
+        for col, lesson in zip(cols, row):
+            is_selected = lesson["id"] == selected_id
+            is_done = lesson["id"] in completed
+            is_recommended = lesson["id"] in recommended_set
+            status = "Completed" if is_done else ("Recommended" if is_recommended else "Available")
+            marker = "✓" if is_done else ("▶" if is_selected else "")
+            concepts = lesson.get("concepts", [])[:2]
+            concept_html = "".join(f"<span class='qai-concept-pill'>{c}</span>" for c in concepts)
+            card_class = "qai-lesson-card selected" if is_selected else "qai-lesson-card"
+            with col:
+                st.markdown(
+                    f"""
+                    <div class='{card_class}'>
+                      <div class='qai-card-kicker'>{status} · {lesson.get('level', 'Module')} · {lesson.get('duration', '')}</div>
+                      <div class='qai-card-title'>{marker} Module {content.LESSONS.index(lesson)+1}</div>
+                      <div class='qai-card-subtitle'>{lesson.get('short_title', lesson['title'])}</div>
+                      <div class='qai-card-concepts'>{concept_html}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if st.button("Opened" if is_selected else "Open", key=f"open_lesson_{lesson['id']}", disabled=is_selected, use_container_width=True):
+                    set_current_lesson(student["id"], lesson["id"])
+                    st.rerun()
+
+
 def render_learning_module(student: Dict[str, Any]) -> None:
     hero("Learning Path", "Professional micro-lessons: visual explanation, tiny Qiskit example, AI support, and reflection.")
     if not test_is_done(student["id"], "pre"):
