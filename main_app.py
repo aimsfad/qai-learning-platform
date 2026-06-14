@@ -552,8 +552,11 @@ def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title
 
 def render_sidebar() -> None:
     role = st.session_state.get("role")
+    # Use both plain Streamlit text and CSS-styled HTML so the sidebar remains visible
+    # even if custom CSS fails to load on Streamlit Cloud.
     st.sidebar.markdown("<div class='qai-side-brand'>QAI Learning Platform</div>", unsafe_allow_html=True)
-    st.sidebar.markdown("<div class='qai-side-sub'>Guided quantum programming study with contextual AI support.</div>", unsafe_allow_html=True)
+    st.sidebar.caption("Guided quantum programming study with contextual AI support.")
+    st.sidebar.divider()
 
     if role == "student":
         student = current_student()
@@ -659,7 +662,7 @@ def render_sidebar() -> None:
         if st.sidebar.button("Switch workspace", use_container_width=True):
             switch_role(None)
     else:
-        st.sidebar.markdown("<div class='qai-side-profile'>Select a workspace to start.</div>", unsafe_allow_html=True)
+        st.sidebar.info("Select Student workspace or Evaluator workspace from the main page to start.")
 
 
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
