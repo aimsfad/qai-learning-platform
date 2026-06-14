@@ -82,8 +82,9 @@
 2. سجّل الدخول كطالب: يجب ألا يغطي أي شريط بداية الصفحة.
 3. افتح Learning Path ثم Module 2 أو Module 3: يجب أن تظهر الصور المقسمة الجديدة بوضوح داخل تبويب Visual and video.
 
+## V9.0 Guided Concept Journey + Professional Sequential Media
 
-## v8.9 Concept Studio + GenAI Coach
-- Added layered concept studio inspired by professional quantum learning modules.
-- Added structured GenAI concept coach with Socratic/hint/exercise/reasoning-check modes.
-- Improved tutor prompt to emphasize intuition, circuit, Qiskit mapping, measurement/counts, and misconception checks.
+- Added a clearer four-step learning route for each concept: Observe, Model, Code, Interpret.
+- Rebuilt lesson media as professional sequential frames instead of crowded all-in-one images.
+- Added step-aware GenAI learning coach: student selects the current step and writes an attempt before AI support.
+- Added short MP4 concept-sequence videos generated from the four pedagogical frames.

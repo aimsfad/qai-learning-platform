@@ -1174,42 +1174,87 @@ def lesson_diagram_html(lesson_id: str) -> str:
 
 
 
-def concept_flow_for_lesson(lesson: Dict[str, Any]) -> List[Dict[str, str]]:
-    """IBM-inspired concept flow: one idea is unfolded through state, circuit, code, and result."""
-    code_focus = lesson.get("code_focus", []) or []
-    visual_steps = lesson.get("visual_steps", []) or []
+
+def lesson_sequence_frames(lesson_id: str) -> List[Dict[str, str]]:
+    """Return the professional four-frame concept sequence for a lesson."""
     return [
         {
-            "title": "1. Start from the phenomenon",
-            "subtitle": "What is the learner trying to understand?",
-            "body": lesson.get("big_idea", lesson.get("concept", "")),
-            "prompt": "Before using AI, write one sentence that predicts what the circuit is trying to show.",
+            "key": "observe",
+            "label": "1. Observe",
+            "title": "What is the phenomenon?",
+            "image": f"sequence/{lesson_id}_01_observe.png",
+            "student_action": "Write one prediction before reading the code.",
+            "ai_rule": "Ask AI only for a question that helps you notice the key idea.",
         },
         {
-            "title": "2. Read the circuit as a model",
-            "subtitle": "Connect the visual elements to quantum and classical resources.",
-            "body": " → ".join(visual_steps) if visual_steps else lesson.get("objective", ""),
-            "prompt": "Point to the qubit line, the operation, and the measurement/output part.",
+            "key": "model",
+            "label": "2. Model",
+            "title": "How does the circuit represent it?",
+            "image": f"sequence/{lesson_id}_02_model.png",
+            "student_action": "Point to the qubit line, gate or operation, measurement, and classical output.",
+            "ai_rule": "Ask AI to check whether you identified the circuit parts correctly.",
         },
         {
-            "title": "3. Map the idea to Qiskit",
-            "subtitle": "Identify the exact line of code that creates the concept.",
-            "body": " ".join(code_focus[:2]) if code_focus else lesson.get("qiskit_code", ""),
-            "prompt": "Explain which line prepares, changes, measures, or stores information.",
+            "key": "code",
+            "label": "3. Code",
+            "title": "Which Qiskit line creates the effect?",
+            "image": f"sequence/{lesson_id}_03_code.png",
+            "student_action": "Name the line that prepares, changes, measures, or stores information.",
+            "ai_rule": "Ask AI for a hint about one code line, not a full solution.",
         },
         {
-            "title": "4. Interpret the result",
-            "subtitle": "Separate the state before measurement from the data after measurement.",
-            "body": f"Before: {lesson.get('before_measurement','')} After: {lesson.get('after_measurement','')}",
-            "prompt": "Use measurement/counts language rather than saying the answer is simply hidden in the qubit.",
+            "key": "interpret",
+            "label": "4. Interpret",
+            "title": "What does the result mean?",
+            "image": f"sequence/{lesson_id}_04_interpret.png",
+            "student_action": "Write a reasoning sentence using measurement, shots, or counts.",
+            "ai_rule": "Ask AI to check your reasoning sentence and improve one phrase.",
         },
     ]
 
 
+def concept_flow_for_lesson(lesson: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Pedagogical route used by the concept studio and AI coach."""
+    frames = lesson_sequence_frames(lesson["id"])
+    visual_steps = lesson.get("visual_steps", []) or []
+    code_focus = lesson.get("code_focus", []) or []
+    body = [
+        lesson.get("big_idea", lesson.get("concept", "")),
+        " → ".join(visual_steps) if visual_steps else lesson.get("objective", ""),
+        " ".join(code_focus[:2]) if code_focus else lesson.get("qiskit_code", ""),
+        f"Before: {lesson.get('before_measurement','')} After: {lesson.get('after_measurement','')}",
+    ]
+    for item, text in zip(frames, body):
+        item["body"] = text
+    return frames
+
+
+def render_learning_route_overview(lesson: Dict[str, Any]) -> None:
+    """A clear student-facing route: what to do, in what order, and why."""
+    st.markdown("### Your learning route for this concept")
+    st.caption("Follow the four steps in order. The AI coach is used after your first attempt, not before it.")
+    steps = lesson_sequence_frames(lesson["id"])
+    st.markdown("<div class='qai-route-strip'>", unsafe_allow_html=True)
+    cols = st.columns(4)
+    for col, step in zip(cols, steps):
+        with col:
+            st.markdown(
+                f"""
+                <div class='qai-route-step'>
+                  <div class='qai-route-label'>{step['label']}</div>
+                  <div class='qai-route-title'>{step['title']}</div>
+                  <div class='qai-route-action'>{step['student_action']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 def render_concept_learning_studio(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
-    """Render a layered concept presentation inspired by IBM Quantum Learning modules."""
-    st.markdown("### Concept learning studio")
-    st.caption("Study the concept in layers: phenomenon → circuit model → Qiskit mapping → measurement/result interpretation.")
+    """Render a sequential concept studio inspired by modular IBM Quantum Learning design."""
+    st.markdown("### Concept studio")
+    st.caption("A concept is presented as a short learning sequence: observe → model → code → interpret.")
     st.markdown(
         f"""
         <div class='qai-concept-hero'>
@@ -1220,45 +1265,51 @@ def render_concept_learning_studio(student: Dict[str, Any], lesson: Dict[str, An
         """,
         unsafe_allow_html=True,
     )
-    flow = concept_flow_for_lesson(lesson)
-    cols = st.columns(2)
-    for i, item in enumerate(flow):
-        with cols[i % 2]:
+    render_learning_route_overview(lesson)
+    st.markdown("#### Step-by-step explanation")
+    for item in concept_flow_for_lesson(lesson):
+        frame_path = LESSON_MEDIA_DIR / item["image"]
+        left, right = st.columns([0.48, 0.52])
+        with left:
+            render_image(frame_path, caption=item["label"])
+        with right:
             st.markdown(
                 f"""
-                <div class='qai-concept-step-card'>
-                  <div class='qai-concept-step-title'>{item['title']}</div>
-                  <div class='qai-concept-step-subtitle'>{item['subtitle']}</div>
-                  <div class='qai-concept-step-body'>{item['body']}</div>
-                  <div class='qai-concept-ai-prompt'><b>Before AI:</b> {item['prompt']}</div>
+                <div class='qai-sequence-card'>
+                  <div class='qai-sequence-label'>{item['label']}</div>
+                  <div class='qai-sequence-title'>{item['title']}</div>
+                  <div class='qai-sequence-body'>{item.get('body','')}</div>
+                  <div class='qai-student-action'><b>Student action:</b> {item['student_action']}</div>
+                  <div class='qai-ai-rule'><b>AI use:</b> {item['ai_rule']}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-    st.markdown("#### Micro-visual reading routine")
-    r1, r2, r3 = st.columns(3)
-    with r1:
-        st.markdown("<div class='qai-routine-card'><b>Look</b><br>Identify qubits, gates, measurement, and classical output.</div>", unsafe_allow_html=True)
-    with r2:
-        st.markdown("<div class='qai-routine-card'><b>Predict</b><br>Say what should happen before running or reading counts.</div>", unsafe_allow_html=True)
-    with r3:
-        st.markdown("<div class='qai-routine-card'><b>Explain</b><br>Use state, measurement, shots, and counts in your own words.</div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class='qai-ai-reminder'>
+          <b>Learning rule:</b> the student first predicts or explains, then uses GenAI for a hint, diagnosis, or feedback. This protects the activity from becoming copy-paste learning.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
-    """A structured GenAI coach that makes the learner think before receiving generated help."""
-    st.markdown("### Generative AI concept coach")
-    st.caption("The AI tutor is used as a scaffold: it should diagnose, ask, hint, and generate practice rather than replace your reasoning.")
+    """A step-aware GenAI coach that supports the concept sequence."""
+    st.markdown("### GenAI learning coach")
+    st.caption("Choose the step you are working on, write your attempt, then ask the AI for a limited type of support.")
+    render_learning_route_overview(lesson)
+    steps = concept_flow_for_lesson(lesson)
+    step_labels = [s["label"] for s in steps]
+    selected_label = st.selectbox("Which step are you working on?", step_labels, key=f"coach_step_{lesson['id']}")
+    selected_step = next(s for s in steps if s["label"] == selected_label)
     st.markdown(
-        """
+        f"""
         <div class='qai-ai-protocol'>
-          <b>Use AI in this order:</b>
-          <ol>
-            <li>Write your own prediction or explanation first.</li>
-            <li>Ask for a hint or diagnostic question before asking for a full explanation.</li>
-            <li>Compare the AI response with the circuit, code, and counts.</li>
-            <li>Rewrite the final explanation in your own words.</li>
-          </ol>
+          <b>{selected_step['label']}:</b> {selected_step['title']}<br>
+          <b>Your task:</b> {selected_step['student_action']}<br>
+          <b>AI boundary:</b> {selected_step['ai_rule']}
         </div>
         """,
         unsafe_allow_html=True,
@@ -1271,169 +1322,89 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
     )
     attempt = st.text_area(
         "Your attempt first",
-        placeholder="Write your prediction, explanation, or confusion before asking the AI tutor...",
+        placeholder="Write a prediction, explanation, code reading, or result interpretation before asking the AI coach...",
         height=120,
         key=f"genai_attempt_{lesson['id']}",
     )
-    tasks = [
-        ("Socratic question", "Ask one Socratic diagnostic question about my attempt. Do not explain everything yet."),
-        ("Hint only", "Give one short hint that helps me continue, without giving the full answer."),
-        ("Layered explanation", "Explain using layers: intuition, circuit, Qiskit line, measurement/result, misconception."),
-        ("Check my reasoning", "Check my explanation, identify what is correct, then give one precise improvement."),
-        ("Create mini-exercise", "Generate one tiny Qiskit practice task and one reflective question; do not include the full solution first."),
+    support_modes = [
+        ("Ask me one question", "Ask one Socratic diagnostic question for this exact step. Do not give the answer."),
+        ("Give one hint", "Give one concise hint for this step only, without solving it."),
+        ("Check my explanation", "Evaluate my attempt: what is correct, what is missing, and one precise improvement."),
+        ("Explain this step", "Give a layered explanation of this step only: intuition, visual, Qiskit, result."),
+        ("Create practice", "Create one tiny practice item for this step and ask me to answer before showing a solution."),
     ]
-    cols = st.columns(5)
-    selected_task = None
+    cols = st.columns(len(support_modes))
+    selected_mode = None
     selected_instruction = None
-    for col, (label, instruction) in zip(cols, tasks):
-        if col.button(label, key=f"genai_{lesson['id']}_{label}", use_container_width=True):
-            selected_task = label
+    for col, (label, instruction) in zip(cols, support_modes):
+        if col.button(label, key=f"coach_{lesson['id']}_{selected_step['key']}_{label}", use_container_width=True):
+            selected_mode = label
             selected_instruction = instruction
-    if selected_task:
-        if len((attempt or "").strip()) < 8 and selected_task in {"Socratic question", "Hint only", "Check my reasoning"}:
+    if selected_mode:
+        if len((attempt or "").strip()) < 8 and selected_mode in {"Ask me one question", "Give one hint", "Check my explanation"}:
             st.warning("Write a short attempt first. This keeps the AI tutor formative rather than answer-giving.")
             return
-        flow = concept_flow_for_lesson(lesson)
         tutor = feedback_engine.generate_tutor_response(
-            task=f"{selected_task}: {selected_instruction}",
+            task=f"{selected_mode}: {selected_instruction}",
             concept=", ".join(lesson.get("concepts", [])),
-            student_input=attempt or f"Please support me with {selected_task.lower()} for this lesson.",
+            student_input=attempt or f"Support me on {selected_step['label']} for {lesson.get('title','this lesson')}.",
             student_profile=student_profile(student),
             lesson_context={
                 **lesson,
                 "response_language": lang,
-                "pedagogical_mode": "IBM-inspired layered concept coaching",
-                "concept_flow": flow,
-                "ai_use_policy": "Do not replace learner reasoning; start with diagnosis, hint, or guided explanation.",
+                "selected_learning_step": selected_step,
+                "pedagogical_mode": "step-aware concept coaching",
+                "ai_use_policy": "Do not replace learner reasoning; scaffold with questions, hints, diagnosis, or limited explanation.",
             },
         )
         interaction_id = log_tutor_interaction(
             student["id"],
-            "genai_concept_coach",
+            "genai_learning_coach",
             ", ".join(lesson.get("concepts", [])),
-            selected_task,
+            selected_mode,
             attempt or selected_instruction,
             tutor,
             lesson_id=lesson["id"],
-            activity_id="genai_concept_coach",
-            selected_text=selected_instruction,
+            activity_id="genai_learning_coach",
+            selected_text=f"{selected_step['label']} | {selected_instruction}",
         )
-        st.markdown("#### AI tutor response")
+        st.markdown("#### AI coach response")
         st.write(tutor.response)
         render_ai_usefulness_feedback(interaction_id, f"genai_coach_{lesson['id']}_{interaction_id}")
 
 
 def render_lesson_media(lesson_id: str) -> None:
-    """Render one optimized lesson visual and one MP4 micro-video with explicit checks."""
-    media = LESSON_MEDIA.get(lesson_id)
+    """Render professional sequential media instead of a crowded all-in-one image."""
+    media = LESSON_MEDIA.get(lesson_id, {})
     lesson = content.lesson_by_id(lesson_id)
-    if not media:
-        st.warning(f"No media mapping was found for lesson: {lesson_id}")
-        return
+    frames = lesson_sequence_frames(lesson_id)
+    video_path = LESSON_MEDIA_DIR / "sequence" / f"{lesson_id}_concept_sequence.mp4"
 
-    image_name = media.get("image", "")
-    video_name = media.get("video", "")
-    image_path = LESSON_MEDIA_DIR / image_name
-    video_path = LESSON_MEDIA_DIR / video_name
+    st.markdown("### Professional sequential media")
+    st.caption("The media is split into four short frames. Each frame has one job: observe, model, code, or interpret.")
+    render_learning_route_overview(lesson)
 
-    st.markdown("### Focused visual and micro-video")
-    st.markdown(
-        f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', '')}</div>",
-        unsafe_allow_html=True,
-    )
-
-    visual_col, video_col = st.columns([1.15, 0.85])
-    with visual_col:
-        st.markdown("#### Focused concept visual")
-        render_image(image_path, caption=media.get("caption", "Lesson visual"))
-
-        steps = lesson.get("visual_steps", [])
-        if steps:
-            st.markdown("**Use the visual with these steps**")
-            for i, step in enumerate(steps, start=1):
-                st.markdown(
-                    f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
-                    unsafe_allow_html=True,
-                )
-
-    with video_col:
-        st.markdown("#### Micro-video")
-        render_video(video_path, caption="Short lesson micro-video")
-        st.markdown(
-            f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
-            unsafe_allow_html=True,
-        )
-
-    with st.expander("Connect the visual to code and output"):
-        left, right = st.columns(2)
+    for item in frames:
+        st.markdown(f"#### {item['label']} — {item['title']}")
+        left, right = st.columns([0.62, 0.38])
         with left:
-            st.markdown("**Tiny Qiskit example**")
-            st.code(lesson.get("qiskit_code", ""), language="python")
-            if lesson.get("code_focus"):
-                st.markdown("**Code reading focus**")
-                for point in lesson.get("code_focus", []):
-                    st.markdown(f"- {point}")
+            render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
         with right:
-            st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
-            st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
-
-    resource_url = media.get("resource_url")
-    resource_label = media.get("resource_label", "Optional external resource")
-    if resource_url:
-        st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
-
-def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
-    st.markdown("### Learning path")
-    st.caption("Six compact modules. Choose a card to open it; the platform remembers your latest module.")
-    cols = st.columns(3)
-    for idx, lesson in enumerate(content.LESSONS):
-        with cols[idx % 3]:
-            status = "Completed" if lesson["id"] in completed else ("Current" if lesson["id"] == selected_id else "Available")
-            klass = "qai-path-done" if lesson["id"] in completed else ("qai-path-current" if lesson["id"] == selected_id else "")
-            badge = "✓" if lesson["id"] in completed else ("▶" if lesson["id"] == selected_id else str(idx + 1))
-            rec = "Recommended" if lesson["id"] in recommended_set else lesson.get("level", "Module")
-            concepts = "".join([f"<span class='qai-concept-pill'>{c}</span>" for c in lesson.get("concepts", [])[:2]])
             st.markdown(
                 f"""
-                <div class='qai-path-card {klass}'>
-                  <div class='qai-path-num'>{badge} Module {idx + 1}</div>
-                  <div class='qai-card-title'>{lesson.get('short_title', lesson['title'])}</div>
-                  <div class='qai-card-mini'>{lesson.get('duration', '')} · {rec}</div>
-                  <div>{concepts}</div>
+                <div class='qai-media-guidance'>
+                  <b>What the student does</b><br>{item['student_action']}<br><br>
+                  <b>How GenAI should help</b><br>{item['ai_rule']}
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            if st.button("Open" if lesson["id"] != selected_id else "Opened", key=f"open_path_{lesson['id']}", use_container_width=True, disabled=lesson["id"] == selected_id):
-                set_current_lesson(student["id"], lesson["id"])
-                st.rerun()
-
-
-def inline_ai_explain_button(student: Dict[str, Any], lesson: Dict[str, Any], label: str, selected_text: str, key: str) -> None:
-    st.markdown("<div class='qai-ai-actions'><b>AI support for this part</b><br>Use the tutor for explanation, hints, or a reflective question without leaving the module.</div>", unsafe_allow_html=True)
-    cols = st.columns([1, 1, 1])
-    actions = [
-        ("Explain simply", "Explain selected text simply"),
-        ("Give a hint", "Give a hint without full answer"),
-        ("Ask me a question", "Ask one reflective check question"),
-    ]
-    for col, (button_label, task) in zip(cols, actions):
-        if col.button(button_label, key=f"{key}_{button_label}", use_container_width=True):
-            tutor = feedback_engine.generate_tutor_response(
-                task=task,
-                concept=", ".join(lesson["concepts"]),
-                student_input=f"Selected lesson text: {selected_text}",
-                student_profile=student_profile(student),
-                lesson_context={**lesson, "source": "inline_lesson_help", "response_language": "Auto-detect"},
-            )
-            interaction_id = log_tutor_interaction(
-                student["id"], "inline_lesson_help", ", ".join(lesson["concepts"]), task,
-                f"Explain selected text: {selected_text}", tutor, lesson_id=lesson["id"], activity_id=key, selected_text=selected_text,
-            )
-            st.markdown("#### AI tutor explanation")
-            st.write(tutor.response)
-            render_ai_usefulness_feedback(interaction_id, f"inline_{key}")
-
+    st.markdown("### Micro-video sequence")
+    render_video(video_path, caption="Four-frame concept micro-video")
+    st.markdown(
+        f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
+        unsafe_allow_html=True,
+    )
 
 def render_learning_module(student: Dict[str, Any]) -> None:
     hero("Learning Path", "Professional micro-lessons: visual explanation, tiny Qiskit example, AI support, and reflection.")
@@ -1478,11 +1449,11 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.success("This module is completed. You may review it or continue to the next module.")
 
     concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, check_tab = st.tabs([
-        "Concept studio",
-        "Visual and video",
+        "Guided concept journey",
+        "Sequential media",
         "Overview",
         "Code and output",
-        "AI concept coach",
+        "GenAI learning coach",
         "Check and reflect",
     ])
 
