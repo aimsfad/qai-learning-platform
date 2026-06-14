@@ -438,12 +438,12 @@ def render_completion_requirements(student: Dict[str, Any], compact: bool = Fals
         st.caption("Tip: use the Continue button on the Student Home page whenever you are unsure what to do next.")
 
 
-def render_status_badge() -> None:
+def render_status_badge(target=st) -> None:
     status = feedback_engine.provider_status()
     if status["provider"] in ("gemini", "openai", "groq") and status["available"]:
-        st.sidebar.success(f"AI tutor: {status['provider']} mode ({status['model']})")
+        target.success(f"AI tutor: {status['provider']} mode ({status['model']})")
     else:
-        st.sidebar.info("AI tutor: local fallback mode")
+        target.info("AI tutor: local fallback mode")
 
 
 def evaluator_password_is_valid(username: str, password: str) -> bool:
@@ -550,13 +550,13 @@ def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title
 # Sidebar
 # -----------------------------------------------------------------------------
 
-def render_sidebar() -> None:
+def render_sidebar(target=st) -> None:
     role = st.session_state.get("role")
     # Use both plain Streamlit text and CSS-styled HTML so the sidebar remains visible
     # even if custom CSS fails to load on Streamlit Cloud.
-    st.sidebar.markdown("<div class='qai-side-brand'>QAI Learning Platform</div>", unsafe_allow_html=True)
-    st.sidebar.caption("Guided quantum programming study with contextual AI support.")
-    st.sidebar.divider()
+    target.markdown("<div class='qai-side-brand'>QAI Learning Platform</div>", unsafe_allow_html=True)
+    target.caption("Guided quantum programming study with contextual AI support.")
+    target.divider()
 
     if role == "student":
         student = current_student()
@@ -566,7 +566,7 @@ def render_sidebar() -> None:
             learning_pct = int(round(100 * lesson_count / max(required_lessons, 1)))
             current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else None
             current_title = next((l.get("short_title", l["title"]) for l in content.LESSONS if l["id"] == current_id), "Not started")
-            st.sidebar.markdown(
+            target.markdown(
                 f"""
                 <div class='qai-side-profile'>
                   <div class='qai-side-code'>Student · {student['participant_code']}</div>
@@ -579,7 +579,7 @@ def render_sidebar() -> None:
                 unsafe_allow_html=True,
             )
         else:
-            st.sidebar.markdown("<div class='qai-side-profile'><b>No student signed in</b><br><span style='color:#64748b;font-size:0.8rem;'>Create an account or sign in to start the study.</span></div>", unsafe_allow_html=True)
+            target.markdown("<div class='qai-side-profile'><b>No student signed in</b><br><span style='color:#64748b;font-size:0.8rem;'>Create an account or sign in to start the study.</span></div>", unsafe_allow_html=True)
 
         allowed = student_pages_allowed(student)
         current_page = st.session_state.get("student_page", "Student Home")
@@ -592,42 +592,42 @@ def render_sidebar() -> None:
             ("Post-test", "Post-test", "Unlocked after learning path"),
             ("Satisfaction Survey", "Survey", "Final feedback"),
         ]
-        st.sidebar.markdown("<div class='qai-side-section'>Student navigation</div>", unsafe_allow_html=True)
-        if student and st.sidebar.button("▶ Resume recommended step", key="student_resume_step", type="primary", use_container_width=True):
+        target.markdown("<div class='qai-side-section'>Student navigation</div>", unsafe_allow_html=True)
+        if student and target.button("▶ Resume recommended step", key="student_resume_step", type="primary", use_container_width=True):
             st.session_state.student_page = next_student_page(student)
             st.rerun()
         if not student:
             for page, label, _ in [("Sign in", "Sign in", ""), ("Create account", "Create account", "")]:
                 prefix = "● " if current_page == page else ""
-                if st.sidebar.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
+                if target.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
                     st.session_state.student_page = page
                     st.rerun()
         else:
             for page, label, detail in nav_items:
                 if page in allowed:
                     prefix = "● " if current_page == page else ""
-                    if st.sidebar.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
+                    if target.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
                         st.session_state.student_page = page
                         st.rerun()
                     if current_page == page:
-                        st.sidebar.markdown(f"<div class='qai-side-active-note'>{detail}</div>", unsafe_allow_html=True)
+                        target.markdown(f"<div class='qai-side-active-note'>{detail}</div>", unsafe_allow_html=True)
                 else:
                     if page in {"Post-test", "Satisfaction Survey"}:
-                        st.sidebar.markdown(f"<div class='qai-side-lock'>Locked · {label} · {detail}</div>", unsafe_allow_html=True)
-        st.sidebar.divider()
-        if student and st.sidebar.button("Sign out", use_container_width=True):
+                        target.markdown(f"<div class='qai-side-lock'>Locked · {label} · {detail}</div>", unsafe_allow_html=True)
+        target.divider()
+        if student and target.button("Sign out", use_container_width=True):
             db.log_event(student["id"], "student", "sign_out", "Student signed out from sidebar")
             st.session_state.student_id = None
             st.session_state.student_page = "Student Home"
             st.session_state.student_access_page = "Sign in"
             st.rerun()
-        if st.sidebar.button("Switch workspace", use_container_width=True):
+        if target.button("Switch workspace", use_container_width=True):
             switch_role(None)
-        st.sidebar.markdown("<div class='qai-side-footer'>AI tutor interactions and progress events are logged for the evaluator dashboard.</div>", unsafe_allow_html=True)
-        render_status_badge()
+        target.markdown("<div class='qai-side-footer'>AI tutor interactions and progress events are logged for the evaluator dashboard.</div>", unsafe_allow_html=True)
+        render_status_badge(target)
 
     elif role == "evaluator":
-        st.sidebar.markdown("<div class='qai-side-profile'><b>Evaluator workspace</b><br><span style='color:#64748b;font-size:0.8rem;'>Monitor progress, AI usage, and exports.</span></div>", unsafe_allow_html=True)
+        target.markdown("<div class='qai-side-profile'><b>Evaluator workspace</b><br><span style='color:#64748b;font-size:0.8rem;'>Monitor progress, AI usage, and exports.</span></div>", unsafe_allow_html=True)
         if st.session_state.evaluator_logged_in:
             pages = [
                 "Evaluator Dashboard",
@@ -647,22 +647,22 @@ def render_sidebar() -> None:
                 "AI Response Evaluation": "Response evaluation",
                 "AI Metrics": "AI metrics",
             }
-            st.sidebar.markdown("<div class='qai-side-section'>Evaluator navigation</div>", unsafe_allow_html=True)
+            target.markdown("<div class='qai-side-section'>Evaluator navigation</div>", unsafe_allow_html=True)
             for page in pages:
                 label_text = compact_labels.get(page, page)
                 prefix = "● " if st.session_state.evaluator_page == page else ""
-                if st.sidebar.button(prefix + label_text, key=f"eval_nav_btn_{page}", use_container_width=True):
+                if target.button(prefix + label_text, key=f"eval_nav_btn_{page}", use_container_width=True):
                     st.session_state.evaluator_page = page
                     st.rerun()
-            st.sidebar.divider()
-            if st.sidebar.button("Sign out", use_container_width=True):
+            target.divider()
+            if target.button("Sign out", use_container_width=True):
                 st.session_state.evaluator_logged_in = False
                 st.session_state.evaluator_page = "Evaluator Dashboard"
                 st.rerun()
-        if st.sidebar.button("Switch workspace", use_container_width=True):
+        if target.button("Switch workspace", use_container_width=True):
             switch_role(None)
     else:
-        st.sidebar.info("Select Student workspace or Evaluator workspace from the main page to start.")
+        target.info("Select Student workspace or Evaluator workspace from the main page to start.")
 
 
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
@@ -2342,14 +2342,21 @@ def render_results_export() -> None:
 def main() -> None:
     db.init_db()
     init_state()
-    render_sidebar()
-    role = st.session_state.get("role")
-    if role == "student":
-        render_student_app()
-    elif role == "evaluator":
-        render_evaluator_app()
-    else:
-        render_role_selection()
+
+    left_col, right_col = st.columns([0.28, 0.72], gap="large")
+    with left_col:
+        st.markdown("<div class='qai-app-sidebar'>", unsafe_allow_html=True)
+        render_sidebar(st)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with right_col:
+        role = st.session_state.get("role")
+        if role == "student":
+            render_student_app()
+        elif role == "evaluator":
+            render_evaluator_app()
+        else:
+            render_role_selection()
 
 
 if __name__ == "__main__":
