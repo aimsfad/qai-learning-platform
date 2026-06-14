@@ -2343,11 +2343,13 @@ def main() -> None:
     db.init_db()
     init_state()
 
-    left_col, right_col = st.columns([0.28, 0.72], gap="large")
+    # Render a reliable in-page shell. The left navigation is a real Streamlit
+    # bordered container, not an HTML wrapper around widgets; this prevents the
+    # empty white sidebar block that appeared in Streamlit Cloud.
+    left_col, right_col = st.columns([0.25, 0.75], gap="large")
     with left_col:
-        st.markdown("<div class='qai-app-sidebar'>", unsafe_allow_html=True)
-        render_sidebar(st)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            render_sidebar(st)
 
     with right_col:
         role = st.session_state.get("role")
