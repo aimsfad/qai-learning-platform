@@ -188,3 +188,110 @@ div.stButton > button {border-radius:.85rem !important; min-height:2.55rem !impo
   .qai-v74-grid {grid-template-columns:1fr !important;}
   [data-testid="stSidebar"] {min-width:275px !important; display:block !important;}
 }
+
+/* QAI v8.3 patch: restore visible sidebar, avoid top clipping, polish landing cards */
+[data-testid="stHeader"] {
+  height: 2.4rem !important;
+  background: var(--qai-bg) !important;
+  box-shadow: none !important;
+}
+.block-container {
+  padding-top: 2rem !important;
+}
+section[data-testid="stSidebar"], [data-testid="stSidebar"] {
+  background: linear-gradient(180deg, #0f172a 0%, #172042 62%, #0f766e 135%) !important;
+  border-right: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 10px 0 28px rgba(15,23,42,.12) !important;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"], [data-testid="stSidebarContent"] {
+  background: transparent !important;
+  padding: 1.35rem 1rem !important;
+}
+section[data-testid="stSidebar"] * {
+  color: rgba(255,255,255,.92) !important;
+}
+section[data-testid="stSidebar"] .qai-side-sub,
+section[data-testid="stSidebar"] .qai-side-active-note,
+section[data-testid="stSidebar"] .qai-side-lock,
+section[data-testid="stSidebar"] .qai-side-footer,
+section[data-testid="stSidebar"] .qai-side-progress-label {
+  color: rgba(226,232,240,.78) !important;
+}
+section[data-testid="stSidebar"] .qai-side-brand {
+  color: #ffffff !important;
+}
+section[data-testid="stSidebar"] .qai-side-profile,
+section[data-testid="stSidebar"] .qai-side-next {
+  background: rgba(255,255,255,.08) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(8px) !important;
+}
+section[data-testid="stSidebar"] .qai-side-next {
+  border-left: 4px solid #38bdf8 !important;
+}
+section[data-testid="stSidebar"] .qai-side-code { color:#93c5fd !important; }
+section[data-testid="stSidebar"] .qai-side-section { color:#c4b5fd !important; }
+section[data-testid="stSidebar"] .qai-side-bar {background: rgba(255,255,255,.18) !important;}
+section[data-testid="stSidebar"] .stButton button {
+  background: rgba(255,255,255,.08) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+}
+section[data-testid="stSidebar"] .stButton button:hover,
+section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+  background: rgba(56,189,248,.25) !important;
+  border-color: rgba(125,211,252,.75) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+.qai-hero-grid {
+  display:grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0,.85fr);
+  gap:1rem;
+  margin: 1.2rem 0;
+}
+.qai-glass-card {
+  background:#ffffff !important;
+  color: var(--qai-text) !important;
+  border:1px solid var(--qai-border) !important;
+  border-radius:1.1rem !important;
+  padding:1.25rem !important;
+  box-shadow:0 10px 24px rgba(15,23,42,.06) !important;
+}
+.qai-module-kicker {
+  color:#2563eb !important;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:.72rem;
+  font-weight:900;
+  margin-bottom:.45rem;
+}
+.qai-stage-chip {
+  display:inline-flex;
+  margin:.35rem .35rem 0 0;
+  padding:.32rem .7rem;
+  border-radius:999px;
+  background:#e0f2fe;
+  color:#075985 !important;
+  border:1px solid #bae6fd;
+  font-weight:750;
+  font-size:.82rem;
+}
+.qai-dashboard-grid {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1rem 0;}
+.qai-tile-value {font-size:1.7rem; font-weight:900; color:#0f172a;}
+.qai-tile-label {font-size:.88rem; color:#475569; margin-top:.25rem;}
+.qai-learning-shell {padding:1.1rem 1.25rem !important; margin:1rem 0 !important;}
+.qai-path-card {padding:1rem !important; min-height:7rem !important;}
+.qai-path-card h4 {margin:.1rem 0 .35rem; color:#0f172a!important;}
+.qai-path-card p {color:#475569!important; margin:.2rem 0!important;}
+.qai-v74-media-card,
+.qai-v74-video-box {
+  background:#ffffff !important;
+  color:#0f172a !important;
+}
+.qai-v74-media-card h4 {color:#0f172a!important; margin-top:0!important;}
+.qai-v74-media-card p {color:#475569!important;}
+@media (max-width: 900px) {
+  .qai-hero-grid, .qai-dashboard-grid {grid-template-columns:1fr !important;}
+}
