@@ -20,3 +20,8 @@ In v8.1, page functions can be gradually moved from `main_app.py` into `pages/st
 ## v8.1 update
 
 CSS is now fully externalized and the AI Tutor Lab uses a continuous chat interface while preserving research logging.
+
+### v9.2 research instrumentation note
+The active learning media are the sequential concept frames in `assets/lesson_media/sequence/` and their matching concept-sequence videos. Legacy duplicate lesson images are intentionally not included in this release.
+
+The platform now logs `lesson_entry` and `ai_request_timing` events. These can be used to estimate whether a participant requested GenAI support immediately or after spending time on the lesson concept.

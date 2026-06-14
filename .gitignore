@@ -1,6 +1,12 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv/
+venv/
 .streamlit/secrets.toml
-*.swp
-*.swo
-*.swn
+.DS_Store
+Thumbs.db
+_archive/
