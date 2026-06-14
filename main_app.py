@@ -16,6 +16,7 @@ import content
 import db
 import feedback_engine
 from security import hash_password, verify_password
+from media_utils import render_image, render_video
 
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
@@ -1169,91 +1170,59 @@ def lesson_diagram_html(lesson_id: str) -> str:
 
 
 
-def lesson_segment_path(lesson_id: str, kind: str) -> Path:
-    """Return path to a cropped visual segment generated from the professional image."""
-    return LESSON_MEDIA_DIR / "segments" / f"{lesson_id}_{kind}_visual.png"
-
-
 def render_lesson_media(lesson_id: str) -> None:
-    """Render the real lesson visuals as separated, readable blocks plus the MP4 micro-video."""
+    """Render one optimized lesson visual and one MP4 micro-video with explicit checks."""
     media = LESSON_MEDIA.get(lesson_id)
     lesson = content.lesson_by_id(lesson_id)
     if not media:
         st.warning(f"No media mapping was found for lesson: {lesson_id}")
         return
 
-    video_name = media.get("video")
-    image_name = media.get("image")
-    video_path = LESSON_MEDIA_DIR / video_name if video_name else None
-    image_path = LESSON_MEDIA_DIR / image_name if image_name else None
-    main_visual = lesson_segment_path(lesson_id, "main")
-    detail_visual = lesson_segment_path(lesson_id, "detail")
-    notice_visual = lesson_segment_path(lesson_id, "notice")
+    image_name = media.get("image", "")
+    video_name = media.get("video", "")
+    image_path = LESSON_MEDIA_DIR / image_name
+    video_path = LESSON_MEDIA_DIR / video_name
 
-    st.markdown("### Visual learning support")
+    st.markdown("### Visual and video support")
     st.markdown(
         f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', '')}</div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### 1. Read the visual in smaller parts")
-    top_left, top_right = st.columns([1.1, 0.9])
-    with top_left:
-        st.markdown("<div class='qai-v74-media-card'><h4>Concept visual</h4><p>A newly rebuilt high-resolution visual explains only the main idea, without crowded text.</p>", unsafe_allow_html=True)
-        if main_visual.exists():
-            st.image(str(main_visual), use_container_width=True, caption="Main concept visual")
-        elif image_path and image_path.exists():
-            st.image(str(image_path), use_container_width=True, caption="Full visual fallback")
-        else:
-            st.warning(f"Visual image not found: {image_name}")
-        st.markdown("</div>", unsafe_allow_html=True)
+    visual_col, video_col = st.columns([1.15, 0.85])
+    with visual_col:
+        st.markdown("#### Lesson visual")
+        render_image(image_path, caption=media.get("caption", "Lesson visual"))
 
-    with top_right:
-        st.markdown("<div class='qai-v74-media-card'><h4>Reading order</h4><p>Follow the visual step by step before asking the AI tutor.</p>", unsafe_allow_html=True)
-        for i, step in enumerate(lesson.get("visual_steps", []), start=1):
-            st.markdown(
-                f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
-                unsafe_allow_html=True,
-            )
-        st.markdown("</div>", unsafe_allow_html=True)
+        steps = lesson.get("visual_steps", [])
+        if steps:
+            st.markdown("**Read the visual in this order**")
+            for i, step in enumerate(steps, start=1):
+                st.markdown(
+                    f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
+                    unsafe_allow_html=True,
+                )
 
-    st.markdown("#### 2. Connect the picture to code and output")
-    grid_left, grid_right = st.columns([1, 1])
-    with grid_left:
-        st.markdown("<div class='qai-v74-media-card'><h4>Code / circuit focus</h4>", unsafe_allow_html=True)
-        if detail_visual.exists():
-            st.image(str(detail_visual), use_container_width=True, caption="Code and circuit visual")
-        st.code(lesson.get("qiskit_code", ""), language="python")
-        if lesson.get("code_focus"):
-            st.markdown("**Code reading focus**")
-            for point in lesson.get("code_focus", []):
-                st.markdown(f"- {point}")
-        st.markdown("</div>", unsafe_allow_html=True)
+    with video_col:
+        st.markdown("#### Micro-video")
+        render_video(video_path, caption="Short lesson micro-video")
+        st.markdown(
+            f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
+            unsafe_allow_html=True,
+        )
 
-    with grid_right:
-        st.markdown("<div class='qai-v74-media-card'><h4>Output / interpretation focus</h4>", unsafe_allow_html=True)
-        if notice_visual.exists():
-            st.image(str(notice_visual), use_container_width=True, caption="Output interpretation visual")
-        st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
-        st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("#### 3. Micro-video")
-    st.markdown("<div class='qai-v74-video-box'>", unsafe_allow_html=True)
-    if video_path and video_path.exists() and video_path.stat().st_size > 0:
-        st.video(video_path.read_bytes(), format="video/mp4")
-        st.caption(f"Loaded MP4 file: {video_name} · size: {video_path.stat().st_size // 1024} KB")
-    else:
-        st.error(f"Video file not found or empty: {video_name}")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown(f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>", unsafe_allow_html=True)
-
-    with st.expander("Optional: open the older complete reference image"):
-        if image_path and image_path.exists():
-            st.image(str(image_path), use_container_width=True, caption=f"Older complete reference visual: {image_name}")
-        else:
-            st.warning(f"Full visual image not found: {image_name}")
+    with st.expander("Connect the visual to code and output"):
+        left, right = st.columns(2)
+        with left:
+            st.markdown("**Tiny Qiskit example**")
+            st.code(lesson.get("qiskit_code", ""), language="python")
+            if lesson.get("code_focus"):
+                st.markdown("**Code reading focus**")
+                for point in lesson.get("code_focus", []):
+                    st.markdown(f"- {point}")
+        with right:
+            st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
+            st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
 
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
