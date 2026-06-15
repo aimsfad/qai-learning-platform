@@ -285,3 +285,33 @@ div.stButton > button:hover { border-color:#93c5fd !important; background:#eaf3f
 .qai-v10-code-bridge { background:#f8fafc !important; border:1px solid #dbe7f5 !important; border-radius:1rem !important; padding:1rem !important; color:#334155 !important; line-height:1.55 !important; min-height:100% !important; }
 /* improve old sequence frames if opened */
 .qai-sequence-card, .qai-media-guidance, .qai-v73-step { border-color:#cfe0f5 !important; box-shadow:0 8px 20px rgba(15,23,42,.05) !important; }
+
+/* v10.1 professional visual organization */
+.qai-v101-map-hero, .qai-v101-lab-shell {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 68%, #eef6ff 100%) !important;
+  border: 1px solid #cfe0f5 !important;
+  border-radius: 1.25rem !important;
+  padding: 1.1rem 1.2rem !important;
+  margin: .45rem 0 1rem 0 !important;
+  box-shadow: 0 10px 26px rgba(15,23,42,.055) !important;
+}
+.qai-v101-lab-top { display:flex !important; align-items:flex-start !important; justify-content:space-between !important; gap:1rem !important; }
+.qai-v101-kicker { color:#1d4ed8 !important; font-size:.74rem !important; font-weight:950 !important; letter-spacing:.08em !important; text-transform:uppercase !important; margin-bottom:.35rem !important; }
+.qai-v101-title { color:#0f172a !important; font-size:1.35rem !important; line-height:1.2 !important; font-weight:950 !important; margin-bottom:.4rem !important; }
+.qai-v101-subtitle { color:#334155 !important; font-size:.96rem !important; line-height:1.48 !important; }
+.qai-v101-method { white-space:nowrap !important; background:#ecfeff !important; color:#0f766e !important; border:1px solid #99f6e4 !important; border-radius:999px !important; padding:.42rem .78rem !important; font-weight:950 !important; font-size:.78rem !important; }
+.qai-v101-focus { background:#ffffff !important; border:1px solid #dbeafe !important; border-radius:.9rem !important; color:#0f172a !important; margin-top:.85rem !important; padding:.72rem .86rem !important; line-height:1.5 !important; }
+.qai-v101-roadmap { margin:.5rem 0 1rem 0 !important; }
+.qai-v101-road-card, .qai-v101-check-card { background:#fff !important; border:1px solid #dbe7f5 !important; border-radius:1rem !important; padding:.9rem !important; min-height:142px !important; box-shadow:0 8px 18px rgba(15,23,42,.04) !important; }
+.qai-v101-road-num, .qai-v101-check-label { display:inline-block !important; color:#1d4ed8 !important; background:#dbeafe !important; border-radius:999px !important; font-weight:950 !important; padding:.24rem .62rem !important; font-size:.75rem !important; margin-bottom:.55rem !important; }
+.qai-v101-road-title, .qai-v101-check-title { color:#0f172a !important; font-weight:950 !important; line-height:1.32 !important; margin-bottom:.4rem !important; font-size:.94rem !important; }
+.qai-v101-road-body, .qai-v101-check-action { color:#475569 !important; font-size:.84rem !important; line-height:1.42 !important; }
+.qai-v101-principle-grid { display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:.8rem !important; margin:1rem 0 !important; }
+.qai-v101-principle-grid div { background:#f8fafc !important; border:1px solid #dbe7f5 !important; border-radius:1rem !important; padding:.85rem !important; color:#0f172a !important; min-height:105px !important; }
+.qai-v101-principle-grid b { color:#1d4ed8 !important; }
+.qai-v101-principle-grid span { color:#475569 !important; font-size:.86rem !important; line-height:1.4 !important; }
+.qai-v101-code-card { background:#f8fafc !important; border:1px solid #dbe7f5 !important; border-radius:1rem !important; padding:1rem !important; color:#334155 !important; line-height:1.5 !important; }
+.qai-v101-code-title { color:#0f172a !important; font-weight:950 !important; margin-bottom:.55rem !important; }
+.qai-v101-note { background:#f0f9ff !important; border:1px solid #bae6fd !important; color:#075985 !important; border-radius:.95rem !important; padding:.85rem 1rem !important; margin:1rem 0 !important; line-height:1.5 !important; }
+@media (max-width: 900px) { .qai-v101-principle-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
+@media (max-width: 640px) { .qai-v101-principle-grid { grid-template-columns:1fr !important; } .qai-v101-lab-top { display:block !important; } .qai-v101-method { display:inline-block !important; margin-top:.65rem !important; } }
