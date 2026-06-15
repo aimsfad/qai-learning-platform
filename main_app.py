@@ -18,10 +18,11 @@ import content
 import db
 import feedback_engine
 from security import hash_password, verify_password
-from media_utils import render_image, render_video
+from media_utils import render_image, render_video, render_simulator
 
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
+INTERACTIVE_MEDIA_DIR = LESSON_MEDIA_DIR / "interactive"
 
 LESSON_MEDIA = {
     "orientation": {
@@ -1446,57 +1447,81 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
         render_ai_usefulness_feedback(interaction_id, f"genai_coach_{lesson['id']}_{interaction_id}")
 
 
-def render_hadamard_interactive_simulator() -> None:
-    """Embed the standalone Hadamard/Bloch-sphere simulator supplied as an HTML learning object."""
-    html_path = APP_DIR / "assets" / "interactive" / "hadamard_superposition_simulator.html"
-    if not html_path.exists():
-        st.info("Interactive simulator is not available in this build.")
-        return
-    st.markdown("### Interactive Hadamard simulator")
-    st.caption("Use the step buttons, the shots slider, and the measurement histogram to connect state, gate, and counts.")
-    components.html(html_path.read_text(encoding="utf-8"), height=680, scrolling=True)
-
-
 def render_lesson_media(lesson_id: str) -> None:
-    """Render professional sequential media instead of a crowded all-in-one image."""
+    """Render the interactive simulator as the primary visual learning object.
+
+    Static sequence frames and micro-video remain available on demand, but the
+    manipulative HTML/SVG simulator is now the first media students encounter.
+    """
     media = LESSON_MEDIA.get(lesson_id, {})
     lesson = content.lesson_by_id(lesson_id)
     frames = lesson_sequence_frames(lesson_id)
     video_path = LESSON_MEDIA_DIR / "sequence" / f"{lesson_id}_concept_sequence.mp4"
 
-    st.markdown("### Professional sequential media")
-    st.caption("The media is split into four short frames. Each frame has one job: observe, model, code, or interpret.")
-    render_learning_route_overview(lesson)
-
-    if lesson_id == "hadamard_superposition":
-        render_hadamard_interactive_simulator()
-        demo_video = LESSON_MEDIA_DIR / "sequence" / "hadamard_superposition_professional_demo.mp4"
-        if demo_video.exists():
-            st.markdown("### Professional demonstration video")
-            render_video(demo_video, caption="Hadamard and superposition demonstration video")
-
-    for item in frames:
-        st.markdown(f"#### {item['label']} — {item['title']}")
-        left, right = st.columns([0.62, 0.38])
-        with left:
-            render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
-        with right:
-            st.markdown(
-                f"""
-                <div class='qai-media-guidance'>
-                  <b>What the student does</b><br>{item['student_action']}<br><br>
-                  <b>How GenAI should help</b><br>{item['ai_rule']}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    st.markdown("### Micro-video sequence")
-    render_video(video_path, caption="Four-frame concept micro-video")
+    st.markdown("### Interactive simulator")
+    st.caption("Manipulate the concept directly. Use the step buttons and sliders before opening the static reference materials.")
     st.markdown(
-        f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
+        f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', lesson.get('objective', ''))}</div>",
         unsafe_allow_html=True,
     )
 
+    rendered = render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR)
+    if not rendered:
+        st.warning("The interactive simulator is missing, so the platform is falling back to the sequential visual frames.")
+        for item in frames:
+            st.markdown(f"#### {item['label']} — {item['title']}")
+            render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
+
+    steps = lesson.get("visual_steps", [])
+    if steps:
+        st.markdown("**Read the interactive object in this order**")
+        for i, step in enumerate(steps, start=1):
+            st.markdown(
+                f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
+                unsafe_allow_html=True,
+            )
+
+    with st.expander("Connect the simulator to code and output"):
+        left, right = st.columns(2)
+        with left:
+            st.markdown("**Tiny Qiskit example**")
+            st.code(lesson.get("qiskit_code", ""), language="python")
+            if lesson.get("code_focus"):
+                st.markdown("**Code reading focus**")
+                for point in lesson.get("code_focus", []):
+                    st.markdown(f"- {point}")
+        with right:
+            st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
+            st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
+            st.markdown(f"**Misconception to avoid:** {lesson.get('misconception', '')}")
+
+    with st.expander("Static sequential frames and micro-video (optional)"):
+        st.markdown(
+            f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
+            unsafe_allow_html=True,
+        )
+        for item in frames:
+            st.markdown(f"#### {item['label']} — {item['title']}")
+            left, right = st.columns([0.62, 0.38])
+            with left:
+                render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
+            with right:
+                st.markdown(
+                    f"""
+                    <div class='qai-media-guidance'>
+                      <b>What the student does</b><br>{item['student_action']}<br><br>
+                      <b>How GenAI should help</b><br>{item['ai_rule']}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        st.markdown("#### Micro-video sequence")
+        render_video(video_path, caption="Four-frame concept micro-video")
+
+    resource_url = media.get("resource_url")
+    resource_label = media.get("resource_label", "Optional external resource")
+    if resource_url:
+        st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
     """Render the lesson selector used by the learning path page.
@@ -1621,9 +1646,25 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     with media_tab:
         render_lesson_media(lesson["id"])
         try:
-            db.log_event(student["id"], "student", "view_professional_media", lesson["id"])
+            db.log_event(student["id"], "student", "view_interactive_simulator", lesson["id"])
         except Exception:
             pass
+
+        sim_key = f"sim_completed_{student['id']}_{lesson['id']}"
+        sim_log_key = f"sim_completed_logged_{student['id']}_{lesson['id']}"
+        if st.checkbox("I stepped through all stages of the simulator", key=sim_key):
+            if not st.session_state.get(sim_log_key):
+                try:
+                    db.log_event(
+                        student["id"],
+                        "student",
+                        "simulator_completed",
+                        json.dumps({"lesson_id": lesson["id"], "self_report": True}),
+                    )
+                except Exception:
+                    pass
+                st.session_state[sim_log_key] = True
+            st.success("Simulator completion recorded for this session.")
 
     with ai_coach_tab:
         render_genai_concept_coach(student, lesson)
