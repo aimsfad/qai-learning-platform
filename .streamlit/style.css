@@ -243,3 +243,45 @@ div.stButton > button:hover { border-color:#93c5fd !important; background:#eaf3f
   line-height:1.55 !important;
   box-shadow:0 8px 22px rgba(15,23,42,.045) !important;
 }
+
+
+/* v10 visual organization redesign */
+.qai-v10-lesson-hero, .qai-v10-lab-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 62%, #eff6ff 100%) !important;
+  border: 1px solid #cfe0f5 !important;
+  border-radius: 1.25rem !important;
+  padding: 1.15rem 1.25rem !important;
+  margin: .5rem 0 1rem 0 !important;
+  box-shadow: 0 10px 26px rgba(15,23,42,.06) !important;
+}
+.qai-v10-lab-header { display:flex !important; justify-content:space-between !important; gap:1rem !important; align-items:flex-start !important; }
+.qai-v10-kicker { color:#1d4ed8 !important; font-size:.76rem !important; font-weight:950 !important; letter-spacing:.08em !important; text-transform:uppercase !important; margin-bottom:.35rem !important; }
+.qai-v10-title, .qai-v10-lab-title { color:#0f172a !important; font-size:1.42rem !important; line-height:1.2 !important; font-weight:950 !important; margin-bottom:.45rem !important; }
+.qai-v10-subtitle, .qai-v10-lab-subtitle { color:#334155 !important; font-size:.98rem !important; line-height:1.55 !important; }
+.qai-v10-bigidea { color:#0f172a !important; background:#fff !important; border:1px solid #dbeafe !important; border-radius:.9rem !important; padding:.75rem .85rem !important; margin-top:.85rem !important; }
+.qai-v10-lab-badge { white-space:nowrap !important; background:#dbeafe !important; color:#1d4ed8 !important; border:1px solid #bfdbfe !important; border-radius:999px !important; padding:.42rem .8rem !important; font-weight:900 !important; font-size:.82rem !important; }
+.qai-v10-route-card {
+  background:#ffffff !important; border:1px solid #dbe7f5 !important; border-radius:1.05rem !important;
+  padding:1rem !important; min-height:155px !important; box-shadow:0 8px 20px rgba(15,23,42,.045) !important;
+}
+.qai-v10-route-number { display:inline-block !important; background:#e0f2fe !important; color:#0369a1 !important; border-radius:999px !important; padding:.25rem .65rem !important; font-weight:950 !important; font-size:.78rem !important; margin-bottom:.55rem !important; }
+.qai-v10-route-title { color:#0f172a !important; font-weight:950 !important; font-size:.98rem !important; line-height:1.35 !important; margin-bottom:.45rem !important; }
+.qai-v10-route-action { color:#475569 !important; font-size:.86rem !important; line-height:1.45 !important; }
+.qai-v10-study-board { background:#fff !important; border:1px solid #dbe7f5 !important; border-radius:1.1rem !important; padding:.85rem !important; }
+.qai-v10-study-row { display:grid !important; grid-template-columns:2.1rem 1fr !important; gap:.55rem .75rem !important; padding:.7rem .6rem !important; border-bottom:1px solid #edf2f7 !important; }
+.qai-v10-study-row:last-child { border-bottom:0 !important; }
+.qai-v10-study-row span { grid-row:1 / span 2 !important; display:flex !important; align-items:center !important; justify-content:center !important; width:2rem !important; height:2rem !important; border-radius:50% !important; background:#2563eb !important; color:#fff !important; font-weight:950 !important; }
+.qai-v10-study-row b { color:#0f172a !important; font-weight:950 !important; }
+.qai-v10-study-row p { color:#475569 !important; margin:0 !important; line-height:1.45 !important; font-size:.9rem !important; }
+.qai-v10-focus-card { background:#f0fdfa !important; border:1px solid #99f6e4 !important; border-radius:1.1rem !important; padding:1rem !important; color:#134e4a !important; min-height:100% !important; }
+.qai-v10-focus-label { color:#0f766e !important; font-size:.75rem !important; font-weight:950 !important; letter-spacing:.08em !important; text-transform:uppercase !important; margin-bottom:.5rem !important; }
+.qai-v10-focus-question { color:#0f172a !important; font-weight:950 !important; font-size:1rem !important; line-height:1.45 !important; margin-bottom:.8rem !important; }
+.qai-v10-focus-note { color:#475569 !important; line-height:1.45 !important; font-size:.9rem !important; }
+.qai-v10-ai-reminder, .qai-v10-no-scroll-note { background:#fff7ed !important; border:1px solid #fed7aa !important; color:#7c2d12 !important; border-radius:.95rem !important; padding:.85rem 1rem !important; margin:.85rem 0 !important; line-height:1.55 !important; }
+.qai-v10-side-step { display:flex !important; gap:.7rem !important; align-items:flex-start !important; background:#ffffff !important; border:1px solid #dbe7f5 !important; border-radius:.95rem !important; padding:.72rem .75rem !important; margin:.5rem 0 !important; box-shadow:0 6px 14px rgba(15,23,42,.035) !important; }
+.qai-v10-side-step-index { flex:0 0 1.75rem !important; height:1.75rem !important; border-radius:50% !important; display:flex !important; align-items:center !important; justify-content:center !important; background:#dbeafe !important; color:#1d4ed8 !important; font-weight:950 !important; }
+.qai-v10-side-step-title { color:#0f172a !important; font-size:.9rem !important; line-height:1.3 !important; font-weight:950 !important; margin-bottom:.2rem !important; }
+.qai-v10-side-step-action { color:#475569 !important; font-size:.82rem !important; line-height:1.4 !important; }
+.qai-v10-code-bridge { background:#f8fafc !important; border:1px solid #dbe7f5 !important; border-radius:1rem !important; padding:1rem !important; color:#334155 !important; line-height:1.55 !important; min-height:100% !important; }
+/* improve old sequence frames if opened */
+.qai-sequence-card, .qai-media-guidance, .qai-v73-step { border-color:#cfe0f5 !important; box-shadow:0 8px 20px rgba(15,23,42,.05) !important; }
