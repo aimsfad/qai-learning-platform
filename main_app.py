@@ -1319,72 +1319,49 @@ def render_learning_route_overview(lesson: Dict[str, Any]) -> None:
 
 
 def render_concept_learning_studio(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
-    """Render a clean visual organizer for the lesson before the simulator."""
-    st.markdown("### Concept map")
-    st.caption("Start here. This page tells the student what to look for before opening the simulator.")
+    """Render the organizing map for the lesson: one question, one route, one rule."""
+    st.markdown("### Learning map")
     steps = concept_flow_for_lesson(lesson)
     st.markdown(
         f"""
-        <div class='qai-v10-lesson-hero'>
-          <div class='qai-v10-kicker'>Guided quantum learning journey</div>
-          <div class='qai-v10-title'>{lesson.get('title','')}</div>
-          <div class='qai-v10-subtitle'>{lesson.get('objective','')}</div>
-          <div class='qai-v10-bigidea'><b>Big idea:</b> {lesson.get('big_idea', lesson.get('concept', ''))}</div>
+        <div class='qai-v101-map-hero'>
+          <div class='qai-v101-kicker'>Structured concept journey</div>
+          <div class='qai-v101-title'>{lesson.get('title','')}</div>
+          <div class='qai-v101-subtitle'>{lesson.get('objective','')}</div>
+          <div class='qai-v101-focus'><b>Big idea:</b> {lesson.get('big_idea', lesson.get('concept', ''))}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Learning route")
+    st.markdown("#### What the student does")
+    st.markdown("<div class='qai-v101-roadmap'>", unsafe_allow_html=True)
     cols = st.columns(4)
     for col, item in zip(cols, steps):
         with col:
             st.markdown(
                 f"""
-                <div class='qai-v10-route-card'>
-                  <div class='qai-v10-route-number'>{item['label']}</div>
-                  <div class='qai-v10-route-title'>{item['title']}</div>
-                  <div class='qai-v10-route-action'>{item['student_action']}</div>
+                <div class='qai-v101-road-card'>
+                  <div class='qai-v101-road-num'>{item['label']}</div>
+                  <div class='qai-v101-road-title'>{item['title']}</div>
+                  <div class='qai-v101-road-body'>{item['student_action']}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-
-    st.markdown("#### How to study this module")
-    left, right = st.columns([0.58, 0.42])
-    with left:
-        st.markdown(
-            """
-            <div class='qai-v10-study-board'>
-              <div class='qai-v10-study-row'><span>1</span><b>Look first</b><p>Read the focus question and predict what should happen before running anything.</p></div>
-              <div class='qai-v10-study-row'><span>2</span><b>Manipulate</b><p>Use the interactive simulator. Move through all stages and watch only one idea change at a time.</p></div>
-              <div class='qai-v10-study-row'><span>3</span><b>Connect to code</b><p>Match the visual change with the Qiskit line that creates it.</p></div>
-              <div class='qai-v10-study-row'><span>4</span><b>Explain</b><p>Write one reasoning sentence, then ask the AI coach to check or improve it.</p></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        st.markdown(
-            f"""
-            <div class='qai-v10-focus-card'>
-              <div class='qai-v10-focus-label'>Focus question</div>
-              <div class='qai-v10-focus-question'>{lesson.get('mini_task', lesson.get('check_question', 'Predict the result before running the circuit.'))}</div>
-              <div class='qai-v10-focus-note'>Do not ask AI first. Try a prediction, then use AI as feedback.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
         """
-        <div class='qai-v10-ai-reminder'>
-          <b>Visual rule:</b> the student should see the concept, manipulate it, connect it to code, then reflect. Static images are secondary references, not the main lesson.
+        <div class='qai-v101-principle-grid'>
+          <div><b>Visual first</b><br><span>The learner sees the circuit/state before reading long explanations.</span></div>
+          <div><b>One change at a time</b><br><span>Each stage highlights only one conceptual change.</span></div>
+          <div><b>Code bridge</b><br><span>The learner matches the visual event with the Qiskit line.</span></div>
+          <div><b>AI after attempt</b><br><span>The AI coach checks or scaffolds, not replaces reasoning.</span></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
 
 def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
     """A step-aware GenAI coach that supports the concept sequence."""
@@ -1472,97 +1449,86 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
 
 
 def render_lesson_media(lesson_id: str) -> None:
-    """Render a visually organized interactive lab for a lesson.
+    """Render a compact, visual-first learning lab.
 
-    The simulator is the primary object. Guidance, code bridge, and optional
-    reference media are arranged so the student does not need to scroll up and
-    down to understand what to do next.
+    The lesson no longer exposes old static images/videos in the main student
+    flow. The order is deliberately simple: focus question, simulator, code
+    bridge, and a small self-report completion event.
     """
     media = LESSON_MEDIA.get(lesson_id, {})
     lesson = content.lesson_by_id(lesson_id)
     frames = lesson_sequence_frames(lesson_id)
-    video_path = LESSON_MEDIA_DIR / "sequence" / f"{lesson_id}_concept_sequence.mp4"
 
-    st.markdown("### Interactive lab")
+    st.markdown("### Interactive learning lab")
     st.markdown(
         f"""
-        <div class='qai-v10-lab-header'>
-          <div>
-            <div class='qai-v10-kicker'>Visual-first learning</div>
-            <div class='qai-v10-lab-title'>{lesson.get('title','')}</div>
-            <div class='qai-v10-lab-subtitle'>{media.get('caption', lesson.get('objective', ''))}</div>
+        <div class='qai-v101-lab-shell'>
+          <div class='qai-v101-lab-top'>
+            <div>
+              <div class='qai-v101-kicker'>Visual-first module</div>
+              <div class='qai-v101-title'>{lesson.get('title','')}</div>
+              <div class='qai-v101-subtitle'>{lesson.get('objective', media.get('caption',''))}</div>
+            </div>
+            <div class='qai-v101-method'>See → Manipulate → Code → Check</div>
           </div>
-          <div class='qai-v10-lab-badge'>Simulator → code → check</div>
+          <div class='qai-v101-focus'>
+            <b>Focus question:</b> {lesson.get('mini_task', lesson.get('check_question', 'Predict what the circuit will output before running it.'))}
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    sim_col, guide_col = st.columns([0.68, 0.32], gap="large")
-    with sim_col:
-        rendered = render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR)
-        if not rendered:
-            st.warning("The interactive simulator is missing, so the platform is falling back to the sequential visual frames.")
-            for item in frames[:2]:
-                render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
-    with guide_col:
-        st.markdown("#### Learning steps")
-        for i, item in enumerate(frames, start=1):
-            st.markdown(
-                f"""
-                <div class='qai-v10-side-step'>
-                  <div class='qai-v10-side-step-index'>{i}</div>
-                  <div>
-                    <div class='qai-v10-side-step-title'>{item['title']}</div>
-                    <div class='qai-v10-side-step-action'>{item['student_action']}</div>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        st.markdown(
-            """
-            <div class='qai-v10-no-scroll-note'>
-              Use the simulator buttons inside the visual area. Do not scroll while changing steps; the explanation stays beside the simulator.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown("#### 1. Use the simulator")
+    rendered = render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR)
+    if not rendered:
+        st.warning("Interactive simulator missing. Please add the simulator HTML file before using this module in a study.")
 
-    st.markdown("#### Code bridge")
-    code_left, code_right = st.columns([0.54, 0.46])
+    st.markdown("#### 2. Connect the visual to Qiskit")
+    code_left, code_right = st.columns([0.56, 0.44], gap="large")
     with code_left:
         st.code(lesson.get("qiskit_code", ""), language="python")
     with code_right:
         st.markdown(
             f"""
-            <div class='qai-v10-code-bridge'>
-              <b>Before measurement</b><br>{lesson.get('before_measurement', '')}<br><br>
-              <b>After measurement / output</b><br>{lesson.get('after_measurement', '')}<br><br>
-              <b>Misconception to avoid</b><br>{lesson.get('misconception', '')}
+            <div class='qai-v101-code-card'>
+              <div class='qai-v101-code-title'>What the student should connect</div>
+              <p><b>Before measurement:</b><br>{lesson.get('before_measurement', '')}</p>
+              <p><b>After measurement / output:</b><br>{lesson.get('after_measurement', '')}</p>
+              <p><b>Misconception to avoid:</b><br>{lesson.get('misconception', '')}</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    with st.expander("Optional static reference frames and micro-video"):
-        st.markdown(
-            f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown("These are backup references only. The interactive simulator above is the main learning object.")
-        for item in frames:
-            frame_path = LESSON_MEDIA_DIR / item["image"]
-            st.markdown(f"**{item['label']} — {item['title']}**")
-            render_image(frame_path, caption=item["title"])
-        st.markdown("#### Micro-video sequence")
-        render_video(video_path, caption="Four-frame concept micro-video")
+    st.markdown("#### 3. Learning checkpoints")
+    cols = st.columns(4)
+    for col, item in zip(cols, frames):
+        with col:
+            st.markdown(
+                f"""
+                <div class='qai-v101-check-card'>
+                  <div class='qai-v101-check-label'>{item['label']}</div>
+                  <div class='qai-v101-check-title'>{item['title']}</div>
+                  <div class='qai-v101-check-action'>{item['student_action']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown(
+        """
+        <div class='qai-v101-note'>
+          The old static images and videos are no longer part of the default learning path. They were removed from the student flow because they duplicated the simulator and weakened the visual organization.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
         st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
-
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
     """Render the lesson selector used by the learning path page.
@@ -1646,9 +1612,9 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.success("This module is completed. You may review it or continue to the next module.")
 
     concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, check_tab = st.tabs([
-        "1. Concept map",
-        "2. Interactive lab",
-        "3. Overview",
+        "1. Learning map",
+        "2. Visual lab",
+        "3. Concept notes",
         "4. Code bridge",
         "5. AI coach",
         "6. Check",

@@ -30,12 +30,12 @@ def render_video(path: Path, caption: str | None = None) -> bool:
 
 # Map lesson_id -> (filename, recommended iframe height in px)
 SIMULATOR_FILES: dict[str, tuple[str, int]] = {
-    "orientation":            ("orientation_simulator.html",          560),
+    "orientation":            ("orientation_simulator.html",          520),
     "qubit_measurement":      ("qubit_measurement_simulator.html",    620),
-    "hadamard_superposition": ("hadamard_superposition_simulator.html", 620),
+    "hadamard_superposition": ("hadamard_superposition_simulator.html", 540),
     "shots_counts":           ("shots_counts_simulator.html",         640),
     "cnot_correlation":       ("cnot_correlation_simulator.html",     680),
-    "qiskit_debugging":       ("qiskit_debugging_simulator.html",     600),
+    "qiskit_debugging":       ("qiskit_debugging_simulator.html",     580),
 }
 
 
