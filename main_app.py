@@ -1319,43 +1319,67 @@ def render_learning_route_overview(lesson: Dict[str, Any]) -> None:
 
 
 def render_concept_learning_studio(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
-    """Render a sequential concept studio inspired by modular IBM Quantum Learning design."""
-    st.markdown("### Concept studio")
-    st.caption("A concept is presented as a short learning sequence: observe → model → code → interpret.")
+    """Render a clean visual organizer for the lesson before the simulator."""
+    st.markdown("### Concept map")
+    st.caption("Start here. This page tells the student what to look for before opening the simulator.")
+    steps = concept_flow_for_lesson(lesson)
     st.markdown(
         f"""
-        <div class='qai-concept-hero'>
-          <div class='qai-concept-kicker'>Guided concept sequence</div>
-          <div class='qai-concept-title'>{lesson.get('title','')}</div>
-          <div class='qai-concept-subtitle'>{lesson.get('objective','')}</div>
+        <div class='qai-v10-lesson-hero'>
+          <div class='qai-v10-kicker'>Guided quantum learning journey</div>
+          <div class='qai-v10-title'>{lesson.get('title','')}</div>
+          <div class='qai-v10-subtitle'>{lesson.get('objective','')}</div>
+          <div class='qai-v10-bigidea'><b>Big idea:</b> {lesson.get('big_idea', lesson.get('concept', ''))}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    render_learning_route_overview(lesson)
-    st.markdown("#### Step-by-step explanation")
-    for item in concept_flow_for_lesson(lesson):
-        frame_path = LESSON_MEDIA_DIR / item["image"]
-        left, right = st.columns([0.48, 0.52])
-        with left:
-            render_image(frame_path, caption=item["label"])
-        with right:
+
+    st.markdown("#### Learning route")
+    cols = st.columns(4)
+    for col, item in zip(cols, steps):
+        with col:
             st.markdown(
                 f"""
-                <div class='qai-sequence-card'>
-                  <div class='qai-sequence-label'>{item['label']}</div>
-                  <div class='qai-sequence-title'>{item['title']}</div>
-                  <div class='qai-sequence-body'>{item.get('body','')}</div>
-                  <div class='qai-student-action'><b>Student action:</b> {item['student_action']}</div>
-                  <div class='qai-ai-rule'><b>AI use:</b> {item['ai_rule']}</div>
+                <div class='qai-v10-route-card'>
+                  <div class='qai-v10-route-number'>{item['label']}</div>
+                  <div class='qai-v10-route-title'>{item['title']}</div>
+                  <div class='qai-v10-route-action'>{item['student_action']}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
+
+    st.markdown("#### How to study this module")
+    left, right = st.columns([0.58, 0.42])
+    with left:
+        st.markdown(
+            """
+            <div class='qai-v10-study-board'>
+              <div class='qai-v10-study-row'><span>1</span><b>Look first</b><p>Read the focus question and predict what should happen before running anything.</p></div>
+              <div class='qai-v10-study-row'><span>2</span><b>Manipulate</b><p>Use the interactive simulator. Move through all stages and watch only one idea change at a time.</p></div>
+              <div class='qai-v10-study-row'><span>3</span><b>Connect to code</b><p>Match the visual change with the Qiskit line that creates it.</p></div>
+              <div class='qai-v10-study-row'><span>4</span><b>Explain</b><p>Write one reasoning sentence, then ask the AI coach to check or improve it.</p></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            f"""
+            <div class='qai-v10-focus-card'>
+              <div class='qai-v10-focus-label'>Focus question</div>
+              <div class='qai-v10-focus-question'>{lesson.get('mini_task', lesson.get('check_question', 'Predict the result before running the circuit.'))}</div>
+              <div class='qai-v10-focus-note'>Do not ask AI first. Try a prediction, then use AI as feedback.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     st.markdown(
         """
-        <div class='qai-ai-reminder'>
-          <b>Learning rule:</b> the student first predicts or explains, then uses GenAI for a hint, diagnosis, or feedback. This protects the activity from becoming copy-paste learning.
+        <div class='qai-v10-ai-reminder'>
+          <b>Visual rule:</b> the student should see the concept, manipulate it, connect it to code, then reflect. Static images are secondary references, not the main lesson.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1448,73 +1472,89 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
 
 
 def render_lesson_media(lesson_id: str) -> None:
-    """Render the interactive simulator as the primary visual learning object.
+    """Render a visually organized interactive lab for a lesson.
 
-    Static sequence frames and micro-video remain available on demand, but the
-    manipulative HTML/SVG simulator is now the first media students encounter.
+    The simulator is the primary object. Guidance, code bridge, and optional
+    reference media are arranged so the student does not need to scroll up and
+    down to understand what to do next.
     """
     media = LESSON_MEDIA.get(lesson_id, {})
     lesson = content.lesson_by_id(lesson_id)
     frames = lesson_sequence_frames(lesson_id)
     video_path = LESSON_MEDIA_DIR / "sequence" / f"{lesson_id}_concept_sequence.mp4"
 
-    st.markdown("### Interactive simulator")
-    st.caption("Manipulate the concept directly. Use the step buttons and sliders before opening the static reference materials.")
+    st.markdown("### Interactive lab")
     st.markdown(
-        f"<div class='qai-big-idea'><b>Purpose:</b> {media.get('caption', lesson.get('objective', ''))}</div>",
+        f"""
+        <div class='qai-v10-lab-header'>
+          <div>
+            <div class='qai-v10-kicker'>Visual-first learning</div>
+            <div class='qai-v10-lab-title'>{lesson.get('title','')}</div>
+            <div class='qai-v10-lab-subtitle'>{media.get('caption', lesson.get('objective', ''))}</div>
+          </div>
+          <div class='qai-v10-lab-badge'>Simulator → code → check</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    rendered = render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR)
-    if not rendered:
-        st.warning("The interactive simulator is missing, so the platform is falling back to the sequential visual frames.")
-        for item in frames:
-            st.markdown(f"#### {item['label']} — {item['title']}")
-            render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
-
-    steps = lesson.get("visual_steps", [])
-    if steps:
-        st.markdown("**Read the interactive object in this order**")
-        for i, step in enumerate(steps, start=1):
+    sim_col, guide_col = st.columns([0.68, 0.32], gap="large")
+    with sim_col:
+        rendered = render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR)
+        if not rendered:
+            st.warning("The interactive simulator is missing, so the platform is falling back to the sequential visual frames.")
+            for item in frames[:2]:
+                render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
+    with guide_col:
+        st.markdown("#### Learning steps")
+        for i, item in enumerate(frames, start=1):
             st.markdown(
-                f"<div class='qai-v73-step'><span class='qai-v73-badge'>{i}</span><div>{step}</div></div>",
+                f"""
+                <div class='qai-v10-side-step'>
+                  <div class='qai-v10-side-step-index'>{i}</div>
+                  <div>
+                    <div class='qai-v10-side-step-title'>{item['title']}</div>
+                    <div class='qai-v10-side-step-action'>{item['student_action']}</div>
+                  </div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
+        st.markdown(
+            """
+            <div class='qai-v10-no-scroll-note'>
+              Use the simulator buttons inside the visual area. Do not scroll while changing steps; the explanation stays beside the simulator.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    with st.expander("Connect the simulator to code and output"):
-        left, right = st.columns(2)
-        with left:
-            st.markdown("**Tiny Qiskit example**")
-            st.code(lesson.get("qiskit_code", ""), language="python")
-            if lesson.get("code_focus"):
-                st.markdown("**Code reading focus**")
-                for point in lesson.get("code_focus", []):
-                    st.markdown(f"- {point}")
-        with right:
-            st.markdown(f"**Before measurement:** {lesson.get('before_measurement', '')}")
-            st.markdown(f"**After measurement / output:** {lesson.get('after_measurement', '')}")
-            st.markdown(f"**Misconception to avoid:** {lesson.get('misconception', '')}")
+    st.markdown("#### Code bridge")
+    code_left, code_right = st.columns([0.54, 0.46])
+    with code_left:
+        st.code(lesson.get("qiskit_code", ""), language="python")
+    with code_right:
+        st.markdown(
+            f"""
+            <div class='qai-v10-code-bridge'>
+              <b>Before measurement</b><br>{lesson.get('before_measurement', '')}<br><br>
+              <b>After measurement / output</b><br>{lesson.get('after_measurement', '')}<br><br>
+              <b>Misconception to avoid</b><br>{lesson.get('misconception', '')}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    with st.expander("Static sequential frames and micro-video (optional)"):
+    with st.expander("Optional static reference frames and micro-video"):
         st.markdown(
             f"<div class='qai-v73-note'><b>What to notice:</b> {media.get('notice', lesson.get('misconception', ''))}</div>",
             unsafe_allow_html=True,
         )
+        st.markdown("These are backup references only. The interactive simulator above is the main learning object.")
         for item in frames:
-            st.markdown(f"#### {item['label']} — {item['title']}")
-            left, right = st.columns([0.62, 0.38])
-            with left:
-                render_image(LESSON_MEDIA_DIR / item["image"], caption=item["title"])
-            with right:
-                st.markdown(
-                    f"""
-                    <div class='qai-media-guidance'>
-                      <b>What the student does</b><br>{item['student_action']}<br><br>
-                      <b>How GenAI should help</b><br>{item['ai_rule']}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+            frame_path = LESSON_MEDIA_DIR / item["image"]
+            st.markdown(f"**{item['label']} — {item['title']}**")
+            render_image(frame_path, caption=item["title"])
         st.markdown("#### Micro-video sequence")
         render_video(video_path, caption="Four-frame concept micro-video")
 
@@ -1522,6 +1562,7 @@ def render_lesson_media(lesson_id: str) -> None:
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
         st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
+
 
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
     """Render the lesson selector used by the learning path page.
@@ -1605,12 +1646,12 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.success("This module is completed. You may review it or continue to the next module.")
 
     concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, check_tab = st.tabs([
-        "Guided concept journey",
-        "Sequential media",
-        "Overview",
-        "Code and output",
-        "GenAI learning coach",
-        "Check and reflect",
+        "1. Concept map",
+        "2. Interactive lab",
+        "3. Overview",
+        "4. Code bridge",
+        "5. AI coach",
+        "6. Check",
     ])
 
     with overview:
