@@ -1,0 +1,373 @@
+<!--
+  Lesson 5 — CNOT and Correlated Outcomes
+  ============================================================
+  Embed with:
+      st.components.v1.html(path.read_text(encoding="utf-8"), height=680, scrolling=False)
+  Self-contained, bilingual (EN/AR), no external dependencies.
+  Shows H(q0) + CNOT(0,1) producing a Bell-style state where
+  measurement outcomes concentrate on 00 and 11.
+-->
+<div id="qsimRoot" lang="en" dir="ltr" style="
+  --qsim-bg:#f4f7fb; --qsim-surface:#ffffff; --qsim-surface2:#f8fafc;
+  --qsim-border:#d9e4f2; --qsim-text:#0f172a; --qsim-muted:#475569;
+  --qsim-blue:#2563eb; --qsim-teal:#0f766e; --qsim-indigo:#4f46e5;
+  --qsim-soft-blue:#eaf3ff; --qsim-soft-teal:#e6f7f4;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:var(--qsim-surface); border:1px solid var(--qsim-border);
+  border-radius:16px; padding:20px 22px; color:var(--qsim-text);
+  max-width:760px; margin:0 auto; box-sizing:border-box;
+">
+
+  <style>
+    #qsimRoot * { box-sizing:border-box; }
+    #qsimRoot .qsim-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    #qsimRoot .qsim-title { font-size:16px; font-weight:700; margin:0 0 2px 0; }
+    #qsimRoot .qsim-subtitle { font-size:12.5px; color:var(--qsim-muted); margin:0; }
+    #qsimRoot .qsim-lang-toggle {
+      flex-shrink:0; font-size:12px; font-weight:600; padding:6px 12px;
+      border-radius:999px; border:1px solid var(--qsim-border);
+      background:var(--qsim-surface2); color:var(--qsim-blue); cursor:pointer;
+    }
+    #qsimRoot .qsim-steps { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    #qsimRoot .qsim-step-pill {
+      font-size:12px; font-weight:600; padding:7px 12px; border-radius:999px;
+      border:1px solid var(--qsim-border); background:var(--qsim-surface2);
+      color:var(--qsim-muted); cursor:pointer; transition:all .15s;
+    }
+    #qsimRoot .qsim-step-pill.active { background:var(--qsim-soft-blue); color:var(--qsim-blue); border-color:#93c5fd; }
+
+    #qsimRoot .qsim-body { display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+    #qsimRoot .qsim-circuit-col { flex:1 1 380px; min-width:300px; }
+    #qsimRoot .qsim-panel { flex:1; min-width:280px; display:flex; flex-direction:column; gap:12px; }
+
+    #qsimRoot .qsim-code-label { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--qsim-muted); margin-bottom:4px; }
+    #qsimRoot .qsim-code-box { background:var(--qsim-surface2); border:1px solid var(--qsim-border); border-radius:10px; padding:8px; }
+    #qsimRoot .qsim-code-line {
+      font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+      font-size:13px; padding:4px 10px; border-radius:7px; color:var(--qsim-muted);
+      white-space:pre;
+    }
+    #qsimRoot .qsim-code-line.active { background:var(--qsim-soft-blue); color:var(--qsim-blue); font-weight:600; }
+    #qsimRoot .qsim-code-line.dim { opacity:.45; }
+
+    #qsimRoot .qsim-explain { font-size:14px; line-height:1.7; color:var(--qsim-text); min-height:60px; }
+
+    #qsimRoot .qsim-rule-table { display:none; }
+    #qsimRoot .qsim-rule-table.show { display:block; }
+    #qsimRoot table.qsim-rt { width:100%; border-collapse:collapse; font-size:12px; }
+    #qsimRoot table.qsim-rt th, #qsimRoot table.qsim-rt td {
+      border:1px solid var(--qsim-border); padding:6px 8px; text-align:center;
+    }
+    #qsimRoot table.qsim-rt th { background:var(--qsim-surface2); color:var(--qsim-muted); font-weight:700; }
+    #qsimRoot table.qsim-rt td.flip { color:var(--qsim-blue); font-weight:700; }
+
+    #qsimRoot .qsim-measure { display:none; flex-direction:column; gap:10px; }
+    #qsimRoot .qsim-measure.show { display:flex; }
+    #qsimRoot .qsim-slider-row { display:flex; align-items:center; gap:10px; }
+    #qsimRoot .qsim-slider-row label { font-size:12.5px; color:var(--qsim-muted); white-space:nowrap; }
+    #qsimRoot .qsim-slider-row input[type=range] { flex:1; accent-color:var(--qsim-blue); }
+    #qsimRoot .qsim-slider-row .qsim-shots-val { font-size:13px; font-weight:700; min-width:42px; text-align:center; }
+
+    #qsimRoot .qsim-hist { display:flex; gap:10px; align-items:flex-end; height:100px; padding:0 4px; }
+    #qsimRoot .qsim-hist-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+    #qsimRoot .qsim-hist-count { font-size:11px; font-weight:700; }
+    #qsimRoot .qsim-bar { width:100%; max-width:46px; border-radius:6px 6px 0 0; transition:height .4s ease; }
+    #qsimRoot .qsim-bar.bar-corr { background:var(--qsim-blue); }
+    #qsimRoot .qsim-bar.bar-anti { background:#cbd5e1; }
+    #qsimRoot .qsim-hist-label { font-size:12px; font-weight:700; color:var(--qsim-muted); font-family:'SFMono-Regular',Consolas,monospace; }
+
+    #qsimRoot .qsim-run-btn {
+      align-self:flex-start; font-size:13px; font-weight:600; padding:8px 16px;
+      border-radius:9px; border:1px solid var(--qsim-border); background:var(--qsim-surface2);
+      color:var(--qsim-blue); cursor:pointer;
+    }
+    #qsimRoot .qsim-run-btn:hover { background:var(--qsim-soft-blue); }
+
+    #qsimRoot .qsim-note {
+      font-size:12.5px; line-height:1.6; color:var(--qsim-teal); background:var(--qsim-soft-teal);
+      border:1px solid #b9e6dd; border-radius:10px; padding:10px 12px;
+    }
+
+    #qsimRoot .qsim-footer { display:flex; justify-content:space-between; margin-top:18px; gap:8px; }
+    #qsimRoot .qsim-nav-btn {
+      font-size:13px; font-weight:600; padding:9px 18px; border-radius:9px;
+      border:1px solid var(--qsim-border); background:var(--qsim-surface2);
+      color:var(--qsim-text); cursor:pointer;
+    }
+    #qsimRoot .qsim-nav-btn:disabled { opacity:.4; cursor:default; }
+    #qsimRoot .qsim-nav-btn:not(:disabled):hover { background:var(--qsim-soft-blue); color:var(--qsim-blue); }
+
+    #qHGroup, #qCnotGroup, #qMeasGroup { opacity:0; transition:opacity .5s; }
+    #qHGroup.show, #qCnotGroup.show, #qMeasGroup.show { opacity:1; }
+    #qHi1, #qHi2, #qHi3 { opacity:0; transition:opacity .4s; }
+    #qHi1.show, #qHi2.show, #qHi3.show { opacity:1; }
+
+    @media (max-width:640px) {
+      #qsimRoot .qsim-body { flex-direction:column; }
+    }
+  </style>
+
+  <div class="qsim-header">
+    <div>
+      <p class="qsim-title" data-i18n="title">CNOT &amp; correlated outcomes — interactive simulator</p>
+      <p class="qsim-subtitle" data-i18n="subtitle">H then CNOT links two qubits together.</p>
+    </div>
+    <button class="qsim-lang-toggle" id="qsimLangBtn" onclick="qsimToggleLang()">العربية</button>
+  </div>
+
+  <div class="qsim-steps">
+    <button class="qsim-step-pill active" id="qsimDot0" onclick="qsimGoStep(0)" data-i18n="step0">1. Initial state |00⟩</button>
+    <button class="qsim-step-pill" id="qsimDot1" onclick="qsimGoStep(1)" data-i18n="step1">2. H + CNOT</button>
+    <button class="qsim-step-pill" id="qsimDot2" onclick="qsimGoStep(2)" data-i18n="step2">3. Measure both</button>
+  </div>
+
+  <div class="qsim-body">
+    <div class="qsim-circuit-col">
+      <svg width="100%" height="170" viewBox="0 0 380 170" role="img">
+        <title>Two-qubit circuit</title>
+        <desc>Qubit q0 with a Hadamard gate, a CNOT with control on q0 and target on q1, and measurement on both qubits.</desc>
+
+        <rect id="qHi1" x="6" y="14" width="100" height="130" rx="10" fill="#eaf3ff"/>
+        <rect id="qHi2" x="110" y="14" width="120" height="130" rx="10" fill="#eaf3ff"/>
+        <rect id="qHi3" x="270" y="14" width="100" height="130" rx="10" fill="#e6f7f4"/>
+
+        <text x="14" y="44" font-size="13" font-weight="700" fill="#0f172a">q0:|0⟩</text>
+        <line x1="84" y1="40" x2="360" y2="40" stroke="#94a3b8" stroke-width="2"/>
+
+        <text x="14" y="108" font-size="13" font-weight="700" fill="#0f172a">q1:|0⟩</text>
+        <line x1="84" y1="104" x2="360" y2="104" stroke="#94a3b8" stroke-width="2"/>
+
+        <g id="qHGroup">
+          <rect x="128" y="22" width="36" height="36" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+          <text x="146" y="40" font-size="16" font-weight="700" fill="#2563eb" text-anchor="middle" dominant-baseline="central">H</text>
+        </g>
+
+        <g id="qCnotGroup">
+          <circle cx="216" cy="40" r="6" fill="#2563eb"/>
+          <line x1="216" y1="46" x2="216" y2="93" stroke="#2563eb" stroke-width="2"/>
+          <circle cx="216" cy="104" r="12" fill="none" stroke="#2563eb" stroke-width="2"/>
+          <line x1="216" y1="92" x2="216" y2="116" stroke="#2563eb" stroke-width="2"/>
+          <line x1="204" y1="104" x2="228" y2="104" stroke="#2563eb" stroke-width="2"/>
+        </g>
+
+        <g id="qMeasGroup">
+          <rect x="290" y="22" width="36" height="36" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+          <path d="M300 50 A 12 12 0 0 1 324 50" fill="none" stroke="#0f766e" stroke-width="2"/>
+          <line x1="312" y1="50" x2="322" y2="36" stroke="#0f766e" stroke-width="2" stroke-linecap="round"/>
+
+          <rect x="290" y="86" width="36" height="36" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+          <path d="M300 114 A 12 12 0 0 1 324 114" fill="none" stroke="#0f766e" stroke-width="2"/>
+          <line x1="312" y1="114" x2="322" y2="100" stroke="#0f766e" stroke-width="2" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="qsim-panel">
+      <div>
+        <div class="qsim-code-label" data-i18n="codeLabel">Qiskit code</div>
+        <div class="qsim-code-box">
+          <div class="qsim-code-line dim">qc = QuantumCircuit(2, 2)</div>
+          <div class="qsim-code-line" id="qsimLine0">qc.h(0)</div>
+          <div class="qsim-code-line" id="qsimLine1">qc.cx(0, 1)</div>
+          <div class="qsim-code-line" id="qsimLine2">qc.measure([0, 1], [0, 1])</div>
+        </div>
+      </div>
+
+      <div class="qsim-explain" id="qsimExplain" data-i18n="explain0">
+        Both qubits start in |0⟩. With no gates applied yet, a measurement here would always give 00.
+      </div>
+
+      <div class="qsim-rule-table" id="qsimRuleTable">
+        <table class="qsim-rt">
+          <tr><th data-i18n="rtControl">Control</th><th data-i18n="rtBefore">Target before</th><th data-i18n="rtAfter">Target after</th></tr>
+          <tr><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>1</td><td>0</td><td class="flip">1</td></tr>
+          <tr><td>1</td><td>1</td><td class="flip">0</td></tr>
+        </table>
+      </div>
+
+      <div class="qsim-measure" id="qsimMeasure">
+        <div class="qsim-slider-row">
+          <label for="qsimShots" data-i18n="shotsLabel">Number of shots</label>
+          <input type="range" id="qsimShots" min="10" max="1000" step="10" value="100" oninput="qsimOnShots(this.value)">
+          <span class="qsim-shots-val" id="qsimShotsVal">100</span>
+        </div>
+        <div class="qsim-hist">
+          <div class="qsim-hist-col">
+            <span class="qsim-hist-count" id="qsimC00">50</span>
+            <div class="qsim-bar bar-corr" id="qsimBar00" style="height:90px;"></div>
+            <span class="qsim-hist-label">00</span>
+          </div>
+          <div class="qsim-hist-col">
+            <span class="qsim-hist-count" id="qsimC01">0</span>
+            <div class="qsim-bar bar-anti" id="qsimBar01" style="height:4px;"></div>
+            <span class="qsim-hist-label">01</span>
+          </div>
+          <div class="qsim-hist-col">
+            <span class="qsim-hist-count" id="qsimC10">0</span>
+            <div class="qsim-bar bar-anti" id="qsimBar10" style="height:4px;"></div>
+            <span class="qsim-hist-label">10</span>
+          </div>
+          <div class="qsim-hist-col">
+            <span class="qsim-hist-count" id="qsimC11">50</span>
+            <div class="qsim-bar bar-corr" id="qsimBar11" style="height:90px;"></div>
+            <span class="qsim-hist-label">11</span>
+          </div>
+        </div>
+        <button class="qsim-run-btn" onclick="qsimRunShots()"><span data-i18n="runBtn">Run simulation again</span></button>
+      </div>
+
+      <div class="qsim-note" id="qsimNote" data-i18n="note0">
+        Notice: with no gates, q0 and q1 stay at |0⟩ — a measurement here would always give 00.
+      </div>
+    </div>
+  </div>
+
+  <div class="qsim-footer">
+    <button class="qsim-nav-btn" id="qsimPrevBtn" onclick="qsimPrev()" data-i18n="prevBtn" disabled>Previous</button>
+    <button class="qsim-nav-btn" id="qsimNextBtn" onclick="qsimNext()" data-i18n="nextBtn">Next</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var I18N = {
+    en: {
+      title: "CNOT &amp; correlated outcomes — interactive simulator",
+      subtitle: "H then CNOT links two qubits together.",
+      step0: "1. Initial state |00⟩",
+      step1: "2. H + CNOT",
+      step2: "3. Measure both",
+      codeLabel: "Qiskit code",
+      shotsLabel: "Number of shots",
+      runBtn: "Run simulation again",
+      rtControl: "Control",
+      rtBefore: "Target before",
+      rtAfter: "Target after",
+      prevBtn: "Previous",
+      nextBtn: "Next",
+      langBtn: "العربية",
+      note0: "Notice: with no gates, q0 and q1 stay at |0⟩ — a measurement here would always give 00.",
+      note1: "CNOT rule: the target flips only when the control is 1. With q0 in superposition, both control values (0 and 1) are possible.",
+      note2: "Across many shots, outcomes concentrate on 00 and 11 — the two qubits are correlated. 01 and 10 stay near zero.",
+      explain: [
+        "Both qubits start in |0⟩. With no gates applied yet, a measurement here would always give 00.",
+        "qc.h(0) puts q0 in superposition. qc.cx(0, 1) is CNOT: q0 is the control (filled dot), q1 is the target (⊕). The target flips only when the control is 1.",
+        "Measuring both qubits gives a 2-bit result. Because of the H + CNOT combination, 00 and 11 dominate — this is the signature of a correlated (entangled) pair."
+      ]
+    },
+    ar: {
+      title: "بوابة CNOT والنتائج المترابطة — محاكي تفاعلي",
+      subtitle: "بوابة H ثم CNOT تربط الكيوبتَين معاً.",
+      step0: "1. الحالة الابتدائية |00⟩",
+      step1: "2. H + CNOT",
+      step2: "3. قياس الكيوبتَين",
+      codeLabel: "كود Qiskit",
+      shotsLabel: "عدد المحاولات (shots)",
+      runBtn: "إعادة المحاكاة",
+      rtControl: "التحكم",
+      rtBefore: "الهدف قبل",
+      rtAfter: "الهدف بعد",
+      prevBtn: "السابق",
+      nextBtn: "التالي",
+      langBtn: "English",
+      note0: "ملاحظة: بدون بوابات، يبقى q0 و q1 عند |0⟩ — أي قياس هنا سيعطي دائماً 00.",
+      note1: "قاعدة CNOT: ينقلب الهدف فقط إذا كان التحكم = 1. وبما أن q0 في تراكب، فكلا قيمتَي التحكم (0 و1) ممكنتان.",
+      note2: "عبر محاولات كثيرة، تتركّز النتائج على 00 و11 — وهذا هو توقيع الارتباط (التشابك). 01 و10 تبقى قريبة من الصفر.",
+      explain: [
+        "يبدأ الكيوبتان عند |0⟩. بدون بوابات، أي قياس هنا سيعطي دائماً 00.",
+        "qc.h(0) يضع q0 في تراكب. qc.cx(0, 1) هي CNOT: q0 هو التحكم (نقطة معبّأة)، q1 هو الهدف (⊕). ينقلب الهدف فقط إذا كان التحكم = 1.",
+        "قياس الكيوبتَين يعطي نتيجة من 2 بت. بسبب تركيبة H + CNOT، تسيطر 00 و11 — وهذا هو توقيع الزوج المترابط (المتشابك)."
+      ]
+    }
+  };
+
+  var root = document.getElementById('qsimRoot');
+  var state = { lang: 'en', step: 0 };
+
+  function applyTranslations() {
+    var dict = I18N[state.lang];
+    root.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      if (key.indexOf('step') === 0 || key === 'title') {
+        el.innerHTML = dict[key];
+      } else {
+        el.textContent = dict[key];
+      }
+    });
+    document.getElementById('qsimLangBtn').textContent = dict.langBtn;
+    document.getElementById('qsimExplain').textContent = dict.explain[state.step];
+    var noteKey = (state.step === 0) ? 'note0' : (state.step === 1) ? 'note1' : 'note2';
+    document.getElementById('qsimNote').textContent = dict[noteKey];
+  }
+
+  function simulate(n) {
+    var spread = Math.sqrt(n) * (Math.random() - 0.5);
+    var c00 = Math.round(n / 2 + spread);
+    c00 = Math.max(0, Math.min(n, c00));
+    var c11 = n - c00;
+    document.getElementById('qsimC00').textContent = c00;
+    document.getElementById('qsimC11').textContent = c11;
+    document.getElementById('qsimC01').textContent = 0;
+    document.getElementById('qsimC10').textContent = 0;
+    var maxH = 90;
+    document.getElementById('qsimBar00').style.height = Math.max(4, Math.round((c00 / n) * maxH * 2)) + 'px';
+    document.getElementById('qsimBar11').style.height = Math.max(4, Math.round((c11 / n) * maxH * 2)) + 'px';
+    document.getElementById('qsimBar01').style.height = '4px';
+    document.getElementById('qsimBar10').style.height = '4px';
+  }
+
+  window.qsimToggleLang = function () {
+    state.lang = (state.lang === 'en') ? 'ar' : 'en';
+    root.setAttribute('lang', state.lang);
+    root.setAttribute('dir', state.lang === 'ar' ? 'rtl' : 'ltr');
+    applyTranslations();
+  };
+
+  window.qsimGoStep = function (n) {
+    state.step = n;
+    for (var i = 0; i < 3; i++) {
+      document.getElementById('qsimDot' + i).classList.toggle('active', i === n);
+    }
+    document.getElementById('qsimLine0').classList.toggle('active', n === 1);
+    document.getElementById('qsimLine1').classList.toggle('active', n === 1);
+    document.getElementById('qsimLine2').classList.toggle('active', n === 2);
+
+    var dict = I18N[state.lang];
+    document.getElementById('qsimExplain').textContent = dict.explain[n];
+    var noteKey = (n === 0) ? 'note0' : (n === 1) ? 'note1' : 'note2';
+    document.getElementById('qsimNote').textContent = dict[noteKey];
+
+    document.getElementById('qHi1').classList.toggle('show', n === 0);
+    document.getElementById('qHi2').classList.toggle('show', n === 1);
+    document.getElementById('qHi3').classList.toggle('show', n === 2);
+
+    document.getElementById('qHGroup').classList.toggle('show', n >= 1);
+    document.getElementById('qCnotGroup').classList.toggle('show', n >= 1);
+    document.getElementById('qMeasGroup').classList.toggle('show', n === 2);
+
+    document.getElementById('qsimRuleTable').classList.toggle('show', n === 1);
+    document.getElementById('qsimMeasure').classList.toggle('show', n === 2);
+
+    document.getElementById('qsimPrevBtn').disabled = (n === 0);
+    document.getElementById('qsimNextBtn').disabled = (n === 2);
+
+    if (n === 2) simulate(parseInt(document.getElementById('qsimShots').value, 10));
+  };
+
+  window.qsimPrev = function () { if (state.step > 0) qsimGoStep(state.step - 1); };
+  window.qsimNext = function () { if (state.step < 2) qsimGoStep(state.step + 1); };
+
+  window.qsimOnShots = function (v) {
+    document.getElementById('qsimShotsVal').textContent = v;
+    simulate(parseInt(v, 10));
+  };
+
+  window.qsimRunShots = function () {
+    simulate(parseInt(document.getElementById('qsimShots').value, 10));
+  };
+
+  applyTranslations();
+})();
+</script>

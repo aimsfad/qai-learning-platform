@@ -1,0 +1,253 @@
+<!--
+  Lesson 6 — Qiskit Syntax and Debugging
+  ============================================================
+  Embed with:
+      st.components.v1.html(path.read_text(encoding="utf-8"), height=600, scrolling=False)
+  Self-contained, English only (error messages are English by nature).
+  Compares an incorrect circuit (no classical bit allocated) with
+  the corrected version, showing the resulting circuit diagram and
+  error / success message side by side.
+-->
+<div id="qsimRoot" style="
+  --qsim-surface:#ffffff; --qsim-surface2:#f8fafc;
+  --qsim-border:#d9e4f2; --qsim-text:#0f172a; --qsim-muted:#475569;
+  --qsim-blue:#2563eb; --qsim-teal:#0f766e; --qsim-indigo:#4f46e5;
+  --qsim-soft-blue:#eaf3ff; --qsim-soft-teal:#e6f7f4;
+  --qsim-red:#dc2626; --qsim-soft-red:#fef2f2; --qsim-red-border:#fecaca;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:var(--qsim-surface); border:1px solid var(--qsim-border);
+  border-radius:16px; padding:20px 22px; color:var(--qsim-text);
+  max-width:760px; margin:0 auto; box-sizing:border-box;
+">
+
+  <style>
+    #qsimRoot * { box-sizing:border-box; }
+    #qsimRoot .qsim-header { margin-bottom:14px; }
+    #qsimRoot .qsim-title { font-size:16px; font-weight:700; margin:0 0 2px 0; }
+    #qsimRoot .qsim-subtitle { font-size:12.5px; color:var(--qsim-muted); margin:0; }
+
+    #qsimRoot .qsim-steps { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    #qsimRoot .qsim-step-pill {
+      font-size:12px; font-weight:600; padding:7px 12px; border-radius:999px;
+      border:1px solid var(--qsim-border); background:var(--qsim-surface2);
+      color:var(--qsim-muted); cursor:pointer; transition:all .15s;
+    }
+    #qsimRoot .qsim-step-pill.active { background:var(--qsim-soft-blue); color:var(--qsim-blue); border-color:#93c5fd; }
+
+    #qsimRoot .qsim-body { display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+    #qsimRoot .qsim-circuit-col { flex:1 1 320px; min-width:300px; }
+    #qsimRoot .qsim-panel { flex:1; min-width:260px; display:flex; flex-direction:column; gap:12px; }
+
+    #qsimRoot .qsim-code-label { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--qsim-muted); margin-bottom:4px; }
+    #qsimRoot .qsim-code-box {
+      border-radius:10px; padding:8px; border:1px solid var(--qsim-border);
+      background:var(--qsim-surface2); transition:opacity .3s, border-color .3s;
+    }
+    #qsimRoot .qsim-code-box.dim { opacity:.4; }
+    #qsimRoot .qsim-code-box.err { border-color:var(--qsim-red-border); background:var(--qsim-soft-red); }
+    #qsimRoot .qsim-code-box.ok { border-color:#b9e6dd; background:var(--qsim-soft-teal); }
+    #qsimRoot .qsim-code-line {
+      font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+      font-size:13px; padding:4px 10px; border-radius:7px; color:var(--qsim-muted);
+      white-space:pre;
+    }
+    #qsimRoot .qsim-code-comment { opacity:.7; font-style:italic; }
+    #qsimRoot .qsim-arg-highlight {
+      display:inline-block; padding:0 3px; border-radius:4px; transition:all .3s;
+    }
+    #qsimRoot .qsim-arg-highlight.flag-err { background:var(--qsim-soft-red); color:var(--qsim-red); font-weight:700; outline:1.5px solid var(--qsim-red); }
+    #qsimRoot .qsim-arg-highlight.flag-ok { background:var(--qsim-soft-teal); color:var(--qsim-teal); font-weight:700; outline:1.5px solid var(--qsim-teal); }
+
+    #qsimRoot .qsim-explain { font-size:14px; line-height:1.7; color:var(--qsim-text); min-height:78px; }
+
+    #qsimRoot .qsim-msg {
+      font-family:'SFMono-Regular',Consolas,monospace; font-size:12.5px; line-height:1.6;
+      border-radius:10px; padding:10px 12px; border:1px solid;
+    }
+    #qsimRoot .qsim-msg.err { color:var(--qsim-red); background:var(--qsim-soft-red); border-color:var(--qsim-red-border); }
+    #qsimRoot .qsim-msg.ok { color:var(--qsim-teal); background:var(--qsim-soft-teal); border-color:#b9e6dd; }
+
+    #qsimRoot .qsim-note {
+      font-size:12.5px; line-height:1.6; color:var(--qsim-indigo); background:var(--qsim-soft-blue);
+      border:1px solid #93c5fd; border-radius:10px; padding:10px 12px;
+    }
+
+    #qsimRoot .qsim-footer { display:flex; justify-content:space-between; margin-top:18px; gap:8px; }
+    #qsimRoot .qsim-nav-btn {
+      font-size:13px; font-weight:600; padding:9px 18px; border-radius:9px;
+      border:1px solid var(--qsim-border); background:var(--qsim-surface2);
+      color:var(--qsim-text); cursor:pointer;
+    }
+    #qsimRoot .qsim-nav-btn:disabled { opacity:.4; cursor:default; }
+    #qsimRoot .qsim-nav-btn:not(:disabled):hover { background:var(--qsim-soft-blue); color:var(--qsim-blue); }
+
+    /* circuit elements */
+    #qC0Solid, #qC0Good, #qGoodLine, #qGoodLabel { opacity:0; transition:opacity .4s; }
+    #qC0Solid.show, #qC0Good.show, #qGoodLine.show, #qGoodLabel.show { opacity:1; }
+    #qC0Dashed, #qErrX, #qErrLine, #qErrBadge { opacity:1; transition:opacity .4s; }
+    #qC0Dashed.hide, #qErrX.hide, #qErrLine.hide, #qErrBadge.hide { opacity:0; }
+    #qArgCircle { opacity:0; transition:opacity .4s; }
+    #qArgCircle.show { opacity:1; }
+
+    @media (max-width:640px) {
+      #qsimRoot .qsim-body { flex-direction:column; }
+    }
+  </style>
+
+  <div class="qsim-header">
+    <p class="qsim-title">Qiskit syntax &amp; debugging — interactive simulator</p>
+    <p class="qsim-subtitle">Find the missing classical bit, then see the fix.</p>
+  </div>
+
+  <div class="qsim-steps">
+    <button class="qsim-step-pill active" id="qsimDot0" onclick="qsimGoStep(0)">1. Run the buggy code</button>
+    <button class="qsim-step-pill" id="qsimDot1" onclick="qsimGoStep(1)">2. Find the bug</button>
+    <button class="qsim-step-pill" id="qsimDot2" onclick="qsimGoStep(2)">3. Run the fixed code</button>
+  </div>
+
+  <div class="qsim-body">
+    <div class="qsim-circuit-col">
+      <svg width="100%" height="180" viewBox="0 0 360 180" role="img">
+        <title>Circuit diagram</title>
+        <desc>A quantum wire q0 with a measurement symbol. The classical wire c0 is missing in the buggy version and present in the fixed version.</desc>
+
+        <text x="14" y="48" font-size="13" font-weight="700" fill="#0f172a">q0:|0⟩</text>
+        <line x1="80" y1="44" x2="340" y2="44" stroke="#94a3b8" stroke-width="2"/>
+
+        <text x="14" y="128" font-size="13" font-weight="700" fill="#94a3b8">c0</text>
+
+        <g id="qC0Dashed">
+          <line x1="80" y1="124" x2="340" y2="124" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <line x1="80" y1="128" x2="340" y2="128" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+        </g>
+        <g id="qC0Solid">
+          <line x1="80" y1="124" x2="340" y2="124" stroke="#94a3b8" stroke-width="1.5"/>
+          <line x1="80" y1="128" x2="340" y2="128" stroke="#94a3b8" stroke-width="1.5"/>
+        </g>
+
+        <rect x="150" y="26" width="36" height="36" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+        <path d="M160 54 A 12 12 0 0 1 184 54" fill="none" stroke="#0f766e" stroke-width="2"/>
+        <line x1="172" y1="54" x2="182" y2="40" stroke="#0f766e" stroke-width="2" stroke-linecap="round"/>
+
+        <g id="qErrLine">
+          <line x1="168" y1="62" x2="168" y2="98" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3 3"/>
+        </g>
+        <g id="qErrX">
+          <circle cx="168" cy="104" r="9" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+          <line x1="164" y1="100" x2="172" y2="108" stroke="#dc2626" stroke-width="1.5"/>
+          <line x1="172" y1="100" x2="164" y2="108" stroke="#dc2626" stroke-width="1.5"/>
+        </g>
+
+        <g id="qGoodLine">
+          <line x1="168" y1="62" x2="168" y2="124" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <circle cx="168" cy="124" r="4" fill="#0f766e"/>
+        </g>
+        <text id="qGoodLabel" x="184" y="128" font-size="13" font-weight="700" fill="#0f766e">= 0</text>
+
+        <circle id="qArgCircle" cx="234" cy="148" r="13" fill="none" stroke="#dc2626" stroke-width="2"/>
+        <text x="234" y="170" font-size="11" font-weight="700" fill="#dc2626" text-anchor="middle" id="qArgCircleLabel">0 classical bits</text>
+      </svg>
+
+      <div class="qsim-msg err" id="qsimErrBadge">
+        ✗ IndexError: classical bit index 0 out of range for register of length 0
+      </div>
+      <div class="qsim-msg ok" id="qsimOkBadge" style="display:none;">
+        ✓ Circuit runs successfully — measurement result stored in c0 = 0
+      </div>
+    </div>
+
+    <div class="qsim-panel">
+      <div>
+        <div class="qsim-code-label">Incorrect</div>
+        <div class="qsim-code-box err" id="qsimBuggyBox">
+          <div class="qsim-code-line qsim-code-comment"># Incorrect: no classical bit allocated</div>
+          <div class="qsim-code-line">qc = QuantumCircuit(1, <span class="qsim-arg-highlight" id="qsimArgBuggy">0</span>)</div>
+          <div class="qsim-code-line">qc.measure(0, 0)</div>
+        </div>
+      </div>
+      <div>
+        <div class="qsim-code-label">Correct</div>
+        <div class="qsim-code-box dim" id="qsimFixedBox">
+          <div class="qsim-code-line qsim-code-comment"># Correct</div>
+          <div class="qsim-code-line">qc = QuantumCircuit(1, <span class="qsim-arg-highlight" id="qsimArgFixed">1</span>)</div>
+          <div class="qsim-code-line">qc.measure(0, 0)</div>
+        </div>
+      </div>
+
+      <div class="qsim-explain" id="qsimExplain">
+        QuantumCircuit(1, 0) allocates 1 qubit but 0 classical bits. The diagram shows q0, but there is no c0 wire to store a measurement result.
+      </div>
+
+      <div class="qsim-note" id="qsimNote">
+        Notice: the second argument to QuantumCircuit is the number of classical bits — not another qubit.
+      </div>
+    </div>
+  </div>
+
+  <div class="qsim-footer">
+    <button class="qsim-nav-btn" id="qsimPrevBtn" onclick="qsimPrev()" disabled>Previous</button>
+    <button class="qsim-nav-btn" id="qsimNextBtn" onclick="qsimNext()">Next</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var EXPLAIN = [
+    "QuantumCircuit(1, 0) allocates 1 qubit but 0 classical bits. The diagram shows q0, but there is no c0 wire to store a measurement result.",
+    "qc.measure(0, 0) tries to write into classical bit index 0 — but the second argument above shows 0 classical bits exist. The first '1' is the qubit count; the second number is the classical-bit count.",
+    "QuantumCircuit(1, 1) allocates 1 qubit and 1 classical bit. Now c0 exists, the measurement symbol connects to it, and the circuit runs: c0 = 0."
+  ];
+  var NOTES = [
+    "Notice: the second argument to QuantumCircuit is the number of classical bits — not another qubit.",
+    "Debugging tip: when a measurement instruction fails, check resources first — how many qubits and classical bits were actually allocated?",
+    "Fix applied: changing (1, 0) to (1, 1) gives the circuit a classical bit to store the result in."
+  ];
+
+  var state = { step: 0 };
+
+  window.qsimGoStep = function (n) {
+    state.step = n;
+    for (var i = 0; i < 3; i++) {
+      document.getElementById('qsimDot' + i).classList.toggle('active', i === n);
+    }
+    document.getElementById('qsimExplain').textContent = EXPLAIN[n];
+    document.getElementById('qsimNote').textContent = NOTES[n];
+
+    var buggyBox = document.getElementById('qsimBuggyBox');
+    var fixedBox = document.getElementById('qsimFixedBox');
+    var argBuggy = document.getElementById('qsimArgBuggy');
+    var argFixed = document.getElementById('qsimArgFixed');
+
+    if (n < 2) {
+      buggyBox.className = 'qsim-code-box err';
+      fixedBox.className = 'qsim-code-box dim';
+    } else {
+      buggyBox.className = 'qsim-code-box dim';
+      fixedBox.className = 'qsim-code-box ok';
+    }
+
+    argBuggy.classList.toggle('flag-err', n === 1);
+    argFixed.classList.toggle('flag-ok', n === 2);
+    document.getElementById('qArgCircle').classList.toggle('show', n === 1);
+
+    var isFixed = (n === 2);
+    document.getElementById('qC0Dashed').classList.toggle('hide', isFixed);
+    document.getElementById('qC0Solid').classList.toggle('show', isFixed);
+    document.getElementById('qErrLine').classList.toggle('hide', isFixed);
+    document.getElementById('qErrX').classList.toggle('hide', isFixed);
+    document.getElementById('qGoodLine').classList.toggle('show', isFixed);
+    document.getElementById('qGoodLabel').classList.toggle('show', isFixed);
+
+    document.getElementById('qsimErrBadge').style.display = isFixed ? 'none' : 'block';
+    document.getElementById('qsimOkBadge').style.display = isFixed ? 'block' : 'none';
+
+    document.getElementById('qsimPrevBtn').disabled = (n === 0);
+    document.getElementById('qsimNextBtn').disabled = (n === 2);
+  };
+
+  window.qsimPrev = function () { if (state.step > 0) qsimGoStep(state.step - 1); };
+  window.qsimNext = function () { if (state.step < 2) qsimGoStep(state.step + 1); };
+
+  qsimGoStep(0);
+})();
+</script>

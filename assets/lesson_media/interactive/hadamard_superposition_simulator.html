@@ -1,0 +1,143 @@
+
+<h2 class="sr-only">محاكي تفاعلي يوضح حالة الكيوبت قبل وبعد بوابة Hadamard، ونتائج القياس على كرة بلوخ.</h2>
+<style>
+.step-dot { font-size:12px; padding:6px 12px; border-radius:var(--border-radius-md); border:0.5px solid var(--color-border-tertiary); background:var(--color-background-primary); cursor:pointer; color:var(--color-text-secondary); }
+.step-dot.active { background:var(--color-background-info); color:var(--color-text-info); border-color:var(--color-border-info); }
+.code-line { font-family:var(--font-mono); font-size:13px; padding:6px 10px; border-radius:var(--border-radius-md); color:var(--color-text-secondary); }
+.code-line.active { background:var(--color-background-info); color:var(--color-text-info); }
+.nav-btn { font-size:13px; padding:8px 16px; border-radius:var(--border-radius-md); border:0.5px solid var(--color-border-tertiary); background:var(--color-background-primary); cursor:pointer; color:var(--color-text-primary); }
+.proj-line { stroke:var(--color-text-tertiary); stroke-width:0.5; stroke-dasharray:4 3; fill:none; opacity:0; transition:opacity 0.4s; }
+.proj-line.show { opacity:1; }
+.proj-label { opacity:0; transition:opacity 0.4s; }
+.proj-label.show { opacity:1; }
+#vector-group { transform-origin:140px 150px; transition:transform 0.7s ease, opacity 0.4s; }
+.bar { width:64px; border-radius:var(--border-radius-md) var(--border-radius-md) 0 0; transition:height 0.4s ease; }
+</style>
+
+<div dir="rtl" style="padding:1rem 0">
+  <div style="display:flex; gap:8px; margin-bottom:1.25rem; flex-wrap:wrap;">
+    <button class="step-dot active" id="dot0" onclick="goStep(0)">1. الحالة الابتدائية</button>
+    <button class="step-dot" id="dot1" onclick="goStep(1)">2. بوابة Hadamard</button>
+    <button class="step-dot" id="dot2" onclick="goStep(2)">3. القياس والعدّ</button>
+  </div>
+
+  <div style="display:flex; gap:28px; flex-wrap:wrap;">
+    <div style="flex:0 0 280px;">
+      <svg width="280" height="290" viewBox="0 0 280 290" role="img">
+        <title>كرة بلوخ</title>
+        <desc>تمثيل حالة الكيوبت كمتجه على كرة بلوخ، يدور عند تطبيق بوابة Hadamard.</desc>
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <circle cx="140" cy="150" r="92" fill="none" stroke="var(--color-border-secondary)" stroke-width="0.5"/>
+        <ellipse cx="140" cy="150" rx="92" ry="20" fill="none" stroke="var(--color-border-tertiary)" stroke-width="0.5" stroke-dasharray="3 3"/>
+        <line x1="140" y1="58" x2="140" y2="242" stroke="var(--color-border-tertiary)" stroke-width="0.5" stroke-dasharray="3 3"/>
+        <text class="th" x="140" y="22" text-anchor="middle">|0⟩</text>
+        <text class="th" x="140" y="286" text-anchor="middle">|1⟩</text>
+
+        <path class="proj-line" id="proj0" d="M140 150 L140 58"/>
+        <text class="ts proj-label" id="lab0" x="150" y="62">P(0) = 50%</text>
+        <path class="proj-line" id="proj1" d="M140 150 L140 242"/>
+        <text class="ts proj-label" id="lab1" x="150" y="252">P(1) = 50%</text>
+
+        <g id="vector-group">
+          <line x1="140" y1="150" x2="140" y2="58" stroke="var(--color-text-info)" stroke-width="2" marker-end="url(#arrow)"/>
+          <circle cx="140" cy="150" r="2.5" fill="var(--color-text-info)"/>
+        </g>
+      </svg>
+      <div id="state-label" style="text-align:center; font-size:14px; font-weight:500; margin-top:6px;">|ψ⟩ = |0⟩</div>
+    </div>
+
+    <div style="flex:1; min-width:280px; display:flex; flex-direction:column; gap:12px;">
+      <div style="background:var(--color-background-secondary); border-radius:var(--border-radius-lg); padding:0.75rem;">
+        <div class="code-line active" id="line0">qc = QuantumCircuit(1, 1)</div>
+        <div class="code-line" id="line1">qc.h(0)</div>
+        <div class="code-line" id="line2">qc.measure(0, 0)</div>
+      </div>
+
+      <div id="explain" style="font-size:14px; line-height:1.7; color:var(--color-text-secondary);">
+        الكيوبت يبدأ دائماً في الحالة |0⟩، ويُمثَّل بمتجه يشير إلى القطب الشمالي لكرة بلوخ.
+      </div>
+
+      <div id="measure-panel" style="display:none; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label style="font-size:13px; color:var(--color-text-secondary);">عدد المحاولات (shots)</label>
+          <input type="range" id="shots" min="10" max="1000" step="10" value="100" style="flex:1" oninput="onShotsInput(this.value)">
+          <span id="shotsVal" style="font-size:13px; font-weight:500; min-width:42px; text-align:left;">100</span>
+        </div>
+        <div style="display:flex; gap:20px; align-items:flex-end; height:110px;">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+            <span id="count0" style="font-size:13px; font-weight:500;">50</span>
+            <div id="bar0" class="bar" style="height:50px; background:var(--color-background-info);"></div>
+            <span class="ts">|0⟩</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+            <span id="count1" style="font-size:13px; font-weight:500;">50</span>
+            <div id="bar1" class="bar" style="height:50px; background:var(--color-background-success);"></div>
+            <span class="ts">|1⟩</span>
+          </div>
+        </div>
+        <button class="nav-btn" onclick="runShots()"><i class="ti ti-refresh" aria-hidden="true" style="vertical-align:-2px"></i> إعادة المحاكاة</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+    <button class="nav-btn" onclick="prevStep()">السابق</button>
+    <button class="nav-btn" onclick="nextStep()">التالي</button>
+  </div>
+</div>
+
+<script>
+let currentStep = 0;
+const explainText = [
+  "الكيوبت يبدأ دائماً في الحالة |0⟩، ويُمثَّل بمتجه يشير إلى القطب الشمالي لكرة بلوخ.",
+  "بوابة Hadamard تدوّر المتجه 90° نحو خط الاستواء. الكيوبت الآن في تراكب متساوٍ بين |0⟩ و|1⟩.",
+  "القياس يحوّل الحالة الكمية إلى نتيجة كلاسيكية واحدة فقط: 0 أو 1، باحتمال 50% لكل منهما. غيّر عدد المحاولات وشاهد توزيع النتائج (counts)."
+];
+const stateLabel = ["|ψ⟩ = |0⟩", "|ψ⟩ = (|0⟩ + |1⟩) / √2", "|ψ⟩ = (|0⟩ + |1⟩) / √2"];
+
+function goStep(n) {
+  currentStep = n;
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('dot'+i).classList.toggle('active', i === n);
+    document.getElementById('line'+i).classList.toggle('active', i === n);
+  }
+  document.getElementById('explain').textContent = explainText[n];
+  document.getElementById('state-label').textContent = stateLabel[n];
+
+  const vec = document.getElementById('vector-group');
+  vec.style.transform = (n >= 1) ? 'rotate(90deg)' : 'rotate(0deg)';
+  vec.style.opacity = (n === 2) ? '0.4' : '1';
+
+  ['proj0','proj1','lab0','lab1'].forEach(id => {
+    document.getElementById(id).classList.toggle('show', n === 2);
+  });
+
+  document.getElementById('measure-panel').style.display = (n === 2) ? 'flex' : 'none';
+  if (n === 2) runShots();
+}
+
+function prevStep() { if (currentStep > 0) goStep(currentStep - 1); }
+function nextStep() { if (currentStep < 2) goStep(currentStep + 1); }
+
+function onShotsInput(v) {
+  document.getElementById('shotsVal').textContent = v;
+  runShots();
+}
+
+function runShots() {
+  const n = parseInt(document.getElementById('shots').value, 10);
+  const spread = Math.sqrt(n) * (Math.random() - 0.5);
+  let c0 = Math.round(n / 2 + spread);
+  c0 = Math.max(0, Math.min(n, c0));
+  const c1 = n - c0;
+  document.getElementById('count0').textContent = c0;
+  document.getElementById('count1').textContent = c1;
+  const maxH = 90;
+  document.getElementById('bar0').style.height = Math.max(4, Math.round((c0/n)*maxH)) + 'px';
+  document.getElementById('bar1').style.height = Math.max(4, Math.round((c1/n)*maxH)) + 'px';
+}
+</script>
