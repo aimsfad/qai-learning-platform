@@ -2185,6 +2185,46 @@ def render_learning_analytics() -> None:
         if "interactions" in observer.columns:
             render_progress_bars(observer, "module", "interactions", "AI interactions by module")
 
+    st.markdown("### AI support mode by lesson and task")
+    task_df = db.ai_task_mode_df()
+    if task_df.empty:
+        st.info("No AI task-mode evidence yet.")
+    else:
+        st.dataframe(task_df, use_container_width=True, hide_index=True)
+        task_summary = task_df.groupby("task", as_index=False)["interactions"].sum().sort_values("interactions", ascending=False)
+        render_progress_bars(task_summary, "task", "interactions", "AI interactions by support type")
+
+    st.markdown("### Time before AI request")
+    timing_raw = db.ai_request_timing_events_df()
+    if timing_raw.empty:
+        st.info("No AI timing events recorded yet.")
+    else:
+        rows = []
+        for _, row in timing_raw.iterrows():
+            try:
+                detail = json.loads(row.get("event_detail") or "{}")
+            except Exception:
+                detail = {}
+            rows.append({
+                "created_at": row.get("created_at"),
+                "participant_code": row.get("participant_code"),
+                "lesson_id": detail.get("lesson_id", ""),
+                "source": detail.get("source", ""),
+                "task": detail.get("task", ""),
+                "step": detail.get("step", ""),
+                "seconds_before_ai": detail.get("seconds_before_ai"),
+            })
+        timing = pd.DataFrame(rows)
+        if "seconds_before_ai" in timing:
+            timing["seconds_before_ai"] = pd.to_numeric(timing["seconds_before_ai"], errors="coerce")
+        st.dataframe(timing, use_container_width=True, hide_index=True)
+        if not timing.empty and "seconds_before_ai" in timing:
+            by_task = timing.groupby("task", as_index=False)["seconds_before_ai"].mean().dropna()
+            if not by_task.empty:
+                by_task = by_task.rename(columns={"seconds_before_ai": "mean_seconds_before_ai"}).sort_values("mean_seconds_before_ai", ascending=False)
+                st.dataframe(by_task, use_container_width=True, hide_index=True)
+                render_progress_bars(by_task, "task", "mean_seconds_before_ai", "Mean seconds before AI request by task")
+
     concept_df = db.concept_scores_df()
     if not concept_df.empty:
         st.markdown("### Concept-level performance")
