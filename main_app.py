@@ -1892,6 +1892,10 @@ def render_evaluator_app() -> None:
         render_evaluator_login()
         return
     page = st.session_state.evaluator_page
+
+    # V12.2: keep evaluator routing synchronized with the visible left menu.
+    # A previous cleanup renamed menu labels but left the old route names here,
+    # which made AI logs / response evaluation / AI metrics / exports appear blank.
     if page == "Evaluator Dashboard":
         render_evaluator_dashboard()
     elif page == "Students":
@@ -1900,6 +1904,15 @@ def render_evaluator_app() -> None:
         render_registration_accounts()
     elif page == "Student Details":
         render_student_details()
+    elif page == "AI Tutor Logs":
+        render_feedback_logs()
+    elif page == "AI Response Evaluation":
+        render_llm_performance_evaluation()
+    elif page == "AI Metrics":
+        render_learning_analytics()
+    elif page == "Exports":
+        render_results_export()
+    # Backward-compatible aliases for older bookmarked/internal pages.
     elif page == "Progress Monitor":
         render_progress_monitor()
     elif page == "Learning Analytics":
@@ -1918,6 +1931,10 @@ def render_evaluator_app() -> None:
         render_system_readiness()
     elif page == "Results Export":
         render_results_export()
+    else:
+        st.warning(f"Unknown evaluator page: {page}. Returning to dashboard.")
+        st.session_state.evaluator_page = "Evaluator Dashboard"
+        st.rerun()
 
 
 def render_evaluator_login() -> None:
