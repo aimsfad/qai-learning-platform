@@ -1449,61 +1449,282 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
         render_ai_usefulness_feedback(interaction_id, f"genai_coach_{lesson['id']}_{interaction_id}")
 
 
-def concept_builder_svg_card(lesson: Dict[str, Any]) -> str:
-    """Return a safe, template-based SVG visual card for the current concept.
 
-    The AI is not allowed to inject executable HTML/JS here. We render only
-    approved SVG templates with lesson text interpolated by the application.
-    """
-    lesson_id = lesson.get("id", "")
-    title = lesson.get("title", "Concept")
-    if lesson_id == "hadamard_superposition":
-        main = "|0>  --H--  measure  =>  counts ~ 50/50"
-        focus = "H changes the state before measurement"
-        bars = "<rect x='470' y='112' width='42' height='70' rx='8' fill='#2563eb'/><rect x='530' y='112' width='42' height='70' rx='8' fill='#0f766e'/>"
-    elif lesson_id == "shots_counts":
-        main = "More shots make the sampled pattern easier to read"
-        focus = "Counts are observed frequencies, not the hidden state"
-        bars = "<rect x='470' y='138' width='34' height='44' rx='7' fill='#2563eb'/><rect x='515' y='126' width='34' height='56' rx='7' fill='#0f766e'/><rect x='560' y='112' width='34' height='70' rx='7' fill='#4f46e5'/>"
-    elif lesson_id == "cnot_correlation":
-        main = "control q0 -> target q1 -> outcomes 00 and 11"
-        focus = "CNOT creates a conditional two-qubit relationship"
-        bars = "<rect x='470' y='102' width='38' height='80' rx='7' fill='#2563eb'/><rect x='530' y='102' width='38' height='80' rx='7' fill='#0f766e'/>"
-    elif lesson_id == "qiskit_debugging":
-        main = "Wrong resource count -> error -> corrected circuit"
-        focus = "Debug by checking qubits, classical bits, and indices"
-        bars = "<rect x='455' y='72' width='120' height='38' rx='9' fill='#fef2f2' stroke='#fecaca'/><text x='515' y='97' text-anchor='middle' font-size='14' fill='#dc2626' font-weight='900'>error</text><rect x='455' y='132' width='120' height='38' rx='9' fill='#ecfdf5' stroke='#99f6e4'/><text x='515' y='157' text-anchor='middle' font-size='14' fill='#0f766e' font-weight='900'>fixed</text>"
-    elif lesson_id == "qubit_measurement":
-        main = "quantum state before -> measurement -> classical bit after"
-        focus = "One run gives one classical outcome"
-        bars = "<rect x='470' y='92' width='42' height='90' rx='8' fill='#2563eb'/><rect x='530' y='176' width='42' height='6' rx='3' fill='#cbd5e1'/>"
-    else:
-        main = "qubit wire -> measurement symbol -> classical output"
-        focus = "A circuit is a structured map, not just printed code"
-        bars = "<line x1='450' y1='100' x2='590' y2='100' stroke='#94a3b8' stroke-width='3'/><rect x='510' y='80' width='42' height='42' rx='10' fill='#fff' stroke='#2563eb' stroke-width='3'/><line x1='531' y1='122' x2='531' y2='168' stroke='#0f766e' stroke-dasharray='4 4'/>"
+def concept_builder_profile(lesson: Dict[str, Any]) -> Dict[str, Any]:
+    """Curated pedagogical content for professional Concept Builder outputs."""
+    lid = lesson.get("id", "orientation")
+    profiles = {
+        "orientation": {
+            "phenomenon": "A Qiskit program becomes a circuit with quantum resources, operations, measurement, and classical output.",
+            "key_line": "qc = QuantumCircuit(1, 1)",
+            "qiskit_meaning": "The first number allocates one qubit; the second allocates one classical bit for measurement output.",
+            "analogy": "Think of the circuit as a laboratory protocol: q0 is the object being tested, the measurement is the instrument, and c0 is the notebook where the observed value is recorded.",
+            "analogy_limit": "Unlike a normal protocol, the quantum state before measurement is not just a hidden classical value waiting to be revealed.",
+            "misconception_test": "If a learner says 'print(qc) gives the quantum result', they are confusing the circuit diagram with execution output.",
+            "takeaway": "A circuit is a structured map of quantum and classical resources, read left to right.",
+            "visual_label": "q0 wire -> measurement -> c0 output",
+        },
+        "qubit_measurement": {
+            "phenomenon": "Measurement creates one classical outcome from a quantum state in each run.",
+            "key_line": "qc.measure(0, 0)",
+            "qiskit_meaning": "Measure qubit 0 and store the observed classical value in classical bit 0.",
+            "analogy": "Measurement is like taking one photograph of a system: you get one recorded observation, not the entire underlying description.",
+            "analogy_limit": "A qubit is not a hidden coin with a fixed face already chosen before you look.",
+            "misconception_test": "If a learner says measurement displays the full quantum state, they are confusing state description with classical sample.",
+            "takeaway": "Before measurement we discuss state; after measurement we discuss classical outcomes.",
+            "visual_label": "state before -> measurement boundary -> classical value",
+        },
+        "hadamard_superposition": {
+            "phenomenon": "H changes the qubit state before measurement; repeated measurement then reveals a balanced pattern.",
+            "key_line": "qc.h(0)",
+            "qiskit_meaning": "Apply a Hadamard gate to qubit 0, preparing a state that can later produce 0 or 1 with roughly equal frequency.",
+            "analogy": "H is like changing the setup of an experiment before taking samples: it changes the conditions that determine the later pattern of observations.",
+            "analogy_limit": "It is not accurate to say the qubit becomes two ordinary classical bits at once.",
+            "misconception_test": "If a learner says 'H directly gives 0 and 1', they are mixing up state preparation with measurement outcomes.",
+            "takeaway": "H is a state-changing operation; counts appear only after measurement and repeated shots.",
+            "visual_label": "|0> -- H -- measure -> counts about 50/50",
+        },
+        "shots_counts": {
+            "phenomenon": "Counts summarize repeated measurement outcomes; small samples fluctuate and larger samples stabilize.",
+            "key_line": "counts = result.get_counts()",
+            "qiskit_meaning": "Collect the observed bitstring frequencies after executing the circuit many times.",
+            "analogy": "Shots are like repeated trials in a science experiment: one trial is not enough to see the pattern clearly.",
+            "analogy_limit": "Counts are samples, not a direct printout of the quantum state itself.",
+            "misconception_test": "If a learner treats {'0': 6, '1': 4} from 10 shots as a permanent law, they are ignoring sampling variation.",
+            "takeaway": "Use proportions and repeated shots to interpret probabilistic output.",
+            "visual_label": "10 shots fluctuate -> 1000 shots approximates the pattern",
+        },
+        "cnot_correlation": {
+            "phenomenon": "CNOT links a control qubit and target qubit; with H before CNOT, outcomes can become correlated.",
+            "key_line": "qc.cx(0, 1)",
+            "qiskit_meaning": "Use qubit 0 as the control and qubit 1 as the target. The target flips when the control is 1.",
+            "analogy": "CNOT is like a conditional rule: if the control condition is active, apply the change to the target.",
+            "analogy_limit": "It is not a universal copying machine for arbitrary quantum states.",
+            "misconception_test": "If a learner says CNOT simply copies q0 into q1 in all cases, they are missing the conditional control-target rule.",
+            "takeaway": "Read CNOT as a two-qubit relationship: control first, target second.",
+            "visual_label": "H on q0 -> CNOT(q0,q1) -> 00 and 11 dominate",
+        },
+        "qiskit_debugging": {
+            "phenomenon": "Many Qiskit errors reveal mismatches between intended circuit resources and allocated resources.",
+            "key_line": "qc = QuantumCircuit(1, 1)",
+            "qiskit_meaning": "Allocate one qubit and one classical bit before measuring qubit 0 into classical bit 0.",
+            "analogy": "Debugging is like checking a lab checklist: do you have the object, the instrument, and a place to record the result?",
+            "analogy_limit": "Fixing syntax is not enough; the correction must also match the intended circuit meaning.",
+            "misconception_test": "If a learner thinks the second argument of measure(0, 0) is another qubit, they are confusing qubit indices with classical-bit indices.",
+            "takeaway": "Check qubits, classical bits, indices, and measurement mapping before interpreting output.",
+            "visual_label": "wrong resource count -> error -> corrected circuit",
+        },
+    }
+    profile = profiles.get(lid, profiles["orientation"]).copy()
+    profile["title"] = lesson.get("title", "Concept")
+    profile["big_idea"] = lesson.get("big_idea", lesson.get("concept", ""))
+    profile["misconception"] = lesson.get("misconception", profile["misconception_test"])
+    profile["qiskit_code"] = lesson.get("qiskit_code", "")
+    profile["check_question"] = lesson.get("check_question", "Explain the result in your own words.")
+    return profile
+
+
+def concept_builder_svg_card(lesson: Dict[str, Any]) -> str:
+    """Return a professional safe SVG-style visual card using approved templates."""
+    profile = concept_builder_profile(lesson)
+    title = profile["title"]
+    focus = profile["takeaway"]
+    label = profile["visual_label"]
+    key_line = profile["key_line"]
     return f"""
-    <div class='qai-builder-svg-card'>
-      <svg viewBox='0 0 720 250' role='img' aria-label='Generated visual concept card'>
-        <rect x='10' y='10' width='700' height='230' rx='24' fill='#ffffff' stroke='#d9e4f2'/>
-        <text x='42' y='58' font-size='22' font-weight='900' fill='#0f172a'>{title}</text>
-        <text x='42' y='92' font-size='15' fill='#475569'>{focus}</text>
-        <rect x='42' y='122' width='350' height='70' rx='16' fill='#eaf3ff' stroke='#bfdbfe'/>
-        <text x='62' y='164' font-size='18' font-weight='850' fill='#1d4ed8'>{main}</text>
-        {bars}
-        <text x='42' y='218' font-size='13' fill='#64748b'>Template-generated visual card · safe SVG, no executable AI code</text>
-      </svg>
+    <div class='qai-builder-pro-card'>
+      <div class='qai-builder-pro-head'>
+        <div>
+          <div class='qai-builder-kicker'>Template-generated visual support</div>
+          <div class='qai-builder-title'>{title}</div>
+          <div class='qai-builder-sub'>{focus}</div>
+        </div>
+        <div class='qai-builder-chip'>safe SVG</div>
+      </div>
+      <div class='qai-builder-diagram'>
+        <div class='qai-node qai-node-blue'>Observe</div>
+        <div class='qai-arrow'>→</div>
+        <div class='qai-node qai-node-indigo'>Model</div>
+        <div class='qai-arrow'>→</div>
+        <div class='qai-node qai-node-teal'>Measure / interpret</div>
+      </div>
+      <div class='qai-builder-visual-line'>{label}</div>
+      <div class='qai-builder-code-line'><b>Key Qiskit line:</b> <code>{key_line}</code></div>
+      <div class='qai-builder-footer'>This card is generated from an approved lesson template, not arbitrary executable AI code.</div>
     </div>
     """
 
 
+def professional_concept_builder_output(lesson: Dict[str, Any], mode: str, attempt: str, language: str = "English") -> str:
+    """Curated professional outputs for the Concept Builder.
+
+    This avoids weak generic LLM answers and ensures every generated support
+    follows a stable pedagogical structure: concept, visual meaning, code bridge,
+    misconception warning, and learner action.
+    """
+    p = concept_builder_profile(lesson)
+    arabic = language == "Arabic"
+    if arabic:
+        # Keep code terms in English for Qiskit clarity.
+        if mode == "simpler_explanation":
+            return f"""### شرح مبسّط ومنظّم
+
+**الفكرة الأساسية:** {p['phenomenon']}
+
+**ما يجب أن يلاحظه الطالب بصريًا:**  
+{p['takeaway']}
+
+**الربط مع Qiskit:**  
+`{p['key_line']}`  
+{p['qiskit_meaning']}
+
+**تنبيه ضد سوء الفهم:**  
+{p['misconception']}
+
+**مهمة قصيرة:** اكتب بجملة واحدة: ما الذي يحدث قبل القياس؟ وما الذي لا يظهر إلا بعد القياس؟"""
+        if mode == "analogy":
+            return f"""### تشبيه تعليمي مضبوط
+
+**التشبيه:**  
+{p['analogy']}
+
+**حدود التشبيه:**  
+{p['analogy_limit']}
+
+**كيف تستعمله في الفهم؟**  
+استعمل التشبيه فقط لتذكّر البنية العامة، ثم ارجع دائمًا إلى الدارة والكود.
+
+**سؤال للطالب:** أين يظهر هذا المعنى في السطر `{p['key_line']}`؟"""
+        if mode == "misconception_check":
+            return f"""### فحص سوء فهم
+
+**تصريح محتمل من الطالب:**  
+{p['misconception_test']}
+
+**لماذا هذا مهم؟**  
+لأنه يكشف هل الطالب يخلط بين الحالة قبل القياس، والكود، والنتيجة الكلاسيكية بعد القياس.
+
+**سؤال تشخيصي:**  
+{p['check_question']}
+
+**إجابة جيدة يجب أن تذكر:**  
+- ما الذي يتغير داخل الدارة.  
+- أين يظهر ذلك في Qiskit.  
+- ماذا تعني النتيجة بعد measurement/counts."""
+        if mode == "mini_quiz":
+            return f"""### Mini quiz
+
+1. **Concept:** {p['check_question']}  
+2. **Code reading:** ماذا يفعل السطر `{p['key_line']}`؟  
+3. **Interpretation:** كيف تربط النتيجة المرئية بفكرة: {p['takeaway']}؟
+
+**قاعدة التصحيح:** الإجابة الجيدة يجب أن تميز بين ما يحدث قبل measurement وما يظهر بعد measurement/counts."""
+        if mode == "qiskit_bridge":
+            return f"""### الربط مع Qiskit
+
+**السطر المفتاحي:**  
+`{p['key_line']}`
+
+**معناه:**  
+{p['qiskit_meaning']}
+
+**كيف تقرأ الكود؟**
+```python
+{p['qiskit_code']}
+```
+
+**ما الذي يجب شرحه:**  
+{p['takeaway']}
+
+**سؤال متابعة:** اشرح لماذا لا يكفي النظر إلى الكود دون تفسير القياس أو counts."""
+    # English professional outputs.
+    if mode == "simpler_explanation":
+        return f"""### Structured explanation
+
+**Core idea.**  
+{p['phenomenon']}
+
+**What the visual is trying to show.**  
+{p['takeaway']}
+
+**Qiskit bridge.**  
+`{p['key_line']}`  
+{p['qiskit_meaning']}
+
+**Misconception warning.**  
+{p['misconception']}
+
+**Learner action.**  
+Write one sentence that separates *what changes before measurement* from *what is observed after measurement/counts*."""
+    if mode == "analogy":
+        return f"""### Careful analogy
+
+**Analogy.**  
+{p['analogy']}
+
+**Where the analogy breaks down.**  
+{p['analogy_limit']}
+
+**How to use it productively.**  
+Use the analogy only to organize the idea, then return to the circuit and the highlighted Qiskit line.
+
+**Check yourself.**  
+Where exactly does `{p['key_line']}` appear in the visual process?"""
+    if mode == "misconception_check":
+        return f"""### Misconception diagnosis
+
+**Possible misconception.**  
+{p['misconception_test']}
+
+**What this misconception reveals.**  
+The learner may be confusing the state before measurement, the code operation, and the classical result after measurement.
+
+**Diagnostic question.**  
+{p['check_question']}
+
+**A strong answer should mention:**
+- the circuit operation or resource being used;
+- the exact Qiskit line connected to it;
+- the interpretation of the result after measurement or repeated shots."""
+    if mode == "mini_quiz":
+        return f"""### Mini formative quiz
+
+1. **Concept question:** {p['check_question']}  
+2. **Code-reading question:** What does `{p['key_line']}` do in this lesson?  
+3. **Interpretation question:** How does the visual support the idea that {p['takeaway'].lower()}?
+
+**Scoring guide.**  
+A strong response distinguishes the circuit operation from the observed measurement result and uses at least one correct Qiskit term."""
+    if mode == "qiskit_bridge":
+        return f"""### Code-to-concept bridge
+
+**Key line.**  
+`{p['key_line']}`
+
+**Meaning.**  
+{p['qiskit_meaning']}
+
+**Minimal context.**
+```python
+{p['qiskit_code']}
+```
+
+**What to connect visually.**  
+{p['takeaway']}
+
+**Follow-up prompt.**  
+Explain why reading the code is not enough unless you also interpret measurement and counts."""
+    return professional_concept_builder_output(lesson, "simpler_explanation", attempt, language)
+
+
 def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
-    """Generate controlled learning supports from approved pedagogical templates."""
+    """Generate controlled, professional learning supports from approved pedagogical templates."""
     st.markdown("### Concept Builder")
-    st.caption("Generate extra learning material only after writing your own attempt. Outputs are constrained to the current lesson.")
+    st.caption("Generate polished learning supports after writing your own attempt. Outputs are curated around the current lesson, not open-ended free generation.")
     st.markdown(
         """
         <div class='qai-builder-rule'>
-          <b>Research rule:</b> write your own attempt first. The builder can generate explanations, analogies, checks, and safe SVG cards, but it does not run arbitrary HTML or JavaScript from the model.
+          <b>Research rule:</b> write your own attempt first. The builder produces structured explanations, analogies, checks, Qiskit bridges, and safe visual cards from approved pedagogical templates.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1516,27 +1737,27 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
     )
     language = st.selectbox(
         "Output language",
-        ["English", "Arabic", "French"],
+        ["English", "Arabic"],
         index=0,
         key=f"concept_builder_language_{lesson['id']}",
     )
     mode_specs = [
-        ("simpler_explanation", "Generate simpler explanation", "Explain this concept in simpler words using the lesson visual, one Qiskit line, and one misconception warning."),
-        ("analogy", "Generate analogy", "Give one careful analogy for this concept, then state where the analogy breaks down."),
-        ("misconception_check", "Generate misconception check", "Create one misconception diagnosis prompt and explain what a wrong answer would reveal."),
-        ("mini_quiz", "Generate mini quiz", "Create three short formative questions: one concept, one code-reading, one interpretation question. Do not give full solutions first."),
-        ("qiskit_bridge", "Connect to Qiskit", "Map the visual idea to the smallest relevant Qiskit snippet and explain each line."),
-        ("svg_card", "Generate SVG visual card", "Render a safe template-based SVG visual card for this lesson."),
+        ("simpler_explanation", "Generate structured explanation"),
+        ("analogy", "Generate careful analogy"),
+        ("misconception_check", "Generate misconception diagnosis"),
+        ("mini_quiz", "Generate mini formative quiz"),
+        ("qiskit_bridge", "Connect to Qiskit professionally"),
+        ("svg_card", "Generate polished visual card"),
     ]
     cols = st.columns(3)
     selected = None
-    for idx, (key, label, instruction) in enumerate(mode_specs):
+    for idx, (key, label) in enumerate(mode_specs):
         with cols[idx % 3]:
             if st.button(label, key=f"concept_builder_{lesson['id']}_{key}", use_container_width=True):
-                selected = (key, label, instruction)
+                selected = (key, label)
     if not selected:
         return
-    key, label, instruction = selected
+    key, label = selected
     if len((attempt or "").strip()) < 8:
         st.warning("Write a short attempt first. This preserves the research value of measuring AI-supported learning after learner effort.")
         return
@@ -1545,6 +1766,7 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
             "lesson_id": lesson["id"],
             "mode": key,
             "attempt_chars": len(attempt or ""),
+            "output_type": "curated_template",
         }))
     except Exception:
         pass
@@ -1553,22 +1775,23 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
         st.markdown("#### Generated visual card")
         st.markdown(concept_builder_svg_card(lesson), unsafe_allow_html=True)
         try:
-            db.log_event(student["id"], "student", "generated_visual_card", json.dumps({"lesson_id": lesson["id"], "mode": key}))
+            db.log_event(student["id"], "student", "generated_visual_card", json.dumps({"lesson_id": lesson["id"], "mode": key, "quality": "curated_template"}))
         except Exception:
             pass
         return
-    tutor = feedback_engine.generate_tutor_response(
-        task=f"Concept Builder mode: {label}. {instruction}",
-        concept=", ".join(lesson.get("concepts", [])),
-        student_input=attempt,
-        student_profile=student_profile(student),
-        lesson_context={
-            **lesson,
-            "response_language": language,
-            "pedagogical_mode": "controlled concept builder",
-            "builder_mode": key,
-            "safety_policy": "Do not generate executable HTML/JavaScript. Stay within the current lesson. Include one misconception warning. Keep output formative and concise.",
-        },
+
+    response = professional_concept_builder_output(lesson, key, attempt, language)
+    tutor = feedback_engine.TutorResult(
+        response=response,
+        mode="curated_template",
+        provider="platform",
+        model="concept-builder-v12.4",
+        diagnostic="curated professional concept-builder output",
+        latency_ms=0,
+        response_word_count=len(response.split()),
+        student_input_language="Arabic" if any('\u0600' <= ch <= '\u06FF' for ch in attempt) else "English",
+        response_language=language,
+        is_fallback_used=0,
     )
     interaction_id = log_tutor_interaction(
         student["id"],
@@ -1582,9 +1805,9 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
         selected_text=label,
     )
     st.markdown(f"#### {label}")
-    st.write(tutor.response)
+    st.markdown(response)
     try:
-        db.log_event(student["id"], "student", f"concept_builder_{key}", json.dumps({"lesson_id": lesson["id"], "interaction_id": interaction_id}))
+        db.log_event(student["id"], "student", f"concept_builder_{key}", json.dumps({"lesson_id": lesson["id"], "interaction_id": interaction_id, "quality": "curated_template"}))
     except Exception:
         pass
     render_ai_usefulness_feedback(interaction_id, f"concept_builder_{lesson['id']}_{key}_{interaction_id}")
