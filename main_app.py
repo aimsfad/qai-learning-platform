@@ -2547,6 +2547,196 @@ def render_progress_monitor() -> None:
     render_progress_bars(df, "participant_code", "progress_percent", "Completion progress")
 
 
+
+def _parse_event_detail(detail: Any) -> Dict[str, Any]:
+    """Parse JSON event_detail safely for research analytics."""
+    if isinstance(detail, dict):
+        return detail
+    if detail is None:
+        return {}
+    try:
+        return json.loads(str(detail))
+    except Exception:
+        return {"raw_detail": str(detail)}
+
+
+def v125_research_interaction_tables(anonymized: bool = False) -> Dict[str, pd.DataFrame]:
+    """Derived research tables for V12.5 analytics.
+
+    These tables convert raw events_log rows into analysis-ready indicators:
+    concept-builder use, simulator completion, quick checks, and time-before-AI.
+    """
+    events = db.events_log_df()
+    if events.empty:
+        empty = pd.DataFrame()
+        return {
+            "concept_builder_events": empty,
+            "learning_activity_events": empty,
+            "ai_request_timing_parsed": empty,
+            "student_research_journey": empty,
+        }
+
+    rows: List[Dict[str, Any]] = []
+    for _, row in events.iterrows():
+        detail = _parse_event_detail(row.get("event_detail"))
+        event_type = str(row.get("event_type") or "")
+        base = {
+            "created_at": row.get("created_at"),
+            "student_id": row.get("student_id"),
+            "participant_code": row.get("participant_code"),
+            "full_name": row.get("full_name"),
+            "actor_role": row.get("actor_role"),
+            "event_type": event_type,
+            "lesson_id": detail.get("lesson_id", ""),
+            "source": detail.get("source", ""),
+            "task": detail.get("task", ""),
+            "step": detail.get("step", ""),
+            "seconds_before_ai": detail.get("seconds_before_ai"),
+            "interaction_id": detail.get("interaction_id", ""),
+            "quality": detail.get("quality", ""),
+            "self_report": detail.get("self_report", ""),
+            "answer_length": len(str(detail.get("answer", ""))) if "answer" in detail else None,
+        }
+        rows.append(base)
+
+    parsed = pd.DataFrame(rows)
+    if "seconds_before_ai" in parsed.columns:
+        parsed["seconds_before_ai"] = pd.to_numeric(parsed["seconds_before_ai"], errors="coerce")
+
+    concept_mask = parsed["event_type"].astype(str).str.startswith("concept_builder") | parsed["event_type"].astype(str).eq("generated_visual_card")
+    concept_events = parsed[concept_mask].copy()
+    if not concept_events.empty:
+        concept_events["builder_action"] = concept_events["event_type"].astype(str).str.replace("concept_builder_", "", regex=False)
+        concept_events.loc[concept_events["event_type"].eq("generated_visual_card"), "builder_action"] = "visual_card"
+
+    learning_types = ["animation_viewed", "simulator_opened", "simulator_completed", "check_answered"]
+    learning_events = parsed[parsed["event_type"].isin(learning_types)].copy()
+
+    timing_events = parsed[parsed["event_type"].eq("ai_request_timing")].copy()
+
+    journey = pd.DataFrame()
+    if not parsed.empty and "participant_code" in parsed.columns:
+        grouped = parsed.groupby("participant_code", dropna=False)
+        summary_rows = []
+        for participant, g in grouped:
+            if participant is None or str(participant) == "nan":
+                continue
+            summary_rows.append({
+                "participant_code": participant,
+                "animation_views": int(g["event_type"].eq("animation_viewed").sum()),
+                "simulator_opens": int(g["event_type"].eq("simulator_opened").sum()),
+                "simulator_completions": int(g["event_type"].eq("simulator_completed").sum()),
+                "quick_checks_answered": int(g["event_type"].eq("check_answered").sum()),
+                "concept_builder_requests": int(g["event_type"].astype(str).str.startswith("concept_builder").sum()),
+                "visual_cards_generated": int(g["event_type"].eq("generated_visual_card").sum()),
+                "ai_timing_events": int(g["event_type"].eq("ai_request_timing").sum()),
+                "mean_seconds_before_ai": round(float(pd.to_numeric(g["seconds_before_ai"], errors="coerce").mean()), 2) if pd.to_numeric(g["seconds_before_ai"], errors="coerce").notna().any() else None,
+            })
+        journey = pd.DataFrame(summary_rows)
+
+    tables = {
+        "concept_builder_events": concept_events,
+        "learning_activity_events": learning_events,
+        "ai_request_timing_parsed": timing_events,
+        "student_research_journey": journey,
+    }
+    if anonymized:
+        tables = {name: db.anonymize_dataframe(df) for name, df in tables.items()}
+    return tables
+
+
+def render_v125_research_dashboard() -> None:
+    """Research-facing dashboard for interaction traces added in V12.x."""
+    st.markdown("### V12.5 research interaction dashboard")
+    st.caption("This section turns raw platform traces into paper-ready indicators: simulator use, Concept Builder use, quick checks, and time before AI requests.")
+
+    tables = v125_research_interaction_tables(anonymized=False)
+    concept_events = tables.get("concept_builder_events", pd.DataFrame())
+    learning_events = tables.get("learning_activity_events", pd.DataFrame())
+    timing_events = tables.get("ai_request_timing_parsed", pd.DataFrame())
+    journey = tables.get("student_research_journey", pd.DataFrame())
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Concept Builder events", int(len(concept_events)))
+    c2.metric("Simulator completions", int(learning_events["event_type"].eq("simulator_completed").sum()) if not learning_events.empty else 0)
+    c3.metric("Quick checks", int(learning_events["event_type"].eq("check_answered").sum()) if not learning_events.empty else 0)
+    if not timing_events.empty and "seconds_before_ai" in timing_events:
+        avg_wait = pd.to_numeric(timing_events["seconds_before_ai"], errors="coerce").mean()
+        c4.metric("Mean seconds before AI", "—" if pd.isna(avg_wait) else f"{avg_wait:.1f}s")
+    else:
+        c4.metric("Mean seconds before AI", "—")
+
+    tab1, tab2, tab3, tab4 = st.tabs(["Concept Builder", "Simulator journey", "AI timing", "Student summary"])
+
+    with tab1:
+        if concept_events.empty:
+            st.info("No Concept Builder events recorded yet.")
+        else:
+            st.markdown("#### Requests by action")
+            by_action = concept_events.groupby("builder_action", as_index=False).size().rename(columns={"size": "events"}).sort_values("events", ascending=False)
+            st.dataframe(by_action, use_container_width=True, hide_index=True)
+            render_progress_bars(by_action, "builder_action", "events", "Concept Builder events by action")
+
+            st.markdown("#### Requests by lesson")
+            by_lesson = concept_events.groupby(["lesson_id", "builder_action"], as_index=False).size().rename(columns={"size": "events"}).sort_values("events", ascending=False)
+            st.dataframe(by_lesson, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download Concept Builder events CSV",
+                data=db.anonymize_dataframe(concept_events).to_csv(index=False).encode("utf-8"),
+                file_name="qai_concept_builder_events.csv",
+                mime="text/csv",
+            )
+
+    with tab2:
+        if learning_events.empty:
+            st.info("No animation/simulator/check events recorded yet.")
+        else:
+            st.markdown("#### Learning activity counts")
+            activity = learning_events.groupby("event_type", as_index=False).size().rename(columns={"size": "events"}).sort_values("events", ascending=False)
+            st.dataframe(activity, use_container_width=True, hide_index=True)
+            render_progress_bars(activity, "event_type", "events", "Learning activity events")
+
+            st.markdown("#### Activity by lesson")
+            by_lesson = learning_events.groupby(["lesson_id", "event_type"], as_index=False).size().rename(columns={"size": "events"}).sort_values(["lesson_id", "events"], ascending=[True, False])
+            st.dataframe(by_lesson, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download learning activity events CSV",
+                data=db.anonymize_dataframe(learning_events).to_csv(index=False).encode("utf-8"),
+                file_name="qai_learning_activity_events.csv",
+                mime="text/csv",
+            )
+
+    with tab3:
+        if timing_events.empty:
+            st.info("No time-before-AI events recorded yet.")
+        else:
+            st.markdown("#### Mean wait before AI by source/task")
+            timing_events["seconds_before_ai"] = pd.to_numeric(timing_events["seconds_before_ai"], errors="coerce")
+            by_task = timing_events.groupby(["source", "task"], as_index=False)["seconds_before_ai"].agg(["count", "mean", "median"]).reset_index()
+            by_task = by_task.rename(columns={"count": "events", "mean": "mean_seconds", "median": "median_seconds"})
+            for col in ["mean_seconds", "median_seconds"]:
+                by_task[col] = by_task[col].round(2)
+            st.dataframe(by_task.sort_values("events", ascending=False), use_container_width=True, hide_index=True)
+            render_progress_bars(by_task.rename(columns={"mean_seconds": "value"}), "task", "value", "Mean seconds before AI by task")
+            st.download_button(
+                "Download AI timing events CSV",
+                data=db.anonymize_dataframe(timing_events).to_csv(index=False).encode("utf-8"),
+                file_name="qai_ai_timing_events.csv",
+                mime="text/csv",
+            )
+
+    with tab4:
+        if journey.empty:
+            st.info("No student-level interaction summary yet.")
+        else:
+            st.dataframe(journey, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download student research journey CSV",
+                data=db.anonymize_dataframe(journey).to_csv(index=False).encode("utf-8"),
+                file_name="qai_student_research_journey.csv",
+                mime="text/csv",
+            )
+
 def render_learning_analytics() -> None:
     hero("Learning Analytics", "Analyze pre/post scores, concept-level performance, and learning gain.")
     df = db.progress_summary_df(len(content.LESSONS))
@@ -2560,6 +2750,8 @@ def render_learning_analytics() -> None:
     numeric = show[["pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions"]].dropna(how="all")
     if not numeric.empty:
         st.write(numeric.describe())
+
+    render_v125_research_dashboard()
 
     st.markdown("### AI-supported learning observer")
     observer = db.ai_learning_observer_df()
@@ -2973,6 +3165,7 @@ def render_results_export() -> None:
     if prepare_anon:
         with st.spinner("Preparing anonymized workbook from Neon..."):
             dfs = db.research_export_tables(len(content.LESSONS), anonymized=True)
+            dfs.update(v125_research_interaction_tables(anonymized=True))
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
             st.session_state["export_filename"] = "qai_research_export_anonymized.xlsx"
@@ -2984,6 +3177,7 @@ def render_results_export() -> None:
                 "students": db.students_df(),
                 **db.research_export_tables(len(content.LESSONS), anonymized=False),
             }
+            dfs.update(v125_research_interaction_tables(anonymized=False))
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
             st.session_state["export_filename"] = "qai_full_admin_backup.xlsx"
