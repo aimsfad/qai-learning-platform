@@ -1,3 +1,14 @@
+
+/* V11 critical app-shell fix: no top overlay, no sticky lesson bars */
+#MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
+[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important; background: transparent !important; box-shadow: none !important; }
+[data-testid="stAppViewContainer"] > .main { padding-top: 0 !important; }
+.block-container { max-width: 1180px !important; padding-top: 1rem !important; padding-bottom: 3rem !important; }
+.qai-sticky-progress, .qai-sticky-note, .qai-sticky-panel { position: static !important; top: auto !important; }
+.qai-v11-preview {background:linear-gradient(120deg,#ffffff,#f1f7ff);border:1px solid #d9e4f2;border-radius:1.25rem;padding:1.15rem 1.25rem;margin:.7rem 0 1.1rem 0;box-shadow:0 12px 30px rgba(15,23,42,.055)}
+.qai-v11-kicker{color:#2563eb;font-weight:950;text-transform:uppercase;letter-spacing:.08em;font-size:.76rem;margin-bottom:.25rem}.qai-v11-title{font-size:1.35rem;font-weight:950;color:#0f172a;margin-bottom:.35rem}.qai-v11-goal{color:#334155;line-height:1.55}.qai-v11-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:.9rem 0}.qai-v11-step{background:#fff;border:1px solid #d9e4f2;border-radius:1rem;padding:.85rem;min-height:110px}.qai-v11-step b{color:#0f172a}.qai-v11-step span{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#dbeafe;color:#1d4ed8;border-radius:999px;font-weight:950;margin-right:.4rem}.qai-v11-section{background:#ffffff;border:1px solid #d9e4f2;border-radius:1.15rem;padding:1rem;margin:1rem 0;box-shadow:0 8px 22px rgba(15,23,42,.045)}.qai-v11-section-title{font-size:1.05rem;font-weight:950;color:#0f172a;margin-bottom:.65rem}.qai-v11-side{background:#f8fbff;border:1px solid #d9e4f2;border-radius:1rem;padding:1rem}.qai-v11-side h4{margin:.1rem 0 .45rem 0;color:#0f172a}.qai-v11-side p{color:#475569;line-height:1.55}.qai-v11-check{background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;border-radius:.95rem;padding:.8rem;margin:.5rem 0}.qai-v11-no-legacy{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:.95rem;padding:.8rem .95rem;margin:.8rem 0}
+@media(max-width:900px){.qai-v11-steps{grid-template-columns:1fr 1fr}.block-container{padding-left:.75rem!important;padding-right:.75rem!important}}
+
 /* QAI v8.7 - stable in-page shell, readable cards, no hidden sidebar */
 #MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stHeader"] { background: #f4f7fb !important; box-shadow: none !important; height: .75rem !important; }
@@ -315,3 +326,20 @@ div.stButton > button:hover { border-color:#93c5fd !important; background:#eaf3f
 .qai-v101-note { background:#f0f9ff !important; border:1px solid #bae6fd !important; color:#075985 !important; border-radius:.95rem !important; padding:.85rem 1rem !important; margin:1rem 0 !important; line-height:1.5 !important; }
 @media (max-width: 900px) { .qai-v101-principle-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
 @media (max-width: 640px) { .qai-v101-principle-grid { grid-template-columns:1fr !important; } .qai-v101-lab-top { display:block !important; } .qai-v101-method { display:inline-block !important; margin-top:.65rem !important; } }
+
+
+/* V11.1 strong top-bar and spacing overrides */
+[data-testid="stHeader"]{display:none !important;height:0 !important;min-height:0 !important;}
+header[data-testid="stHeader"]{display:none !important;}
+[data-testid="stAppViewContainer"] > .main{padding-top:0 !important;}
+.block-container{padding-top:3.2rem !important;scroll-padding-top:4rem !important;}
+iframe{border:0 !important;}
+
+
+/* V12 final layout overrides: appended last to beat older CSS */
+#MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stHeader"], header[data-testid="stHeader"] { display:none !important; height:0 !important; min-height:0 !important; visibility:hidden !important; }
+[data-testid="stAppViewContainer"] > .main { padding-top:0 !important; }
+.block-container { max-width:1180px !important; padding-top:3rem !important; padding-bottom:3rem !important; scroll-padding-top:4rem !important; }
+.qai-sticky-progress, .qai-sticky-note, .qai-sticky-panel { position:static !important; top:auto !important; }
+iframe { border:0 !important; }
+.qai-v11-section { overflow:visible !important; }

@@ -18,11 +18,12 @@ import content
 import db
 import feedback_engine
 from security import hash_password, verify_password
-from media_utils import render_image, render_video, render_simulator
+from media_utils import render_image, render_video, render_simulator, render_micro_animation
 
 APP_DIR = Path(__file__).resolve().parent
 LESSON_MEDIA_DIR = APP_DIR / "assets" / "lesson_media"
 INTERACTIVE_MEDIA_DIR = LESSON_MEDIA_DIR / "interactive"
+ANIMATION_MEDIA_DIR = LESSON_MEDIA_DIR / "animations"
 
 LESSON_MEDIA = {
     "orientation": {
@@ -1448,83 +1449,91 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
         render_ai_usefulness_feedback(interaction_id, f"genai_coach_{lesson['id']}_{interaction_id}")
 
 
-def render_lesson_media(lesson_id: str) -> None:
-    """Render a compact, visual-first learning lab.
-
-    The lesson no longer exposes old static images/videos in the main student
-    flow. The order is deliberately simple: focus question, simulator, code
-    bridge, and a small self-report completion event.
-    """
+def render_lesson_media(lesson_id: str, student: Optional[Dict[str, Any]] = None) -> None:
+    """V11 visual learning flow: animation, simulator, code bridge, quick checks."""
     media = LESSON_MEDIA.get(lesson_id, {})
     lesson = content.lesson_by_id(lesson_id)
-    frames = lesson_sequence_frames(lesson_id)
+    sid = student.get("id") if student else None
 
-    st.markdown("### Interactive learning lab")
     st.markdown(
         f"""
-        <div class='qai-v101-lab-shell'>
-          <div class='qai-v101-lab-top'>
-            <div>
-              <div class='qai-v101-kicker'>Visual-first module</div>
-              <div class='qai-v101-title'>{lesson.get('title','')}</div>
-              <div class='qai-v101-subtitle'>{lesson.get('objective', media.get('caption',''))}</div>
-            </div>
-            <div class='qai-v101-method'>See → Manipulate → Code → Check</div>
-          </div>
-          <div class='qai-v101-focus'>
-            <b>Focus question:</b> {lesson.get('mini_task', lesson.get('check_question', 'Predict what the circuit will output before running it.'))}
-          </div>
+        <div class='qai-v11-preview'>
+          <div class='qai-v11-kicker'>V11 structured visual learning</div>
+          <div class='qai-v11-title'>{lesson.get('title','')}</div>
+          <div class='qai-v11-goal'><b>Goal:</b> {lesson.get('objective', media.get('caption',''))}</div>
+          <div class='qai-v11-goal'><b>Focus question:</b> {lesson.get('mini_task', lesson.get('check_question', 'What changes, and what is merely observed?'))}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    step_html = "".join([
+        f"<div class='qai-v11-step'><span>{i}</span><b>{label}</b><br><small>{desc}</small></div>"
+        for i, (label, desc) in enumerate([
+            ("Watch", "See the core idea in motion."),
+            ("Simulate", "Step through the visual model."),
+            ("Connect", "Map the visual to Qiskit."),
+            ("Check", "Explain what the result means."),
+        ], start=1)
+    ])
+    st.markdown(f"<div class='qai-v11-steps'>{step_html}</div>", unsafe_allow_html=True)
 
-    st.markdown("#### 1. Use the simulator")
-    rendered = render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR)
-    if not rendered:
-        st.warning("Interactive simulator missing. Please add the simulator HTML file before using this module in a study.")
+    st.markdown("<div class='qai-v11-section'><div class='qai-v11-section-title'>1. Watch the idea</div>", unsafe_allow_html=True)
+    if render_micro_animation(lesson_id, ANIMATION_MEDIA_DIR):
+        if sid:
+            try: db.log_event(sid, "student", "animation_viewed", lesson_id)
+            except Exception: pass
+    else:
+        st.info("Concept animation will appear here once the MP4 is available.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("#### 2. Connect the visual to Qiskit")
-    code_left, code_right = st.columns([0.56, 0.44], gap="large")
-    with code_left:
+    st.markdown("<div class='qai-v11-section'><div class='qai-v11-section-title'>2. Use the simulator</div>", unsafe_allow_html=True)
+    if render_simulator(lesson_id, INTERACTIVE_MEDIA_DIR):
+        if sid:
+            try: db.log_event(sid, "student", "simulator_opened", lesson_id)
+            except Exception: pass
+    else:
+        st.warning("Interactive simulator missing. This module should not be used in a study until it is restored.")
+    sim_key = f"v11_sim_completed_{sid}_{lesson_id}"
+    sim_log_key = f"v11_sim_completed_logged_{sid}_{lesson_id}"
+    if st.checkbox("I completed the simulator steps", key=sim_key):
+        if sid and not st.session_state.get(sim_log_key):
+            try:
+                db.log_event(sid, "student", "simulator_completed", json.dumps({"lesson_id": lesson_id, "self_report": True}))
+                st.session_state[sim_log_key] = True
+            except Exception: pass
+        st.success("Simulator completion recorded.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='qai-v11-section'><div class='qai-v11-section-title'>3. Connect to Qiskit</div>", unsafe_allow_html=True)
+    left, right = st.columns([0.58, 0.42], gap="large")
+    with left:
         st.code(lesson.get("qiskit_code", ""), language="python")
-    with code_right:
+    with right:
         st.markdown(
             f"""
-            <div class='qai-v101-code-card'>
-              <div class='qai-v101-code-title'>What the student should connect</div>
+            <div class='qai-v11-side'>
+              <h4>What to connect</h4>
               <p><b>Before measurement:</b><br>{lesson.get('before_measurement', '')}</p>
               <p><b>After measurement / output:</b><br>{lesson.get('after_measurement', '')}</p>
-              <p><b>Misconception to avoid:</b><br>{lesson.get('misconception', '')}</p>
+              <p><b>Avoid this misconception:</b><br>{lesson.get('misconception', '')}</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("#### 3. Learning checkpoints")
-    cols = st.columns(4)
-    for col, item in zip(cols, frames):
-        with col:
-            st.markdown(
-                f"""
-                <div class='qai-v101-check-card'>
-                  <div class='qai-v101-check-label'>{item['label']}</div>
-                  <div class='qai-v101-check-title'>{item['title']}</div>
-                  <div class='qai-v101-check-action'>{item['student_action']}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    st.markdown(
-        """
-        <div class='qai-v101-note'>
-          The old static images and videos are no longer part of the default learning path. They were removed from the student flow because they duplicated the simulator and weakened the visual organization.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
+    st.markdown("<div class='qai-v11-section'><div class='qai-v11-section-title'>4. Check your understanding</div>", unsafe_allow_html=True)
+    if lesson.get("check_question"):
+        st.markdown(f"<div class='qai-v11-check'><b>Question:</b> {lesson.get('check_question')}</div>", unsafe_allow_html=True)
+    response_key = f"v11_check_{sid}_{lesson_id}"
+    answer = st.text_area("Write one short explanation before using AI", key=response_key, height=90)
+    if st.button("Save my explanation", key=f"save_v11_check_{sid}_{lesson_id}"):
+        if sid:
+            try: db.log_event(sid, "student", "check_answered", json.dumps({"lesson_id": lesson_id, "answer": answer[:800]}))
+            except Exception: pass
+        st.success("Saved.")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='qai-v11-no-legacy'><b>Design decision:</b> old static images and legacy micro-videos are hidden from the student path. Active materials are the micro-animation, simulator, code bridge, and check.</div>", unsafe_allow_html=True)
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
@@ -1613,7 +1622,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
 
     concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, check_tab = st.tabs([
         "1. Learning map",
-        "2. Visual lab",
+        "2. Visual system",
         "3. Concept notes",
         "4. Code bridge",
         "5. AI coach",
@@ -1651,27 +1660,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
 
     with media_tab:
-        render_lesson_media(lesson["id"])
-        try:
-            db.log_event(student["id"], "student", "view_interactive_simulator", lesson["id"])
-        except Exception:
-            pass
-
-        sim_key = f"sim_completed_{student['id']}_{lesson['id']}"
-        sim_log_key = f"sim_completed_logged_{student['id']}_{lesson['id']}"
-        if st.checkbox("I stepped through all stages of the simulator", key=sim_key):
-            if not st.session_state.get(sim_log_key):
-                try:
-                    db.log_event(
-                        student["id"],
-                        "student",
-                        "simulator_completed",
-                        json.dumps({"lesson_id": lesson["id"], "self_report": True}),
-                    )
-                except Exception:
-                    pass
-                st.session_state[sim_log_key] = True
-            st.success("Simulator completion recorded for this session.")
+        render_lesson_media(lesson["id"], student)
 
     with ai_coach_tab:
         render_genai_concept_coach(student, lesson)
