@@ -1449,6 +1449,147 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
         render_ai_usefulness_feedback(interaction_id, f"genai_coach_{lesson['id']}_{interaction_id}")
 
 
+def concept_builder_svg_card(lesson: Dict[str, Any]) -> str:
+    """Return a safe, template-based SVG visual card for the current concept.
+
+    The AI is not allowed to inject executable HTML/JS here. We render only
+    approved SVG templates with lesson text interpolated by the application.
+    """
+    lesson_id = lesson.get("id", "")
+    title = lesson.get("title", "Concept")
+    if lesson_id == "hadamard_superposition":
+        main = "|0>  --H--  measure  =>  counts ~ 50/50"
+        focus = "H changes the state before measurement"
+        bars = "<rect x='470' y='112' width='42' height='70' rx='8' fill='#2563eb'/><rect x='530' y='112' width='42' height='70' rx='8' fill='#0f766e'/>"
+    elif lesson_id == "shots_counts":
+        main = "More shots make the sampled pattern easier to read"
+        focus = "Counts are observed frequencies, not the hidden state"
+        bars = "<rect x='470' y='138' width='34' height='44' rx='7' fill='#2563eb'/><rect x='515' y='126' width='34' height='56' rx='7' fill='#0f766e'/><rect x='560' y='112' width='34' height='70' rx='7' fill='#4f46e5'/>"
+    elif lesson_id == "cnot_correlation":
+        main = "control q0 -> target q1 -> outcomes 00 and 11"
+        focus = "CNOT creates a conditional two-qubit relationship"
+        bars = "<rect x='470' y='102' width='38' height='80' rx='7' fill='#2563eb'/><rect x='530' y='102' width='38' height='80' rx='7' fill='#0f766e'/>"
+    elif lesson_id == "qiskit_debugging":
+        main = "Wrong resource count -> error -> corrected circuit"
+        focus = "Debug by checking qubits, classical bits, and indices"
+        bars = "<rect x='455' y='72' width='120' height='38' rx='9' fill='#fef2f2' stroke='#fecaca'/><text x='515' y='97' text-anchor='middle' font-size='14' fill='#dc2626' font-weight='900'>error</text><rect x='455' y='132' width='120' height='38' rx='9' fill='#ecfdf5' stroke='#99f6e4'/><text x='515' y='157' text-anchor='middle' font-size='14' fill='#0f766e' font-weight='900'>fixed</text>"
+    elif lesson_id == "qubit_measurement":
+        main = "quantum state before -> measurement -> classical bit after"
+        focus = "One run gives one classical outcome"
+        bars = "<rect x='470' y='92' width='42' height='90' rx='8' fill='#2563eb'/><rect x='530' y='176' width='42' height='6' rx='3' fill='#cbd5e1'/>"
+    else:
+        main = "qubit wire -> measurement symbol -> classical output"
+        focus = "A circuit is a structured map, not just printed code"
+        bars = "<line x1='450' y1='100' x2='590' y2='100' stroke='#94a3b8' stroke-width='3'/><rect x='510' y='80' width='42' height='42' rx='10' fill='#fff' stroke='#2563eb' stroke-width='3'/><line x1='531' y1='122' x2='531' y2='168' stroke='#0f766e' stroke-dasharray='4 4'/>"
+    return f"""
+    <div class='qai-builder-svg-card'>
+      <svg viewBox='0 0 720 250' role='img' aria-label='Generated visual concept card'>
+        <rect x='10' y='10' width='700' height='230' rx='24' fill='#ffffff' stroke='#d9e4f2'/>
+        <text x='42' y='58' font-size='22' font-weight='900' fill='#0f172a'>{title}</text>
+        <text x='42' y='92' font-size='15' fill='#475569'>{focus}</text>
+        <rect x='42' y='122' width='350' height='70' rx='16' fill='#eaf3ff' stroke='#bfdbfe'/>
+        <text x='62' y='164' font-size='18' font-weight='850' fill='#1d4ed8'>{main}</text>
+        {bars}
+        <text x='42' y='218' font-size='13' fill='#64748b'>Template-generated visual card · safe SVG, no executable AI code</text>
+      </svg>
+    </div>
+    """
+
+
+def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
+    """Generate controlled learning supports from approved pedagogical templates."""
+    st.markdown("### Concept Builder")
+    st.caption("Generate extra learning material only after writing your own attempt. Outputs are constrained to the current lesson.")
+    st.markdown(
+        """
+        <div class='qai-builder-rule'>
+          <b>Research rule:</b> write your own attempt first. The builder can generate explanations, analogies, checks, and safe SVG cards, but it does not run arbitrary HTML or JavaScript from the model.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    attempt = st.text_area(
+        "Your attempt before generation",
+        placeholder="Write what you think the concept means, what the circuit does, or what confuses you...",
+        height=115,
+        key=f"concept_builder_attempt_{lesson['id']}",
+    )
+    language = st.selectbox(
+        "Output language",
+        ["English", "Arabic", "French"],
+        index=0,
+        key=f"concept_builder_language_{lesson['id']}",
+    )
+    mode_specs = [
+        ("simpler_explanation", "Generate simpler explanation", "Explain this concept in simpler words using the lesson visual, one Qiskit line, and one misconception warning."),
+        ("analogy", "Generate analogy", "Give one careful analogy for this concept, then state where the analogy breaks down."),
+        ("misconception_check", "Generate misconception check", "Create one misconception diagnosis prompt and explain what a wrong answer would reveal."),
+        ("mini_quiz", "Generate mini quiz", "Create three short formative questions: one concept, one code-reading, one interpretation question. Do not give full solutions first."),
+        ("qiskit_bridge", "Connect to Qiskit", "Map the visual idea to the smallest relevant Qiskit snippet and explain each line."),
+        ("svg_card", "Generate SVG visual card", "Render a safe template-based SVG visual card for this lesson."),
+    ]
+    cols = st.columns(3)
+    selected = None
+    for idx, (key, label, instruction) in enumerate(mode_specs):
+        with cols[idx % 3]:
+            if st.button(label, key=f"concept_builder_{lesson['id']}_{key}", use_container_width=True):
+                selected = (key, label, instruction)
+    if not selected:
+        return
+    key, label, instruction = selected
+    if len((attempt or "").strip()) < 8:
+        st.warning("Write a short attempt first. This preserves the research value of measuring AI-supported learning after learner effort.")
+        return
+    try:
+        db.log_event(student["id"], "student", "concept_builder_request", json.dumps({
+            "lesson_id": lesson["id"],
+            "mode": key,
+            "attempt_chars": len(attempt or ""),
+        }))
+    except Exception:
+        pass
+    log_ai_request_timing(student["id"], lesson["id"], "concept_builder", task=key, step="builder")
+    if key == "svg_card":
+        st.markdown("#### Generated visual card")
+        st.markdown(concept_builder_svg_card(lesson), unsafe_allow_html=True)
+        try:
+            db.log_event(student["id"], "student", "generated_visual_card", json.dumps({"lesson_id": lesson["id"], "mode": key}))
+        except Exception:
+            pass
+        return
+    tutor = feedback_engine.generate_tutor_response(
+        task=f"Concept Builder mode: {label}. {instruction}",
+        concept=", ".join(lesson.get("concepts", [])),
+        student_input=attempt,
+        student_profile=student_profile(student),
+        lesson_context={
+            **lesson,
+            "response_language": language,
+            "pedagogical_mode": "controlled concept builder",
+            "builder_mode": key,
+            "safety_policy": "Do not generate executable HTML/JavaScript. Stay within the current lesson. Include one misconception warning. Keep output formative and concise.",
+        },
+    )
+    interaction_id = log_tutor_interaction(
+        student["id"],
+        "concept_builder",
+        ", ".join(lesson.get("concepts", [])),
+        key,
+        attempt,
+        tutor,
+        lesson_id=lesson["id"],
+        activity_id="concept_builder",
+        selected_text=label,
+    )
+    st.markdown(f"#### {label}")
+    st.write(tutor.response)
+    try:
+        db.log_event(student["id"], "student", f"concept_builder_{key}", json.dumps({"lesson_id": lesson["id"], "interaction_id": interaction_id}))
+    except Exception:
+        pass
+    render_ai_usefulness_feedback(interaction_id, f"concept_builder_{lesson['id']}_{key}_{interaction_id}")
+
+
 def render_lesson_media(lesson_id: str, student: Optional[Dict[str, Any]] = None) -> None:
     """V11 visual learning flow: animation, simulator, code bridge, quick checks."""
     media = LESSON_MEDIA.get(lesson_id, {})
@@ -1620,13 +1761,14 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     if lesson["id"] in completed:
         st.success("This module is completed. You may review it or continue to the next module.")
 
-    concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, check_tab = st.tabs([
+    concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, builder_tab, check_tab = st.tabs([
         "1. Learning map",
         "2. Visual system",
         "3. Concept notes",
         "4. Code bridge",
         "5. AI coach",
-        "6. Check",
+        "6. Concept Builder",
+        "7. Check",
     ])
 
     with overview:
@@ -1664,6 +1806,9 @@ def render_learning_module(student: Dict[str, Any]) -> None:
 
     with ai_coach_tab:
         render_genai_concept_coach(student, lesson)
+
+    with builder_tab:
+        render_concept_builder(student, lesson)
 
     with check_tab:
         st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
