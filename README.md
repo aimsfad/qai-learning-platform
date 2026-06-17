@@ -25,3 +25,8 @@ CSS is now fully externalized and the AI Tutor Lab uses a continuous chat interf
 The active learning media are the sequential concept frames in `assets/lesson_media/sequence/` and their matching concept-sequence videos. Legacy duplicate lesson images are intentionally not included in this release.
 
 The platform now logs `lesson_entry` and `ai_request_timing` events. These can be used to estimate whether a participant requested GenAI support immediately or after spending time on the lesson concept.
+
+
+## V12.1 research cleanup
+
+This package keeps only README.md and CHANGELOG.md in the repository root, removes unused legacy media/cache files, activates the six interactive simulators, adds evaluator analytics for AI task mode and time-before-AI, and adds optional Anthropic/Claude support via Streamlit secrets.

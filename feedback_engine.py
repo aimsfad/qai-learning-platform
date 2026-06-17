@@ -38,6 +38,7 @@ def provider_status() -> Dict[str, Any]:
     gemini_key = bool(_secret("GEMINI_API_KEY", "").strip())
     openai_key = bool(_secret("OPENAI_API_KEY", "").strip())
     groq_key = bool(_secret("GROQ_API_KEY", "").strip())
+    anthropic_key = bool(_secret("ANTHROPIC_API_KEY", "").strip())
 
     # If LLM_PROVIDER is missing or set to local, auto-detect a configured key.
     # This helps avoid silent local fallback when the secrets file contains a key
@@ -49,6 +50,8 @@ def provider_status() -> Dict[str, Any]:
             provider = "gemini"
         elif openai_key:
             provider = "openai"
+        elif anthropic_key:
+            provider = "anthropic"
         else:
             provider = "local"
     else:
@@ -63,6 +66,9 @@ def provider_status() -> Dict[str, Any]:
     elif provider == "groq":
         available = groq_key
         model = _secret("GROQ_MODEL", "llama-3.1-8b-instant")
+    elif provider == "anthropic":
+        available = anthropic_key
+        model = _secret("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
     else:
         available = False
         model = "local-fallback"
@@ -74,6 +80,7 @@ def provider_status() -> Dict[str, Any]:
         "gemini_key_detected": gemini_key,
         "openai_key_detected": openai_key,
         "groq_key_detected": groq_key,
+        "anthropic_key_detected": anthropic_key,
         "model": model,
     }
 
@@ -346,6 +353,37 @@ def call_groq(prompt: str, response_language: str = "English") -> Tuple[str, str
     return text, "groq", model
 
 
+
+def call_anthropic(prompt: str, response_language: str = "English") -> Tuple[str, str, str]:
+    """Call Anthropic Messages API without adding another SDK dependency."""
+    api_key = _secret("ANTHROPIC_API_KEY", "").strip()
+    base_url = _secret("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1").rstrip("/")
+    model = _secret("ANTHROPIC_MODEL", "claude-3-5-haiku-latest").strip()
+    url = f"{base_url}/messages"
+    payload = {
+        "model": model,
+        "system": system_prompt(response_language),
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.35,
+        "max_tokens": 900,
+    }
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": _secret("ANTHROPIC_VERSION", "2023-06-01"),
+        "content-type": "application/json",
+    }
+    r = requests.post(url, json=payload, headers=headers, timeout=45)
+    if r.status_code != 200:
+        raise RuntimeError(f"Anthropic API HTTP {r.status_code}: {r.text[:1200]}")
+    data = r.json()
+    content = data.get("content", [])
+    text_parts = [item.get("text", "") for item in content if item.get("type") == "text"]
+    text = "\n".join(part.strip() for part in text_parts if part.strip()).strip()
+    if not text:
+        raise RuntimeError(f"Anthropic API returned an empty response: {json.dumps(data)[:800]}")
+    return text, "anthropic", model
+
+
 def generate_tutor_response(
     task: str,
     concept: str,
@@ -415,6 +453,16 @@ def generate_tutor_response(
                 + local_fallback(task, concept, student_input, response_language)
             )
             return finalize(fallback, "llm_error", "groq", status["model"], str(exc), _classify_error(exc), 1)
+    if provider == "anthropic" and status["anthropic_key_detected"]:
+        try:
+            text, prov, model = call_anthropic(prompt, response_language)
+            return finalize(text, "llm", prov, model)
+        except Exception as exc:
+            fallback = (
+                "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
+                + local_fallback(task, concept, student_input, response_language)
+            )
+            return finalize(fallback, "llm_error", "anthropic", status["model"], str(exc), _classify_error(exc), 1)
 
     return finalize(
         local_fallback(task, concept, student_input, response_language),

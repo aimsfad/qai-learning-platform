@@ -907,6 +907,46 @@ def ai_learning_observer_df() -> pd.DataFrame:
     )
 
 
+
+def ai_task_mode_df() -> pd.DataFrame:
+    """Aggregate AI support by pedagogical task/mode for research analytics."""
+    return query_df(
+        """
+        SELECT
+            COALESCE(NULLIF(lesson_id,''), 'not linked') AS lesson_id,
+            COALESCE(NULLIF(module,''), 'unknown') AS module,
+            COALESCE(NULLIF(task,''), 'unspecified') AS task,
+            COALESCE(NULLIF(provider,''), 'unknown') AS provider,
+            COALESCE(NULLIF(mode,''), 'unknown') AS mode,
+            COUNT(*) AS interactions,
+            AVG(latency_ms) AS avg_latency_ms,
+            AVG(response_word_count) AS avg_response_words,
+            AVG(student_usefulness_rating) AS avg_student_usefulness,
+            SUM(CASE WHEN is_fallback_used=1 THEN 1 ELSE 0 END) AS fallback_count
+        FROM ai_interactions
+        GROUP BY
+            COALESCE(NULLIF(lesson_id,''), 'not linked'),
+            COALESCE(NULLIF(module,''), 'unknown'),
+            COALESCE(NULLIF(task,''), 'unspecified'),
+            COALESCE(NULLIF(provider,''), 'unknown'),
+            COALESCE(NULLIF(mode,''), 'unknown')
+        ORDER BY interactions DESC
+        """
+    )
+
+
+def ai_request_timing_events_df() -> pd.DataFrame:
+    """Return raw AI timing events; event_detail contains JSON with seconds_before_ai."""
+    return query_df(
+        """
+        SELECT e.created_at, e.student_id, s.participant_code, s.full_name, e.event_detail
+        FROM events_log e
+        LEFT JOIN students s ON s.id=e.student_id
+        WHERE e.event_type='ai_request_timing'
+        ORDER BY e.created_at DESC, e.id DESC
+        """
+    )
+
 def save_survey(student_id: int, responses: Dict[str, int], open_feedback: Dict[str, str]) -> None:
     """Store the survey once; do not overwrite live pilot responses."""
     existing = get_survey(student_id)

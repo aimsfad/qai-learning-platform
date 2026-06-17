@@ -1,3 +1,12 @@
+# Changelog
+
+## V12.1 Research analytics and repository cleanup
+
+- Removed legacy markdown update files, cache artifacts, and heavy duplicate old media.
+- Kept the active visual learning path: micro-animation, simulator, code bridge, and check.
+- Added evaluator analytics for AI support task/mode and time before AI request.
+- Added optional Anthropic/Claude provider support without adding a new package dependency.
+
 # تحديث v8.0 - تنظيف هيكلي آمن
 
 هذه نسخة انتقالية آمنة وليست إعادة كتابة كاملة. الهدف هو إيقاف تضارب CSS وتنظيم المشروع بدون كسر تسجيل الدخول أو قاعدة البيانات.
