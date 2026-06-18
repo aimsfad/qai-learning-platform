@@ -1,3 +1,12 @@
+# V12.8 — Study Protocol and Consent Gate
+
+- Added evaluator Study Protocol page.
+- Added active study configuration table.
+- Added research workflow safeguards checklist.
+- Added consent/completion audit table.
+- Added downloadable protocol evidence workbook.
+- Updated application version marker to v12.8-study-protocol-consent-gate.
+
 # Changelog
 
 ## V12.1 Research analytics and repository cleanup

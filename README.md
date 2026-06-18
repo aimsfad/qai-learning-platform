@@ -34,3 +34,8 @@ The platform now logs `lesson_entry` and `ai_request_timing` events. These can b
 ## V12.1 research cleanup
 
 This package keeps only README.md and CHANGELOG.md in the repository root, removes unused legacy media/cache files, activates the six interactive simulators, adds evaluator analytics for AI task mode and time-before-AI, and adds optional Anthropic/Claude support via Streamlit secrets.
+
+
+## V12.8 Study Protocol and Consent Gate
+
+Adds an evaluator-facing Study Protocol page with active study configuration, workflow safeguards, consent/completion audit, and a downloadable protocol evidence workbook.

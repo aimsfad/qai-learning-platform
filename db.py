@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v12.7-control-experimental-group"
+APP_VERSION = "v12.8-study-protocol-consent-gate"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password

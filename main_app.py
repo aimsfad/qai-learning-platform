@@ -748,6 +748,7 @@ def render_sidebar(target=st) -> None:
         if st.session_state.evaluator_logged_in:
             pages = [
                 "Evaluator Dashboard",
+                "Study Protocol",
                 "Students",
                 "Registration Accounts",
                 "Student Details",
@@ -758,6 +759,7 @@ def render_sidebar(target=st) -> None:
             ]
             compact_labels = {
                 "Evaluator Dashboard": "Dashboard",
+                "Study Protocol": "Protocol",
                 "Registration Accounts": "Accounts",
                 "Student Details": "Student details",
                 "AI Tutor Logs": "AI logs",
@@ -2347,6 +2349,8 @@ def render_evaluator_app() -> None:
     # which made AI logs / response evaluation / AI metrics / exports appear blank.
     if page == "Evaluator Dashboard":
         render_evaluator_dashboard()
+    elif page == "Study Protocol":
+        render_study_protocol()
     elif page == "Students":
         render_students_admin()
     elif page == "Registration Accounts":
@@ -2402,6 +2406,106 @@ def render_evaluator_login() -> None:
             st.rerun()
         else:
             st.error("Invalid evaluator credentials.")
+
+
+
+def _safe_count(df: pd.DataFrame) -> int:
+    return int(len(df)) if isinstance(df, pd.DataFrame) and not df.empty else 0
+
+
+def consent_audit_table() -> pd.DataFrame:
+    """Build an evaluator-facing audit table without exposing more than needed."""
+    students = db.students_df()
+    progress = db.progress_summary_df(len(content.LESSONS))
+    if students.empty:
+        return pd.DataFrame()
+    audit = students.copy()
+    cols = ["id", "participant_code", "full_name", "email", "institution", "academic_level", "study_group", "created_at", "last_login_at", "is_active"]
+    audit = audit[[c for c in cols if c in audit.columns]]
+    if not progress.empty:
+        keep = ["student_id", "consent_done", "pre_done", "completed_lessons", "ai_interactions", "post_done", "survey_done", "is_complete_case", "complete_case_missing", "progress_percent"]
+        progress_small = progress[[c for c in keep if c in progress.columns]].copy()
+        audit = audit.merge(progress_small, left_on="id", right_on="student_id", how="left")
+    for c in ["consent_done", "pre_done", "completed_lessons", "ai_interactions", "post_done", "survey_done", "is_complete_case"]:
+        if c in audit.columns:
+            audit[c] = audit[c].fillna(0).astype(int)
+    if "progress_percent" in audit.columns:
+        audit["progress_percent"] = pd.to_numeric(audit["progress_percent"], errors="coerce").fillna(0).round(1)
+    if "complete_case_missing" in audit.columns:
+        audit["complete_case_missing"] = audit["complete_case_missing"].fillna("not_started")
+    return audit
+
+
+def render_study_protocol() -> None:
+    hero("Study Protocol", "Operational checklist for running the QAI pilot as a controlled educational study.")
+    st.info(
+        "This page does not change the database. It documents the active study design, checks consent and workflow readiness, "
+        "and prepares protocol evidence for the evaluator."
+    )
+
+    progress = db.progress_summary_df(len(content.LESSONS))
+    students = db.students_df()
+    consent_audit = consent_audit_table()
+    control_enabled = control_group_enabled()
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Registered students", _safe_count(students))
+    c2.metric("Consent confirmed", int(progress["consent_done"].sum()) if not progress.empty and "consent_done" in progress else 0)
+    c3.metric("Complete cases", int(progress["is_complete_case"].sum()) if not progress.empty and "is_complete_case" in progress else 0)
+    c4.metric("Design", "Control/experimental" if control_enabled else "Single-arm pilot")
+
+    st.markdown("### Active study configuration")
+    config_rows = [
+        {"setting": "App version", "value": getattr(db, "APP_VERSION", "unknown")},
+        {"setting": "Control group enabled", "value": str(control_enabled)},
+        {"setting": "Default workflow", "value": "Consent → Pre-test → 6 learning modules → Post-test → Survey"},
+        {"setting": "Pre-test items", "value": str(len(content.PRE_TEST_QUESTIONS))},
+        {"setting": "Post-test items", "value": str(len(content.POST_TEST_QUESTIONS))},
+        {"setting": "Learning modules", "value": str(len(content.LESSONS))},
+        {"setting": "AI provider", "value": secret("LLM_PROVIDER", "local") or "local"},
+        {"setting": "Concept Builder", "value": "Enabled for experimental/single-arm students; hidden for control students when control mode is enabled."},
+        {"setting": "AI data logging", "value": "AI task, mode, provider, latency, usefulness rating, and request timing are logged."},
+    ]
+    config_df = pd.DataFrame(config_rows)
+    st.dataframe(config_df, use_container_width=True, hide_index=True)
+
+    st.markdown("### Research workflow safeguards")
+    checklist = pd.DataFrame([
+        {"safeguard": "Consent gate before learning tasks", "status": "Implemented", "evidence": "Research Notice page and consent_records table"},
+        {"safeguard": "Pre-test before access to lessons", "status": "Implemented", "evidence": "Student navigation locks learning modules until pre-test is complete"},
+        {"safeguard": "Control students do not receive AI support", "status": "Conditional", "evidence": "Active only when ENABLE_CONTROL_GROUP=true"},
+        {"safeguard": "Post-test after learning path", "status": "Implemented", "evidence": "Post-test unlocks after required learning activities"},
+        {"safeguard": "Anonymized export for analysis", "status": "Implemented", "evidence": "Exports page prepares anonymized workbook"},
+        {"safeguard": "AI response quality review", "status": "Implemented", "evidence": "Evaluator rubric for AI responses"},
+    ])
+    st.dataframe(checklist, use_container_width=True, hide_index=True)
+
+    st.markdown("### Consent and completion audit")
+    if consent_audit.empty:
+        st.info("No participants have been registered yet.")
+    else:
+        show_cols = [
+            "participant_code", "full_name", "study_group", "consent_done", "pre_done", "completed_lessons",
+            "ai_interactions", "post_done", "survey_done", "is_complete_case", "complete_case_missing", "progress_percent"
+        ]
+        st.dataframe(consent_audit[[c for c in show_cols if c in consent_audit.columns]], use_container_width=True, hide_index=True)
+        missing_consent = consent_audit[consent_audit.get("consent_done", 0).eq(0)] if "consent_done" in consent_audit else pd.DataFrame()
+        if not missing_consent.empty:
+            st.warning(f"{len(missing_consent)} participant(s) have no recorded consent. They should not be included in analysis until resolved.")
+
+    st.markdown("### Download protocol evidence")
+    protocol_tables = {
+        "study_configuration": config_df,
+        "workflow_safeguards": checklist,
+        "consent_completion_audit": consent_audit,
+    }
+    st.download_button(
+        "Download study protocol workbook",
+        data=to_excel_bytes(protocol_tables),
+        file_name="qai_study_protocol_evidence.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
 
 
 def render_evaluator_dashboard() -> None:
