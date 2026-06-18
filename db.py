@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v5-learning-path-analytics"
+APP_VERSION = "v12.7-control-experimental-group"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -86,6 +86,7 @@ def init_db() -> None:
             academic_level TEXT,
             prior_python_level INTEGER DEFAULT 1,
             prior_quantum_level INTEGER DEFAULT 0,
+            study_group TEXT,
             password_hash TEXT,
             created_at {created_default},
             last_login_at {created_default},
@@ -224,6 +225,7 @@ def init_db() -> None:
     ensure_column("students", "password_hash", "TEXT")
     ensure_column("students", "is_active", "INTEGER DEFAULT 1")
     ensure_column("students", "last_login_at", "TEXT")
+    ensure_column("students", "study_group", "TEXT")
     ensure_column("ai_interactions", "provider", "TEXT")
     ensure_column("ai_interactions", "model", "TEXT")
     ensure_column("ai_interactions", "diagnostic", "TEXT")
@@ -291,6 +293,7 @@ def create_student(
     prior_quantum_level: int,
     password: str,
     participant_code: Optional[str] = None,
+    study_group: Optional[str] = None,
 ) -> Dict[str, Any]:
     if not full_name.strip():
         raise ValueError("Full name is required.")
@@ -300,10 +303,10 @@ def create_student(
         """
         INSERT INTO students
         (participant_code, full_name, email, institution, academic_level, prior_python_level,
-         prior_quantum_level, password_hash, created_at, last_login_at, is_active)
+         prior_quantum_level, study_group, password_hash, created_at, last_login_at, is_active)
         VALUES
         (:participant_code, :full_name, :email, :institution, :academic_level, :prior_python_level,
-         :prior_quantum_level, :password_hash, :created_at, NULL, 1)
+         :prior_quantum_level, :study_group, :password_hash, :created_at, NULL, 1)
         """ + (" RETURNING id" if dialect() != "sqlite" else ""),
         {
             "participant_code": code,
@@ -313,6 +316,7 @@ def create_student(
             "academic_level": academic_level,
             "prior_python_level": int(prior_python_level),
             "prior_quantum_level": int(prior_quantum_level),
+            "study_group": (study_group if study_group is not None else "single_arm"),
             "password_hash": password_hash,
             "created_at": utc_now(),
         },
@@ -322,6 +326,34 @@ def create_student(
 
 def get_student(student_id: int) -> Optional[Dict[str, Any]]:
     return query_one("SELECT * FROM students WHERE id=:id", {"id": int(student_id)})
+
+
+def assign_study_group(student_id: int) -> str:
+    """Assign a student to a balanced control/experimental group if not already assigned."""
+    student = get_student(student_id)
+    current = str((student or {}).get("study_group") or "").strip().lower()
+    if current in {"control", "experimental", "single_arm"}:
+        return current
+    counts = query_df(
+        """
+        SELECT COALESCE(study_group, '') AS study_group, COUNT(*) AS n
+        FROM students
+        WHERE COALESCE(study_group, '') IN ('control', 'experimental')
+        GROUP BY COALESCE(study_group, '')
+        """
+    )
+    count_map = {str(r["study_group"]): int(r["n"]) for _, r in counts.iterrows()} if not counts.empty else {}
+    group = "control" if count_map.get("control", 0) <= count_map.get("experimental", 0) else "experimental"
+    exec_sql("UPDATE students SET study_group=:group WHERE id=:id", {"group": group, "id": int(student_id)})
+    return group
+
+
+def set_student_study_group(student_id: int, study_group: str) -> None:
+    """Administrative helper for correcting a study group assignment."""
+    clean = str(study_group or "").strip().lower()
+    if clean not in {"control", "experimental", "single_arm"}:
+        raise ValueError("study_group must be control, experimental, or single_arm")
+    exec_sql("UPDATE students SET study_group=:group WHERE id=:id", {"group": clean, "id": int(student_id)})
 
 
 def get_student_by_code(code: str) -> Optional[Dict[str, Any]]:
@@ -978,7 +1010,7 @@ def get_survey(student_id: int) -> Optional[Dict[str, Any]]:
 def students_df(limit: Optional[int] = None) -> pd.DataFrame:
     sql = """
         SELECT id, participant_code, full_name, email, institution, academic_level,
-               prior_python_level, prior_quantum_level, created_at, last_login_at, is_active
+               prior_python_level, prior_quantum_level, COALESCE(study_group, 'single_arm') AS study_group, created_at, last_login_at, is_active
         FROM students
         ORDER BY created_at DESC
     """
