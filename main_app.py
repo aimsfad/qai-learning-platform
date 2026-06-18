@@ -75,6 +75,49 @@ def secret(name: str, default: str = "") -> str:
         return default
 
 
+def bool_secret(name: str, default: str = "false") -> bool:
+    return secret(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def control_group_enabled() -> bool:
+    """Optional RCT-style study design switch.
+
+    Default is off to protect ongoing single-arm pilot data. When enabled,
+    new students are balanced between control and experimental groups.
+    """
+    return bool_secret("ENABLE_CONTROL_GROUP", "false")
+
+
+def study_group_label(student: Optional[Dict[str, Any]]) -> str:
+    if not student:
+        return "single_arm"
+    group = str(student.get("study_group") or "single_arm").strip().lower()
+    if control_group_enabled() and group not in {"control", "experimental"}:
+        try:
+            group = db.assign_study_group(int(student["id"]))
+            student["study_group"] = group
+        except Exception:
+            group = "experimental"
+    if not control_group_enabled() and group in {"", "none", "null"}:
+        group = "single_arm"
+    return group
+
+
+def is_control_student(student: Optional[Dict[str, Any]]) -> bool:
+    return control_group_enabled() and study_group_label(student) == "control"
+
+
+def ai_features_available(student: Optional[Dict[str, Any]]) -> bool:
+    return not is_control_student(student)
+
+
+def ai_requirement_met(student: Dict[str, Any]) -> bool:
+    """Control students should not be forced to use AI before the post-test."""
+    if is_control_student(student):
+        return True
+    return has_minimum_ai_interaction(student["id"])
+
+
 def current_app_base_url() -> str:
     """Return the public URL used in password reset emails."""
     base = secret("APP_BASE_URL", "").strip().rstrip("/")
@@ -234,7 +277,11 @@ def current_student() -> Optional[Dict[str, Any]]:
     sid = st.session_state.get("student_id")
     if not sid:
         return None
-    return db.get_student(int(sid))
+    student = db.get_student(int(sid))
+    if student and control_group_enabled():
+        group = study_group_label(student)
+        student["study_group"] = group
+    return student
 
 
 def student_profile(student: Dict[str, Any]) -> Dict[str, Any]:
@@ -325,7 +372,7 @@ def completion_items(student: Dict[str, Any]) -> List[tuple[str, bool, str]]:
         ("1. Consent", has_research_consent(sid), "Read and confirm the study notice"),
         ("2. Pre-test", test_is_done(sid, "pre"), "Answer the initial questions"),
         ("3. Learning path", lesson_count >= required_lessons, f"Complete all learning modules ({lesson_count}/{required_lessons})"),
-        ("4. AI Tutor", has_minimum_ai_interaction(sid), "Ask the tutor at least once inside a module or in the AI lab"),
+        ("4. AI support", ai_requirement_met(student), "Experimental group: use AI once. Control group: AI is intentionally hidden."),
         ("5. Post-test", test_is_done(sid, "post"), "Unlocked after completing the learning path"),
         ("6. Survey", db.get_survey(sid) is not None, "Submit usability feedback"),
     ]
@@ -484,6 +531,8 @@ def inline_ai_explain_button(student: Dict[str, Any], lesson: Dict[str, Any], fo
     It is intentionally limited: it asks for a scaffolded explanation of the
     selected panel rather than a full answer. Timing is logged for research.
     """
+    if not ai_features_available(student):
+        return
     st.markdown("<div class='qai-inline-ai-box'>", unsafe_allow_html=True)
     st.caption("Use after reading this part: the AI should clarify the idea, not replace your reasoning.")
     if st.button("Ask AI to clarify this part", key=f"inline_ai_{key}", use_container_width=True):
@@ -637,7 +686,7 @@ def render_sidebar(target=st) -> None:
             target.markdown(
                 f"""
                 <div class='qai-side-profile'>
-                  <div class='qai-side-code'>Student · {student['participant_code']}</div>
+                  <div class='qai-side-code'>Student · {student['participant_code']} · {study_group_label(student)}</div>
                   <div class='qai-side-progress-label'><span>Learning path</span><b>{lesson_count}/{required_lessons}</b></div>
                   <div class='qai-side-bar'><div class='qai-side-fill' style='width:{learning_pct}%;'></div></div>
                   <div style='font-size:0.78rem;color:#64748b;'>Current module: <b>{current_title}</b></div>
@@ -743,8 +792,10 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     if not test_is_done(student["id"], "pre"):
         pages.append("Pre-test")
         return pages
-    pages += ["Learning Module", "AI Tutor Lab"]
-    if learning_path_ready_for_posttest(student["id"]) and has_minimum_ai_interaction(student["id"]):
+    pages += ["Learning Module"]
+    if ai_features_available(student):
+        pages.append("AI Tutor Lab")
+    if learning_path_ready_for_posttest(student["id"]) and ai_requirement_met(student):
         pages.append("Post-test")
     if test_is_done(student["id"], "post"):
         pages.append("Satisfaction Survey")
@@ -914,7 +965,9 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
             st.session_state.student_page = "Learning Module"
             st.rerun()
     with c3:
-        if st.button("AI Tutor Lab", use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
+        ai_disabled = (not test_is_done(student["id"], "pre")) or (not ai_features_available(student))
+        ai_label = "AI Tutor Lab" if ai_features_available(student) else "AI hidden for control group"
+        if st.button(ai_label, use_container_width=True, disabled=ai_disabled):
             set_student_page("AI Tutor Lab")
 
     if st.button("Sign out", use_container_width=True):
@@ -938,7 +991,7 @@ def next_student_page(student: Dict[str, Any]) -> str:
         return "Learning Module"
     if not learning_path_ready_for_posttest(sid):
         return "Learning Module"
-    if not has_minimum_ai_interaction(sid):
+    if not ai_requirement_met(student):
         return "AI Tutor Lab"
     if not test_is_done(sid, "post"):
         return "Post-test"
@@ -1096,7 +1149,15 @@ def render_student_registration() -> None:
             if not consent:
                 st.error("Please confirm the study notice before creating an account.")
                 return
-            student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password)
+            assigned_group = None
+            if control_group_enabled():
+                # Balanced assignment is finalized after the row is created.
+                assigned_group = "pending"
+            student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password, study_group=("" if assigned_group else "single_arm"))
+            if control_group_enabled():
+                group = db.assign_study_group(student["id"])
+                student = db.get_student(student["id"]) or student
+                db.log_event(student["id"], "system", "study_group_assigned", json.dumps({"study_group": group, "method": "balanced_alternation"}))
             consent_text = "Participant confirmed that answers and AI interactions may be recorded for the pilot evaluation."
             db.save_consent(student["id"], consent_text, consent_version="v1")
             db.log_event(student["id"], "student", "account_created", "Student created account and confirmed consent notice")
@@ -1122,8 +1183,8 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
         if st.button("Go to learning module", type="primary"):
             set_student_page("Learning Module")
         return
-    if kind == "post" and not has_minimum_ai_interaction(student["id"]):
-        st.warning("Please complete at least one AI Tutor interaction before the post-test. This is required for the AI-supported learning evaluation.")
+    if kind == "post" and not ai_requirement_met(student):
+        st.warning("Please complete at least one AI Tutor interaction before the post-test. This applies only to the experimental AI-supported group.")
         if st.button("Go to AI Tutor Lab", type="primary"):
             set_student_page("AI Tutor Lab")
         return
@@ -1984,15 +2045,25 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     if lesson["id"] in completed:
         st.success("This module is completed. You may review it or continue to the next module.")
 
-    concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, builder_tab, check_tab = st.tabs([
-        "1. Learning map",
-        "2. Visual system",
-        "3. Concept notes",
-        "4. Code bridge",
-        "5. AI coach",
-        "6. Concept Builder",
-        "7. Check",
-    ])
+    if ai_features_available(student):
+        concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, builder_tab, check_tab = st.tabs([
+            "1. Learning map",
+            "2. Visual system",
+            "3. Concept notes",
+            "4. Code bridge",
+            "5. AI coach",
+            "6. Concept Builder",
+            "7. Check",
+        ])
+    else:
+        concept_studio_tab, media_tab, overview, code_tab, check_tab = st.tabs([
+            "1. Learning map",
+            "2. Visual system",
+            "3. Concept notes",
+            "4. Code bridge",
+            "5. Check",
+        ])
+        ai_coach_tab = builder_tab = None
 
     with overview:
         st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
@@ -2027,11 +2098,14 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     with media_tab:
         render_lesson_media(lesson["id"], student)
 
-    with ai_coach_tab:
-        render_genai_concept_coach(student, lesson)
+    if ai_features_available(student):
+        with ai_coach_tab:
+            render_genai_concept_coach(student, lesson)
 
-    with builder_tab:
-        render_concept_builder(student, lesson)
+        with builder_tab:
+            render_concept_builder(student, lesson)
+    else:
+        st.info("Control group mode is active for this learner: AI Coach and Concept Builder are hidden by design.")
 
     with check_tab:
         st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
@@ -2074,7 +2148,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     if nav1.button("← Previous module", use_container_width=True, disabled=idx == 0):
         set_current_lesson(student["id"], ids[idx - 1])
         st.rerun()
-    if nav2.button("Ask AI about this module", use_container_width=True):
+    if nav2.button("Ask AI about this module" if ai_features_available(student) else "AI hidden for control group", use_container_width=True, disabled=not ai_features_available(student)):
         st.session_state.current_lesson_id = lesson["id"]
         st.session_state.student_page = "AI Tutor Lab"
         st.rerun()
@@ -2082,19 +2156,26 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         set_current_lesson(student["id"], ids[idx + 1])
         st.rerun()
 
-    if learning_path_ready_for_posttest(student["id"]) and has_minimum_ai_interaction(student["id"]):
-        st.success("Learning path and AI interaction requirements are complete. You may continue to the post-test when ready.")
+    if learning_path_ready_for_posttest(student["id"]) and ai_requirement_met(student):
+        st.success("Learning path requirements are complete. You may continue to the post-test when ready.")
         if st.button("Go to post-test", type="primary", use_container_width=True):
             set_student_page("Post-test")
     else:
         remaining = required_lesson_count_for_posttest() - lesson_completion_count(student["id"])
         if remaining > 0:
             st.info(f"Post-test is locked until the full learning path is complete. Remaining modules: {remaining}.")
-        elif not has_minimum_ai_interaction(student["id"]):
-            st.info("Post-test is locked until at least one AI Tutor interaction is recorded.")
+        elif not ai_requirement_met(student):
+            st.info("Post-test is locked until at least one AI Tutor interaction is recorded for the experimental group.")
 
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
+    if not ai_features_available(student):
+        hero("AI Tutor Lab", "This area is intentionally hidden for the control group.")
+        st.info("You are in the control learning path. Continue with lessons, simulators, reflections, and the post-test without AI support.")
+        if st.button("Return to learning module", type="primary"):
+            st.session_state.student_page = "Learning Module"
+            st.rerun()
+        return
     hero(
         "AI Tutor Lab",
         "A continuous learning conversation with context from the current module. The tutor is designed to guide, not replace, your reasoning.",
@@ -2384,9 +2465,18 @@ def render_students_admin() -> None:
             submitted = st.form_submit_button("Create participant", type="primary")
         if submitted:
             try:
-                student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password)
+                assigned_group = "" if control_group_enabled() else "single_arm"
+                student = db.create_student(
+                    full_name, email, institution, academic_level, prior_python, prior_quantum, password,
+                    study_group=assigned_group,
+                )
+                if control_group_enabled():
+                    group = db.assign_study_group(student["id"])
+                    student = db.get_student(student["id"]) or student
+                    db.log_event(student["id"], "system", "study_group_assigned", json.dumps({"study_group": group, "method": "balanced_alternation"}))
                 db.log_event(student["id"], "evaluator", "account_created_by_evaluator", "Evaluator created participant account")
-                st.success(f"Created: {student['participant_code']} | Initial password set.")
+                group_note = f" | Group: {study_group_label(student)}" if control_group_enabled() else ""
+                st.success(f"Created: {student['participant_code']} | Initial password set.{group_note}")
             except Exception as exc:
                 st.error(f"Could not create participant: {exc}")
 
@@ -2602,6 +2692,12 @@ def v125_research_interaction_tables(anonymized: bool = False) -> Dict[str, pd.D
     parsed = pd.DataFrame(rows)
     if "seconds_before_ai" in parsed.columns:
         parsed["seconds_before_ai"] = pd.to_numeric(parsed["seconds_before_ai"], errors="coerce")
+    try:
+        student_groups = db.students_df()[["participant_code", "study_group"]]
+        parsed = parsed.merge(student_groups, how="left", on="participant_code")
+        parsed["study_group"] = parsed["study_group"].fillna("unknown")
+    except Exception:
+        parsed["study_group"] = "unknown"
 
     concept_mask = parsed["event_type"].astype(str).str.startswith("concept_builder") | parsed["event_type"].astype(str).eq("generated_visual_card")
     concept_events = parsed[concept_mask].copy()
@@ -2623,6 +2719,7 @@ def v125_research_interaction_tables(anonymized: bool = False) -> Dict[str, pd.D
                 continue
             summary_rows.append({
                 "participant_code": participant,
+                "study_group": str(g["study_group"].dropna().iloc[0]) if "study_group" in g and not g["study_group"].dropna().empty else "unknown",
                 "animation_views": int(g["event_type"].eq("animation_viewed").sum()),
                 "simulator_opens": int(g["event_type"].eq("simulator_opened").sum()),
                 "simulator_completions": int(g["event_type"].eq("simulator_completed").sum()),
@@ -2666,7 +2763,7 @@ def render_v125_research_dashboard() -> None:
     else:
         c4.metric("Mean seconds before AI", "—")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Concept Builder", "Simulator journey", "AI timing", "Student summary"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Concept Builder", "Simulator journey", "AI timing", "Student summary", "Group comparison"])
 
     with tab1:
         if concept_events.empty:
@@ -2737,6 +2834,35 @@ def render_v125_research_dashboard() -> None:
                 mime="text/csv",
             )
 
+    with tab5:
+        st.markdown("#### Control / experimental comparison")
+        try:
+            progress = db.progress_summary_df(len(content.LESSONS))
+            if progress.empty or "study_group" not in progress.columns:
+                st.info("No group-level data available yet.")
+            else:
+                group_summary = progress.groupby("study_group", dropna=False).agg(
+                    participants=("participant_code", "count"),
+                    mean_pre_score=("pre_score", "mean"),
+                    mean_post_score=("post_score", "mean"),
+                    mean_learning_gain=("learning_gain", "mean"),
+                    mean_completed_lessons=("completed_lessons", "mean"),
+                    mean_ai_interactions=("ai_interactions", "mean"),
+                ).reset_index()
+                for col in ["mean_pre_score", "mean_post_score", "mean_learning_gain", "mean_completed_lessons", "mean_ai_interactions"]:
+                    if col in group_summary.columns:
+                        group_summary[col] = group_summary[col].round(2)
+                st.dataframe(group_summary, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "Download group comparison CSV",
+                    data=group_summary.to_csv(index=False).encode("utf-8"),
+                    file_name="qai_group_comparison_summary.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+        except Exception as exc:
+            st.warning(f"Could not build group comparison yet: {exc}")
+
 def render_learning_analytics() -> None:
     hero("Learning Analytics", "Analyze pre/post scores, concept-level performance, and learning gain.")
     df = db.progress_summary_df(len(content.LESSONS))
@@ -2744,7 +2870,7 @@ def render_learning_analytics() -> None:
         st.info("No student data yet.")
         return
     st.markdown("### Score summary")
-    show_cols = ["participant_code", "full_name", "pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions", "is_complete_case", "complete_case_missing"]
+    show_cols = ["participant_code", "full_name", "study_group", "pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions", "is_complete_case", "complete_case_missing"]
     show = df[[c for c in show_cols if c in df.columns]]
     st.dataframe(show, use_container_width=True)
     numeric = show[["pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions"]].dropna(how="all")

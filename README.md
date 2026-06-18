@@ -1,3 +1,7 @@
+# V12.7 Control / Experimental Group
+
+This version adds an optional research-design switch for controlled comparisons. By default, `ENABLE_CONTROL_GROUP = "false"`, so the platform keeps the normal single-arm AI-supported workflow. When enabled in Streamlit secrets, new participants are balanced between `control` and `experimental` groups. Control participants use lessons, visual simulators, reflections, pre/post tests, and surveys without AI Coach or Concept Builder. Experimental participants keep AI Coach and Concept Builder. Exports preserve `study_group` for group-level analysis.
+
 # QAI Learning Evaluation Platform - v8.0 Structural Cleanup
 
 This package is a safe structural cleanup of the previous Streamlit application.
