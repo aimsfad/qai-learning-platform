@@ -177,6 +177,7 @@ def init_db() -> None:
             question_id TEXT NOT NULL,
             concept TEXT NOT NULL,
             question_text TEXT,
+            cognitive_level TEXT,
             selected_index INTEGER,
             selected_answer TEXT,
             correct_index INTEGER,
@@ -233,6 +234,7 @@ def init_db() -> None:
     ensure_column("ai_interactions", "error_type", "TEXT")
     ensure_column("ai_interactions", "is_fallback_used", "INTEGER DEFAULT 0")
     ensure_column("question_responses", "question_text", "TEXT")
+    ensure_column("question_responses", "cognitive_level", "TEXT")
     ensure_column("question_responses", "selected_answer", "TEXT")
     ensure_column("question_responses", "correct_answer", "TEXT")
     ensure_column("question_responses", "explanation", "TEXT")
@@ -490,10 +492,10 @@ def save_question_responses(student_id: int, attempt_type: str, answers: Dict[st
         exec_sql(
             """
             INSERT INTO question_responses
-            (student_id, attempt_type, question_id, concept, question_text, selected_index,
+            (student_id, attempt_type, question_id, concept, question_text, cognitive_level, selected_index,
              selected_answer, correct_index, correct_answer, is_correct, explanation, created_at)
             VALUES
-            (:student_id, :attempt_type, :question_id, :concept, :question_text, :selected_index,
+            (:student_id, :attempt_type, :question_id, :concept, :question_text, :cognitive_level, :selected_index,
              :selected_answer, :correct_index, :correct_answer, :is_correct, :explanation, :created_at)
             """,
             {
@@ -502,6 +504,7 @@ def save_question_responses(student_id: int, attempt_type: str, answers: Dict[st
                 "question_id": q.id,
                 "concept": q.concept,
                 "question_text": q.question,
+                "cognitive_level": getattr(q, "cognitive_level", "Understanding"),
                 "selected_index": selected,
                 "selected_answer": selected_answer,
                 "correct_index": int(q.answer_index),
