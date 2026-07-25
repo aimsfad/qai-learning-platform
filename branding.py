@@ -194,19 +194,25 @@ def _fallback_mark_svg(size: int = 66) -> str:
 
 
 def logo_lockup_html(compact: bool = False, language: str = "ar") -> str:
-    """Return a self-contained logo lockup that does not depend on browser file paths."""
-    mark = _fallback_mark_svg(44 if compact else 68)
-    tagline = "" if compact else f"<div class='brand-tagline'>{escape(TEXT[language]['subheadline'])}</div>"
+    """Return the approved official 3alimnIA logo as an embedded image.
+
+    The image is embedded as a data URI so Streamlit Cloud does not depend on
+    a browser-accessible local file path. The visual identity remains exactly
+    the approved blue/cyan/gold horizontal logo.
+    """
+    data_uri = official_logo_data_uri()
     compact_class = " brand-compact" if compact else ""
+    if data_uri:
+        mark = (
+            f"<img class='brand-approved-logo-img' src='{data_uri}' "
+            f"alt='{escape(BRAND_NAME)} - {escape(BRAND_NAME_AR)}'/>"
+        )
+    else:
+        mark = _fallback_mark_svg(44 if compact else 68)
     return dedent(
         f"""
-        <div class='brand-lockup{compact_class}'>
+        <div class='brand-lockup brand-approved-lockup{compact_class}' dir='ltr'>
           <div class='brand-official-logo'>{mark}</div>
-          <div class='brand-accessible-copy'>
-            <div class='brand-wordmark'><span>3alimn</span><strong>IA</strong></div>
-            <div class='brand-arabic-name'>{escape(BRAND_NAME_AR)}</div>
-            {tagline}
-          </div>
         </div>
         """
     ).strip()
