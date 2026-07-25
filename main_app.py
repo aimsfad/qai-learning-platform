@@ -279,6 +279,7 @@ def render_language_selector(target=st, key: str = "global_language_selector") -
         except Exception:
             pass
     if changed:
+        request_scroll_top()
         st.rerun()
     return code
 
@@ -295,7 +296,32 @@ def localized_media(lesson_id: str) -> Dict[str, Any]:
     return item
 
 
+def request_scroll_top() -> None:
+    """Request a one-shot top-of-page reset after navigation or language changes."""
+    st.session_state["_v4_scroll_top_requested"] = True
+
+
+def perform_scroll_top_if_requested() -> None:
+    """Reset the parent Streamlit page scroll position once, then clear the flag."""
+    if not st.session_state.pop("_v4_scroll_top_requested", False):
+        return
+    components.html(
+        """
+        <script>
+        try {
+          window.parent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        } catch (e) {
+          window.parent.scrollTo(0, 0);
+        }
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
 def switch_role(role: Optional[str] = None) -> None:
+    request_scroll_top()
     st.session_state.role = role
     st.session_state.student_page = "Student Home"
     st.session_state.student_access_page = "Sign in"
@@ -3694,6 +3720,7 @@ def main() -> None:
     init_state()
     i18n.install_streamlit_i18n(st)
     i18n.apply_language_css(st, i18n.current_lang(st))
+    perform_scroll_top_if_requested()
 
     # Render a reliable in-page shell. The left navigation is a real Streamlit
     # bordered container, not an HTML wrapper around widgets; this prevents the

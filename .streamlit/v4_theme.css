@@ -495,3 +495,90 @@ hr { border-color:#e6edf6 !important; }
   .brand-track-card p { min-height:auto !important; }
   .brand-research-strip { padding:1.2rem !important; }
 }
+
+/* ========================================================================== 
+   3alimnIA V4.1 - responsive landing and CTA readability fixes
+   Appended last so these rules override all legacy and V4 declarations.
+   ========================================================================== */
+
+/* Streamlit places button text inside nested p/span nodes. Keep primary CTAs
+   readable in every theme and language. */
+div.stButton > button[kind="primary"],
+div.stButton > button[data-testid="stBaseButton-primary"],
+button[kind="primary"],
+[data-testid="stFormSubmitButton"] button[kind="primary"] {
+  background: linear-gradient(105deg, #0b1f4d, #1f6bff) !important;
+  color: #ffffff !important;
+  border-color: #1f6bff !important;
+}
+div.stButton > button[kind="primary"] p,
+div.stButton > button[kind="primary"] span,
+div.stButton > button[data-testid="stBaseButton-primary"] p,
+div.stButton > button[data-testid="stBaseButton-primary"] span,
+button[kind="primary"] p,
+button[kind="primary"] span,
+[data-testid="stFormSubmitButton"] button[kind="primary"] p,
+[data-testid="stFormSubmitButton"] button[kind="primary"] span {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* A slightly more compact hero fits common 1366 x 768 laptop screens without
+   hiding the top or pushing the learning-path heading too far below the fold. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) {
+  padding: 1rem !important;
+  margin-bottom: 1.45rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) [data-testid="stImage"] img {
+  max-height: 96px !important;
+}
+.v4-hero-copy h1 {
+  font-size: clamp(2.15rem, 3.65vw, 3.65rem) !important;
+  line-height: 1.1 !important;
+  margin: .48rem 0 .7rem !important;
+}
+[dir="rtl"] .v4-hero-copy h1,
+html[dir="rtl"] .v4-hero-copy h1 {
+  font-size: clamp(2rem, 3.15vw, 3.15rem) !important;
+  line-height: 1.34 !important;
+  margin-top: .38rem !important;
+}
+.v4-hero-copy p {
+  font-size: .98rem !important;
+  line-height: 1.72 !important;
+}
+.brand-hero-badges {
+  margin: .85rem 0 .35rem !important;
+}
+.v4-hero-visual {
+  min-height: 360px !important;
+}
+.v4-hero-visual .brand-visual-core {
+  width: 142px !important;
+  height: 142px !important;
+  border-radius: 40px !important;
+}
+.v4-hero-visual .orbit-one { width: 305px !important; height: 172px !important; }
+.v4-hero-visual .orbit-two { width: 212px !important; height: 322px !important; }
+.brand-section-heading { margin-top: 1.75rem !important; }
+
+/* Improve the landing shell at laptop widths where the 22/78 app columns leave
+   less horizontal room for the nested hero columns. */
+@media (min-width: 901px) and (max-width: 1450px) {
+  .block-container { padding: 1rem 1rem 3rem !important; }
+  [data-testid="stHorizontalBlock"]:has(.v4-app-shell-marker) { gap: 1rem !important; }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v4-sidebar-marker) { top: .8rem !important; }
+  .v4-hero-copy h1 { font-size: clamp(2rem, 3.25vw, 3.15rem) !important; }
+  [dir="rtl"] .v4-hero-copy h1, html[dir="rtl"] .v4-hero-copy h1 {
+    font-size: clamp(1.95rem, 2.85vw, 2.85rem) !important;
+  }
+  .v4-hero-visual { min-height: 335px !important; }
+  .v4-hero-visual .brand-visual-core { width: 132px !important; height: 132px !important; }
+  .v4-hero-visual .orbit-one { width: 282px !important; height: 160px !important; }
+  .v4-hero-visual .orbit-two { width: 198px !important; height: 300px !important; }
+}
+
+@media (max-width: 900px) {
+  .v4-hero-visual { min-height: 300px !important; }
+}
