@@ -4,6 +4,7 @@ import base64
 from functools import lru_cache
 from html import escape
 from pathlib import Path
+from textwrap import dedent
 from typing import Dict
 
 BRAND_NAME = "3alimnIA"
@@ -193,56 +194,61 @@ def _fallback_mark_svg(size: int = 66) -> str:
 
 
 def logo_lockup_html(compact: bool = False, language: str = "ar") -> str:
-    uri = official_logo_data_uri()
-    logo = f"<img src='{uri}' alt='{escape(BRAND_NAME)}'/>" if uri else _fallback_mark_svg(50 if compact else 66)
+    """Return a self-contained logo lockup that does not depend on browser file paths."""
+    mark = _fallback_mark_svg(44 if compact else 68)
     tagline = "" if compact else f"<div class='brand-tagline'>{escape(TEXT[language]['subheadline'])}</div>"
-    return f"""
-    <div class='brand-lockup {'brand-compact' if compact else ''}'>
-      <div class='brand-official-logo'>{logo}</div>
-      <div class='brand-accessible-copy'><strong>{escape(BRAND_NAME)}</strong><span>{escape(BRAND_NAME_AR)}</span>{tagline}</div>
-    </div>
-    """
-
+    compact_class = " brand-compact" if compact else ""
+    return dedent(
+        f"""
+        <div class='brand-lockup{compact_class}'>
+          <div class='brand-official-logo'>{mark}</div>
+          <div class='brand-accessible-copy'>
+            <div class='brand-wordmark'><span>3alimn</span><strong>IA</strong></div>
+            <div class='brand-arabic-name'>{escape(BRAND_NAME_AR)}</div>
+            {tagline}
+          </div>
+        </div>
+        """
+    ).strip()
 
 def landing_hero_html(language: str = "ar") -> str:
     t = TEXT[language]
     badge_html = "".join(f"<span>{escape(item)}</span>" for item in t["badges"])
-    return f"""
-    <section class='brand-landing-hero' dir='{t['direction']}'>
-      <div class='brand-hero-copy'>
-        {logo_lockup_html(compact=False, language=language)}
-        <div class='brand-eyebrow'>{escape(t['eyebrow'])}</div>
-        <h1>{escape(t['headline'])}</h1>
-        <p>{escape(t['subheadline'])}</p>
-        <div class='brand-hero-badges'>{badge_html}</div>
-      </div>
-      <div class='brand-hero-visual' aria-hidden='true'>
-        <div class='brand-visual-orbit orbit-one'></div>
-        <div class='brand-visual-orbit orbit-two'></div>
-        <div class='brand-visual-core'><span>AI</span><b>Learn</b></div>
-        <div class='brand-visual-node node-q'>Quantum</div>
-        <div class='brand-visual-node node-ml'>ML</div>
-        <div class='brand-visual-node node-ai'>AI</div>
-      </div>
-    </section>
-    """
-
+    logo_html = logo_lockup_html(compact=False, language=language)
+    return (
+        f"<section class='brand-landing-hero' dir='{t['direction']}'>"
+        "<div class='brand-hero-copy'>"
+        f"{logo_html}"
+        f"<div class='brand-eyebrow'>{escape(t['eyebrow'])}</div>"
+        f"<h1>{escape(t['headline'])}</h1>"
+        f"<p>{escape(t['subheadline'])}</p>"
+        f"<div class='brand-hero-badges'>{badge_html}</div>"
+        "</div>"
+        "<div class='brand-hero-visual' aria-hidden='true'>"
+        "<div class='brand-visual-orbit orbit-one'></div>"
+        "<div class='brand-visual-orbit orbit-two'></div>"
+        "<div class='brand-visual-core'><span>AI</span><b>Learn</b></div>"
+        "<div class='brand-visual-node node-q'>Quantum</div>"
+        "<div class='brand-visual-node node-ml'>ML</div>"
+        "<div class='brand-visual-node node-ai'>AI</div>"
+        "</div>"
+        "</section>"
+    )
 
 def track_card_html(track_id: str, language: str = "ar", selected: bool = False) -> str:
     track = TRACKS[track_id]
     selected_class = " brand-track-selected" if selected else ""
-    return f"""
-    <article class='brand-track-card brand-accent-{escape(track['accent'])}{selected_class}' dir='{TEXT[language]['direction']}'>
-      <div class='brand-track-topline'>
-        <span class='brand-track-icon'>{escape(track['icon'])}</span>
-        <span class='brand-track-status'>{escape(track['status'][language])}</span>
-      </div>
-      <h3>{escape(track['name'][language])}</h3>
-      <p>{escape(track['description'][language])}</p>
-      <div class='brand-track-audience'>{escape(track['audience'][language])}</div>
-    </article>
-    """
-
+    return (
+        f"<article class='brand-track-card brand-accent-{escape(track['accent'])}{selected_class}' dir='{TEXT[language]['direction']}'>"
+        "<div class='brand-track-topline'>"
+        f"<span class='brand-track-icon'>{escape(track['icon'])}</span>"
+        f"<span class='brand-track-status'>{escape(track['status'][language])}</span>"
+        "</div>"
+        f"<h3>{escape(track['name'][language])}</h3>"
+        f"<p>{escape(track['description'][language])}</p>"
+        f"<div class='brand-track-audience'>{escape(track['audience'][language])}</div>"
+        "</article>"
+    )
 
 def sidebar_brand_html(language: str = "ar") -> str:
     return logo_lockup_html(compact=True, language=language)
