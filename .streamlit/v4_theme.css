@@ -582,3 +582,155 @@ html[dir="rtl"] .v4-hero-copy h1 {
 @media (max-width: 900px) {
   .v4-hero-visual { min-height: 300px !important; }
 }
+
+/* ========================================================================== 
+   3alimnIA V4.2 - Compact premium shell and top-alignment refinement
+   ========================================================================== */
+
+/* Newer Streamlit builds expose stMainBlockContainer while older ones keep
+   block-container. Target both so the first row starts near the browser top. */
+[data-testid="stMain"],
+.stMain,
+section.main {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+[data-testid="stMainBlockContainer"],
+.stMainBlockContainer,
+section.main > div.block-container,
+.block-container {
+  padding-top: .28rem !important;
+  margin-top: 0 !important;
+}
+
+/* The app shell is detected by the real sidebar marker. This avoids an empty
+   Streamlit element above the two-column layout and keeps both columns aligned. */
+[data-testid="stHorizontalBlock"]:has(.v4-sidebar-marker) {
+  gap: 1.05rem !important;
+  align-items: flex-start !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+[data-testid="stHorizontalBlock"]:has(.v4-sidebar-marker) > div {
+  align-self: flex-start !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Pull the two premium surfaces upward and keep their top edges optically even. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-sidebar-marker),
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) {
+  margin-top: 0 !important;
+  top: .3rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-sidebar-marker) {
+  border-radius: 1.3rem !important;
+  box-shadow: 0 14px 36px rgba(11,31,77,.09) !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) {
+  border-radius: 1.55rem !important;
+  padding: .9rem !important;
+  box-shadow: 0 20px 52px rgba(11,31,77,.11) !important;
+}
+
+/* More compact hero proportions preserve the premium feel while bringing the
+   next section into view on common 1366x768 and 1440x900 laptop screens. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) [data-testid="stImage"] {
+  margin-bottom: -.1rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) [data-testid="stImage"] img {
+  max-height: 88px !important;
+}
+.v4-hero-copy {
+  padding-top: 0 !important;
+}
+.brand-eyebrow {
+  margin-top: .55rem !important;
+}
+.v4-hero-copy h1 {
+  font-size: clamp(2.05rem, 3.15vw, 3.22rem) !important;
+  margin: .4rem 0 .62rem !important;
+  max-width: 760px !important;
+}
+[dir="rtl"] .v4-hero-copy h1,
+html[dir="rtl"] .v4-hero-copy h1 {
+  font-size: clamp(1.95rem, 2.75vw, 2.82rem) !important;
+  line-height: 1.32 !important;
+}
+.v4-hero-copy p {
+  font-size: .95rem !important;
+  line-height: 1.68 !important;
+  margin-bottom: .2rem !important;
+}
+.brand-hero-badges {
+  margin: .72rem 0 .25rem !important;
+  gap: .42rem !important;
+}
+.brand-hero-badges span {
+  padding: .42rem .68rem !important;
+}
+.v4-hero-visual {
+  min-height: 310px !important;
+  border-radius: 1.3rem !important;
+}
+.v4-hero-visual .brand-visual-core {
+  width: 124px !important;
+  height: 124px !important;
+  border-radius: 36px !important;
+}
+.v4-hero-visual .brand-visual-core span { font-size: 2.1rem !important; }
+.v4-hero-visual .orbit-one { width: 268px !important; height: 150px !important; }
+.v4-hero-visual .orbit-two { width: 186px !important; height: 282px !important; }
+.v4-hero-visual .brand-visual-node {
+  min-width: 76px !important;
+  padding: .46rem .65rem !important;
+}
+.brand-section-heading {
+  margin-top: 1.35rem !important;
+}
+
+/* Sidebar polish: less vertical bulk, cleaner logo scale, and denser information. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-sidebar-marker) [data-testid="stImage"] {
+  padding: .2rem .35rem .45rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-sidebar-marker) [data-testid="stImage"] img {
+  max-height: 68px !important;
+}
+.v4-sidebar-tagline {
+  padding-bottom: .28rem !important;
+  line-height: 1.55 !important;
+}
+.v4-sidebar-welcome {
+  padding: .85rem !important;
+}
+
+/* Slightly stronger premium card treatment without increasing visual weight. */
+.brand-track-card,
+.brand-how-card,
+.brand-preview-panel,
+.v4-content-card {
+  border-color: rgba(196,212,232,.9) !important;
+  box-shadow: 0 10px 26px rgba(11,31,77,.055) !important;
+}
+
+@media (min-width: 901px) and (max-width: 1450px) {
+  [data-testid="stMainBlockContainer"],
+  .stMainBlockContainer,
+  .block-container {
+    padding-top: .18rem !important;
+  }
+  [data-testid="stHorizontalBlock"]:has(.v4-sidebar-marker) {
+    gap: .85rem !important;
+  }
+  .v4-hero-visual { min-height: 292px !important; }
+  .v4-hero-copy h1 { font-size: clamp(1.95rem, 2.85vw, 2.85rem) !important; }
+  [dir="rtl"] .v4-hero-copy h1,
+  html[dir="rtl"] .v4-hero-copy h1 { font-size: clamp(1.88rem, 2.55vw, 2.55rem) !important; }
+}
+
+@media (max-width: 900px) {
+  [data-testid="stHorizontalBlock"]:has(.v4-sidebar-marker) {
+    gap: .7rem !important;
+  }
+  .v4-hero-visual { min-height: 280px !important; }
+}
