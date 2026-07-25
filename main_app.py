@@ -259,13 +259,12 @@ def render_language_selector(target=st, key: str = "global_language_selector") -
     current = i18n.current_lang(st)
     labels = list(i18n.LANGUAGE_LABELS.values())
     current_label = i18n.LANGUAGE_LABELS.get(current, "العربية")
-    selected = target.radio(
-        "Interface language / لغة الواجهة / Langue de l’interface",
+    selected = target.selectbox(
+        i18n.tr("Language"),
         labels,
         index=labels.index(current_label) if current_label in labels else 0,
-        horizontal=True,
         key=key,
-        label_visibility="collapsed",
+        label_visibility="visible",
     )
     code = i18n.normalize_lang(selected)
     changed = code != current
@@ -879,7 +878,9 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
 
 def render_role_selection() -> None:
     """Render the public multi-track startup landing page for 3alimnIA."""
-    lang = render_language_selector(st, key="landing_language_selector")
+    # The language selector is rendered once in the navigation panel.
+    # Reusing the active language here avoids duplicate controls on the landing page.
+    lang = i18n.current_lang(st)
     t = branding.TEXT[lang]
 
     st.markdown(branding.landing_hero_html(lang), unsafe_allow_html=True)
