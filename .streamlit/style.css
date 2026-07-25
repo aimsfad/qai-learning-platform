@@ -576,3 +576,32 @@ div.stButton > button[kind="primary"]:hover, button[kind="primary"]:hover { colo
   .brand-hero-visual { min-height:240px; transform:scale(.88); transform-origin:center top; margin-bottom:-30px; }
   .brand-wordmark { font-size:1.72rem; }
 }
+
+/* V3.2 - Restore the approved official horizontal 3alimnIA logo */
+.brand-approved-lockup {
+  width: min(100%, 430px);
+  display: block;
+  margin: 0;
+}
+.brand-approved-lockup .brand-official-logo {
+  width: 100%;
+  display: block;
+}
+.brand-approved-logo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 116px;
+  object-fit: contain;
+  object-position: left center;
+}
+.brand-compact.brand-approved-lockup {
+  width: min(100%, 225px);
+}
+.brand-compact .brand-approved-logo-img {
+  max-height: 68px;
+  object-position: left center;
+}
+[dir="rtl"] .brand-approved-logo-img {
+  object-position: right center;
+}
