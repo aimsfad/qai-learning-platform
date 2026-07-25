@@ -3725,8 +3725,10 @@ def main() -> None:
     # Render a reliable in-page shell. The left navigation is a real Streamlit
     # bordered container, not an HTML wrapper around widgets; this prevents the
     # empty white sidebar block that appeared in Streamlit Cloud.
-    st.markdown("<span class='v4-app-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    left_col, right_col = st.columns([0.22, 0.78], gap="large")
+    # The shell is identified through the sidebar marker rendered inside the
+    # left column. Avoiding a separate empty marker above the columns removes
+    # the large blank strip that Streamlit otherwise inserts at page start.
+    left_col, right_col = st.columns([0.19, 0.81], gap="large")
     with left_col:
         with st.container(border=True):
             render_sidebar(st)
