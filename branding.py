@@ -217,29 +217,85 @@ def logo_lockup_html(compact: bool = False, language: str = "ar") -> str:
         """
     ).strip()
 
-def landing_hero_html(language: str = "ar") -> str:
+def hero_copy_html(language: str = "ar") -> str:
     t = TEXT[language]
     badge_html = "".join(f"<span>{escape(item)}</span>" for item in t["badges"])
-    logo_html = logo_lockup_html(compact=False, language=language)
-    return (
-        f"<section class='brand-landing-hero' dir='{t['direction']}'>"
-        "<div class='brand-hero-copy'>"
-        f"{logo_html}"
-        f"<div class='brand-eyebrow'>{escape(t['eyebrow'])}</div>"
-        f"<h1>{escape(t['headline'])}</h1>"
-        f"<p>{escape(t['subheadline'])}</p>"
-        f"<div class='brand-hero-badges'>{badge_html}</div>"
-        "</div>"
-        "<div class='brand-hero-visual' aria-hidden='true'>"
-        "<div class='brand-visual-orbit orbit-one'></div>"
-        "<div class='brand-visual-orbit orbit-two'></div>"
-        "<div class='brand-visual-core'><span>AI</span><b>Learn</b></div>"
-        "<div class='brand-visual-node node-q'>Quantum</div>"
-        "<div class='brand-visual-node node-ml'>ML</div>"
-        "<div class='brand-visual-node node-ai'>AI</div>"
-        "</div>"
-        "</section>"
-    )
+    return dedent(
+        f"""
+        <div class='brand-hero-copy v4-hero-copy' dir='{t['direction']}'>
+          <div class='brand-eyebrow'>{escape(t['eyebrow'])}</div>
+          <h1>{escape(t['headline'])}</h1>
+          <p>{escape(t['subheadline'])}</p>
+          <div class='brand-hero-badges'>{badge_html}</div>
+        </div>
+        """
+    ).strip()
+
+
+def hero_visual_html(language: str = "ar") -> str:
+    labels = {
+        "ar": ("كوانتوم", "ML", "AI", "تعلّم"),
+        "fr": ("Quantum", "ML", "IA", "Apprendre"),
+        "en": ("Quantum", "ML", "AI", "Learn"),
+    }[language]
+    return dedent(
+        f"""
+        <div class='brand-hero-visual v4-hero-visual' aria-hidden='true' dir='ltr'>
+          <div class='v4-visual-grid'></div>
+          <div class='brand-visual-orbit orbit-one'></div>
+          <div class='brand-visual-orbit orbit-two'></div>
+          <div class='v4-orbit-dot dot-one'></div><div class='v4-orbit-dot dot-two'></div><div class='v4-orbit-dot dot-three'></div>
+          <div class='brand-visual-core'><span>AI</span><b>{escape(labels[3])}</b></div>
+          <div class='brand-visual-node node-q'>{escape(labels[0])}</div>
+          <div class='brand-visual-node node-ml'>{escape(labels[1])}</div>
+          <div class='brand-visual-node node-ai'>{escape(labels[2])}</div>
+        </div>
+        """
+    ).strip()
+
+
+def landing_hero_html(language: str = "ar") -> str:
+    """Backward-compatible non-widget hero used by old previews."""
+    t = TEXT[language]
+    return f"<section class='brand-landing-hero' dir='{t['direction']}'>{hero_copy_html(language)}{hero_visual_html(language)}</section>"
+
+
+def section_heading_html(kicker: str, title: str, body: str, language: str = "ar", extra_class: str = "") -> str:
+    direction = TEXT[language]["direction"]
+    body_html = f"<p>{escape(body)}</p>" if body else ""
+    return f"<div class='brand-section-heading {escape(extra_class)}' dir='{direction}'><span>{escape(kicker)}</span><h2>{escape(title)}</h2>{body_html}</div>"
+
+
+def preview_panel_html(track: Dict[str, object], language: str = "ar") -> str:
+    t = TEXT[language]
+    steps = "".join(f"<span>{index}. {escape(step)}</span>" for index, step in enumerate(t["roadmap_steps"], start=1))
+    return dedent(
+        f"""
+        <div class='brand-preview-panel' dir='{t['direction']}'>
+          <div><span class='brand-preview-label'>{escape(t['roadmap'])}</span><h3>{escape(track['short_name'][language])}</h3><h4>{escape(t['roadmap_title'])}</h4><p>{escape(t['roadmap_body'])}</p></div>
+          <div class='brand-preview-steps'>{steps}</div>
+        </div>
+        """
+    ).strip()
+
+
+def how_grid_html(language: str = "ar") -> str:
+    t = TEXT[language]
+    cards = "".join(f"<article class='brand-how-card'><div class='brand-how-number'>{escape(num)}</div><h3>{escape(title)}</h3><p>{escape(body)}</p></article>" for num, title, body in t["steps"])
+    return f"<div class='brand-how-grid' dir='{t['direction']}'>{cards}</div>"
+
+
+def research_strip_html(language: str = "ar") -> str:
+    t = TEXT[language]
+    return dedent(
+        f"""
+        <section class='brand-research-strip' dir='{t['direction']}'>
+          <div class='v4-research-icon'>LPQS</div>
+          <div><span class='brand-preview-label'>{escape(t['research_kicker'])}</span><h3>{escape(t['research_title'])}</h3><p>{escape(t['research_body'])}</p></div>
+        </section>
+        """
+    ).strip()
+
 
 def track_card_html(track_id: str, language: str = "ar", selected: bool = False) -> str:
     track = TRACKS[track_id]

@@ -804,10 +804,12 @@ def apply_language_css(st_module: Any, lang: str | None = None) -> None:
     code = normalize_lang(lang) if lang else current_lang(st_module)
     dir_value = direction(code)
     align = "right" if code == "ar" else "left"
+    font_stack = "'Alexandria','Tajawal','Noto Sans Arabic','Segoe UI',sans-serif" if code == "ar" else "'Inter','Manrope','Segoe UI',sans-serif"
     st_module.markdown(
         f"""
         <style>
-        html, body, [data-testid="stAppViewContainer"], .stApp {{ direction:{dir_value}; }}
+        html, body, [data-testid="stAppViewContainer"], .stApp {{ direction:{dir_value}; font-family:{font_stack}; }}
+        body, button, input, textarea, select, [data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"] {{ font-family:{font_stack} !important; }}
         [data-testid="stAppViewContainer"] .block-container {{ direction:{dir_value}; text-align:{align}; }}
         [data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"],
         [data-testid="stCaptionContainer"], [data-testid="stAlertContainer"],

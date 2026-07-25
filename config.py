@@ -7,12 +7,16 @@ APP_TITLE = "3alimnIA | علّمنيا"
 APP_ICON = "🧠"
 ROOT_DIR = Path(__file__).resolve().parent
 STYLE_PATH = ROOT_DIR / ".streamlit" / "style.css"
+V4_STYLE_PATH = ROOT_DIR / ".streamlit" / "v4_theme.css"
 LESSON_MEDIA_DIR = ROOT_DIR / "assets" / "lesson_media"
 
 
 def load_css() -> None:
     """Load the external stylesheet once at app startup."""
-    if STYLE_PATH.exists():
-        st.markdown(f"<style>{STYLE_PATH.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
-    else:
-        st.warning("style.css not found; the app will use Streamlit defaults.")
+    loaded = False
+    for path in (STYLE_PATH, V4_STYLE_PATH):
+        if path.exists():
+            st.markdown(f"<style>{path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+            loaded = True
+    if not loaded:
+        st.warning("Theme styles were not found; the app will use Streamlit defaults.")

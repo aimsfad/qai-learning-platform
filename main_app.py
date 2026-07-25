@@ -7,6 +7,7 @@ import smtplib
 import ssl
 import time
 from email.message import EmailMessage
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -313,23 +314,38 @@ def set_evaluator_page(page: str) -> None:
 
 
 def hero(title: str, subtitle: str) -> None:
-    st.markdown(f"""
-    <div class="qai-hero">
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """Render a language-aware premium page header used across the platform."""
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    safe_title = escape(i18n.tr(title))
+    safe_subtitle = escape(i18n.tr(subtitle))
+    st.markdown(
+        f"""
+        <section class="qai-hero v4-page-hero" dir="{direction}">
+          <div class="v4-page-hero-glow"></div>
+          <div class="v4-page-hero-kicker">3alimnIA · {escape(branding.BRAND_NAME_AR)}</div>
+          <h1>{safe_title}</h1>
+          <p>{safe_subtitle}</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def card(title: str, body: str, pill: Optional[str] = None) -> None:
-    pill_html = f'<span class="qai-pill">{pill}</span>' if pill else ""
-    st.markdown(f"""
-    <div class="qai-card">
-      {pill_html}
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    pill_html = f'<span class="qai-pill">{escape(i18n.tr(pill))}</span>' if pill else ""
+    st.markdown(
+        f"""
+        <article class="qai-card v4-content-card" dir="{direction}">
+          {pill_html}
+          <h3>{escape(i18n.tr(title))}</h3>
+          <p>{escape(i18n.tr(body))}</p>
+        </article>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def ux_note(text: str) -> None:
@@ -748,12 +764,23 @@ def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title
 # -----------------------------------------------------------------------------
 
 def render_sidebar(target=st) -> None:
+    """Render the premium in-page navigation panel.
+
+    The approved logo is rendered with ``st.image`` instead of raw HTML so it
+    remains reliable on Streamlit Cloud and local deployments.
+    """
     role = st.session_state.get("role")
-    # Use both plain Streamlit text and CSS-styled HTML so the sidebar remains visible
-    # even if custom CSS fails to load on Streamlit Cloud.
     lang = i18n.current_lang(st)
-    target.markdown(branding.sidebar_brand_html(lang), unsafe_allow_html=True)
-    target.caption(branding.TEXT[lang]["nav_caption"])
+    t = branding.TEXT[lang]
+    target.markdown("<span class='v4-sidebar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    if branding.OFFICIAL_LOGO_PATH.exists():
+        target.image(str(branding.OFFICIAL_LOGO_PATH), use_column_width=True)
+    else:
+        target.markdown(branding.logo_lockup_html(compact=True, language=lang), unsafe_allow_html=True)
+    target.markdown(
+        f"<div class='v4-sidebar-tagline' dir='{t['direction']}'>{escape(t['nav_caption'])}</div>",
+        unsafe_allow_html=True,
+    )
     render_language_selector(target, key="sidebar_language_selector")
     target.divider()
 
@@ -764,21 +791,25 @@ def render_sidebar(target=st) -> None:
             required_lessons = required_lesson_count_for_posttest()
             learning_pct = int(round(100 * lesson_count / max(required_lessons, 1)))
             current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else None
-            current_title = next((l.get("short_title", l["title"]) for l in localized_lessons() if l["id"] == current_id), "Not started")
+            current_title = next((l.get("short_title", l["title"]) for l in localized_lessons() if l["id"] == current_id), i18n.tr("Not started"))
             target.markdown(
                 f"""
-                <div class='qai-side-profile'>
-                  <div class='qai-side-code'>Student · {student['participant_code']} · {study_group_label(student)}</div>
-                  <div class='qai-side-progress-label'><span>Learning path</span><b>{lesson_count}/{required_lessons}</b></div>
+                <section class='qai-side-profile v4-profile-card' dir='{t['direction']}'>
+                  <div class='qai-side-code'>{escape(i18n.tr('Student'))} · {escape(str(student['participant_code']))}</div>
+                  <div class='v4-profile-name'>{escape(str(student.get('full_name') or ''))}</div>
+                  <div class='qai-side-progress-label'><span>{escape(i18n.tr('Learning path'))}</span><b>{lesson_count}/{required_lessons}</b></div>
                   <div class='qai-side-bar'><div class='qai-side-fill' style='width:{learning_pct}%;'></div></div>
-                  <div style='font-size:0.78rem;color:#64748b;'>Current module: <b>{current_title}</b></div>
-                </div>
-                <div class='qai-side-next'><b>Next step</b><br>{next_action_text(student)}</div>
+                  <div class='v4-current-module'>{escape(i18n.tr('Current module'))}: <b>{escape(str(current_title))}</b></div>
+                </section>
+                <div class='qai-side-next v4-next-card' dir='{t['direction']}'><b>{escape(i18n.tr('Next step'))}</b><br>{escape(i18n.tr(next_action_text(student)))}</div>
                 """,
                 unsafe_allow_html=True,
             )
         else:
-            target.markdown("<div class='qai-side-profile'><b>No student signed in</b><br><span style='color:#64748b;font-size:0.8rem;'>Create an account or sign in to start the study.</span></div>", unsafe_allow_html=True)
+            target.markdown(
+                f"<div class='qai-side-profile v4-profile-card' dir='{t['direction']}'><b>{escape(i18n.tr('No student signed in'))}</b><br><span>{escape(i18n.tr('Create an account or sign in to start the study.'))}</span></div>",
+                unsafe_allow_html=True,
+            )
 
         allowed = student_pages_allowed(student)
         current_page = st.session_state.get("student_page", "Student Home")
@@ -786,71 +817,69 @@ def render_sidebar(target=st) -> None:
             (page, i18n.page_label(page, lang), i18n.page_detail(page, lang))
             for page in ["Student Home", "Research Notice", "Pre-test", "Learning Module", "AI Tutor Lab", "Post-test", "Satisfaction Survey"]
         ]
-        target.markdown("<div class='qai-side-section'>Student navigation</div>", unsafe_allow_html=True)
-        if student and target.button("▶ Resume recommended step", key="student_resume_step", type="primary", use_container_width=True):
+        target.markdown(f"<div class='qai-side-section'>{escape(i18n.tr('Student navigation'))}</div>", unsafe_allow_html=True)
+        if student and target.button(i18n.tr("Resume recommended step"), key="student_resume_step", type="primary", use_container_width=True):
             st.session_state.student_page = next_student_page(student)
             st.rerun()
         if not student:
-            for page, label, _ in [("Sign in", i18n.page_label("Sign in", lang), ""), ("Create account", i18n.page_label("Create account", lang), "")]:
-                prefix = "● " if current_page == page else ""
-                if target.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
+            for page in ("Sign in", "Create account"):
+                label = i18n.page_label(page, lang)
+                if target.button(label, key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
                     st.session_state.student_page = page
                     st.rerun()
         else:
             for page, label, detail in nav_items:
                 if page in allowed:
-                    prefix = "● " if current_page == page else ""
-                    if target.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
+                    if target.button(label, key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
                         st.session_state.student_page = page
                         st.rerun()
-                    if current_page == page:
-                        target.markdown(f"<div class='qai-side-active-note'>{detail}</div>", unsafe_allow_html=True)
-                else:
-                    if page in {"Post-test", "Satisfaction Survey"}:
-                        target.markdown(f"<div class='qai-side-lock'>Locked · {label} · {detail}</div>", unsafe_allow_html=True)
+                    if current_page == page and detail:
+                        target.markdown(f"<div class='qai-side-active-note'>{escape(detail)}</div>", unsafe_allow_html=True)
+                elif page in {"Post-test", "Satisfaction Survey"}:
+                    target.markdown(f"<div class='qai-side-lock'>🔒 {escape(label)}</div>", unsafe_allow_html=True)
         target.divider()
-        if student and target.button("Sign out", use_container_width=True):
+        if student and target.button(i18n.tr("Sign out"), use_container_width=True):
             db.log_event(student["id"], "student", "sign_out", "Student signed out from sidebar")
             st.session_state.student_id = None
             st.session_state.student_page = "Student Home"
             st.session_state.student_access_page = "Sign in"
             st.rerun()
-        if target.button("Switch workspace", use_container_width=True):
+        if target.button(i18n.tr("Switch workspace"), use_container_width=True):
             switch_role(None)
-        target.markdown("<div class='qai-side-footer'>AI tutor interactions and progress events are logged for the evaluator dashboard.</div>", unsafe_allow_html=True)
+        target.markdown(
+            f"<div class='qai-side-footer' dir='{t['direction']}'>{escape(i18n.tr('AI tutor interactions and progress events are logged for the evaluator dashboard.'))}</div>",
+            unsafe_allow_html=True,
+        )
         render_status_badge(target)
 
     elif role == "evaluator":
-        target.markdown("<div class='qai-side-profile'><b>Evaluator workspace</b><br><span style='color:#64748b;font-size:0.8rem;'>Monitor progress, AI usage, and exports.</span></div>", unsafe_allow_html=True)
+        target.markdown(
+            f"<div class='qai-side-profile v4-profile-card' dir='{t['direction']}'><b>{escape(i18n.tr('Evaluator workspace'))}</b><br><span>{escape(i18n.tr('Monitor progress, AI usage, and exports.'))}</span></div>",
+            unsafe_allow_html=True,
+        )
         if st.session_state.evaluator_logged_in:
             pages = [
-                "Evaluator Dashboard",
-                "Study Protocol",
-                "Students",
-                "Registration Accounts",
-                "Student Details",
-                "AI Tutor Logs",
-                "AI Response Evaluation",
-                "AI Metrics",
-                "Exports",
+                "Evaluator Dashboard", "Study Protocol", "Students", "Registration Accounts",
+                "Student Details", "AI Tutor Logs", "AI Response Evaluation", "AI Metrics", "Exports",
             ]
-            compact_labels = {page: i18n.page_label(page, lang) for page in pages}
-            target.markdown("<div class='qai-side-section'>Evaluator navigation</div>", unsafe_allow_html=True)
+            target.markdown(f"<div class='qai-side-section'>{escape(i18n.tr('Evaluator navigation'))}</div>", unsafe_allow_html=True)
             for page in pages:
-                label_text = compact_labels.get(page, page)
-                prefix = "● " if st.session_state.evaluator_page == page else ""
-                if target.button(prefix + label_text, key=f"eval_nav_btn_{page}", use_container_width=True):
+                label_text = i18n.page_label(page, lang)
+                if target.button(label_text, key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if st.session_state.evaluator_page == page else "secondary"):
                     st.session_state.evaluator_page = page
                     st.rerun()
             target.divider()
-            if target.button("Sign out", use_container_width=True):
+            if target.button(i18n.tr("Sign out"), use_container_width=True):
                 st.session_state.evaluator_logged_in = False
                 st.session_state.evaluator_page = "Evaluator Dashboard"
                 st.rerun()
-        if target.button("Switch workspace", use_container_width=True):
+        if target.button(i18n.tr("Switch workspace"), use_container_width=True):
             switch_role(None)
     else:
-        target.info("Choose a learning path or open the evaluator workspace from the 3alimnIA home page.")
+        target.markdown(
+            f"<div class='v4-sidebar-welcome' dir='{t['direction']}'><span>{escape(t['how_kicker'])}</span><strong>{escape(t['how_title'])}</strong><p>{escape(t['paths_body'])}</p></div>",
+            unsafe_allow_html=True,
+        )
 
 
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
@@ -877,42 +906,40 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
 # -----------------------------------------------------------------------------
 
 def render_role_selection() -> None:
-    """Render the public multi-track startup landing page for 3alimnIA."""
-    # The language selector is rendered once in the navigation panel.
-    # Reusing the active language here avoids duplicate controls on the landing page.
+    """Render the V4 premium multilingual startup landing page."""
     lang = i18n.current_lang(st)
     t = branding.TEXT[lang]
+    direction = t["direction"]
 
-    st.markdown(branding.landing_hero_html(lang), unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("<span class='v4-landing-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        copy_col, visual_col = st.columns([1.15, 0.85], gap="large")
+        with copy_col:
+            if branding.OFFICIAL_LOGO_PATH.exists():
+                st.image(str(branding.OFFICIAL_LOGO_PATH), use_column_width=True)
+            st.markdown(branding.hero_copy_html(lang), unsafe_allow_html=True)
+            cta1, cta2 = st.columns(2, gap="small")
+            with cta1:
+                if st.button(t["start_quantum"], key="v4_hero_start", type="primary", use_container_width=True):
+                    st.session_state.landing_track = "quantum"
+                    st.session_state.selected_track = "quantum"
+                    switch_role("student")
+            with cta2:
+                if st.button(t["evaluator_button"], key="v4_hero_evaluator", use_container_width=True):
+                    switch_role("evaluator")
+        with visual_col:
+            st.markdown(branding.hero_visual_html(lang), unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class='brand-section-heading' dir='{t['direction']}'>
-          <span>{t['paths_kicker']}</span>
-          <h2>{t['paths_title']}</h2>
-          <p>{t['paths_body']}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(branding.section_heading_html(t["paths_kicker"], t["paths_title"], t["paths_body"], lang), unsafe_allow_html=True)
 
     selected = st.session_state.get("landing_track", "quantum")
     cols = st.columns(3, gap="large")
     track_order = ["quantum", "ml", "ai"]
-    labels = {
-        "quantum": t["start_quantum"],
-        "ml": t["preview_ml"],
-        "ai": t["preview_ai"],
-    }
+    labels = {"quantum": t["start_quantum"], "ml": t["preview_ml"], "ai": t["preview_ai"]}
     for col, track_id in zip(cols, track_order):
         with col:
             st.markdown(branding.track_card_html(track_id, lang, selected == track_id), unsafe_allow_html=True)
-            if st.button(
-                labels[track_id],
-                key=f"landing_track_{track_id}",
-                type="primary" if track_id == "quantum" else "secondary",
-                use_container_width=True,
-            ):
+            if st.button(labels[track_id], key=f"landing_track_{track_id}", type="primary" if track_id == "quantum" else "secondary", use_container_width=True):
                 st.session_state.landing_track = track_id
                 st.session_state.selected_track = track_id
                 if track_id == "quantum":
@@ -921,53 +948,12 @@ def render_role_selection() -> None:
 
     if selected in {"ml", "ai"}:
         track = branding.TRACKS[selected]
-        st.markdown(
-            f"""
-            <div class='brand-preview-panel' dir='{t['direction']}'>
-              <div>
-                <span class='brand-preview-label'>{t['roadmap']}</span>
-                <h3>{track['short_name'][lang]}</h3>
-                <h4>{t['roadmap_title']}</h4>
-                <p>{t['roadmap_body']}</p>
-              </div>
-              <div class='brand-preview-steps'>
-                {''.join(f"<span>{index}. {step}</span>" for index, step in enumerate(t['roadmap_steps'], start=1))}
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(branding.preview_panel_html(track, lang), unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class='brand-section-heading brand-how-heading' dir='{t['direction']}'>
-          <span>{t['how_kicker']}</span><h2>{t['how_title']}</h2>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    steps_html = "".join(
-        f"<div class='brand-how-card'><div class='brand-how-number'>{num}</div><h3>{title}</h3><p>{body}</p></div>"
-        for num, title, body in t["steps"]
-    )
-    st.markdown(f"<div class='brand-how-grid' dir='{t['direction']}'>{steps_html}</div>", unsafe_allow_html=True)
+    st.markdown(branding.section_heading_html(t["how_kicker"], t["how_title"], "", lang, extra_class="brand-how-heading"), unsafe_allow_html=True)
+    st.markdown(branding.how_grid_html(lang), unsafe_allow_html=True)
+    st.markdown(branding.research_strip_html(lang), unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class='brand-research-strip' dir='{t['direction']}'>
-          <span class='brand-preview-label'>{t['research_kicker']}</span>
-          <h3>{t['research_title']}</h3>
-          <p>{t['research_body']}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    eval_col, info_col = st.columns([0.38, 0.62])
-    with eval_col:
-        if st.button(t["evaluator_button"], key="landing_evaluator", use_container_width=True):
-            switch_role("evaluator")
-    with info_col:
-        st.caption("LPQS · Learning analytics · Anonymized research exports · Provider-agnostic LLM layer")
 
 def render_student_app() -> None:
     reset_token = get_query_param("reset_token").strip()
@@ -3712,7 +3698,8 @@ def main() -> None:
     # Render a reliable in-page shell. The left navigation is a real Streamlit
     # bordered container, not an HTML wrapper around widgets; this prevents the
     # empty white sidebar block that appeared in Streamlit Cloud.
-    left_col, right_col = st.columns([0.25, 0.75], gap="large")
+    st.markdown("<span class='v4-app-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    left_col, right_col = st.columns([0.22, 0.78], gap="large")
     with left_col:
         with st.container(border=True):
             render_sidebar(st)
