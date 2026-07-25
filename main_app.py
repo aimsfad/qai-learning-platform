@@ -551,27 +551,23 @@ def set_current_lesson(student_id: int, lesson_id: str) -> None:
     db.log_event(student_id, "student", "open_module", lesson_id)
 
 
-def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
-    items = completion_items(student)
-    done_count = sum(1 for _, ok, _ in items if ok)
-    lesson_count = lesson_completion_count(student["id"])
-    required_lessons = required_lesson_count_for_posttest()
-    current_lesson = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else "not started"
-    lesson_title = next((l.get("short_title", l["title"]) for l in localized_lessons() if l["id"] == current_lesson), i18n.tr("Learning not started"))
-    next_action = next_action_text(student)
-    study_percent = int(round((done_count / len(items)) * 100)) if items else 0
-    learning_percent = int(round((lesson_count / max(required_lessons, 1)) * 100))
-    st.markdown(
-        f"""
-        <div class='qai-sticky-progress'>
-          <div class='qai-sticky-title'>3alimnIA guided study · {study_percent}% study workflow · {learning_percent}% learning path</div>
-          <div class='qai-sticky-meta'>Current page: <b>{page}</b> · Completed modules: <b>{lesson_count}/{required_lessons}</b> · Resume: <b>{lesson_title}</b></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.progress(lesson_count / max(required_lessons, 1), text=next_action)
 
+def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
+    u = learning_ui_copy()
+    lesson_count = lesson_completion_count(student["id"])
+    required = required_lesson_count_for_posttest()
+    learning_pct = int(round(100 * lesson_count / max(required, 1)))
+    current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else ""
+    current_title = next((x.get("short_title", x["title"]) for x in localized_lessons() if x["id"] == current_id), "—")
+    items = completion_items(student)
+    study_pct = int(round(100 * sum(1 for _, ok, _ in items if ok) / max(len(items), 1)))
+    st.markdown(f"""
+    <section class='v43-topbar' dir='{u['dir']}'>
+      <div><span>{escape(u['journey'])}</span><b>{escape(i18n.page_label(page, i18n.current_lang(st)))}</b></div>
+      <div><span>{escape(u['current'])}</span><b>{escape(str(current_title))}</b></div>
+      <div class='v43-topbar-meter'><div><b>{learning_pct}%</b><span>{escape(u['modules_done'])}: {lesson_count}/{required}</span></div><i><em style='width:{learning_pct}%'></em></i></div>
+      <div class='v43-topbar-study'><b>{study_pct}%</b><span>{escape(u['overall'])}</span></div>
+    </section>""", unsafe_allow_html=True)
 
 def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
     items = completion_items(student)
@@ -789,123 +785,138 @@ def render_progress_bars(df: pd.DataFrame, label_col: str, value_col: str, title
 # Sidebar
 # -----------------------------------------------------------------------------
 
-def render_sidebar(target=st) -> None:
-    """Render the premium in-page navigation panel.
 
-    The approved logo is rendered with ``st.image`` instead of raw HTML so it
-    remains reliable on Streamlit Cloud and local deployments.
-    """
+def learning_ui_copy() -> Dict[str, Any]:
+    lang = i18n.current_lang(st)
+    values = {
+        "ar": {
+            "dir": "rtl", "overview": "نظرة عامة", "learning": "التعلّم", "assessment": "التقييم", "research": "البحث والموافقة",
+            "home": "لوحة المتعلّم", "plan": "الخطة التكيفية", "modules": "الوحدات التعليمية", "tutor": "مدرّب الذكاء الاصطناعي",
+            "pre": "الاختبار القبلي", "post": "الاختبار البعدي", "survey": "الاستبيان الختامي", "notice": "إشعار البحث",
+            "resume": "متابعة التعلّم", "journey": "رحلة التعلّم", "overall": "التقدّم العام", "modules_done": "الوحدات المكتملة",
+            "ai_uses": "تفاعلات المدرّب", "pre_score": "نتيجة الاختبار القبلي", "post_score": "نتيجة الاختبار البعدي",
+            "current": "الوحدة الحالية", "next_action": "الخطوة التالية", "continue": "متابعة الخطوة المقترحة",
+            "open_path": "فتح المسار", "open_tutor": "فتح المدرّب الذكي", "dashboard_sub": "تابع تقدمك، استأنف وحدتك الحالية، وانتقل إلى الخطوة الصحيحة دون تشتّت.",
+            "test_intro": "أجب بشكل فردي. يقيس هذا التقييم تقدّم الفهم ولا يمنح علامة دراسية.", "question": "السؤال", "of": "من",
+            "choose": "اختر إجابة واحدة", "concept": "المفهوم", "submit_pre": "إرسال الاختبار القبلي", "submit_post": "إرسال الاختبار البعدي",
+            "path_title": "مسار الكوانتوم الموجّه", "path_sub": "ست وحدات قصيرة تجمع الشرح البصري، التطبيق، Qiskit، الدعم الموجّه، والتحقق من الفهم.",
+            "completed": "مكتملة", "recommended": "موصى بها", "available": "متاحة", "open": "فتح الوحدة", "opened": "مفتوحة",
+            "quick": "بدايات سريعة", "hint": "أعطني تلميحًا", "simplify": "اشرح بطريقة أبسط", "qiskit": "أعطني مثال Qiskit", "quiz": "اختبر فهمي",
+        },
+        "fr": {
+            "dir": "ltr", "overview": "Vue d’ensemble", "learning": "Apprentissage", "assessment": "Évaluation", "research": "Recherche et consentement",
+            "home": "Tableau apprenant", "plan": "Plan adaptatif", "modules": "Modules", "tutor": "Coach IA", "pre": "Pré-test", "post": "Post-test",
+            "survey": "Questionnaire final", "notice": "Notice de recherche", "resume": "Reprendre l’apprentissage", "journey": "Parcours d’apprentissage",
+            "overall": "Progression globale", "modules_done": "Modules terminés", "ai_uses": "Interactions IA", "pre_score": "Score pré-test",
+            "post_score": "Score post-test", "current": "Module actuel", "next_action": "Prochaine étape", "continue": "Continuer l’étape recommandée",
+            "open_path": "Ouvrir le parcours", "open_tutor": "Ouvrir le Coach IA", "dashboard_sub": "Suivez votre progression, reprenez le module actuel et avancez sans vous disperser.",
+            "test_intro": "Répondez individuellement. Cette évaluation mesure les progrès de compréhension et ne constitue pas une note académique.",
+            "question": "Question", "of": "sur", "choose": "Choisissez une réponse", "concept": "Concept", "submit_pre": "Envoyer le pré-test", "submit_post": "Envoyer le post-test",
+            "path_title": "Parcours Quantum guidé", "path_sub": "Six modules courts combinant explication visuelle, pratique, Qiskit, soutien guidé et vérification.",
+            "completed": "Terminé", "recommended": "Recommandé", "available": "Disponible", "open": "Ouvrir", "opened": "Ouvert",
+            "quick": "Démarrages rapides", "hint": "Donner un indice", "simplify": "Expliquer plus simplement", "qiskit": "Donner un exemple Qiskit", "quiz": "Tester ma compréhension",
+        },
+        "en": {
+            "dir": "ltr", "overview": "Overview", "learning": "Learning", "assessment": "Assessment", "research": "Research & consent",
+            "home": "Learner dashboard", "plan": "Adaptive plan", "modules": "Learning modules", "tutor": "AI Coach", "pre": "Pre-test", "post": "Post-test",
+            "survey": "Final survey", "notice": "Research notice", "resume": "Resume learning", "journey": "Learning journey",
+            "overall": "Overall progress", "modules_done": "Modules completed", "ai_uses": "AI interactions", "pre_score": "Pre-test score",
+            "post_score": "Post-test score", "current": "Current module", "next_action": "Next action", "continue": "Continue recommended step",
+            "open_path": "Open learning path", "open_tutor": "Open AI Coach", "dashboard_sub": "Track progress, resume the current module, and move to the right next step without distraction.",
+            "test_intro": "Answer individually. This assessment measures learning progress and is not an academic grade.",
+            "question": "Question", "of": "of", "choose": "Choose one answer", "concept": "Concept", "submit_pre": "Submit pre-test", "submit_post": "Submit post-test",
+            "path_title": "Guided Quantum path", "path_sub": "Six compact modules combining visual explanation, practice, Qiskit, guided support, and understanding checks.",
+            "completed": "Completed", "recommended": "Recommended", "available": "Available", "open": "Open module", "opened": "Opened",
+            "quick": "Quick starts", "hint": "Give me a hint", "simplify": "Explain more simply", "qiskit": "Give a Qiskit example", "quiz": "Test my understanding",
+        },
+    }
+    return values.get(lang, values["en"])
+
+
+
+def render_sidebar(target=st) -> None:
     role = st.session_state.get("role")
     lang = i18n.current_lang(st)
     t = branding.TEXT[lang]
-    target.markdown("<span class='v4-sidebar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    u = learning_ui_copy()
+    target.markdown("<span class='v4-sidebar-marker v43-sidebar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     if branding.OFFICIAL_LOGO_PATH.exists():
-        target.image(str(branding.OFFICIAL_LOGO_PATH), use_column_width=True)
+        target.image(str(branding.OFFICIAL_LOGO_PATH), use_container_width=True)
     else:
         target.markdown(branding.logo_lockup_html(compact=True, language=lang), unsafe_allow_html=True)
-    target.markdown(
-        f"<div class='v4-sidebar-tagline' dir='{t['direction']}'>{escape(t['nav_caption'])}</div>",
-        unsafe_allow_html=True,
-    )
+    target.markdown(f"<div class='v4-sidebar-tagline' dir='{u['dir']}'>{escape(t['nav_caption'])}</div>", unsafe_allow_html=True)
     render_language_selector(target, key="sidebar_language_selector")
-    target.divider()
 
     if role == "student":
         student = current_student()
-        if student:
-            lesson_count = lesson_completion_count(student["id"])
-            required_lessons = required_lesson_count_for_posttest()
-            learning_pct = int(round(100 * lesson_count / max(required_lessons, 1)))
-            current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else None
-            current_title = next((l.get("short_title", l["title"]) for l in localized_lessons() if l["id"] == current_id), i18n.tr("Not started"))
-            target.markdown(
-                f"""
-                <section class='qai-side-profile v4-profile-card' dir='{t['direction']}'>
-                  <div class='qai-side-code'>{escape(i18n.tr('Student'))} · {escape(str(student['participant_code']))}</div>
-                  <div class='v4-profile-name'>{escape(str(student.get('full_name') or ''))}</div>
-                  <div class='qai-side-progress-label'><span>{escape(i18n.tr('Learning path'))}</span><b>{lesson_count}/{required_lessons}</b></div>
-                  <div class='qai-side-bar'><div class='qai-side-fill' style='width:{learning_pct}%;'></div></div>
-                  <div class='v4-current-module'>{escape(i18n.tr('Current module'))}: <b>{escape(str(current_title))}</b></div>
-                </section>
-                <div class='qai-side-next v4-next-card' dir='{t['direction']}'><b>{escape(i18n.tr('Next step'))}</b><br>{escape(i18n.tr(next_action_text(student)))}</div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            target.markdown(
-                f"<div class='qai-side-profile v4-profile-card' dir='{t['direction']}'><b>{escape(i18n.tr('No student signed in'))}</b><br><span>{escape(i18n.tr('Create an account or sign in to start the study.'))}</span></div>",
-                unsafe_allow_html=True,
-            )
-
-        allowed = student_pages_allowed(student)
         current_page = st.session_state.get("student_page", "Student Home")
-        nav_items = [
-            (page, i18n.page_label(page, lang), i18n.page_detail(page, lang))
-            for page in ["Student Home", "Research Notice", "Pre-test", "Learning Module", "AI Tutor Lab", "Post-test", "Satisfaction Survey"]
-        ]
-        target.markdown(f"<div class='qai-side-section'>{escape(i18n.tr('Student navigation'))}</div>", unsafe_allow_html=True)
-        if student and target.button(i18n.tr("Resume recommended step"), key="student_resume_step", type="primary", use_container_width=True):
-            st.session_state.student_page = next_student_page(student)
-            st.rerun()
+        allowed = student_pages_allowed(student)
+        if student:
+            completed = lesson_completion_count(student["id"])
+            required = required_lesson_count_for_posttest()
+            pct = int(round(100 * completed / max(required, 1)))
+            current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else None
+            current_title = next((x.get("short_title", x["title"]) for x in localized_lessons() if x["id"] == current_id), "—")
+            initials = "".join(part[:1].upper() for part in str(student.get("full_name") or "3A").split()[:2]) or "3A"
+            target.markdown(f"""
+            <section class='v43-side-profile' dir='{u['dir']}'>
+              <div class='v43-avatar'>{escape(initials)}</div>
+              <div class='v43-profile-copy'><strong>{escape(str(student.get('full_name') or ''))}</strong><span>{escape(str(student['participant_code']))}</span></div>
+              <div class='v43-progress-number'>{pct}%</div>
+              <div class='v43-progress-track'><i style='width:{pct}%'></i></div>
+              <div class='v43-current'><span>{escape(u['current'])}</span><b>{escape(str(current_title))}</b></div>
+            </section>""", unsafe_allow_html=True)
+            if target.button(f"▶ {u['resume']}", key="v43_resume", type="primary", use_container_width=True):
+                st.session_state.student_page = next_student_page(student)
+                st.rerun()
+        else:
+            target.markdown(f"<div class='v43-guest-card' dir='{u['dir']}'><b>{escape(i18n.tr('No student signed in'))}</b><span>{escape(i18n.tr('Create an account or sign in to start the study.'))}</span></div>", unsafe_allow_html=True)
+
         if not student:
-            for page in ("Sign in", "Create account"):
-                label = i18n.page_label(page, lang)
-                if target.button(label, key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
+            for page, icon in (("Sign in", "↪"), ("Create account", "+")):
+                if target.button(f"{icon} {i18n.page_label(page, lang)}", key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
                     st.session_state.student_page = page
                     st.rerun()
         else:
-            for page, label, detail in nav_items:
-                if page in allowed:
-                    if target.button(label, key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
-                        st.session_state.student_page = page
-                        st.rerun()
-                    if current_page == page and detail:
-                        target.markdown(f"<div class='qai-side-active-note'>{escape(detail)}</div>", unsafe_allow_html=True)
-                elif page in {"Post-test", "Satisfaction Survey"}:
-                    target.markdown(f"<div class='qai-side-lock'>🔒 {escape(label)}</div>", unsafe_allow_html=True)
-        target.divider()
+            groups = [
+                (u["overview"], [("Student Home", "⌂", u["home"])]),
+                (u["learning"], [("Adaptive Plan", "✦", u["plan"]), ("Learning Module", "▦", u["modules"]), ("AI Tutor Lab", "◈", u["tutor"])]),
+                (u["assessment"], [("Pre-test", "01", u["pre"]), ("Post-test", "02", u["post"]), ("Satisfaction Survey", "✓", u["survey"])]),
+                (u["research"], [("Research Notice", "◎", u["notice"])])
+            ]
+            for title, pages in groups:
+                target.markdown(f"<div class='v43-nav-group' dir='{u['dir']}'>{escape(title)}</div>", unsafe_allow_html=True)
+                for page, icon, label in pages:
+                    if page in allowed:
+                        if target.button(f"{icon}  {label}", key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
+                            st.session_state.student_page = page
+                            st.rerun()
+                    else:
+                        target.markdown(f"<div class='v43-nav-lock' dir='{u['dir']}'><span>{escape(icon)}</span><b>{escape(label)}</b><i>🔒</i></div>", unsafe_allow_html=True)
+        target.markdown("<div class='v43-side-separator'></div>", unsafe_allow_html=True)
         if student and target.button(i18n.tr("Sign out"), use_container_width=True):
             db.log_event(student["id"], "student", "sign_out", "Student signed out from sidebar")
             st.session_state.student_id = None
             st.session_state.student_page = "Student Home"
-            st.session_state.student_access_page = "Sign in"
             st.rerun()
         if target.button(i18n.tr("Switch workspace"), use_container_width=True):
             switch_role(None)
-        target.markdown(
-            f"<div class='qai-side-footer' dir='{t['direction']}'>{escape(i18n.tr('AI tutor interactions and progress events are logged for the evaluator dashboard.'))}</div>",
-            unsafe_allow_html=True,
-        )
         render_status_badge(target)
-
     elif role == "evaluator":
-        target.markdown(
-            f"<div class='qai-side-profile v4-profile-card' dir='{t['direction']}'><b>{escape(i18n.tr('Evaluator workspace'))}</b><br><span>{escape(i18n.tr('Monitor progress, AI usage, and exports.'))}</span></div>",
-            unsafe_allow_html=True,
-        )
+        target.markdown(f"<div class='v43-guest-card' dir='{u['dir']}'><b>{escape(i18n.tr('Evaluator workspace'))}</b><span>{escape(i18n.tr('Monitor progress, AI usage, and exports.'))}</span></div>", unsafe_allow_html=True)
         if st.session_state.evaluator_logged_in:
-            pages = [
-                "Evaluator Dashboard", "Study Protocol", "Students", "Registration Accounts",
-                "Student Details", "AI Tutor Logs", "AI Response Evaluation", "AI Metrics", "Exports",
-            ]
-            target.markdown(f"<div class='qai-side-section'>{escape(i18n.tr('Evaluator navigation'))}</div>", unsafe_allow_html=True)
+            pages = ["Evaluator Dashboard", "Study Protocol", "Students", "Registration Accounts", "Student Details", "AI Tutor Logs", "AI Response Evaluation", "AI Metrics", "Exports"]
             for page in pages:
-                label_text = i18n.page_label(page, lang)
-                if target.button(label_text, key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if st.session_state.evaluator_page == page else "secondary"):
+                if target.button(i18n.page_label(page, lang), key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if st.session_state.evaluator_page == page else "secondary"):
                     st.session_state.evaluator_page = page
                     st.rerun()
-            target.divider()
             if target.button(i18n.tr("Sign out"), use_container_width=True):
                 st.session_state.evaluator_logged_in = False
-                st.session_state.evaluator_page = "Evaluator Dashboard"
                 st.rerun()
         if target.button(i18n.tr("Switch workspace"), use_container_width=True):
             switch_role(None)
     else:
-        target.markdown(
-            f"<div class='v4-sidebar-welcome' dir='{t['direction']}'><span>{escape(t['how_kicker'])}</span><strong>{escape(t['how_title'])}</strong><p>{escape(t['paths_body'])}</p></div>",
-            unsafe_allow_html=True,
-        )
+        target.markdown(f"<div class='v4-sidebar-welcome' dir='{u['dir']}'><span>{escape(t['how_kicker'])}</span><strong>{escape(t['how_title'])}</strong><p>{escape(t['paths_body'])}</p></div>", unsafe_allow_html=True)
 
 
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
@@ -918,13 +929,14 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     if not test_is_done(student["id"], "pre"):
         pages.append("Pre-test")
         return pages
-    pages += ["Learning Module"]
+    pages += ["Adaptive Plan", "Learning Module"]
     if ai_features_available(student):
         pages.append("AI Tutor Lab")
     if learning_path_ready_for_posttest(student["id"]) and ai_requirement_met(student):
         pages.append("Post-test")
     if test_is_done(student["id"], "post"):
         pages.append("Satisfaction Survey")
+    pages.append("Research Notice")
     return pages
 
 # -----------------------------------------------------------------------------
@@ -1025,101 +1037,63 @@ def require_student(func, *args) -> None:
     func(student, *args)
 
 
+
 def render_student_home(student: Optional[Dict[str, Any]]) -> None:
-    hero("3alimnIA Quantum", "A guided Qiskit learning workspace with visual explanations, learner-first attempts, contextual AI scaffolding, and measurable progress evidence.")
+    u = learning_ui_copy()
+    lang = i18n.current_lang(st)
     if not student:
-        st.markdown("""
-        <div class='qai-hero-grid'>
-          <div class='qai-glass-card'>
-            <div class='qai-module-kicker'>Guided pilot workflow</div>
-            <div class='qai-module-title'>Learn Qiskit step by step</div>
-            <p>The platform combines a structured learning path, short visual explanations, pre/post assessment, and an AI tutor that encourages reasoning rather than copy-paste answers.</p>
-            <span class='qai-stage-chip'>6 modules</span><span class='qai-stage-chip'>AI tutor</span><span class='qai-stage-chip'>Progress tracking</span>
-          </div>
-          <div class='qai-glass-card'>
-            <div class='qai-panel-title'>Recommended path</div>
-            <ol>
-              <li>Create or sign in to your account</li>
-              <li>Complete the pre-test</li>
-              <li>Follow the learning path</li>
-              <li>Use the AI tutor when needed</li>
-              <li>Complete the post-test and survey</li>
-            </ol>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        hero("3alimnIA Quantum", branding.TEXT[lang]["subheadline"])
+        st.markdown(f"<div class='v43-guest-intro' dir='{u['dir']}'><b>{escape(u['path_title'])}</b><span>{escape(u['path_sub'])}</span></div>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
-            card("Sign in", "Use your participant code, email, or exact registered name with your password.", "Returning participant")
-            if st.button("Sign in", type="primary", use_container_width=True):
-                st.session_state.student_page = "Sign in"
-                st.rerun()
+            if st.button(i18n.tr("Sign in"), type="primary", use_container_width=True):
+                st.session_state.student_page = "Sign in"; st.rerun()
         with c2:
-            card("Create account", "Register as a study participant. If the study is protected, you will need the registration access code.", "New participant")
-            if st.button("Create account", use_container_width=True):
-                st.session_state.student_page = "Create account"
-                st.rerun()
+            if st.button(i18n.tr("Create account"), use_container_width=True):
+                st.session_state.student_page = "Create account"; st.rerun()
         return
-
-    st.markdown(f"<div class='qai-ok'><b>Signed in:</b> {student['full_name']} ({student['participant_code']})</div>", unsafe_allow_html=True)
     if st.session_state.get("new_participant_code"):
-        st.success("Account created successfully. Save your participant code before continuing.")
+        st.success(i18n.tr("Account created successfully. Save your participant code before continuing."))
         render_participant_code_box(st.session_state["new_participant_code"])
-        if st.button("I saved my participant code", type="primary"):
+        if st.button(i18n.tr("I saved my participant code"), type="primary"):
             st.session_state.new_participant_code = None
             st.session_state.student_page = next_student_page(student)
             st.rerun()
         return
-
     summary = db.progress_summary_df(len(content.LESSONS))
     row = summary[summary["student_id"] == student["id"]] if not summary.empty and "student_id" in summary.columns else pd.DataFrame()
-    progress_percent = float(row["progress_percent"].iloc[0]) if not row.empty and "progress_percent" in row.columns else 0.0
+    progress_pct = float(row["progress_percent"].iloc[0]) if not row.empty and "progress_percent" in row.columns else 0.0
     modules_done = lesson_completion_count(student["id"])
     ai_count = db.ai_interaction_count(student["id"])
-    next_page = next_student_page(student)
-    current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
-    current_lesson = content.lesson_by_id(current_lesson_id, i18n.current_lang(st))
-
-    st.markdown(
-        f"""
-        <div class='qai-dashboard-grid'>
-          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{progress_percent:.0f}%</div><div class='qai-tile-label'>Overall study workflow</div></div>
-          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{modules_done}/{len(content.LESSONS)}</div><div class='qai-tile-label'>Learning modules completed</div></div>
-          <div class='qai-dashboard-tile'><div class='qai-tile-value'>{ai_count}</div><div class='qai-tile-label'>AI tutor interactions recorded</div></div>
-        </div>
-        <div class='qai-learning-shell'>
-          <div class='qai-module-kicker'>Resume point</div>
-          <div class='qai-module-title'>{current_lesson.get('short_title', current_lesson['title'])}</div>
-          <div class='qai-module-meta'>Next required action: <b>{next_action_text(student)}</b></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.progress(progress_percent / 100, text=f"Overall progress: {progress_percent:.0f}%")
-    render_completion_requirements(student)
-
-    st.divider()
-    c1, c2, c3 = st.columns(3)
+    pre = db.get_test_attempt(student["id"], "pre")
+    post = db.get_test_attempt(student["id"], "post")
+    current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
+    lesson = content.lesson_by_id(current_id, lang)
+    current_index = [x["id"] for x in content.LESSONS].index(current_id) + 1
+    hero(u["home"], u["dashboard_sub"])
+    st.markdown(f"""
+    <section class='v43-metrics' dir='{u['dir']}'>
+      <article><span>{escape(u['overall'])}</span><strong>{progress_pct:.0f}%</strong><i><em style='width:{progress_pct:.0f}%'></em></i></article>
+      <article><span>{escape(u['modules_done'])}</span><strong>{modules_done}<small> / {len(content.LESSONS)}</small></strong><i><em style='width:{100*modules_done/max(len(content.LESSONS),1):.0f}%'></em></i></article>
+      <article><span>{escape(u['pre_score'])}</span><strong>{f"{pre['score']:.0f}%" if pre else '—'}</strong><small>{escape(u['post_score'])}: {f"{post['score']:.0f}%" if post else '—'}</small></article>
+      <article><span>{escape(u['ai_uses'])}</span><strong>{ai_count}</strong><small>{escape(study_group_label(student))}</small></article>
+    </section>
+    <section class='v43-resume-card' dir='{u['dir']}'>
+      <div class='v43-resume-index'>{current_index:02d}</div>
+      <div><span>{escape(u['current'])}</span><h2>{escape(lesson.get('short_title', lesson['title']))}</h2><p>{escape(lesson.get('objective',''))}</p></div>
+      <div class='v43-next-action'><span>{escape(u['next_action'])}</span><b>{escape(i18n.tr(next_action_text(student)))}</b></div>
+    </section>""", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1.35, 1, 1])
     with c1:
-        if st.button(f"Continue: {next_page}", type="primary", use_container_width=True):
-            st.session_state.student_page = next_page
-            st.rerun()
+        if st.button(f"▶ {u['continue']}", type="primary", use_container_width=True):
+            st.session_state.student_page = next_student_page(student); st.rerun()
     with c2:
-        if st.button("Resume learning module", use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
-            st.session_state.student_page = "Learning Module"
-            st.rerun()
+        if st.button(u["open_path"], use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
+            st.session_state.student_page = "Learning Module"; st.rerun()
     with c3:
-        ai_disabled = (not test_is_done(student["id"], "pre")) or (not ai_features_available(student))
-        ai_label = "AI Tutor Lab" if ai_features_available(student) else "AI hidden for control group"
-        if st.button(ai_label, use_container_width=True, disabled=ai_disabled):
-            set_student_page("AI Tutor Lab")
-
-    if st.button("Sign out", use_container_width=True):
-        db.log_event(student["id"], "student", "sign_out", "Student signed out from home")
-        st.session_state.student_id = None
-        st.session_state.student_page = "Student Home"
-        st.rerun()
-
+        if st.button(u["open_tutor"], use_container_width=True, disabled=(not test_is_done(student["id"], "pre") or not ai_features_available(student))):
+            st.session_state.student_page = "AI Tutor Lab"; st.rerun()
+    render_completion_requirements(student)
 
 def next_student_page(student: Dict[str, Any]) -> str:
     sid = student["id"]
@@ -1321,60 +1295,37 @@ def render_student_registration() -> None:
 # Student study flow
 # -----------------------------------------------------------------------------
 
+
 def render_test_page(student: Dict[str, Any], kind: str) -> None:
-    title = "Pre-test" if kind == "pre" else "Post-test"
-    subtitle = "Answer the questions individually. This is used to evaluate learning progress, not to grade you."
-    hero(title, subtitle)
+    u = learning_ui_copy()
+    title = u["pre"] if kind == "pre" else u["post"]
+    hero(title, u["test_intro"])
     if kind == "post" and not has_minimum_lesson_activity(student["id"]):
-        st.warning("Please complete at least one learning section and save its reflection before the post-test.")
-        if st.button("Go to learning module", type="primary"):
-            set_student_page("Learning Module")
-        return
+        st.warning(i18n.tr("Please complete at least one learning section and save its reflection before the post-test.")); return
     if kind == "post" and not ai_requirement_met(student):
-        st.warning("Please complete at least one AI Tutor interaction before the post-test. This applies only to the experimental AI-supported group.")
-        if st.button("Go to AI Tutor Lab", type="primary"):
-            set_student_page("AI Tutor Lab")
-        return
+        st.warning(i18n.tr("Please complete at least one AI Tutor interaction before the post-test. This applies only to the experimental AI-supported group.")); return
     existing = db.get_test_attempt(student["id"], kind)
     if existing:
-        st.success(f"{title} already submitted. Score: {existing['score']:.1f}%")
-        if st.button("Continue", type="primary"):
-            if kind == "pre":
-                try:
-                    db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
-                except Exception:
-                    pass
-                st.session_state.student_page = "Learning Module"
-            else:
-                st.session_state.student_page = "Satisfaction Survey"
-            st.rerun()
+        st.markdown(f"<div class='v43-result-card' dir='{u['dir']}'><span>{escape(title)}</span><strong>{existing['score']:.1f}%</strong></div>", unsafe_allow_html=True)
+        if st.button(i18n.tr("Continue"), type="primary", use_container_width=True):
+            st.session_state.student_page = "Adaptive Plan" if kind == "pre" else "Satisfaction Survey"; st.rerun()
         return
-
     questions = content.questions_for(kind)
     with st.form(f"{kind}_test_form"):
         answers: Dict[str, int] = {}
         for i, q in enumerate(questions, start=1):
-            st.markdown(f"**Q{i}. {q.question}**")
-            answers[q.id] = st.radio(
-                label="Choose one answer",
-                options=list(range(len(q.options))),
-                format_func=lambda idx, opts=q.options: opts[idx],
-                key=f"{kind}_{q.id}",
-                label_visibility="collapsed",
-            )
-            st.caption(f"Concept: {getattr(q, 'display_concept', '') or i18n.concept_label(q.concept, i18n.current_lang(st))}")
-            st.divider()
-        submitted = st.form_submit_button(f"Submit {title}", type="primary", use_container_width=True)
+            pct = int(round(100*i/max(len(questions),1)))
+            st.markdown(f"<section class='v43-question-head' dir='{u['dir']}'><div><span>{escape(u['question'])} {i} {escape(u['of'])} {len(questions)}</span><b>{escape(q.question)}</b></div><i>{pct}%</i></section>", unsafe_allow_html=True)
+            answers[q.id] = st.radio(u["choose"], options=list(range(len(q.options))), format_func=lambda idx, opts=q.options: opts[idx], key=f"{kind}_{q.id}", label_visibility="collapsed")
+            concept_label = getattr(q, 'display_concept', '') or i18n.concept_label(q.concept, i18n.current_lang(st))
+            st.markdown(f"<div class='v43-concept-tag'>{escape(u['concept'])}: {escape(concept_label)}</div>", unsafe_allow_html=True)
+        submitted = st.form_submit_button(u["submit_pre"] if kind == "pre" else u["submit_post"], type="primary", use_container_width=True)
     if submitted:
         result = db.save_test_attempt(student["id"], kind, answers, questions)
-        if kind == "pre":
-            db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
-            db.log_event(student["id"], "student", "pre_test_submitted", f"Score: {result['score']:.1f}%")
-        else:
-            db.log_event(student["id"], "student", "post_test_submitted", f"Score: {result['score']:.1f}%")
-        st.success(f"Submitted. Score: {result['score']:.1f}%")
+        if kind == "pre": db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
+        db.log_event(student["id"], "student", f"{kind}_test_submitted", f"Score: {result['score']:.1f}%")
+        st.success(f"{result['score']:.1f}%")
         st.rerun()
-
 
 def render_adaptive_plan(student: Dict[str, Any]) -> None:
     hero("Adaptive Learning Plan", "The platform uses your pre-test results to recommend learning sections and AI-supported practice.")
@@ -2244,44 +2195,31 @@ def render_lesson_media(lesson_id: str, student: Optional[Dict[str, Any]] = None
     if resource_url:
         st.markdown(f"Optional enrichment: [{resource_label}]({resource_url})")
 
+
 def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recommended_set: set, completed: set) -> None:
-    """Render the lesson selector used by the learning path page.
-
-    This function was accidentally omitted in v9.0 when the Guided Concept
-    Journey was added, which caused a NameError on Streamlit Cloud.
-    """
-    st.markdown("### Learning path")
-    st.caption("Six compact modules. Choose a card to open it; the platform remembers your latest module.")
-
+    u = learning_ui_copy()
     lessons = localized_lessons()
-    rows = [lessons[i:i + 3] for i in range(0, len(lessons), 3)]
-    for row in rows:
-        cols = st.columns(len(row))
+    st.markdown(f"<div class='v43-section-title' dir='{u['dir']}'><span>{escape(u['journey'])}</span><h3>{escape(u['path_title'])}</h3><p>{escape(u['path_sub'])}</p></div>", unsafe_allow_html=True)
+    for start in range(0, len(lessons), 3):
+        row = lessons[start:start+3]
+        cols = st.columns(len(row), gap="medium")
         for col, lesson in zip(cols, row):
-            is_selected = lesson["id"] == selected_id
-            is_done = lesson["id"] in completed
-            is_recommended = lesson["id"] in recommended_set
-            status = "Completed" if is_done else ("Recommended" if is_recommended else "Available")
-            marker = "✓" if is_done else ("▶" if is_selected else "")
-            concepts = lesson.get("concepts", [])[:2]
-            concept_html = "".join(f"<span class='qai-concept-pill'>{c}</span>" for c in concepts)
-            card_class = "qai-lesson-card selected" if is_selected else "qai-lesson-card"
+            selected = lesson["id"] == selected_id
+            done = lesson["id"] in completed
+            recommended = lesson["id"] in recommended_set
+            status = u["completed"] if done else (u["recommended"] if recommended else u["available"])
+            idx = lessons.index(lesson) + 1
+            tags = "".join(f"<span>{escape(i18n.concept_label(c, i18n.current_lang(st)))}</span>" for c in lesson.get("concepts", [])[:2])
             with col:
-                st.markdown(
-                    f"""
-                    <div class='{card_class}'>
-                      <div class='qai-card-kicker'>{status} · {lesson.get('level', 'Module')} · {lesson.get('duration', '')}</div>
-                      <div class='qai-card-title'>{marker} Module {lessons.index(lesson)+1}</div>
-                      <div class='qai-card-subtitle'>{lesson.get('short_title', lesson['title'])}</div>
-                      <div class='qai-card-concepts'>{concept_html}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                if st.button("Opened" if is_selected else "Open", key=f"open_lesson_{lesson['id']}", disabled=is_selected, use_container_width=True):
-                    set_current_lesson(student["id"], lesson["id"])
-                    st.rerun()
-
+                st.markdown(f"""
+                <article class='v43-lesson-card {'is-active' if selected else ''} {'is-done' if done else ''}' dir='{u['dir']}'>
+                  <div class='v43-lesson-top'><i>{idx:02d}</i><span>{escape(status)}</span></div>
+                  <h4>{escape(lesson.get('short_title', lesson['title']))}</h4>
+                  <p>{escape(lesson.get('objective',''))}</p>
+                  <div class='v43-lesson-tags'>{tags}</div><small>{escape(lesson.get('duration',''))}</small>
+                </article>""", unsafe_allow_html=True)
+                if st.button(u["opened"] if selected else u["open"], key=f"open_lesson_{lesson['id']}", disabled=selected, use_container_width=True):
+                    set_current_lesson(student["id"], lesson["id"]); st.rerun()
 
 def render_learning_module(student: Dict[str, Any]) -> None:
     hero("Learning Path", "Professional micro-lessons: visual explanation, tiny Qiskit example, AI support, and reflection.")
@@ -2516,13 +2454,13 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         st.session_state[chat_key] = []
 
     quick_prompts = {
-        "Explain simply": f"I am confused about {concept}. Explain it simply, then ask me one question to check my understanding.",
-        "Give practice": f"Give me one short beginner exercise about {concept}. Do not give the full solution first.",
-        "Check my idea": f"Here is my explanation of {concept}: ... Please tell me what is correct and what I should improve.",
-        "Help with code": "Here is my Qiskit code:\n\n# paste code here\n\nPlease help me interpret it or find the mistake without giving a long answer.",
+        learning_ui_copy()["simplify"]: f"I am confused about {concept}. Explain it simply, then ask me one question to check my understanding.",
+        learning_ui_copy()["hint"]: f"Give me one short beginner exercise about {concept}. Do not give the full solution first.",
+        learning_ui_copy()["quiz"]: f"Here is my explanation of {concept}: ... Please tell me what is correct and what I should improve.",
+        learning_ui_copy()["qiskit"]: "Here is my Qiskit code:\n\n# paste code here\n\nPlease help me interpret it or find the mistake without giving a long answer.",
     }
 
-    st.markdown("#### Quick-start prompts")
+    st.markdown(f"#### {learning_ui_copy()['quick']}")
     qcols = st.columns(4)
     for i, (label, example) in enumerate(quick_prompts.items()):
         with qcols[i]:
@@ -3728,7 +3666,7 @@ def main() -> None:
     # The shell is identified through the sidebar marker rendered inside the
     # left column. Avoiding a separate empty marker above the columns removes
     # the large blank strip that Streamlit otherwise inserts at page start.
-    left_col, right_col = st.columns([0.19, 0.81], gap="large")
+    left_col, right_col = st.columns([0.205, 0.795], gap="medium")
     with left_col:
         with st.container(border=True):
             render_sidebar(st)
