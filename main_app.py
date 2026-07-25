@@ -17,6 +17,9 @@ import streamlit.components.v1 as components
 import content
 import db
 import feedback_engine
+import branding
+import i18n
+from content_locales import MEDIA_TRANSLATIONS
 from security import hash_password, verify_password
 from media_utils import render_image, render_video, render_simulator, render_micro_animation
 
@@ -131,8 +134,14 @@ def smtp_is_configured() -> bool:
     return bool(secret("SMTP_HOST", "").strip() and secret("SMTP_USERNAME", "").strip() and secret("SMTP_PASSWORD", "").strip())
 
 
-def send_password_reset_email(to_email: str, full_name: str, reset_link: str, expires_minutes: int = 30) -> Tuple[bool, str]:
-    """Send a one-time password reset link using SMTP settings from Streamlit secrets."""
+def send_password_reset_email(
+    to_email: str,
+    full_name: str,
+    reset_link: str,
+    expires_minutes: int = 30,
+    language: str = "en",
+) -> Tuple[bool, str]:
+    """Send a one-time password reset link in the learner's preferred language."""
     host = secret("SMTP_HOST", "").strip()
     port = int(secret("SMTP_PORT", "587") or 587)
     username = secret("SMTP_USERNAME", "").strip()
@@ -143,18 +152,44 @@ def send_password_reset_email(to_email: str, full_name: str, reset_link: str, ex
     if not (host and username and password and sender):
         return False, "SMTP email is not configured."
 
+    lang = i18n.normalize_lang(language)
+    subjects = {
+        "ar": "إعادة تعيين كلمة مرور 3alimnIA",
+        "fr": "Réinitialisation du mot de passe 3alimnIA",
+        "en": "3alimnIA password reset",
+    }
+    bodies = {
+        "ar": (
+            f"مرحبًا {full_name}،\n\n"
+            "تلقينا طلبًا لإعادة تعيين كلمة مرور حسابك في منصة 3alimnIA التعليمية.\n\n"
+            f"استخدم الرابط الآتي لإنشاء كلمة مرور جديدة:\n{reset_link}\n\n"
+            f"يبقى هذا الرابط صالحًا لمدة {expires_minutes} دقيقة، ويمكن استعماله مرة واحدة فقط.\n"
+            "إن لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة.\n\n"
+            "منصة 3alimnIA التعليمية"
+        ),
+        "fr": (
+            f"Bonjour {full_name},\n\n"
+            "Nous avons reçu une demande de réinitialisation du mot de passe de votre compte sur la plateforme 3alimnIA.\n\n"
+            f"Utilisez ce lien pour créer un nouveau mot de passe :\n{reset_link}\n\n"
+            f"Ce lien reste valide pendant {expires_minutes} minutes et ne peut être utilisé qu'une seule fois.\n"
+            "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\n"
+            "Plateforme d'apprentissage 3alimnIA"
+        ),
+        "en": (
+            f"Hello {full_name},\n\n"
+            "We received a request to reset your password for the 3alimnIA learning platform.\n\n"
+            f"Reset your password using this link:\n{reset_link}\n\n"
+            f"This link is valid for {expires_minutes} minutes and can be used only once.\n"
+            "If you did not request this reset, you can ignore this email.\n\n"
+            "3alimnIA Learning Platform"
+        ),
+    }
+
     msg = EmailMessage()
-    msg["Subject"] = "QAI platform password reset"
+    msg["Subject"] = subjects[lang]
     msg["From"] = sender
     msg["To"] = to_email
-    msg.set_content(
-        f"Hello {full_name},\n\n"
-        "We received a request to reset your password for the QAI Learning Evaluation Platform.\n\n"
-        f"Reset your password using this link:\n{reset_link}\n\n"
-        f"This link is valid for {expires_minutes} minutes and can be used only once.\n"
-        "If you did not request this reset, you can ignore this email.\n\n"
-        "QAI Learning Evaluation Platform"
-    )
+    msg.set_content(bodies[lang])
 
     try:
         if use_ssl:
@@ -210,9 +245,54 @@ def init_state() -> None:
         "new_participant_code": None,
         "current_lesson_id": None,
         "last_ai_interaction_id": None,
+        "landing_track": "quantum",
+        "selected_track": "quantum",
+        "ui_language": "العربية",
+        "ui_language_code": "ar",
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
+
+
+def render_language_selector(target=st, key: str = "global_language_selector") -> str:
+    """Render a persistent language selector and save it to the learner account."""
+    current = i18n.current_lang(st)
+    labels = list(i18n.LANGUAGE_LABELS.values())
+    current_label = i18n.LANGUAGE_LABELS.get(current, "العربية")
+    selected = target.radio(
+        "Interface language / لغة الواجهة / Langue de l’interface",
+        labels,
+        index=labels.index(current_label) if current_label in labels else 0,
+        horizontal=True,
+        key=key,
+        label_visibility="collapsed",
+    )
+    code = i18n.normalize_lang(selected)
+    changed = code != current
+    st.session_state.ui_language_code = code
+    st.session_state.ui_language = i18n.LANGUAGE_LABELS[code]
+    student = current_student()
+    if student and str(student.get("preferred_language") or "") != code:
+        try:
+            db.set_student_preferred_language(int(student["id"]), code)
+            student["preferred_language"] = code
+        except Exception:
+            pass
+    if changed:
+        st.rerun()
+    return code
+
+
+def localized_lessons() -> List[Dict[str, Any]]:
+    return content.lessons_for(i18n.current_lang(st))
+
+
+def localized_media(lesson_id: str) -> Dict[str, Any]:
+    item = dict(LESSON_MEDIA.get(lesson_id, {}))
+    code = i18n.current_lang(st)
+    if code != "en":
+        item.update(MEDIA_TRANSLATIONS.get(code, {}).get(lesson_id, {}))
+    return item
 
 
 def switch_role(role: Optional[str] = None) -> None:
@@ -293,6 +373,7 @@ def student_profile(student: Dict[str, Any]) -> Dict[str, Any]:
         "academic_level": student.get("academic_level"),
         "prior_python_level": student.get("prior_python_level"),
         "prior_quantum_level": student.get("prior_quantum_level"),
+        "preferred_language": i18n.response_language(student.get("preferred_language", i18n.current_lang(st))),
         "pre_test_score": pre.get("score") if pre else None,
         "weak_concepts": rec.get("weak_concepts") if rec else [],
         "recommended_lessons": rec.get("recommended_lessons") if rec else [],
@@ -435,14 +516,14 @@ def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
     lesson_count = lesson_completion_count(student["id"])
     required_lessons = required_lesson_count_for_posttest()
     current_lesson = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else "not started"
-    lesson_title = next((l.get("short_title", l["title"]) for l in content.LESSONS if l["id"] == current_lesson), "Learning not started")
+    lesson_title = next((l.get("short_title", l["title"]) for l in localized_lessons() if l["id"] == current_lesson), i18n.tr("Learning not started"))
     next_action = next_action_text(student)
     study_percent = int(round((done_count / len(items)) * 100)) if items else 0
     learning_percent = int(round((lesson_count / max(required_lessons, 1)) * 100))
     st.markdown(
         f"""
         <div class='qai-sticky-progress'>
-          <div class='qai-sticky-title'>QAI guided study · {study_percent}% study workflow · {learning_percent}% learning path</div>
+          <div class='qai-sticky-title'>3alimnIA guided study · {study_percent}% study workflow · {learning_percent}% learning path</div>
           <div class='qai-sticky-meta'>Current page: <b>{page}</b> · Completed modules: <b>{lesson_count}/{required_lessons}</b> · Resume: <b>{lesson_title}</b></div>
         </div>
         """,
@@ -633,7 +714,7 @@ def render_ai_usefulness_feedback(interaction_id: Optional[int], key_prefix: str
         "Usefulness rating",
         options=[1, 2, 3, 4, 5],
         value=4,
-        format_func=lambda x: {1: "1 - Not useful", 2: "2", 3: "3 - Acceptable", 4: "4", 5: "5 - Very useful"}[x],
+        format_func=lambda x: i18n.tr({1: "1 - Not useful", 2: "2", 3: "3 - Acceptable", 4: "4", 5: "5 - Very useful"}[x]),
         key=f"{key_prefix}_rating_{interaction_id}",
     )
     comment = st.text_input("Optional short comment", key=f"{key_prefix}_comment_{interaction_id}")
@@ -671,8 +752,10 @@ def render_sidebar(target=st) -> None:
     role = st.session_state.get("role")
     # Use both plain Streamlit text and CSS-styled HTML so the sidebar remains visible
     # even if custom CSS fails to load on Streamlit Cloud.
-    target.markdown("<div class='qai-side-brand'>QAI Learning Platform</div>", unsafe_allow_html=True)
-    target.caption("Guided quantum programming study with contextual AI support.")
+    lang = i18n.current_lang(st)
+    target.markdown(branding.sidebar_brand_html(lang), unsafe_allow_html=True)
+    target.caption(branding.TEXT[lang]["nav_caption"])
+    render_language_selector(target, key="sidebar_language_selector")
     target.divider()
 
     if role == "student":
@@ -682,7 +765,7 @@ def render_sidebar(target=st) -> None:
             required_lessons = required_lesson_count_for_posttest()
             learning_pct = int(round(100 * lesson_count / max(required_lessons, 1)))
             current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else None
-            current_title = next((l.get("short_title", l["title"]) for l in content.LESSONS if l["id"] == current_id), "Not started")
+            current_title = next((l.get("short_title", l["title"]) for l in localized_lessons() if l["id"] == current_id), "Not started")
             target.markdown(
                 f"""
                 <div class='qai-side-profile'>
@@ -701,20 +784,15 @@ def render_sidebar(target=st) -> None:
         allowed = student_pages_allowed(student)
         current_page = st.session_state.get("student_page", "Student Home")
         nav_items = [
-            ("Student Home", "Dashboard", "Overview and next action"),
-            ("Research Notice", "Research notice", "Consent step"),
-            ("Pre-test", "Pre-test", "Initial knowledge check"),
-            ("Learning Module", "Learning path", "Six guided modules"),
-            ("AI Tutor Lab", "AI tutor", "Ask for hints and explanations"),
-            ("Post-test", "Post-test", "Unlocked after learning path"),
-            ("Satisfaction Survey", "Survey", "Final feedback"),
+            (page, i18n.page_label(page, lang), i18n.page_detail(page, lang))
+            for page in ["Student Home", "Research Notice", "Pre-test", "Learning Module", "AI Tutor Lab", "Post-test", "Satisfaction Survey"]
         ]
         target.markdown("<div class='qai-side-section'>Student navigation</div>", unsafe_allow_html=True)
         if student and target.button("▶ Resume recommended step", key="student_resume_step", type="primary", use_container_width=True):
             st.session_state.student_page = next_student_page(student)
             st.rerun()
         if not student:
-            for page, label, _ in [("Sign in", "Sign in", ""), ("Create account", "Create account", "")]:
+            for page, label, _ in [("Sign in", i18n.page_label("Sign in", lang), ""), ("Create account", i18n.page_label("Create account", lang), "")]:
                 prefix = "● " if current_page == page else ""
                 if target.button(prefix + label, key=f"student_nav_{page}", use_container_width=True):
                     st.session_state.student_page = page
@@ -757,15 +835,7 @@ def render_sidebar(target=st) -> None:
                 "AI Metrics",
                 "Exports",
             ]
-            compact_labels = {
-                "Evaluator Dashboard": "Dashboard",
-                "Study Protocol": "Protocol",
-                "Registration Accounts": "Accounts",
-                "Student Details": "Student details",
-                "AI Tutor Logs": "AI logs",
-                "AI Response Evaluation": "Response evaluation",
-                "AI Metrics": "AI metrics",
-            }
+            compact_labels = {page: i18n.page_label(page, lang) for page in pages}
             target.markdown("<div class='qai-side-section'>Evaluator navigation</div>", unsafe_allow_html=True)
             for page in pages:
                 label_text = compact_labels.get(page, page)
@@ -781,7 +851,7 @@ def render_sidebar(target=st) -> None:
         if target.button("Switch workspace", use_container_width=True):
             switch_role(None)
     else:
-        target.info("Select Student workspace or Evaluator workspace from the main page to start.")
+        target.info("Choose a learning path or open the evaluator workspace from the 3alimnIA home page.")
 
 
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
@@ -808,36 +878,95 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
 # -----------------------------------------------------------------------------
 
 def render_role_selection() -> None:
-    hero(
-        "Quantum AI Learning Evaluation Platform",
-        "Pilot platform for AI-supported introductory quantum programming with Qiskit."
+    """Render the public multi-track startup landing page for 3alimnIA."""
+    lang = render_language_selector(st, key="landing_language_selector")
+    t = branding.TEXT[lang]
+
+    st.markdown(branding.landing_hero_html(lang), unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <div class='brand-section-heading' dir='{t['direction']}'>
+          <span>{t['paths_kicker']}</span>
+          <h2>{t['paths_title']}</h2>
+          <p>{t['paths_body']}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    ux_note(
-        "<b>Please choose your workspace.</b><br>"
-        "Students should use the Student workspace to complete the learning activities, AI tutor interaction, pre-test, post-test, and survey.<br>"
-        "The Evaluator workspace is reserved for the researcher/teacher to monitor progress, review logs, and export anonymized research data."
+    selected = st.session_state.get("landing_track", "quantum")
+    cols = st.columns(3, gap="large")
+    track_order = ["quantum", "ml", "ai"]
+    labels = {
+        "quantum": t["start_quantum"],
+        "ml": t["preview_ml"],
+        "ai": t["preview_ai"],
+    }
+    for col, track_id in zip(cols, track_order):
+        with col:
+            st.markdown(branding.track_card_html(track_id, lang, selected == track_id), unsafe_allow_html=True)
+            if st.button(
+                labels[track_id],
+                key=f"landing_track_{track_id}",
+                type="primary" if track_id == "quantum" else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state.landing_track = track_id
+                st.session_state.selected_track = track_id
+                if track_id == "quantum":
+                    switch_role("student")
+                st.rerun()
+
+    if selected in {"ml", "ai"}:
+        track = branding.TRACKS[selected]
+        st.markdown(
+            f"""
+            <div class='brand-preview-panel' dir='{t['direction']}'>
+              <div>
+                <span class='brand-preview-label'>{t['roadmap']}</span>
+                <h3>{track['short_name'][lang]}</h3>
+                <h4>{t['roadmap_title']}</h4>
+                <p>{t['roadmap_body']}</p>
+              </div>
+              <div class='brand-preview-steps'>
+                {''.join(f"<span>{index}. {step}</span>" for index, step in enumerate(t['roadmap_steps'], start=1))}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        f"""
+        <div class='brand-section-heading brand-how-heading' dir='{t['direction']}'>
+          <span>{t['how_kicker']}</span><h2>{t['how_title']}</h2>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
+    steps_html = "".join(
+        f"<div class='brand-how-card'><div class='brand-how-number'>{num}</div><h3>{title}</h3><p>{body}</p></div>"
+        for num, title, body in t["steps"]
+    )
+    st.markdown(f"<div class='brand-how-grid' dir='{t['direction']}'>{steps_html}</div>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        card(
-            "Student workspace",
-            "Use this option if you are a participant. You will create an account or sign in, complete the learning workflow, interact with the AI tutor, and submit the final survey.",
-            "For students"
-        )
-        if st.button("Enter as student", type="primary", use_container_width=True):
-            switch_role("student")
-
-    with col2:
-        card(
-            "Evaluator workspace",
-            "Reserved for the professor/researcher. It is used to monitor participant progress, review pre/post-test results, inspect AI tutor logs, and export anonymized research data.",
-            "For evaluator only"
-        )
-        st.caption("Students do not need to use this option.")
-        if st.button("Enter as evaluator", use_container_width=True):
+    st.markdown(
+        f"""
+        <div class='brand-research-strip' dir='{t['direction']}'>
+          <span class='brand-preview-label'>{t['research_kicker']}</span>
+          <h3>{t['research_title']}</h3>
+          <p>{t['research_body']}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    eval_col, info_col = st.columns([0.38, 0.62])
+    with eval_col:
+        if st.button(t["evaluator_button"], key="landing_evaluator", use_container_width=True):
             switch_role("evaluator")
+    with info_col:
+        st.caption("LPQS · Learning analytics · Anonymized research exports · Provider-agnostic LLM layer")
 
 def render_student_app() -> None:
     reset_token = get_query_param("reset_token").strip()
@@ -884,7 +1013,7 @@ def require_student(func, *args) -> None:
 
 
 def render_student_home(student: Optional[Dict[str, Any]]) -> None:
-    hero("Student Dashboard", "A guided quantum programming workspace with progress, contextual AI support, and research-grade learning analytics.")
+    hero("3alimnIA Quantum", "A guided Qiskit learning workspace with visual explanations, learner-first attempts, contextual AI scaffolding, and measurable progress evidence.")
     if not student:
         st.markdown("""
         <div class='qai-hero-grid'>
@@ -936,7 +1065,7 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     ai_count = db.ai_interaction_count(student["id"])
     next_page = next_student_page(student)
     current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
-    current_lesson = content.lesson_by_id(current_lesson_id)
+    current_lesson = content.lesson_by_id(current_lesson_id, i18n.current_lang(st))
 
     st.markdown(
         f"""
@@ -1050,7 +1179,7 @@ def render_password_reset_request() -> None:
         if result:
             student, token, _expires_at = result
             reset_link = f"{current_app_base_url()}/?reset_token={token}"
-            ok, diagnostic = send_password_reset_email(student.get("email", email_clean), student.get("full_name", "student"), reset_link)
+            ok, diagnostic = send_password_reset_email(student.get("email", email_clean), student.get("full_name", "student"), reset_link, language=student.get("preferred_language", i18n.current_lang(st)))
             db.log_event(student["id"], "student", "password_reset_requested", "Password reset requested")
             if not ok:
                 st.warning("Password reset was created, but email delivery is not configured or failed. Please contact the instructor.")
@@ -1061,7 +1190,7 @@ def render_password_reset_request() -> None:
 
 
 def render_password_reset_form(token: str) -> None:
-    hero("Reset Password", "Create a new password for your QAI platform account.")
+    hero("Reset Password", "Create a new password for your 3alimnIA account.")
     st.info("Please enter and confirm your new password. Reset links are valid for a limited time and can be used only once.")
     with st.form("password_reset_form"):
         new_password = st.text_input("New password", type="password")
@@ -1100,6 +1229,9 @@ def render_student_signin() -> None:
         student = db.authenticate_student(identifier, password)
         if student:
             db.log_event(student["id"], "student", "sign_in", "Student signed in")
+            preferred = i18n.normalize_lang(student.get("preferred_language"))
+            st.session_state.ui_language_code = preferred
+            st.session_state.ui_language = i18n.LANGUAGE_LABELS[preferred]
             st.session_state.student_id = student["id"]
             st.session_state.current_lesson_id = db.get_last_open_lesson(student["id"]) or first_incomplete_lesson_id(student["id"])
             st.session_state.student_page = next_student_page(student)
@@ -1155,7 +1287,7 @@ def render_student_registration() -> None:
             if control_group_enabled():
                 # Balanced assignment is finalized after the row is created.
                 assigned_group = "pending"
-            student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password, study_group=("" if assigned_group else "single_arm"))
+            student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password, study_group=("" if assigned_group else "single_arm"), preferred_language=i18n.current_lang(st))
             if control_group_enabled():
                 group = db.assign_study_group(student["id"])
                 student = db.get_student(student["id"]) or student
@@ -1217,7 +1349,7 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
                 key=f"{kind}_{q.id}",
                 label_visibility="collapsed",
             )
-            st.caption(f"Concept: {q.concept}")
+            st.caption(f"Concept: {getattr(q, 'display_concept', '') or i18n.concept_label(q.concept, i18n.current_lang(st))}")
             st.divider()
         submitted = st.form_submit_button(f"Submit {title}", type="primary", use_container_width=True)
     if submitted:
@@ -1244,12 +1376,12 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
         st.markdown("### Concepts to reinforce")
         if weak:
             for concept in weak:
-                st.markdown(f"- {concept}")
+                st.markdown(f"- {i18n.concept_label(concept, i18n.current_lang(st))}")
         else:
             st.markdown("No major weakness detected. Continue with the full learning sequence.")
     with c2:
         st.markdown("### Recommended lesson sequence")
-        lesson_map = {lesson["id"]: lesson["title"] for lesson in content.LESSONS}
+        lesson_map = {lesson["id"]: lesson["title"] for lesson in localized_lessons()}
         for lesson_id in recommended:
             st.markdown(f"- {lesson_map.get(lesson_id, lesson_id)}")
 
@@ -1257,8 +1389,9 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
     plan_language = st.selectbox(
         "AI response language",
         ["Auto-detect", "English", "Arabic", "French"],
-        index=1,
+        index={"en": 1, "ar": 2, "fr": 3}[i18n.current_lang(st)],
         key="adaptive_plan_language",
+        format_func=lambda value: i18n.tr(value),
     )
     if st.button("Generate AI personalized study plan", type="primary"):
         profile = student_profile(student)
@@ -1291,56 +1424,72 @@ def render_adaptive_plan(student: Dict[str, Any]) -> None:
 
 
 def lesson_diagram_html(lesson_id: str) -> str:
-    """Return a small text-based diagram for the concept instead of one crowded image."""
+    """Return a compact localized text diagram while keeping code tokens unchanged."""
     diagrams = {
-        "orientation": "Qiskit code\n  QuantumCircuit(1, 1)\n        ↓\nCircuit\n  q0 ── M ──\n        │\n  c0 ◄──0\n        ↓\nClassical output: {'0': shots}",
-        "qubit_measurement": "Before measurement\n  qubit state: |0⟩ or α|0⟩ + β|1⟩\n        ↓ measurement\nAfter measurement\n  one classical result per shot: 0 or 1",
-        "hadamard_superposition": "Start\n  |0⟩\n        ↓ H gate\nBefore measurement\n  (|0⟩ + |1⟩) / √2\n        ↓ many shots\nCounts\n  0 ≈ 50%   1 ≈ 50%",
-        "shots_counts": "Run circuit once = one shot\n        ↓\nRun 10 shots → small noisy sample\n        ↓\nRun 1000 shots → clearer distribution\n        ↓\nCounts are frequencies, not certainty",
-        "cnot_correlation": "q0: ── H ── ● ── M ──\n             │\nq1: ─────── ⊕ ── M ──\n\nRule: if control q0 = 1, target q1 flips\nBell-style output: mostly 00 and 11",
-        "qiskit_debugging": "Common error\n  QuantumCircuit(1, 0)\n  qc.measure(0, 0)  ← no classical bit exists\n\nFix\n  QuantumCircuit(1, 1)\n  qc.measure(0, 0)",
+        "en": {
+            "orientation": "Qiskit code\n  QuantumCircuit(1, 1)\n        ↓\nCircuit\n  q0 ── M ──\n        │\n  c0 ◄──0\n        ↓\nClassical output: {'0': shots}",
+            "qubit_measurement": "Before measurement\n  qubit state: |0⟩ or α|0⟩ + β|1⟩\n        ↓ measurement\nAfter measurement\n  one classical result per shot: 0 or 1",
+            "hadamard_superposition": "Start\n  |0⟩\n        ↓ H gate\nBefore measurement\n  (|0⟩ + |1⟩) / √2\n        ↓ many shots\nCounts\n  0 ≈ 50%   1 ≈ 50%",
+            "shots_counts": "Run circuit once = one shot\n        ↓\nRun 10 shots → small noisy sample\n        ↓\nRun 1000 shots → clearer distribution\n        ↓\nCounts are frequencies, not certainty",
+            "cnot_correlation": "q0: ── H ── ● ── M ──\n             │\nq1: ─────── ⊕ ── M ──\n\nRule: if control q0 = 1, target q1 flips\nBell-style output: mostly 00 and 11",
+            "qiskit_debugging": "Common error\n  QuantumCircuit(1, 0)\n  qc.measure(0, 0)  ← no classical bit exists\n\nFix\n  QuantumCircuit(1, 1)\n  qc.measure(0, 0)",
+        },
+        "ar": {
+            "orientation": "كود Qiskit\n  QuantumCircuit(1, 1)\n        ↓\nالدارة\n  q0 ── M ──\n        │\n  c0 ◄──0\n        ↓\nالخرج الكلاسيكي: {'0': shots}",
+            "qubit_measurement": "قبل القياس\n  حالة qubit: |0⟩ أو α|0⟩ + β|1⟩\n        ↓ measurement\nبعد القياس\n  نتيجة كلاسيكية واحدة في كل shot: 0 أو 1",
+            "hadamard_superposition": "البداية\n  |0⟩\n        ↓ بوابة H\nقبل القياس\n  (|0⟩ + |1⟩) / √2\n        ↓ shots كثيرة\nالعدّادات counts\n  0 ≈ 50%   1 ≈ 50%",
+            "shots_counts": "تنفيذ الدارة مرة = shot واحدة\n        ↓\n10 shots → عينة صغيرة متذبذبة\n        ↓\n1000 shots → توزيع أوضح\n        ↓\ncounts تكرارات وليست يقينًا",
+            "cnot_correlation": "q0: ── H ── ● ── M ──\n             │\nq1: ─────── ⊕ ── M ──\n\nالقاعدة: إذا كان control q0 = 1 تنقلب target q1\nخرج شبيه بحالة Bell: غالبًا 00 و11",
+            "qiskit_debugging": "خطأ شائع\n  QuantumCircuit(1, 0)\n  qc.measure(0, 0)  ← لا يوجد classical bit\n\nالتصحيح\n  QuantumCircuit(1, 1)\n  qc.measure(0, 0)",
+        },
+        "fr": {
+            "orientation": "Code Qiskit\n  QuantumCircuit(1, 1)\n        ↓\nCircuit\n  q0 ── M ──\n        │\n  c0 ◄──0\n        ↓\nSortie classique : {'0': shots}",
+            "qubit_measurement": "Avant la mesure\n  état du qubit : |0⟩ ou α|0⟩ + β|1⟩\n        ↓ measurement\nAprès la mesure\n  un résultat classique par shot : 0 ou 1",
+            "hadamard_superposition": "Départ\n  |0⟩\n        ↓ porte H\nAvant la mesure\n  (|0⟩ + |1⟩) / √2\n        ↓ plusieurs shots\nCounts\n  0 ≈ 50 %   1 ≈ 50 %",
+            "shots_counts": "Exécuter une fois = un shot\n        ↓\n10 shots → petit échantillon fluctuant\n        ↓\n1000 shots → distribution plus claire\n        ↓\nLes counts sont des fréquences, pas une certitude",
+            "cnot_correlation": "q0: ── H ── ● ── M ──\n             │\nq1: ─────── ⊕ ── M ──\n\nRègle : si le contrôle q0 = 1, la cible q1 bascule\nSortie de type Bell : surtout 00 et 11",
+            "qiskit_debugging": "Erreur fréquente\n  QuantumCircuit(1, 0)\n  qc.measure(0, 0)  ← aucun bit classique\n\nCorrection\n  QuantumCircuit(1, 1)\n  qc.measure(0, 0)",
+        },
     }
-    return diagrams.get(lesson_id, "Diagram is being prepared for this lesson.")
-
-
-
+    lang = i18n.current_lang(st)
+    fallback = {"ar": "يُحضّر المخطط لهذا الدرس.", "fr": "Le schéma de cette leçon est en préparation.", "en": "Diagram is being prepared for this lesson."}
+    return diagrams.get(lang, diagrams["en"]).get(lesson_id, fallback[lang])
 
 
 def lesson_sequence_frames(lesson_id: str) -> List[Dict[str, str]]:
-    """Return the professional four-frame concept sequence for a lesson."""
+    """Return a localized four-frame learning sequence."""
+    lang = i18n.current_lang(st)
+    copy = {
+        "en": [
+            ("1. Observe", "What is the phenomenon?", "Write one prediction before reading the code.", "Ask AI only for a question that helps you notice the key idea."),
+            ("2. Model", "How does the circuit represent it?", "Point to the qubit line, gate or operation, measurement, and classical output.", "Ask AI to check whether you identified the circuit parts correctly."),
+            ("3. Code", "Which Qiskit line creates the effect?", "Name the line that prepares, changes, measures, or stores information.", "Ask AI for a hint about one code line, not a full solution."),
+            ("4. Interpret", "What does the result mean?", "Write a reasoning sentence using measurement, shots, or counts.", "Ask AI to check your reasoning sentence and improve one phrase."),
+        ],
+        "ar": [
+            ("1. ألاحظ", "ما الظاهرة التي أدرسها؟", "اكتب توقعًا واحدًا قبل قراءة الكود.", "اطلب من الذكاء الاصطناعي سؤالًا فقط يساعدك على ملاحظة الفكرة الأساسية."),
+            ("2. أمثّل", "كيف تمثل الدارة هذه الظاهرة؟", "حدد خط qubit والبوابة أو العملية والقياس والخرج الكلاسيكي.", "اطلب من الذكاء الاصطناعي التحقق من تحديدك لأجزاء الدارة."),
+            ("3. أربط بالكود", "أي سطر في Qiskit ينشئ التأثير؟", "سمّ السطر الذي يهيئ المعلومات أو يغيّرها أو يقيسها أو يخزنها.", "اطلب تلميحًا حول سطر واحد من الكود، لا حلًا كاملًا."),
+            ("4. أفسّر", "ماذا تعني النتيجة؟", "اكتب جملة استدلال تستعمل measurement أو shots أو counts.", "اطلب التحقق من جملة استدلالك وتحسين عبارة واحدة."),
+        ],
+        "fr": [
+            ("1. Observer", "Quel est le phénomène étudié ?", "Écrivez une prédiction avant de lire le code.", "Demandez à l'IA une seule question qui vous aide à repérer l'idée essentielle."),
+            ("2. Modéliser", "Comment le circuit le représente-t-il ?", "Repérez la ligne du qubit, la porte ou l'opération, la mesure et la sortie classique.", "Demandez à l'IA de vérifier votre identification des parties du circuit."),
+            ("3. Relier au code", "Quelle ligne Qiskit produit l'effet ?", "Nommez la ligne qui prépare, transforme, mesure ou stocke l'information.", "Demandez un indice sur une ligne de code, pas la solution complète."),
+            ("4. Interpréter", "Que signifie le résultat ?", "Rédigez une phrase de raisonnement avec measurement, shots ou counts.", "Demandez à l'IA de vérifier votre raisonnement et d'améliorer une formulation."),
+        ],
+    }[lang]
+    keys = ["observe", "model", "code", "interpret"]
     return [
         {
-            "key": "observe",
-            "label": "1. Observe",
-            "title": "What is the phenomenon?",
-            "image": f"sequence/{lesson_id}_01_observe.png",
-            "student_action": "Write one prediction before reading the code.",
-            "ai_rule": "Ask AI only for a question that helps you notice the key idea.",
-        },
-        {
-            "key": "model",
-            "label": "2. Model",
-            "title": "How does the circuit represent it?",
-            "image": f"sequence/{lesson_id}_02_model.png",
-            "student_action": "Point to the qubit line, gate or operation, measurement, and classical output.",
-            "ai_rule": "Ask AI to check whether you identified the circuit parts correctly.",
-        },
-        {
-            "key": "code",
-            "label": "3. Code",
-            "title": "Which Qiskit line creates the effect?",
-            "image": f"sequence/{lesson_id}_03_code.png",
-            "student_action": "Name the line that prepares, changes, measures, or stores information.",
-            "ai_rule": "Ask AI for a hint about one code line, not a full solution.",
-        },
-        {
-            "key": "interpret",
-            "label": "4. Interpret",
-            "title": "What does the result mean?",
-            "image": f"sequence/{lesson_id}_04_interpret.png",
-            "student_action": "Write a reasoning sentence using measurement, shots, or counts.",
-            "ai_rule": "Ask AI to check your reasoning sentence and improve one phrase.",
-        },
+            "key": key,
+            "label": values[0],
+            "title": values[1],
+            "image": f"sequence/{lesson_id}_{index:02d}_{key}.png",
+            "student_action": values[2],
+            "ai_rule": values[3],
+        }
+        for index, (key, values) in enumerate(zip(keys, copy), start=1)
     ]
 
 
@@ -1349,11 +1498,14 @@ def concept_flow_for_lesson(lesson: Dict[str, Any]) -> List[Dict[str, str]]:
     frames = lesson_sequence_frames(lesson["id"])
     visual_steps = lesson.get("visual_steps", []) or []
     code_focus = lesson.get("code_focus", []) or []
+    lang = i18n.current_lang(st)
+    before_label = {"ar": "قبل", "fr": "Avant", "en": "Before"}[lang]
+    after_label = {"ar": "بعد", "fr": "Après", "en": "After"}[lang]
     body = [
         lesson.get("big_idea", lesson.get("concept", "")),
         " → ".join(visual_steps) if visual_steps else lesson.get("objective", ""),
         " ".join(code_focus[:2]) if code_focus else lesson.get("qiskit_code", ""),
-        f"Before: {lesson.get('before_measurement','')} After: {lesson.get('after_measurement','')}",
+        f"{before_label}: {lesson.get('before_measurement','')} {after_label}: {lesson.get('after_measurement','')}",
     ]
     for item, text in zip(frames, body):
         item["body"] = text
@@ -1449,8 +1601,9 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
     lang = st.selectbox(
         "Coach response language",
         ["Auto-detect", "English", "Arabic", "French"],
-        index=0,
+        index={"en": 1, "ar": 2, "fr": 3}[i18n.current_lang(st)],
         key=f"genai_coach_lang_{lesson['id']}",
+        format_func=lambda value: i18n.tr(value),
     )
     attempt = st.text_area(
         "Your attempt first",
@@ -1469,7 +1622,7 @@ def render_genai_concept_coach(student: Dict[str, Any], lesson: Dict[str, Any]) 
     selected_mode = None
     selected_instruction = None
     for col, (label, instruction) in zip(cols, support_modes):
-        if col.button(label, key=f"coach_{lesson['id']}_{selected_step['key']}_{label}", use_container_width=True):
+        if col.button(i18n.tr(label), key=f"coach_{lesson['id']}_{selected_step['key']}_{label}", use_container_width=True):
             selected_mode = label
             selected_instruction = instruction
     if selected_mode:
@@ -1582,38 +1735,73 @@ def concept_builder_profile(lesson: Dict[str, Any]) -> Dict[str, Any]:
     profile["title"] = lesson.get("title", "Concept")
     profile["big_idea"] = lesson.get("big_idea", lesson.get("concept", ""))
     profile["misconception"] = lesson.get("misconception", profile["misconception_test"])
+    profile["takeaway"] = lesson.get("big_idea", profile["takeaway"])
+    if lesson.get("code_focus"):
+        profile["qiskit_meaning"] = " ".join(lesson.get("code_focus", [])[:2])
     profile["qiskit_code"] = lesson.get("qiskit_code", "")
     profile["check_question"] = lesson.get("check_question", "Explain the result in your own words.")
+    lang = i18n.current_lang(st)
+    localized_builder = {
+        "ar": {
+            "orientation": ("تخيّل الدارة بروتوكول مختبر: q0 هو النظام، وmeasurement أداة الملاحظة، وc0 دفتر تسجيل النتيجة.", "التشبيه يساعد على تمييز الموارد، لكنه لا يعني أن الحالة الكمية قيمة كلاسيكية مخفية.", "خط q0 ← measurement ← خرج c0"),
+            "qubit_measurement": ("القياس يشبه التقاط صورة واحدة: نحصل على ملاحظة مسجلة، لا على الوصف الكامل للحالة.", "ليس qubit قطعة نقدية ذات وجه ثابت قبل النظر إليها.", "حالة كمية ← measurement ← قيمة كلاسيكية"),
+            "hadamard_superposition": ("بوابة H تغيّر إعداد التجربة قبل أخذ العينات، فتغيّر نمط النتائج اللاحقة.", "لا يعني ذلك أن qubit أصبح بتّين كلاسيكيين في الوقت نفسه.", "|0⟩ ← H ← measurement ← counts تقارب 50/50"),
+            "shots_counts": ("shots مثل تكرار التجربة العلمية: تجربة واحدة لا تكشف النمط بوضوح.", "counts عينات من النتائج وليست طباعة مباشرة للحالة الكمية.", "10 shots متذبذبة ← 1000 shots أوضح"),
+            "cnot_correlation": ("CNOT قاعدة شرطية: عندما يكون control فعّالًا، يتغير target.", "CNOT ليست آلة نسخ عامة لأي حالة كمية.", "H على q0 ← CNOT(q0,q1) ← غالبًا 00 و11"),
+            "qiskit_debugging": ("تصحيح الخطأ يشبه قائمة فحص مختبر: هل خصصت النظام وأداة القياس ومكان تسجيل النتيجة؟", "تصحيح الصياغة وحده لا يكفي؛ يجب أن يطابق التصحيح معنى الدارة المقصود.", "موارد ناقصة ← خطأ ← دارة مصححة"),
+        },
+        "fr": {
+            "orientation": ("Pensez au circuit comme à un protocole de laboratoire : q0 est le système, measurement l'instrument et c0 le carnet de résultat.", "Cette analogie distingue les ressources, mais l'état quantique n'est pas une valeur classique cachée.", "ligne q0 → measurement → sortie c0"),
+            "qubit_measurement": ("La mesure ressemble à une photographie unique : elle produit une observation enregistrée, pas la description complète de l'état.", "Un qubit n'est pas une pièce possédant déjà une face classique fixe.", "état quantique → measurement → valeur classique"),
+            "hadamard_superposition": ("La porte H modifie la préparation de l'expérience avant l'échantillonnage et change donc le motif des résultats.", "Cela ne signifie pas que le qubit devient deux bits classiques simultanément.", "|0⟩ → H → measurement → counts proches de 50/50"),
+            "shots_counts": ("Les shots ressemblent à des répétitions expérimentales : un seul essai ne suffit pas pour voir clairement le motif.", "Les counts sont des échantillons, pas une impression directe de l'état quantique.", "10 shots fluctuent → 1000 shots stabilisent"),
+            "cnot_correlation": ("CNOT agit comme une règle conditionnelle : si le contrôle est actif, la cible bascule.", "CNOT n'est pas une machine universelle de copie d'états quantiques.", "H sur q0 → CNOT(q0,q1) → surtout 00 et 11"),
+            "qiskit_debugging": ("Déboguer ressemble à vérifier une liste de laboratoire : système, instrument et emplacement d'enregistrement sont-ils disponibles ?", "Corriger la syntaxe ne suffit pas ; la correction doit respecter le sens du circuit visé.", "ressources insuffisantes → erreur → circuit corrigé"),
+        },
+    }
+    if lang in localized_builder:
+        analogy, analogy_limit, visual_label = localized_builder[lang].get(lid, localized_builder[lang]["orientation"])
+        profile["phenomenon"] = lesson.get("concept", profile["phenomenon"])
+        profile["analogy"] = analogy
+        profile["analogy_limit"] = analogy_limit
+        profile["misconception_test"] = lesson.get("misconception", profile["misconception_test"])
+        profile["visual_label"] = visual_label
     return profile
 
 
 def concept_builder_svg_card(lesson: Dict[str, Any]) -> str:
-    """Return a professional safe SVG-style visual card using approved templates."""
+    """Return a localized safe visual card using approved templates."""
     profile = concept_builder_profile(lesson)
     title = profile["title"]
     focus = profile["takeaway"]
     label = profile["visual_label"]
     key_line = profile["key_line"]
+    lang = i18n.current_lang(st)
+    labels = {
+        "ar": {"kicker": "دعامة بصرية مولدة من قالب", "chip": "SVG آمن", "observe": "ألاحظ", "model": "أمثّل", "interpret": "أقيس وأفسّر", "key": "سطر Qiskit الأساسي:", "footer": "تُولد هذه البطاقة من قالب درس تربوي معتمد، لا من كود تنفيذي عشوائي."},
+        "fr": {"kicker": "Support visuel généré par modèle", "chip": "SVG sécurisé", "observe": "Observer", "model": "Modéliser", "interpret": "Mesurer / interpréter", "key": "Ligne Qiskit clé :", "footer": "Cette carte provient d'un modèle pédagogique validé, et non d'un code exécutable arbitraire."},
+        "en": {"kicker": "Template-generated visual support", "chip": "safe SVG", "observe": "Observe", "model": "Model", "interpret": "Measure / interpret", "key": "Key Qiskit line:", "footer": "This card is generated from an approved lesson template, not arbitrary executable AI code."},
+    }[lang]
     return f"""
     <div class='qai-builder-pro-card'>
       <div class='qai-builder-pro-head'>
         <div>
-          <div class='qai-builder-kicker'>Template-generated visual support</div>
+          <div class='qai-builder-kicker'>{labels['kicker']}</div>
           <div class='qai-builder-title'>{title}</div>
           <div class='qai-builder-sub'>{focus}</div>
         </div>
-        <div class='qai-builder-chip'>safe SVG</div>
+        <div class='qai-builder-chip'>{labels['chip']}</div>
       </div>
       <div class='qai-builder-diagram'>
-        <div class='qai-node qai-node-blue'>Observe</div>
+        <div class='qai-node qai-node-blue'>{labels['observe']}</div>
         <div class='qai-arrow'>→</div>
-        <div class='qai-node qai-node-indigo'>Model</div>
+        <div class='qai-node qai-node-indigo'>{labels['model']}</div>
         <div class='qai-arrow'>→</div>
-        <div class='qai-node qai-node-teal'>Measure / interpret</div>
+        <div class='qai-node qai-node-teal'>{labels['interpret']}</div>
       </div>
       <div class='qai-builder-visual-line'>{label}</div>
-      <div class='qai-builder-code-line'><b>Key Qiskit line:</b> <code>{key_line}</code></div>
-      <div class='qai-builder-footer'>This card is generated from an approved lesson template, not arbitrary executable AI code.</div>
+      <div class='qai-builder-code-line'><b>{labels['key']}</b> <code>{key_line}</code></div>
+      <div class='qai-builder-footer'>{labels['footer']}</div>
     </div>
     """
 
@@ -1675,7 +1863,7 @@ def professional_concept_builder_output(lesson: Dict[str, Any], mode: str, attem
 - أين يظهر ذلك في Qiskit.  
 - ماذا تعني النتيجة بعد measurement/counts."""
         if mode == "mini_quiz":
-            return f"""### Mini quiz
+            return f"""### اختبار تكويني قصير
 
 1. **Concept:** {p['check_question']}  
 2. **Code reading:** ماذا يفعل السطر `{p['key_line']}`؟  
@@ -1700,6 +1888,80 @@ def professional_concept_builder_output(lesson: Dict[str, Any], mode: str, attem
 {p['takeaway']}
 
 **سؤال متابعة:** اشرح لماذا لا يكفي النظر إلى الكود دون تفسير القياس أو counts."""
+    if language == "French":
+        if mode == "simpler_explanation":
+            return f"""### Explication structurée
+
+**Idée essentielle.**  
+{p['big_idea'] or p['phenomenon']}
+
+**Ce que la représentation visuelle met en évidence.**  
+{p['takeaway']}
+
+**Lien avec Qiskit.**  
+`{p['key_line']}`  
+{p['qiskit_meaning']}
+
+**Attention à la confusion fréquente.**  
+{p['misconception']}
+
+**Action de l'apprenant.**  
+Rédigez une phrase qui distingue ce qui change avant la mesure de ce qui est observé après measurement/counts."""
+        if mode == "analogy":
+            return f"""### Analogie guidée
+
+**Analogie.**  
+{p['analogy']}
+
+**Limite de l'analogie.**  
+{p['analogy_limit']}
+
+**Usage pédagogique.**  
+Utilisez l'analogie pour organiser l'idée, puis revenez au circuit et à la ligne Qiskit mise en évidence.
+
+**Auto-vérification.**  
+Où la ligne `{p['key_line']}` intervient-elle exactement dans le processus ?"""
+        if mode == "misconception_check":
+            return f"""### Diagnostic d'une conception erronée
+
+**Confusion possible.**  
+{p['misconception']}
+
+**Question diagnostique.**  
+{p['check_question']}
+
+**Une réponse solide doit mentionner :**
+- l'opération ou la ressource du circuit ;
+- la ligne Qiskit correspondante ;
+- le sens du résultat après measurement ou après plusieurs shots."""
+        if mode == "mini_quiz":
+            return f"""### Mini-quiz formatif
+
+1. **Concept :** {p['check_question']}  
+2. **Lecture du code :** Que fait `{p['key_line']}` dans cette leçon ?  
+3. **Interprétation :** Comment la représentation visuelle soutient-elle l'idée suivante : {p['takeaway']} ?
+
+**Critère de réussite.**  
+La réponse distingue l'opération du circuit du résultat de mesure observé et emploie au moins un terme Qiskit correct."""
+        if mode == "qiskit_bridge":
+            return f"""### Du code au concept
+
+**Ligne clé.**  
+`{p['key_line']}`
+
+**Signification.**  
+{p['qiskit_meaning']}
+
+**Contexte minimal.**
+```python
+{p['qiskit_code']}
+```
+
+**Lien visuel à expliquer.**  
+{p['takeaway']}
+
+**Question de suivi.**  
+Pourquoi la lecture du code ne suffit-elle pas sans interpréter measurement et counts ?"""
     # English professional outputs.
     if mode == "simpler_explanation":
         return f"""### Structured explanation
@@ -1798,11 +2060,14 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
         height=115,
         key=f"concept_builder_attempt_{lesson['id']}",
     )
+    builder_languages = ["English", "Arabic", "French"]
+    builder_default = {"en": 0, "ar": 1, "fr": 2}[i18n.current_lang(st)]
     language = st.selectbox(
         "Output language",
-        ["English", "Arabic"],
-        index=0,
+        builder_languages,
+        index=builder_default,
         key=f"concept_builder_language_{lesson['id']}",
+        format_func=lambda value: i18n.tr(value),
     )
     mode_specs = [
         ("simpler_explanation", "Generate structured explanation"),
@@ -1852,7 +2117,7 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
         diagnostic="curated professional concept-builder output",
         latency_ms=0,
         response_word_count=len(response.split()),
-        student_input_language="Arabic" if any('\u0600' <= ch <= '\u06FF' for ch in attempt) else "English",
+        student_input_language=feedback_engine.detect_input_language(attempt),
         response_language=language,
         is_fallback_used=0,
     )
@@ -1878,8 +2143,8 @@ def render_concept_builder(student: Dict[str, Any], lesson: Dict[str, Any]) -> N
 
 def render_lesson_media(lesson_id: str, student: Optional[Dict[str, Any]] = None) -> None:
     """V11 visual learning flow: animation, simulator, code bridge, quick checks."""
-    media = LESSON_MEDIA.get(lesson_id, {})
-    lesson = content.lesson_by_id(lesson_id)
+    media = localized_media(lesson_id)
+    lesson = content.lesson_by_id(lesson_id, i18n.current_lang(st))
     sid = student.get("id") if student else None
 
     st.markdown(
@@ -1975,7 +2240,8 @@ def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recomm
     st.markdown("### Learning path")
     st.caption("Six compact modules. Choose a card to open it; the platform remembers your latest module.")
 
-    rows = [content.LESSONS[i:i + 3] for i in range(0, len(content.LESSONS), 3)]
+    lessons = localized_lessons()
+    rows = [lessons[i:i + 3] for i in range(0, len(lessons), 3)]
     for row in rows:
         cols = st.columns(len(row))
         for col, lesson in zip(cols, row):
@@ -1992,7 +2258,7 @@ def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recomm
                     f"""
                     <div class='{card_class}'>
                       <div class='qai-card-kicker'>{status} · {lesson.get('level', 'Module')} · {lesson.get('duration', '')}</div>
-                      <div class='qai-card-title'>{marker} Module {content.LESSONS.index(lesson)+1}</div>
+                      <div class='qai-card-title'>{marker} Module {lessons.index(lesson)+1}</div>
                       <div class='qai-card-subtitle'>{lesson.get('short_title', lesson['title'])}</div>
                       <div class='qai-card-concepts'>{concept_html}</div>
                     </div>
@@ -2020,7 +2286,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     valid_ids = {l["id"] for l in content.LESSONS}
     if selected_id not in valid_ids:
         selected_id = first_incomplete_lesson_id(student["id"])
-    lesson = content.lesson_by_id(selected_id)
+    lesson = content.lesson_by_id(selected_id, i18n.current_lang(st))
     record_lesson_entry(student["id"], selected_id)
     db.log_event(student["id"], "student", "open_module", selected_id)
 
@@ -2195,7 +2461,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         st.info("No external LLM is configured. The lab will use a local formative fallback.")
 
     current_lesson_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else content.LESSONS[0]["id"]
-    current_lesson = content.lesson_by_id(current_lesson_id)
+    current_lesson = content.lesson_by_id(current_lesson_id, i18n.current_lang(st))
     concepts = sorted({c for lesson in content.LESSONS for c in lesson["concepts"]})
     default_concept = current_lesson["concepts"][0] if current_lesson.get("concepts") else concepts[0]
     default_index = concepts.index(default_concept) if default_concept in concepts else 0
@@ -2205,14 +2471,16 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         task = st.selectbox(
             "Tutor task",
             ["Explain a concept", "Generate a practice exercise", "Check my explanation", "Debug or interpret Qiskit code"],
+            format_func=lambda value: i18n.tr(value),
         )
     with c2:
-        concept = st.selectbox("Concept focus", concepts, index=default_index)
+        concept = st.selectbox("Concept focus", concepts, index=default_index, format_func=lambda value: i18n.concept_label(value, i18n.current_lang(st)))
     with c3:
         tutor_language = st.selectbox(
             "Response language",
             ["Auto-detect", "English", "Arabic", "French"],
-            index=0,
+            index={"en": 1, "ar": 2, "fr": 3}[i18n.current_lang(st)],
+            format_func=lambda value: i18n.tr(value),
             help="Auto-detect uses the language of your question. Select Arabic to force Arabic responses.",
         )
 
@@ -2320,11 +2588,11 @@ def render_survey(student: Dict[str, Any]) -> None:
     with st.form("survey_form"):
         st.markdown("Rate each item from 1 = strongly disagree to 5 = strongly agree.")
         responses: Dict[str, int] = {}
-        for key, label in content.SURVEY_ITEMS:
+        for key, label in content.survey_items_for(i18n.current_lang(st)):
             responses[key] = st.slider(label, 1, 5, 3, key=f"survey_{key}")
         open_feedback: Dict[str, str] = {}
         st.markdown("### Open-ended feedback")
-        for key, label in content.OPEN_ENDED_ITEMS:
+        for key, label in content.open_ended_items_for(i18n.current_lang(st)):
             open_feedback[key] = st.text_area(label, key=f"open_{key}")
         submitted = st.form_submit_button("Submit survey", type="primary", use_container_width=True)
     if submitted:
@@ -2437,7 +2705,7 @@ def consent_audit_table() -> pd.DataFrame:
 
 
 def render_study_protocol() -> None:
-    hero("Study Protocol", "Operational checklist for running the QAI pilot as a controlled educational study.")
+    hero("Study Protocol", "Operational checklist for running the 3alimnIA pilot as a controlled educational study.")
     st.info(
         "This page does not change the database. It documents the active study design, checks consent and workflow readiness, "
         "and prepares protocol evidence for the evaluator."
@@ -3398,7 +3666,7 @@ def render_results_export() -> None:
             dfs.update(v125_research_interaction_tables(anonymized=True))
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
-            st.session_state["export_filename"] = "qai_research_export_anonymized.xlsx"
+            st.session_state["export_filename"] = "3alimnia_research_export_anonymized.xlsx"
             db.log_event(None, "evaluator", "anonymized_export_prepared", "Evaluator prepared anonymized research export")
 
     if prepare_full:
@@ -3410,14 +3678,14 @@ def render_results_export() -> None:
             dfs.update(v125_research_interaction_tables(anonymized=False))
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
-            st.session_state["export_filename"] = "qai_full_admin_backup.xlsx"
+            st.session_state["export_filename"] = "3alimnia_full_admin_backup.xlsx"
             db.log_event(None, "evaluator", "full_backup_prepared", "Evaluator prepared full administrative backup")
 
     if "export_excel" in st.session_state:
         st.download_button(
             "Download prepared workbook",
             data=st.session_state["export_excel"],
-            file_name=st.session_state.get("export_filename", "qai_export.xlsx"),
+            file_name=st.session_state.get("export_filename", "3alimnia_export.xlsx"),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
         )
@@ -3437,6 +3705,8 @@ def render_results_export() -> None:
 def main() -> None:
     db.init_db()
     init_state()
+    i18n.install_streamlit_i18n(st)
+    i18n.apply_language_css(st, i18n.current_lang(st))
 
     # Render a reliable in-page shell. The left navigation is a real Streamlit
     # bordered container, not an HTML wrapper around widgets; this prevents the

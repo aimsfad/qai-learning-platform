@@ -1,41 +1,76 @@
-# V12.7 Control / Experimental Group
+# 3alimnIA | علّمنيا - Multilingual Generative-AI Learning Platform
 
-This version adds an optional research-design switch for controlled comparisons. By default, `ENABLE_CONTROL_GROUP = "false"`, so the platform keeps the normal single-arm AI-supported workflow. When enabled in Streamlit secrets, new participants are balanced between `control` and `experimental` groups. Control participants use lessons, visual simulators, reflections, pre/post tests, and surveys without AI Coach or Concept Builder. Experimental participants keep AI Coach and Concept Builder. Exports preserve `study_group` for group-level analysis.
+منصة تعليمية متعددة المسارات لتبسيط المفاهيم الصعبة بالشرح البصري والمحاكاة والمحاولة الأولى من المتعلم ومدرّب ذكاء توليدي مقيّد تربويًا.
 
-# QAI Learning Evaluation Platform - v8.0 Structural Cleanup
+## الإصدار V3 متعدد اللغات
 
-This package is a safe structural cleanup of the previous Streamlit application.
+يطبق هذا الإصدار اختيار اللغة على المنصة كاملة، وليس على الصفحة العامة فقط:
 
-## Main changes
-- `app.py` is now a small entry point.
-- The previous large app body is moved to `main_app.py` as a stability bridge.
-- CSS is externalized to `.streamlit/style.css`.
-- New helper modules are added: `config.py`, `state.py`, `ui_components.py`, `media_utils.py`.
-- A `pages/` structure is prepared for the next full refactor.
-- Old version-change Markdown clutter and `app_original.py` are not included.
+- العربية مع اتجاه RTL كامل.
+- Français avec une interface LTR complète.
+- English with a complete LTR interface.
+- حفظ لغة المتعلم في قاعدة البيانات واستعادتها بعد تسجيل الدخول.
+- ترجمة صفحات التسجيل والدخول والموافقة البحثية والمسار التعليمي وفضاء المقيّم.
+- ترجمة الوحدات التعليمية الست وشروحاتها وخطواتها وأسئلة التحقق والتأمل.
+- ترجمة الاختبارات القبلية والبعدية: 18 سؤالًا قبليًا و18 سؤالًا بعديًا في كل لغة.
+- ترجمة الاستبيان والأسئلة المفتوحة والوسائط التعليمية والتوجيهات.
+- ربط اللغة المختارة تلقائيًا بردود AI Coach وAI Tutor وConcept Builder.
+- دعم Concept Builder بالعربية والفرنسية والإنجليزية.
+- إبقاء كود Qiskit والمصطلحات التقنية الضرورية دون ترجمة تفسد معناها.
+- الحفاظ على مفاتيح البيانات الداخلية بالإنجليزية لضمان ثبات التحليلات والمقارنات البحثية بين اللغات.
 
-## Deployment
-Upload the package files to the existing GitHub branch, merge, and reboot Streamlit Cloud.
+## المسارات
 
-## Next step
-In v8.1, page functions can be gradually moved from `main_app.py` into `pages/student/` and `pages/evaluator/` without changing the database layer.
+- **Quantum Computing:** المسار التشغيلي الكامل حاليًا.
+- **Machine Learning:** معاينة منتج قيد التطوير.
+- **AI Foundations:** معاينة منتج قيد التطوير.
 
+## تشغيل المنصة
 
-## v8.1 update
+### Windows
 
-CSS is now fully externalized and the AI Tutor Lab uses a continuous chat interface while preserving research logging.
+```text
+INSTALL_AND_RUN_WINDOWS.bat
+```
 
-### v9.2 research instrumentation note
-The active learning media are the sequential concept frames in `assets/lesson_media/sequence/` and their matching concept-sequence videos. Legacy duplicate lesson images are intentionally not included in this release.
+أو يدويًا:
 
-The platform now logs `lesson_entry` and `ai_request_timing` events. These can be used to estimate whether a participant requested GenAI support immediately or after spending time on the lesson concept.
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+```
 
+### Linux / macOS
 
-## V12.1 research cleanup
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-This package keeps only README.md and CHANGELOG.md in the repository root, removes unused legacy media/cache files, activates the six interactive simulators, adds evaluator analytics for AI task mode and time-before-AI, and adds optional Anthropic/Claude support via Streamlit secrets.
+## الإعدادات والنشر
 
+1. انسخ `.streamlit/secrets_example.toml` إلى `.streamlit/secrets.toml`.
+2. غيّر كلمات المرور ومفاتيح API.
+3. لا ترفع ملف `secrets.toml` إلى GitHub.
+4. استخدم PostgreSQL/Neon عند جمع بيانات حقيقية متعددة المستخدمين.
+5. اختر `app.py` ملف التشغيل في Streamlit Cloud.
 
-## V12.8 Study Protocol and Consent Gate
+## الملفات الأساسية
 
-Adds an evaluator-facing Study Protocol page with active study configuration, workflow safeguards, consent/completion audit, and a downloadable protocol evidence workbook.
+- `app.py`: نقطة تشغيل Streamlit.
+- `main_app.py`: سير العمل التعليمي والبحثي.
+- `i18n.py`: ترجمة الواجهة وتطبيق RTL/LTR واختيار اللغة.
+- `content.py`: المحتوى الأساسي ووظائف استرجاع النسخ المحلية.
+- `content_locales.py`: الترجمات العربية والفرنسية للدروس والاختبارات والاستبيانات.
+- `branding.py`: الهوية والصفحة الرئيسية متعددة اللغات.
+- `feedback_engine.py`: AI Tutor ودعم اكتشاف العربية والفرنسية والإنجليزية.
+- `db.py`: قاعدة البيانات، بما فيها `preferred_language`.
+- `validate_multilingual.py`: فحص اتساق المحتوى متعدد اللغات دون تشغيل الواجهة.
+
+## ملاحظة بحثية
+
+تبقى معرفات الأسئلة والمفاهيم والوحدات ثابتة في قاعدة البيانات مهما تغيرت لغة العرض. وبذلك يمكن تحليل نتائج جميع المشاركين في مجموعة واحدة دون تقسيم البيانات بسبب اللغة.

@@ -1,4 +1,4 @@
-"""LLM provider integration and local fallback for the QAI platform."""
+"""LLM provider integration and local fallback for the 3alimnIA platform."""
 
 from __future__ import annotations
 
@@ -103,6 +103,14 @@ def _normalize_language(value: str) -> str:
 def detect_input_language(text: str = "") -> str:
     if _contains_arabic(text):
         return "Arabic"
+    raw = f" {str(text or '').lower()} "
+    french_markers = (
+        " é", " è", " à", " ç", " ù", " ê", " ô", " î", " je ", " le ", " la ",
+        " les ", " une ", " des ", " pourquoi ", " comment ", " mesure ", " qubit ",
+        " circuit ", " résultat ", " explique ", " erreur ", " porte ",
+    )
+    if any(marker in raw for marker in french_markers):
+        return "French"
     return "English"
 
 
@@ -139,9 +147,7 @@ def resolve_response_language(
     if prof_lang != "Auto-detect":
         return prof_lang
     # Auto-detect from the student's free text.
-    if _contains_arabic(student_input):
-        return "Arabic"
-    return "English"
+    return detect_input_language(student_input)
 
 
 def system_prompt(response_language: str = "English") -> str:

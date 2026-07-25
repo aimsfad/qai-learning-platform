@@ -1,4 +1,4 @@
-"""Database layer for the QAI Streamlit platform."""
+"""Database layer for the 3alimnIA Streamlit platform."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v12.8-study-protocol-consent-gate"
+APP_VERSION = "v13.0-full-multilingual-i18n"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -84,6 +84,7 @@ def init_db() -> None:
             email TEXT,
             institution TEXT,
             academic_level TEXT,
+            preferred_language TEXT DEFAULT 'ar',
             prior_python_level INTEGER DEFAULT 1,
             prior_quantum_level INTEGER DEFAULT 0,
             study_group TEXT,
@@ -226,6 +227,7 @@ def init_db() -> None:
     ensure_column("students", "is_active", "INTEGER DEFAULT 1")
     ensure_column("students", "last_login_at", "TEXT")
     ensure_column("students", "study_group", "TEXT")
+    ensure_column("students", "preferred_language", "TEXT DEFAULT 'ar'")
     ensure_column("ai_interactions", "provider", "TEXT")
     ensure_column("ai_interactions", "model", "TEXT")
     ensure_column("ai_interactions", "diagnostic", "TEXT")
@@ -275,7 +277,7 @@ def ensure_column(table: str, column: str, col_type: str) -> None:
         pass
 
 
-def generate_code(prefix: str = "QAI") -> str:
+def generate_code(prefix: str = "3AI") -> str:
     alphabet = string.ascii_uppercase + string.digits
     for _ in range(30):
         code = f"{prefix}-" + "".join(py_secrets.choice(alphabet) for _ in range(6))
@@ -294,6 +296,7 @@ def create_student(
     password: str,
     participant_code: Optional[str] = None,
     study_group: Optional[str] = None,
+    preferred_language: str = "ar",
 ) -> Dict[str, Any]:
     if not full_name.strip():
         raise ValueError("Full name is required.")
@@ -302,10 +305,10 @@ def create_student(
     student_id = execute_returning_id(
         """
         INSERT INTO students
-        (participant_code, full_name, email, institution, academic_level, prior_python_level,
+        (participant_code, full_name, email, institution, academic_level, preferred_language, prior_python_level,
          prior_quantum_level, study_group, password_hash, created_at, last_login_at, is_active)
         VALUES
-        (:participant_code, :full_name, :email, :institution, :academic_level, :prior_python_level,
+        (:participant_code, :full_name, :email, :institution, :academic_level, :preferred_language, :prior_python_level,
          :prior_quantum_level, :study_group, :password_hash, :created_at, NULL, 1)
         """ + (" RETURNING id" if dialect() != "sqlite" else ""),
         {
@@ -314,6 +317,7 @@ def create_student(
             "email": email.strip().lower(),
             "institution": institution.strip(),
             "academic_level": academic_level,
+            "preferred_language": str(preferred_language or "ar"),
             "prior_python_level": int(prior_python_level),
             "prior_quantum_level": int(prior_quantum_level),
             "study_group": (study_group if study_group is not None else "single_arm"),
@@ -326,6 +330,14 @@ def create_student(
 
 def get_student(student_id: int) -> Optional[Dict[str, Any]]:
     return query_one("SELECT * FROM students WHERE id=:id", {"id": int(student_id)})
+
+
+def set_student_preferred_language(student_id: int, language: str) -> None:
+    """Persist an ISO language code (ar/fr/en) for a learner account."""
+    clean = str(language or "ar").strip().lower()
+    if clean not in {"ar", "fr", "en"}:
+        raise ValueError("language must be ar, fr, or en")
+    exec_sql("UPDATE students SET preferred_language=:lang WHERE id=:id", {"lang": clean, "id": int(student_id)})
 
 
 def assign_study_group(student_id: int) -> str:

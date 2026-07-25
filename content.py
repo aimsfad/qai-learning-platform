@@ -1,4 +1,4 @@
-"""Educational content and assessment instruments for the QAI pilot platform."""
+"""Educational content and assessment instruments for the 3alimnIA pilot platform."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ class MCQ:
     answer_index: int
     explanation: str
     cognitive_level: str = "Understanding"
+    display_concept: str = ""
 
 
 ASSESSMENT_BLUEPRINT: Dict[str, Dict[str, str]] = {
@@ -660,19 +661,113 @@ OPEN_ENDED_ITEMS = [
 ]
 
 
-def questions_for(kind: str) -> List[MCQ]:
-    if kind == "pre":
-        return PRE_TEST
-    if kind == "post":
-        return POST_TEST
-    raise ValueError(f"Unknown test kind: {kind}")
+
+def questions_for(kind: str, lang: str | None = None) -> List[MCQ]:
+    """Return assessment questions localized for display.
+
+    The canonical ``concept`` field and answer index remain unchanged so data
+    collected in different languages are directly comparable.
+    """
+    from content_locales import MCQ_TRANSLATIONS
+    from i18n import cognitive_label, concept_label, normalize_lang
+
+    source = PRE_TEST if kind == "pre" else POST_TEST if kind == "post" else None
+    if source is None:
+        raise ValueError(f"Unknown test kind: {kind}")
+    if lang is None:
+        from i18n import current_lang
+        lang = current_lang()
+    code = normalize_lang(lang)
+    if code == "en":
+        return [MCQ(q.id, q.concept, q.question, list(q.options), q.answer_index, q.explanation, q.cognitive_level, q.concept) for q in source]
+    translations = MCQ_TRANSLATIONS.get(code, {})
+    localized: List[MCQ] = []
+    for q in source:
+        item = translations.get(q.id, {})
+        localized.append(
+            MCQ(
+                q.id,
+                q.concept,
+                item.get("question", q.question),
+                list(item.get("options", q.options)),
+                q.answer_index,
+                item.get("explanation", q.explanation),
+                cognitive_label(q.cognitive_level, code),
+                concept_label(q.concept, code),
+            )
+        )
+    return localized
 
 
-def lesson_by_id(lesson_id: str) -> Dict:
+def lessons_for(lang: str | None = None) -> List[Dict]:
+    """Return a deep-copied localized curriculum while preserving canonical IDs."""
+    from copy import deepcopy
+    from content_locales import LESSON_TRANSLATIONS
+    from i18n import concept_label, level_label, normalize_lang
+
+    if lang is None:
+        from i18n import current_lang
+        lang = current_lang()
+    code = normalize_lang(lang)
+    result: List[Dict] = []
+    translations = LESSON_TRANSLATIONS.get(code, {})
     for lesson in LESSONS:
+        item = deepcopy(lesson)
+        if code != "en":
+            item.update(deepcopy(translations.get(lesson["id"], {})))
+        item["concept_labels"] = [concept_label(c, code) for c in lesson.get("concepts", [])]
+        if code == "en":
+            item["level"] = level_label(str(item.get("level", "")), code)
+        item["language"] = code
+        result.append(item)
+    return result
+
+
+def lesson_by_id(lesson_id: str, lang: str | None = None) -> Dict:
+    for lesson in lessons_for(lang):
         if lesson["id"] == lesson_id:
             return lesson
     raise KeyError(lesson_id)
+
+
+def survey_items_for(lang: str | None = None) -> List[tuple[str, str]]:
+    from content_locales import SURVEY_TRANSLATIONS
+    from i18n import normalize_lang
+
+    if lang is None:
+        from i18n import current_lang
+        lang = current_lang()
+    code = normalize_lang(lang)
+    translations = SURVEY_TRANSLATIONS.get(code, {})
+    return [(key, translations.get(key, text)) for key, text in SURVEY_ITEMS]
+
+
+def open_ended_items_for(lang: str | None = None) -> List[tuple[str, str]]:
+    from content_locales import OPEN_TRANSLATIONS
+    from i18n import normalize_lang
+
+    if lang is None:
+        from i18n import current_lang
+        lang = current_lang()
+    code = normalize_lang(lang)
+    translations = OPEN_TRANSLATIONS.get(code, {})
+    return [(key, translations.get(key, text)) for key, text in OPEN_ENDED_ITEMS]
+
+
+def assessment_blueprint_for(lang: str | None = None) -> Dict[str, Dict[str, str]]:
+    from copy import deepcopy
+    from i18n import concept_label, normalize_lang
+
+    if lang is None:
+        from i18n import current_lang
+        lang = current_lang()
+    code = normalize_lang(lang)
+    result: Dict[str, Dict[str, str]] = {}
+    for concept, details in ASSESSMENT_BLUEPRINT.items():
+        row = deepcopy(details)
+        row["concept_label"] = concept_label(concept, code)
+        result[concept] = row
+    return result
 
 
 CONCEPT_TO_LESSONS: Dict[str, List[str]] = {}
