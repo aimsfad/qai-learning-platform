@@ -1,117 +1,37 @@
-# V12.8 — Study Protocol and Consent Gate
+# سجل تعديلات 3alimnIA
 
-- Added evaluator Study Protocol page.
-- Added active study configuration table.
-- Added research workflow safeguards checklist.
-- Added consent/completion audit table.
-- Added downloadable protocol evidence workbook.
-- Updated application version marker to v12.8-study-protocol-consent-gate.
+## V3 - التدويل الكامل للمنصة
 
-# Changelog
+### اختيار اللغة
 
-## V12.1 Research analytics and repository cleanup
+- إضافة اختيار عالمي للعربية والفرنسية والإنجليزية.
+- تطبيق الاختيار على الصفحة العامة، حساب المتعلم، جميع صفحات الدراسة، والتقييم البحثي.
+- إعادة تحميل الواجهة فور تغيير اللغة لتطبيق RTL/LTR بصورة صحيحة.
+- حفظ `preferred_language` داخل حساب المتعلم واستعادتها عند تسجيل الدخول.
 
-- Removed legacy markdown update files, cache artifacts, and heavy duplicate old media.
-- Kept the active visual learning path: micro-animation, simulator, code bridge, and check.
-- Added evaluator analytics for AI support task/mode and time before AI request.
-- Added optional Anthropic/Claude provider support without adding a new package dependency.
+### المحتوى والتعلمات
 
-# تحديث v8.0 - تنظيف هيكلي آمن
+- ترجمة الوحدات الست كاملة: الأهداف، المفاهيم، الشرح، الأهمية، الفكرة الكبرى، خطوات التصور، جسر Qiskit، سوء الفهم، المهمة، التحقق، التأمل، ومعايير الإنجاز.
+- ترجمة المخططات النصية وتسلسل Observe/Model/Code/Interpret.
+- ترجمة الوسائط التعليمية وتعليمات المحاكيات.
+- ترجمة 36 سؤال تقييم مع الخيارات والتغذية الراجعة.
+- ترجمة الاستبيان والأسئلة المفتوحة.
 
-هذه نسخة انتقالية آمنة وليست إعادة كتابة كاملة. الهدف هو إيقاف تضارب CSS وتنظيم المشروع بدون كسر تسجيل الدخول أو قاعدة البيانات.
+### الذكاء التوليدي
 
-## ما تم إنجازه
-- أصبح `app.py` ملف دخول صغير.
-- نُقلت الواجهة القديمة إلى `main_app.py` مؤقتًا لضمان الاستقرار.
-- نُقل CSS إلى `.streamlit/style.css`.
-- أضيفت ملفات تنظيمية: `config.py`, `state.py`, `ui_components.py`, `media_utils.py`.
-- أُنشئ هيكل `pages/` للتحويل التدريجي لاحقًا.
-- حُذف `app_original.py` وملفات changelog الكثيرة من الحزمة.
+- مزامنة اللغة المختارة مع AI Coach وAI Tutor والخطة التكيفية.
+- إضافة الفرنسية إلى Concept Builder.
+- تحسين كشف لغة سؤال المتعلم ليشمل الفرنسية.
+- توطين بطاقات Concept Builder والرسائل البريدية لإعادة تعيين كلمة المرور.
 
-## لماذا لم نقسم كل شيء دفعة واحدة؟
-لأن التطبيق يحتوي وظائف حساسة: تسجيل الدخول، استرجاع كلمة المرور، حفظ التقدم، الاختبارات، وسجلات AI. التقسيم الكامل دفعة واحدة قد يكسر المنصة. هذه النسخة تثبت الأرضية ثم ننقل الصفحات تدريجيًا في v8.1.
-# تحديث v8.1: تثبيت CSS خارجي وواجهة AI Tutor Chat
+### سلامة البحث
 
-هذه النسخة تكمل v8.0 دون تغيير قاعدة البيانات أو ملفات الأمان.
+- الإبقاء على مفاتيح المفاهيم والوحدات والأسئلة بالإنجليزية داخليًا.
+- عدم تغيير بنية السجلات البحثية الحالية.
+- إضافة ترحيل تلقائي لحقل `preferred_language` للحسابات الموجودة.
 
-## ما تم إنجازه
+### التحقق
 
-- إزالة كتل CSS المضمنة من `main_app.py` حتى لا تتصارع مع `.streamlit/style.css`.
-- الإبقاء على `app.py` كنقطة دخول صغيرة.
-- اعتماد `.streamlit/style.css` كمصدر التصميم الوحيد.
-- تحويل AI Tutor Lab إلى واجهة محادثة مستمرة باستعمال `st.chat_message` و `st.chat_input`.
-- حفظ سجل المحادثة المرئي داخل `st.session_state` لكل طالب.
-- إبقاء تسجيل التفاعل مع الذكاء الاصطناعي داخل قاعدة البيانات كما كان.
-- إضافة زر لمسح سجل المحادثة المرئي فقط دون حذف السجلات البحثية.
-- الإبقاء على هيكل `pages/` كمرحلة انتقالية آمنة قبل النقل الكامل للصفحات.
-
-## ما لم يتم تغييره
-
-- `db.py` لم يتغير.
-- `security.py` لم يتغير.
-- `feedback_engine.py` لم يتغير.
-- `content.py` لم يتغير.
-
-## الخطوة التالية المقترحة
-
-في v8.2 ننقل صفحة الدرس والوسائط فعليًا إلى `pages/student/lesson.py` ونحوّل الصور إلى blocks تعليمية داخلية بدل الاعتماد على صورة طويلة واحدة.
-# v8.2 UI + Media Quality Fix
-
-هذه النسخة تصلح ثلاث ملاحظات ظهرت بعد v8.1:
-
-1. **اختفاء أو ضعف ظهور الشريط الأيسر**
-   - تم تثبيت sidebar الأصلي الخاص بـ Streamlit بصريًا.
-   - تم منع CSS من إخفائه أو جعله باهتًا.
-   - الشعار أصبح QAI نصيًا واضحًا دون أي رمز مشتت.
-
-2. **الشريط العلوي الذي يغطي الصفحة**
-   - تم إلغاء السلوك sticky للشريط التقدمي.
-   - أصبح الشريط جزءًا طبيعيًا من الصفحة ولا يغطي المحتوى.
-
-3. **ضعف مستوى الرسومات التعليمية**
-   - تم استبدال صور المقاطع القديمة برسومات تعليمية جديدة عالية الدقة.
-   - كل درس يحتوي الآن على ثلاث صور واضحة:
-     - Main concept visual
-     - Code/circuit visual
-     - Output/interpretation visual
-   - بقيت الصورة المرجعية القديمة اختيارية داخل Expander فقط.
-
-لم يتم تعديل db.py أو security.py أو feedback_engine.py أو content.py.
-# v8.3 Sidebar, top bar, and media polish
-
-هذا التحديث يعالج ملاحظات ما بعد v8.2:
-
-- إعادة إبراز الشريط الجانبي بلون داكن واضح وتباين عالٍ بدل ظهوره كمساحة فارغة.
-- منع شريط Streamlit العلوي من تغطية بداية صفحة الطالب عبر ضبط الهيدر والمسافة العلوية.
-- تحسين بطاقات الصفحة الأولى وصفحة الطالب حتى لا تظهر العناصر ملتصقة مثل `6 modulesAI tutorProgress tracking`.
-- إعادة بناء الصور التعليمية المقسمة بدقة 1600x900 وبنمط أبسط: كل صورة تشرح فكرة واحدة فقط.
-- الإبقاء على البنية الجديدة v8: `app.py` كنقطة دخول، `main_app.py` للتطبيق المستقر، و CSS خارجي في `.streamlit/style.css`.
-
-لم يتم تعديل الملفات الحساسة:
-
-- `db.py`
-- `security.py`
-- `feedback_engine.py`
-- `content.py`
-
-## الاختبار المقترح بعد النشر
-
-1. افتح Student workspace قبل تسجيل الدخول: يجب أن يظهر الشريط الجانبي بوضوح.
-2. سجّل الدخول كطالب: يجب ألا يغطي أي شريط بداية الصفحة.
-3. افتح Learning Path ثم Module 2 أو Module 3: يجب أن تظهر الصور المقسمة الجديدة بوضوح داخل تبويب Visual and video.
-
-## V9.0 Guided Concept Journey + Professional Sequential Media
-
-- Added a clearer four-step learning route for each concept: Observe, Model, Code, Interpret.
-- Rebuilt lesson media as professional sequential frames instead of crowded all-in-one images.
-- Added step-aware GenAI learning coach: student selects the current step and writes an attempt before AI support.
-- Added short MP4 concept-sequence videos generated from the four pedagogical frames.
-
-## v9.2 - Research hygiene and AI timing instrumentation
-
-- Removed unused legacy documentation files from the release package; keep only README.md and CHANGELOG.md at the root.
-- Removed Python cache files and updated .gitignore.
-- Removed legacy clean PNG and old micro-video duplicates; the active lesson media now uses the sequential concept frames and concept-sequence MP4 files.
-- Added research event logging for `lesson_entry` and `ai_request_timing`, including seconds spent in a lesson before requesting GenAI support.
-- Restored a safe inline AI clarification helper used by the concept and Qiskit panels.
-- Kept database, security, evaluator export, and authentication behavior unchanged.
+- اجتازت جميع ملفات Python فحص `py_compile`.
+- اجتاز فحص المحتوى: 6 وحدات و18 سؤالًا قبليًا و18 سؤالًا بعديًا لكل لغة.
+- اجتاز اختبار SQLite لإنشاء الحساب وحفظ اللغة وتغييرها واستعادتها عند المصادقة.

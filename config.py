@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import streamlit as st
 
-APP_TITLE = "QAI Learning Evaluation Platform"
-APP_ICON = "QAI"
+APP_TITLE = "3alimnIA | علّمنيا"
+APP_ICON = "🧠"
 ROOT_DIR = Path(__file__).resolve().parent
 STYLE_PATH = ROOT_DIR / ".streamlit" / "style.css"
 LESSON_MEDIA_DIR = ROOT_DIR / "assets" / "lesson_media"
