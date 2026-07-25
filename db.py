@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v13.0-full-multilingual-i18n"
+APP_VERSION = "v4.0-premium-ui-multilingual"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password

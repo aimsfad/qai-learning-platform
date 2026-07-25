@@ -1,3 +1,7 @@
+# 3alimnIA V4 - Premium Multilingual Learning Platform
+
+> واجهة احترافية متعددة اللغات مع مسار Qiskit، دعم توليدي موجّه، وتحليلات بحثية.
+
 # 3alimnIA | علّمنيا - Multilingual Generative-AI Learning Platform
 
 منصة تعليمية متعددة المسارات لتبسيط المفاهيم الصعبة بالشرح البصري والمحاكاة والمحاولة الأولى من المتعلم ومدرّب ذكاء توليدي مقيّد تربويًا.
