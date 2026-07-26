@@ -121,3 +121,9 @@ The main content begins closer to the browser top, and horizontal analysis tabs 
 
 ## V4.11 navigation safety
 Every authenticated workspace now includes an always-visible top navigation bar. It provides page switching, Back, Home, Change account, Sidebar open, and Exit controls even if the native Streamlit sidebar is collapsed.
+
+## V5 native navigation
+
+V5 uses Streamlit's supported multipage router instead of custom in-page navigation buttons. The entrypoint is still `app.py`, but pages are now registered dynamically with `st.Page` and `st.navigation(position="top")` according to the active role, login state, and learner progress.
+
+The common account toolbar provides reliable access to Home, Change account, Switch workspace, and Sign out on every internal page. See `V5_NATIVE_ROUTER_AR.md` for the migration details.

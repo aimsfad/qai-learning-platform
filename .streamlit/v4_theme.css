@@ -1585,3 +1585,249 @@ section.main > div.block-container,
     min-width: 0 !important;
   }
 }
+
+/* ========================================================================== 
+   3alimnIA V5 - native top router and reliable account toolbar
+   ========================================================================== */
+:root {
+  --v5-navy:#0d2458;
+  --v5-blue:#1f6bff;
+  --v5-cyan:#16c7e8;
+  --v5-gold:#f4b528;
+  --v5-ink:#13203c;
+  --v5-muted:#66758d;
+  --v5-line:#d8e3f0;
+  --v5-surface:rgba(255,255,255,.94);
+}
+
+/* V5 intentionally replaces the long docked rail with Streamlit's native
+   top navigation. Remove any legacy sidebar and offset behavior. */
+section[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+  display:none !important;
+}
+[data-testid="stAppViewContainer"] > .main,
+[data-testid="stAppViewContainer"] .main {
+  margin-inline:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  flex:1 1 auto !important;
+}
+[data-testid="stMainBlockContainer"],
+.stMainBlockContainer,
+.block-container {
+  max-width:1480px !important;
+  padding-top:.55rem !important;
+  padding-bottom:2rem !important;
+  padding-inline:clamp(.85rem,2.2vw,2rem) !important;
+}
+
+/* Native top navigation: clear hierarchy, strong active state and no custom
+   click interception. Selectors intentionally cover several Streamlit builds. */
+[data-testid="stTopNav"],
+[data-testid="stNavigation"],
+header:has([data-testid="stNavigation"]) {
+  background:rgba(248,251,255,.97) !important;
+  border-bottom:1px solid var(--v5-line) !important;
+  box-shadow:0 5px 20px rgba(13,36,88,.07) !important;
+  backdrop-filter:blur(16px) saturate(1.1) !important;
+}
+[data-testid="stTopNav"] a,
+[data-testid="stNavigation"] a,
+[data-testid="stTopNav"] button,
+[data-testid="stNavigation"] button {
+  border-radius:10px !important;
+  font-weight:750 !important;
+  color:#334564 !important;
+}
+[data-testid="stTopNav"] a[aria-current="page"],
+[data-testid="stNavigation"] a[aria-current="page"],
+[data-testid="stTopNav"] button[aria-selected="true"],
+[data-testid="stNavigation"] button[aria-selected="true"] {
+  color:#fff !important;
+  background:linear-gradient(135deg,var(--v5-navy),var(--v5-blue)) !important;
+  box-shadow:0 7px 18px rgba(31,107,255,.20) !important;
+}
+
+.v5-toolbar-marker { display:none !important; }
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) {
+  position:sticky !important;
+  top:.35rem !important;
+  z-index:1200 !important;
+  margin:.25rem 0 .7rem !important;
+  padding:.52rem .62rem !important;
+  border:1px solid rgba(207,220,236,.95) !important;
+  border-radius:16px !important;
+  background:var(--v5-surface) !important;
+  box-shadow:0 9px 28px rgba(13,36,88,.09) !important;
+  backdrop-filter:blur(14px) saturate(1.08) !important;
+  overflow:visible !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) > div {
+  gap:.25rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) [data-testid="stHorizontalBlock"] {
+  align-items:center !important;
+  gap:.45rem !important;
+}
+.v5-toolbar-identity {
+  display:flex;
+  align-items:center;
+  gap:.65rem;
+  min-height:2.55rem;
+  padding-inline:.25rem;
+}
+.v5-toolbar-identity span {
+  display:inline-flex;
+  align-items:center;
+  min-height:1.8rem;
+  padding:.25rem .62rem;
+  border-radius:999px;
+  background:#edf4ff;
+  color:#1550b8;
+  font-size:.72rem;
+  font-weight:850;
+  white-space:nowrap;
+}
+.v5-toolbar-identity strong {
+  color:var(--v5-ink);
+  font-size:.98rem;
+  font-weight:850;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) [data-baseweb="select"] > div {
+  min-height:2.5rem !important;
+  border-radius:11px !important;
+  border-color:#cfddec !important;
+  background:#fff !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) .stButton > button {
+  min-height:2.5rem !important;
+  height:2.5rem !important;
+  padding:.4rem .65rem !important;
+  border-radius:11px !important;
+  border:1px solid #cfddec !important;
+  background:#fff !important;
+  color:#244066 !important;
+  font-size:.76rem !important;
+  font-weight:800 !important;
+  white-space:nowrap !important;
+  box-shadow:none !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) .stButton > button:hover {
+  border-color:var(--v5-blue) !important;
+  color:#0d51c6 !important;
+  background:#eef5ff !important;
+  transform:translateY(-1px) !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) .stButton > button[kind="primary"],
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) .stButton > button[data-testid="stBaseButton-primary"] {
+  border-color:#174fc0 !important;
+  background:linear-gradient(135deg,var(--v5-navy),var(--v5-blue)) !important;
+  color:#fff !important;
+  box-shadow:0 6px 16px rgba(31,107,255,.18) !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) .stButton > button[kind="primary"] p,
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) .stButton > button[kind="primary"] span {
+  color:#fff !important;
+}
+
+/* The legacy V4.11 escape strip is no longer rendered. Ensure stale markup
+   from a cached deployment cannot reserve space or intercept pointer events. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) {
+  display:none !important;
+}
+
+/* Professional content density inspired by modern learning dashboards. */
+.v4-page-hero,
+.v47-page-hero-compact {
+  margin-top:.2rem !important;
+}
+[data-testid="stDataFrame"] {
+  border:1px solid var(--v5-line) !important;
+  border-radius:14px !important;
+  overflow:hidden !important;
+  box-shadow:0 5px 18px rgba(13,36,88,.045) !important;
+}
+[data-testid="stMetric"] {
+  border-radius:14px !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  padding:.28rem !important;
+  border:1px solid var(--v5-line) !important;
+  border-radius:14px !important;
+  background:#f4f7fb !important;
+  gap:.25rem !important;
+}
+[data-testid="stTabs"] button[role="tab"] {
+  min-height:2.55rem !important;
+  padding:.45rem .8rem !important;
+  border-radius:10px !important;
+  color:#445572 !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  background:linear-gradient(135deg,var(--v5-navy),var(--v5-blue)) !important;
+  color:#fff !important;
+  box-shadow:0 7px 18px rgba(31,107,255,.17) !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+  color:#fff !important;
+}
+
+@media (max-width:1100px) {
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) [data-testid="stHorizontalBlock"] {
+    flex-wrap:wrap !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) [data-testid="column"]:first-child {
+    flex:1 1 100% !important;
+    width:100% !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) [data-testid="column"]:not(:first-child) {
+    flex:1 1 8rem !important;
+    min-width:7rem !important;
+  }
+}
+@media (max-width:700px) {
+  [data-testid="stMainBlockContainer"], .stMainBlockContainer, .block-container {
+    padding-inline:.65rem !important;
+    padding-top:.25rem !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) {
+    position:relative !important;
+    top:auto !important;
+    border-radius:13px !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v5-toolbar-marker) [data-testid="column"]:not(:first-child) {
+    flex:1 1 calc(50% - .3rem) !important;
+    min-width:0 !important;
+  }
+  .v5-toolbar-identity strong { font-size:.9rem; }
+}
+
+/* Restore the Streamlit header because V5 uses the supported native top
+   navigation. Earlier versions hid it to reclaim vertical space. */
+.stAppHeader,
+header.stAppHeader,
+[data-testid="stHeader"],
+header[data-testid="stHeader"] {
+  display:flex !important;
+  visibility:visible !important;
+  height:auto !important;
+  min-height:3.25rem !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:0 .65rem !important;
+  background:rgba(248,251,255,.97) !important;
+  border-bottom:1px solid var(--v5-line) !important;
+  box-shadow:0 4px 18px rgba(13,36,88,.055) !important;
+}
+[data-testid="stHeader"] [data-testid="stToolbar"],
+header[data-testid="stHeader"] [data-testid="stToolbar"] {
+  display:flex !important;
+  visibility:visible !important;
+  height:auto !important;
+  min-height:2.5rem !important;
+}
