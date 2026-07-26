@@ -1334,3 +1334,147 @@ section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) .v45-eval-statu
   }
   .v49-action-card { min-height:108px; }
 }
+
+/* --------------------------------------------------------------------------
+   3alimnIA V4.10 - compact top alignment and explicit active tabs
+   -------------------------------------------------------------------------- */
+
+/* Remove the residual Streamlit top reserve across old and new DOM variants.
+   This is intentionally placed at the very end of the stylesheet so it wins
+   over both the legacy theme and earlier responsive overrides. */
+:root {
+  --header-height: 0px !important;
+}
+html, body,
+.stApp,
+[data-testid="stAppViewContainer"] {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+.stAppHeader,
+header.stAppHeader,
+[data-testid="stHeader"],
+header[data-testid="stHeader"] {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+main[data-testid="stMain"],
+[data-testid="stMain"],
+.stMain,
+section.main,
+[data-testid="stAppViewContainer"] > .main {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+main[data-testid="stMain"] > div,
+[data-testid="stMainBlockContainer"],
+.stMainBlockContainer,
+section.main > div.block-container,
+[data-testid="stAppViewContainer"] > .main .block-container,
+.block-container,
+[data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main .block-container,
+[data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) [data-testid="stMainBlockContainer"] {
+  margin-top: 0 !important;
+  padding-top: .12rem !important;
+}
+
+/* Keep the first premium surface optically close to the browser edge without
+   clipping its border or shadow. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) {
+  margin-top: 0 !important;
+  padding-top: .68rem !important;
+}
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"],
+.stMainBlockContainer > [data-testid="stVerticalBlock"],
+.block-container > [data-testid="stVerticalBlock"] {
+  padding-top: 0 !important;
+}
+
+/* Premium segmented-tab treatment. The selected analysis category is now
+   unmistakable instead of remaining a white tab among white surfaces. */
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+.stTabs [data-baseweb="tab-list"] {
+  gap: .38rem !important;
+  padding: .34rem !important;
+  border: 1px solid #d7e4f3 !important;
+  border-radius: 15px !important;
+  background: linear-gradient(180deg, #f7faff 0%, #edf4fc 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85) !important;
+  overflow-x: auto !important;
+  scrollbar-width: thin !important;
+}
+[data-testid="stTabs"] button[role="tab"],
+.stTabs button[role="tab"],
+[data-testid="stTabs"] [data-baseweb="tab"] {
+  min-height: 2.55rem !important;
+  padding: .55rem .92rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  color: #42516a !important;
+  font-weight: 750 !important;
+  transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease !important;
+}
+[data-testid="stTabs"] button[role="tab"]:hover,
+.stTabs button[role="tab"]:hover {
+  background: rgba(255,255,255,.82) !important;
+  color: #124fae !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+.stTabs button[role="tab"][aria-selected="true"],
+[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
+  background: linear-gradient(135deg, #0d3b91 0%, #1f6bff 72%, #16bfe1 100%) !important;
+  border-color: rgba(18,88,205,.55) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(31,107,255,.24) !important;
+  transform: translateY(-1px) !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p,
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] span,
+.stTabs button[role="tab"][aria-selected="true"] p,
+.stTabs button[role="tab"][aria-selected="true"] span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  opacity: 1 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-highlight"] {
+  display: none !important;
+}
+
+/* Laptop refinement: preserve a small safe edge while eliminating the large
+   empty band seen above the landing hero. */
+@media (min-width: 901px) and (max-width: 1600px) {
+  [data-testid="stMainBlockContainer"],
+  .stMainBlockContainer,
+  .block-container,
+  [data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main .block-container {
+    padding-top: .08rem !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v4-landing-marker) {
+    padding-top: .58rem !important;
+  }
+}
+
+@media (max-width: 900px) {
+  [data-testid="stMainBlockContainer"],
+  .stMainBlockContainer,
+  .block-container {
+    padding-top: .18rem !important;
+  }
+  [data-testid="stTabs"] [data-baseweb="tab-list"],
+  .stTabs [data-baseweb="tab-list"] {
+    border-radius: 13px !important;
+  }
+  [data-testid="stTabs"] button[role="tab"],
+  .stTabs button[role="tab"] {
+    min-height: 2.35rem !important;
+    padding: .48rem .68rem !important;
+    font-size: .78rem !important;
+    white-space: nowrap !important;
+  }
+}
