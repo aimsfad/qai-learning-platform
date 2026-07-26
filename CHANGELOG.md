@@ -112,3 +112,9 @@
 - Added a clear segmented-control treatment for horizontal tabs.
 - The selected evaluator analysis category now uses a blue-cyan gradient with white text.
 - Preserved responsive horizontal scrolling for tabs on narrow screens.
+
+## V4.11 - Escape navigation
+- Added an always-visible in-app navigation bar independent of the Streamlit sidebar.
+- Added page switcher, Back, Home, Change account, Sidebar open, and Exit actions.
+- Prevented users from becoming trapped when the native sidebar is collapsed.
+- Added responsive RTL/LTR styling for the safety navigation bar.

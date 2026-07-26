@@ -1478,3 +1478,110 @@ section.main > div.block-container,
     white-space: nowrap !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   3alimnIA V4.11 - always-visible escape navigation
+   -------------------------------------------------------------------------- */
+.v411-global-nav-marker { display:none !important; }
+
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) {
+  position: sticky !important;
+  top: .18rem !important;
+  z-index: 1995 !important;
+  margin: .12rem 0 .55rem !important;
+  padding: .46rem .55rem .52rem !important;
+  border: 1px solid rgba(187,205,227,.92) !important;
+  border-radius: 16px !important;
+  background: rgba(248,251,255,.94) !important;
+  box-shadow: 0 9px 26px rgba(13,27,76,.10) !important;
+  backdrop-filter: blur(14px) saturate(1.08) !important;
+  overflow: visible !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) > div {
+  gap: .22rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="stHorizontalBlock"] {
+  align-items: center !important;
+  gap: .38rem !important;
+}
+.v411-workspace-label {
+  margin: 0 0 .2rem !important;
+  padding-inline: .18rem !important;
+  color: #60708a !important;
+  font-size: .66rem !important;
+  font-weight: 800 !important;
+  letter-spacing: .03em !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-baseweb="select"] > div {
+  min-height: 2.38rem !important;
+  border-radius: 11px !important;
+  border-color: #cbd9ea !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) .stButton > button {
+  min-height: 2.38rem !important;
+  height: 2.38rem !important;
+  padding: .36rem .55rem !important;
+  border-radius: 11px !important;
+  border: 1px solid #cbd9ea !important;
+  background: #ffffff !important;
+  color: #17366d !important;
+  font-size: .76rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  box-shadow: 0 3px 10px rgba(13,27,76,.04) !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) .stButton > button:hover {
+  border-color: #1f6bff !important;
+  background: #edf5ff !important;
+  color: #0d4fc5 !important;
+  transform: translateY(-1px) !important;
+}
+/* Account-change action receives the broad column; exit remains compact. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="column"]:nth-last-child(2) .stButton > button {
+  background: linear-gradient(135deg,#0d3b91,#1f6bff) !important;
+  border-color: #1f6bff !important;
+  color: #ffffff !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="column"]:last-child .stButton > button {
+  border-color: #f0c2c2 !important;
+  color: #a52c2c !important;
+  background: #fffafa !important;
+}
+
+/* Desktop safety: once V4.11 is deployed the collapse control is hidden so a
+   user cannot accidentally lose the full rail again. The top bar remains a
+   complete fallback even if an older browser session retained collapsed state. */
+@media (min-width: 901px) {
+  section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="column"]:first-child {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="column"]:not(:first-child) {
+    flex: 1 1 8rem !important;
+    min-width: 5.25rem !important;
+  }
+}
+
+@media (max-width: 700px) {
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) {
+    position: relative !important;
+    top: auto !important;
+    margin-bottom: .45rem !important;
+    border-radius: 13px !important;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v411-global-nav-marker) [data-testid="column"]:not(:first-child) {
+    flex: 1 1 calc(50% - .3rem) !important;
+    min-width: 0 !important;
+  }
+}
