@@ -1,3 +1,12 @@
+## V4.8 - Native Docked Navigation
+
+- Replaced the page-column navigation shell with Streamlit's native sidebar.
+- Docked the rail by language direction: right for Arabic, left for French/English.
+- Added a dedicated viewport-height scroll area for navigation.
+- Decoupled navigation height from document height and removed main-page scroll dependency.
+- Added responsive drawer behaviour below 900px.
+- Updated the instrumented app version to `v4.8-native-docked-navigation`.
+
 ## V4.7.1 - Study Protocol Hotfix
 
 - Fixed the evaluator Study Protocol crash caused by outdated PRE_TEST_QUESTIONS and POST_TEST_QUESTIONS attribute names.

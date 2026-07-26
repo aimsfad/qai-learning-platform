@@ -4311,30 +4311,21 @@ def main() -> None:
     i18n.apply_language_css(st, i18n.current_lang(st))
     perform_scroll_top_if_requested()
 
-    # Render a reliable in-page shell. The left navigation is a real Streamlit
-    # bordered container, not an HTML wrapper around widgets; this prevents the
-    # empty white sidebar block that appeared in Streamlit Cloud.
-    # The shell is identified through the sidebar marker rendered inside the
-    # left column. Avoiding a separate empty marker above the columns removes
-    # the large blank strip that Streamlit otherwise inserts at page start.
+    # V4.8 uses Streamlit's native sidebar as a true application rail.
+    # Unlike an in-page column, the native rail owns its viewport and scrollbar,
+    # so a long learner/evaluator menu never increases the document height or
+    # forces users to scroll the main page merely to reach navigation items.
     role = st.session_state.get("role")
-    # The same compact sticky shell is used throughout the learner and
-    # evaluator workspaces. The evaluator receives a slightly wider rail for
-    # long multilingual labels, while the public landing remains balanced.
-    shell_ratio = [0.215, 0.785] if role == "evaluator" else [0.205, 0.795]
-    left_col, right_col = st.columns(shell_ratio, gap="medium")
-    with left_col:
-        with st.container(border=True):
-            st.markdown("<span class='v47-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-            render_sidebar(st)
+    with st.sidebar:
+        st.markdown("<span class='v48-native-sidebar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        render_sidebar(st.sidebar)
 
-    with right_col:
-        if role == "student":
-            render_student_app()
-        elif role == "evaluator":
-            render_evaluator_app()
-        else:
-            render_role_selection()
+    if role == "student":
+        render_student_app()
+    elif role == "evaluator":
+        render_evaluator_app()
+    else:
+        render_role_selection()
 
 
 if __name__ == "__main__":

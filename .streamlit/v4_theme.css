@@ -990,3 +990,149 @@ html[dir="rtl"] [data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-mark
     padding: .9rem 1rem !important;
   }
 }
+
+/* ========================================================================== 
+   3alimnIA V4.8 - Native docked application navigation
+   ========================================================================== */
+
+:root {
+  --v48-rail-width: clamp(18rem, 21vw, 20.5rem);
+}
+
+.v48-native-sidebar-marker { display: none !important; }
+
+/* The native Streamlit sidebar is the only navigation shell in V4.8. It is
+   detached from the document flow and owns an independent vertical scroll. */
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) {
+  position: fixed !important;
+  z-index: 1002 !important;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(19,181,234,.10), transparent 28%),
+    linear-gradient(180deg, #f9fcff 0%, #f4f8fd 100%) !important;
+  border-inline-end: 1px solid #d5e1ef !important;
+  box-shadow: 0 0 30px rgba(10,36,83,.08) !important;
+  overflow: hidden !important;
+}
+
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) > div:first-child,
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stSidebarContent"] {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(31,107,255,.38) transparent !important;
+}
+
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stSidebarContent"] > div:first-child,
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) > div:first-child > div:first-child {
+  padding: .55rem .72rem 1rem !important;
+}
+
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) ::-webkit-scrollbar {
+  width: 7px;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) ::-webkit-scrollbar-track {
+  background: transparent;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(31,107,255,.28), rgba(19,181,234,.52));
+  border-radius: 999px;
+}
+
+/* The old in-page shell is intentionally disabled. */
+.v47-shell-marker { display: none !important; }
+[data-testid="stHorizontalBlock"]:has(.v47-shell-marker) { display: contents !important; }
+
+/* Keep the operational content compact and independent from the rail height. */
+[data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main {
+  min-height: 100dvh !important;
+  overflow-x: hidden !important;
+}
+[data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main .block-container {
+  padding-top: .65rem !important;
+  padding-bottom: 1.75rem !important;
+  max-width: 100% !important;
+}
+
+/* Native rail typography and density. */
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stImage"] {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stImage"] img {
+  max-height: 60px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) .v4-sidebar-tagline {
+  margin: .05rem 0 .35rem !important;
+  padding: 0 .1rem !important;
+  font-size: .76rem !important;
+  line-height: 1.5 !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) .v45-eval-profile,
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) .v43-side-profile {
+  margin: .4rem 0 .52rem !important;
+  padding: .7rem !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stExpander"] {
+  margin: .32rem 0 !important;
+  border-radius: 14px !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stExpander"] summary {
+  min-height: 2.35rem !important;
+  padding: .42rem .58rem !important;
+  font-size: .73rem !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stExpander"] [data-testid="stVerticalBlock"] {
+  gap: .14rem !important;
+  padding: 0 .38rem .4rem !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) .stButton > button {
+  min-height: 2.28rem !important;
+  padding: .32rem .52rem !important;
+  margin: 0 !important;
+  border-radius: 11px !important;
+  font-size: .76rem !important;
+  line-height: 1.25 !important;
+}
+section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) .v45-eval-status {
+  margin: .52rem 0 !important;
+  padding: .6rem .68rem !important;
+}
+
+/* On desktop the application rail remains open and stable. This avoids a
+   hidden navigation state that would leave a permanent content offset. */
+@media (min-width: 901px) {
+  section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stSidebarCollapseButton"],
+  [data-testid="stSidebarCollapsedControl"] {
+    display: none !important;
+  }
+}
+
+/* Tablet and mobile use Streamlit's drawer behaviour: no permanent document
+   offset and no nested scroll trap. */
+@media (max-width: 900px) {
+  :root { --v48-rail-width: min(88vw, 20rem); }
+  section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) {
+    width: var(--v48-rail-width) !important;
+    min-width: var(--v48-rail-width) !important;
+    max-width: var(--v48-rail-width) !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  [data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  [data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main .block-container {
+    padding-top: .55rem !important;
+    padding-inline: .7rem !important;
+  }
+}

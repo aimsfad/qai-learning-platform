@@ -973,6 +973,11 @@ def apply_language_css(st_module: Any, lang: str | None = None) -> None:
     dir_value = direction(code)
     align = "right" if code == "ar" else "left"
     font_stack = "'Alexandria','Tajawal','Noto Sans Arabic','Segoe UI',sans-serif" if code == "ar" else "'Inter','Manrope','Segoe UI',sans-serif"
+    # The native Streamlit rail is docked according to the reading direction.
+    # This keeps Arabic navigation on the right and French/English navigation
+    # on the left, while the main document retains its own independent scroll.
+    rail_side = "right:0 !important; left:auto !important;" if code == "ar" else "left:0 !important; right:auto !important;"
+    main_offset = "margin-right:var(--v48-rail-width) !important; margin-left:0 !important;" if code == "ar" else "margin-left:var(--v48-rail-width) !important; margin-right:0 !important;"
     st_module.markdown(
         f"""
         <style>
@@ -990,6 +995,27 @@ def apply_language_css(st_module: Any, lang: str | None = None) -> None:
         .qai-side-next {{ border-left:{'1px solid var(--qai-border)' if code == 'ar' else '4px solid var(--qai-blue)'} !important;
                          border-right:{'4px solid var(--qai-blue)' if code == 'ar' else '1px solid var(--qai-border)'} !important; }}
         .qai-stage-chip, .qai-pill, .qai-concept-pill {{ margin-right:{'0' if code == 'ar' else '.22rem'} !important; margin-left:{'.22rem' if code == 'ar' else '0'} !important; }}
+
+        /* V4.8 - native docked navigation. The sidebar is a viewport-level
+           application rail, not a column inside the scrolling document. */
+        @media (min-width: 901px) {{
+          section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) {{
+            {rail_side}
+            top:0 !important;
+            bottom:0 !important;
+            width:var(--v48-rail-width) !important;
+            min-width:var(--v48-rail-width) !important;
+            max-width:var(--v48-rail-width) !important;
+            height:100dvh !important;
+            transform:none !important;
+          }}
+          [data-testid="stAppViewContainer"]:has(.v48-native-sidebar-marker) > .main {{
+            {main_offset}
+            width:calc(100vw - var(--v48-rail-width)) !important;
+            max-width:calc(100vw - var(--v48-rail-width)) !important;
+            flex:0 0 calc(100vw - var(--v48-rail-width)) !important;
+          }}
+        }}
         </style>
         """,
         unsafe_allow_html=True,

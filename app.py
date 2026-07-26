@@ -10,7 +10,7 @@ st.set_page_config(
     page_title=APP_TITLE,
     page_icon=APP_ICON,
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 load_css()
