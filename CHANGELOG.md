@@ -118,3 +118,14 @@
 - Added page switcher, Back, Home, Change account, Sidebar open, and Exit actions.
 - Prevented users from becoming trapped when the native sidebar is collapsed.
 - Added responsive RTL/LTR styling for the safety navigation bar.
+
+## V5 - Native top navigation and reliable account controls
+
+- Replaced custom sidebar routing and the V4.11 escape strip with `st.Page` and `st.navigation(position="top")`.
+- Added dynamic role- and permission-aware page registration.
+- Added a compact global account toolbar with native callbacks for Home, Change account, Switch workspace, and Sign out.
+- Routed internal learning actions through `st.switch_page` via a queued router, preventing stale page state after reruns.
+- Restored the Streamlit header required by native top navigation.
+- Removed dependence on DOM-click JavaScript for opening navigation.
+- Added multilingual navigation sections and active-page styling.
+- Updated the application version to `v5-native-top-navigation`.

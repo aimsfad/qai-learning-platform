@@ -20,6 +20,7 @@ import db
 import feedback_engine
 import branding
 import i18n
+import router
 from content_locales import MEDIA_TRANSLATIONS
 from security import hash_password, verify_password
 from media_utils import render_image, render_video, render_simulator, render_micro_animation
@@ -255,7 +256,7 @@ def init_state() -> None:
         st.session_state.setdefault(k, v)
 
 
-def render_language_selector(target=st, key: str = "global_language_selector") -> str:
+def render_language_selector(target=st, key: str = "global_language_selector", label_visibility: str = "visible") -> str:
     """Render a persistent language selector and save it to the learner account."""
     current = i18n.current_lang(st)
     labels = list(i18n.LANGUAGE_LABELS.values())
@@ -265,7 +266,7 @@ def render_language_selector(target=st, key: str = "global_language_selector") -
         labels,
         index=labels.index(current_label) if current_label in labels else 0,
         key=key,
-        label_visibility="visible",
+        label_visibility=label_visibility,
     )
     code = i18n.normalize_lang(selected)
     changed = code != current
@@ -328,19 +329,74 @@ def switch_role(role: Optional[str] = None) -> None:
     st.session_state.evaluator_page = "Evaluator Dashboard"
     st.session_state["_v411_history"] = []
     st.session_state["_v411_current_route"] = None
+    if role == "student":
+        router.queue(router.route_key("student", "Student Home"))
+    elif role == "evaluator":
+        router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
+    else:
+        router.queue(router.route_key("public", "home"))
     st.rerun()
 
 
 def set_student_page(page: str) -> None:
     st.session_state.student_page = page
     request_scroll_top()
-    st.rerun()
+    router.navigate(router.route_key("student", page))
 
 
 def set_evaluator_page(page: str) -> None:
     st.session_state.evaluator_page = page
     request_scroll_top()
-    st.rerun()
+    router.navigate(router.route_key("evaluator", page))
+
+
+def change_account_callback() -> None:
+    """Reliable native callback used by the global account toolbar."""
+    role = st.session_state.get("role")
+    if role == "student":
+        student = current_student()
+        if student:
+            try:
+                db.log_event(student["id"], "student", "sign_out", "Student changed account from native toolbar")
+            except Exception:
+                pass
+        st.session_state.student_id = None
+        st.session_state.student_page = "Sign in"
+        router.queue(router.route_key("student", "Sign in"))
+    elif role == "evaluator":
+        st.session_state.evaluator_logged_in = False
+        st.session_state.evaluator_page = "Evaluator Dashboard"
+        router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
+    request_scroll_top()
+
+
+def switch_workspace_callback() -> None:
+    """Return to the public workspace chooser without relying on a sidebar."""
+    st.session_state.role = None
+    st.session_state.student_page = "Student Home"
+    st.session_state.evaluator_page = "Evaluator Dashboard"
+    router.queue(router.route_key("public", "home"))
+    request_scroll_top()
+
+
+def logout_callback() -> None:
+    """End the active workspace session and return to the public home page."""
+    role = st.session_state.get("role")
+    if role == "student":
+        student = current_student()
+        if student:
+            try:
+                db.log_event(student["id"], "student", "sign_out", "Student signed out from native toolbar")
+            except Exception:
+                pass
+        st.session_state.student_id = None
+    elif role == "evaluator":
+        st.session_state.evaluator_logged_in = False
+    st.session_state.role = None
+    st.session_state.student_page = "Student Home"
+    st.session_state.evaluator_page = "Evaluator Dashboard"
+    router.queue(router.route_key("public", "home"))
+    request_scroll_top()
 
 
 def _v411_navigation_copy() -> Dict[str, str]:
@@ -1331,18 +1387,17 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         c1, c2 = st.columns(2)
         with c1:
             if st.button(i18n.tr("Sign in"), type="primary", use_container_width=True):
-                st.session_state.student_page = "Sign in"; st.rerun()
+                set_student_page("Sign in")
         with c2:
             if st.button(i18n.tr("Create account"), use_container_width=True):
-                st.session_state.student_page = "Create account"; st.rerun()
+                set_student_page("Create account")
         return
     if st.session_state.get("new_participant_code"):
         st.success(i18n.tr("Account created successfully. Save your participant code before continuing."))
         render_participant_code_box(st.session_state["new_participant_code"])
         if st.button(i18n.tr("I saved my participant code"), type="primary"):
             st.session_state.new_participant_code = None
-            st.session_state.student_page = next_student_page(student)
-            st.rerun()
+            set_student_page(next_student_page(student))
         return
     summary = db.progress_summary_df(len(content.LESSONS))
     row = summary[summary["student_id"] == student["id"]] if not summary.empty and "student_id" in summary.columns else pd.DataFrame()
@@ -1370,13 +1425,13 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     c1, c2, c3 = st.columns([1.35, 1, 1])
     with c1:
         if st.button(f"▶ {u['continue']}", type="primary", use_container_width=True):
-            st.session_state.student_page = next_student_page(student); st.rerun()
+            set_student_page(next_student_page(student))
     with c2:
         if st.button(u["open_path"], use_container_width=True, disabled=not test_is_done(student["id"], "pre")):
-            st.session_state.student_page = "Learning Module"; st.rerun()
+            set_student_page("Learning Module")
     with c3:
         if st.button(u["open_tutor"], use_container_width=True, disabled=(not test_is_done(student["id"], "pre") or not ai_features_available(student))):
-            st.session_state.student_page = "AI Tutor Lab"; st.rerun()
+            set_student_page("AI Tutor Lab")
     render_completion_requirements(student)
 
 def next_student_page(student: Dict[str, Any]) -> str:
@@ -1408,8 +1463,7 @@ def render_research_notice(student: Dict[str, Any]) -> None:
         st.success("Research notice already confirmed.")
         render_completion_requirements(student, compact=True)
         if st.button("Continue", type="primary"):
-            st.session_state.student_page = next_student_page(student)
-            st.rerun()
+            set_student_page(next_student_page(student))
         return
 
     st.markdown("""
@@ -1429,8 +1483,7 @@ def render_research_notice(student: Dict[str, Any]) -> None:
         consent_text = "Participant confirmed research notice and consented to recording learning data and AI tutor interactions."
         db.save_consent(student["id"], consent_text, consent_version="v2")
         db.log_event(student["id"], "student", "consent_confirmed", "Research notice confirmed")
-        st.session_state.student_page = next_student_page(student)
-        st.rerun()
+        set_student_page(next_student_page(student))
 
 
 def render_password_reset_request() -> None:
@@ -1477,10 +1530,9 @@ def render_password_reset_form(token: str) -> None:
             clear_reset_token_from_url()
             st.session_state.role = "student"
             st.session_state.student_id = None
-            st.session_state.student_page = "Sign in"
             st.info("You can now sign in using your email, participant code, or exact full name.")
             if st.button("Go to sign in", type="primary"):
-                st.rerun()
+                set_student_page("Sign in")
         else:
             st.error(message)
             st.caption("If the link expired, request a new password reset from the sign-in page.")
@@ -1505,9 +1557,8 @@ def render_student_signin() -> None:
             st.session_state.ui_language = i18n.LANGUAGE_LABELS[preferred]
             st.session_state.student_id = student["id"]
             st.session_state.current_lesson_id = db.get_last_open_lesson(student["id"]) or first_incomplete_lesson_id(student["id"])
-            st.session_state.student_page = next_student_page(student)
             st.success("Signed in successfully.")
-            st.rerun()
+            set_student_page(next_student_page(student))
         else:
             st.error("Invalid identifier or password.")
 
@@ -1569,9 +1620,8 @@ def render_student_registration() -> None:
             st.session_state.student_id = student["id"]
             st.session_state.current_lesson_id = content.LESSONS[0]["id"]
             st.session_state.new_participant_code = student["participant_code"]
-            st.session_state.student_page = "Student Home"
             st.success(f"Account created. Your participant code is: {student['participant_code']}")
-            st.rerun()
+            set_student_page("Student Home")
         except Exception as exc:
             st.error(f"Could not create account: {exc}")
 
@@ -1592,7 +1642,7 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
     if existing:
         st.markdown(f"<div class='v43-result-card' dir='{u['dir']}'><span>{escape(title)}</span><strong>{existing['score']:.1f}%</strong></div>", unsafe_allow_html=True)
         if st.button(i18n.tr("Continue"), type="primary", use_container_width=True):
-            st.session_state.student_page = "Adaptive Plan" if kind == "pre" else "Satisfaction Survey"; st.rerun()
+            set_student_page("Adaptive Plan" if kind == "pre" else "Satisfaction Survey")
         return
     questions = content.questions_for(kind)
     with st.form(f"{kind}_test_form"):
@@ -2755,8 +2805,7 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.rerun()
     if nav2.button("Ask AI about this module" if ai_features_available(student) else "AI hidden for control group", use_container_width=True, disabled=not ai_features_available(student)):
         st.session_state.current_lesson_id = lesson["id"]
-        st.session_state.student_page = "AI Tutor Lab"
-        st.rerun()
+        set_student_page("AI Tutor Lab")
     if nav3.button("Next module →", type="primary", use_container_width=True, disabled=idx >= len(ids) - 1):
         set_current_lesson(student["id"], ids[idx + 1])
         st.rerun()
@@ -2778,8 +2827,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         hero("AI Tutor Lab", "This area is intentionally hidden for the control group.")
         st.info("You are in the control learning path. Continue with lessons, simulators, reflections, and the post-test without AI support.")
         if st.button("Return to learning module", type="primary"):
-            st.session_state.student_page = "Learning Module"
-            st.rerun()
+            set_student_page("Learning Module")
         return
     hero(
         "AI Tutor Lab",
@@ -2832,8 +2880,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     )
 
     if st.button("Return to current learning module", use_container_width=True):
-        st.session_state.student_page = "Learning Module"
-        st.rerun()
+        set_student_page("Learning Module")
 
     chat_key = f"ai_chat_history_{student['id']}"
     if chat_key not in st.session_state:
@@ -3150,8 +3197,7 @@ def render_evaluator_app() -> None:
         render_results_export()
     else:
         st.warning(f"Unknown evaluator page: {page}. Returning to dashboard.")
-        st.session_state.evaluator_page = "Evaluator Dashboard"
-        st.rerun()
+        set_evaluator_page("Evaluator Dashboard")
 
 
 def render_evaluator_login() -> None:
@@ -3169,6 +3215,7 @@ def render_evaluator_login() -> None:
             db.log_event(None, "evaluator", "sign_in", f"Evaluator username: {username.strip()}")
             st.session_state.evaluator_logged_in = True
             st.success(u["signed_in"])
+            router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
             st.rerun()
         else:
             st.error(u["invalid"])
