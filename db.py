@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v4.8-native-docked-navigation"
+APP_VERSION = "v4.9-evaluator-command-center"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password

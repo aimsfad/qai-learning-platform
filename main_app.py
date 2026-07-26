@@ -2721,7 +2721,7 @@ def evaluator_ui() -> Dict[str, Any]:
             "workflow": "مسار إكمال الدراسة", "workflow_sub": "عدد المشاركين الذين وصلوا إلى كل مرحلة من البروتوكول.",
             "stage": "المرحلة", "count": "العدد", "percent": "النسبة", "consent": "الموافقة", "pre": "الاختبار القبلي", "lesson": "نشاط تعليمي", "ai": "تفاعل AI", "post": "الاختبار البعدي", "survey": "الاستبيان",
             "recent": "أحدث المشاركين", "recent_sub": "عرض تشغيلي سريع مع إبقاء التصدير الكامل في صفحة التصدير.", "no_data": "لا توجد بيانات مطابقة للمرشحات الحالية.",
-            "quick_actions": "إجراءات سريعة", "open_students": "إدارة المتعلمين", "open_ai_logs": "مراجعة سجلات AI", "open_quality": "تقييم الاستجابات", "open_exports": "فتح التصدير",
+            "quick_actions": "مركز الإجراءات", "quick_actions_sub": "الوصول المباشر إلى أكثر أدوات المقيّم استخدامًا دون النزول أسفل الصفحة.", "open_students": "إدارة المتعلمين", "quick_students_sub": "البحث في الحسابات، إنشاء مشاركين ومراجعة حالة التسجيل.", "open_ai_logs": "مراجعة سجلات AI", "quick_ai_sub": "فحص المطالبات والاستجابات والأخطاء وزمن التنفيذ.", "open_quality": "تقييم الاستجابات", "quick_quality_sub": "تطبيق معايير LPQS السبعة على استجابات المدرّب الذكي.", "open_exports": "فتح التصدير", "quick_exports_sub": "تحضير بيانات مجهولة الهوية أو نسخة إدارية مؤمّنة.",
             "score_summary": "ملخص الدرجات", "mean_pre": "متوسط القبلي", "mean_post": "متوسط البعدي", "normalized": "الحالات المستخدمة", "concepts": "الأداء حسب المفهوم",
             "usage_provider": "الاستخدام حسب النمط والمزوّد", "usage_task": "الاستخدام حسب نوع الدعم", "interaction_health": "صحة التفاعلات", "fallback_rate": "نسبة الاستجابات الاحتياطية", "latency": "متوسط زمن الاستجابة", "usefulness": "متوسط فائدة الاستجابة",
             "quality_summary": "ملخص جودة استجابات الذكاء الاصطناعي", "evaluated": "الاستجابات المقيّمة", "unrated": "المتبقية للتقييم", "provider_status": "حالة مزوّد الذكاء الاصطناعي", "system_status": "جاهزية النظام",
@@ -2747,7 +2747,7 @@ def evaluator_ui() -> Dict[str, Any]:
             "workflow": "Parcours d’achèvement", "workflow_sub": "Nombre de participants ayant atteint chaque étape du protocole.",
             "stage": "Étape", "count": "Nombre", "percent": "Pourcentage", "consent": "Consentement", "pre": "Pré-test", "lesson": "Activité d’apprentissage", "ai": "Interaction IA", "post": "Post-test", "survey": "Enquête",
             "recent": "Participants récents", "recent_sub": "Vue opérationnelle rapide; utilisez l’export pour le jeu complet.", "no_data": "Aucune donnée ne correspond aux filtres.",
-            "quick_actions": "Actions rapides", "open_students": "Gérer les apprenants", "open_ai_logs": "Voir les journaux IA", "open_quality": "Évaluer les réponses", "open_exports": "Ouvrir les exports",
+            "quick_actions": "Centre d’actions", "quick_actions_sub": "Accédez immédiatement aux outils d’évaluation les plus utilisés, sans descendre en bas de page.", "open_students": "Gérer les apprenants", "quick_students_sub": "Rechercher les comptes, créer des participants et vérifier les inscriptions.", "open_ai_logs": "Voir les journaux IA", "quick_ai_sub": "Inspecter les requêtes, réponses, erreurs et temps d’exécution.", "open_quality": "Évaluer les réponses", "quick_quality_sub": "Appliquer les sept critères LPQS aux réponses du coach IA.", "open_exports": "Ouvrir les exports", "quick_exports_sub": "Préparer un jeu anonymisé ou une sauvegarde administrative sécurisée.",
             "score_summary": "Résumé des scores", "mean_pre": "Moyenne pré-test", "mean_post": "Moyenne post-test", "normalized": "Cas analysés", "concepts": "Performance par concept",
             "usage_provider": "Usage par mode et fournisseur", "usage_task": "Usage par type de soutien", "interaction_health": "Santé des interactions", "fallback_rate": "Taux de fallback", "latency": "Latence moyenne", "usefulness": "Utilité moyenne",
             "quality_summary": "Qualité des réponses IA", "evaluated": "Réponses évaluées", "unrated": "Restant à évaluer", "provider_status": "Fournisseur IA", "system_status": "État du système",
@@ -2773,7 +2773,7 @@ def evaluator_ui() -> Dict[str, Any]:
             "workflow": "Study completion funnel", "workflow_sub": "Participants who reached each stage of the protocol.",
             "stage": "Stage", "count": "Count", "percent": "Percent", "consent": "Consent", "pre": "Pre-test", "lesson": "Learning activity", "ai": "AI interaction", "post": "Post-test", "survey": "Survey",
             "recent": "Recent participants", "recent_sub": "Operational snapshot; use Exports for the full dataset.", "no_data": "No data match the current filters.",
-            "quick_actions": "Quick actions", "open_students": "Manage learners", "open_ai_logs": "Review AI logs", "open_quality": "Evaluate responses", "open_exports": "Open exports",
+            "quick_actions": "Action center", "quick_actions_sub": "Jump directly to the evaluator tools used most often, without scrolling to the bottom of the page.", "open_students": "Manage learners", "quick_students_sub": "Search accounts, create participants, and review registration readiness.", "open_ai_logs": "Review AI logs", "quick_ai_sub": "Inspect prompts, responses, errors, and execution latency.", "open_quality": "Evaluate responses", "quick_quality_sub": "Apply the seven LPQS criteria to AI tutor responses.", "open_exports": "Open exports", "quick_exports_sub": "Prepare an anonymized dataset or a secure administrative backup.",
             "score_summary": "Score summary", "mean_pre": "Mean pre-test", "mean_post": "Mean post-test", "normalized": "Cases analyzed", "concepts": "Concept performance",
             "usage_provider": "Usage by mode and provider", "usage_task": "Usage by support type", "interaction_health": "Interaction health", "fallback_rate": "Fallback rate", "latency": "Mean latency", "usefulness": "Mean usefulness",
             "quality_summary": "AI response quality summary", "evaluated": "Evaluated responses", "unrated": "Remaining unrated", "provider_status": "AI provider status", "system_status": "System readiness",
@@ -3233,9 +3233,41 @@ def render_study_protocol() -> None:
     )
 
 
+
+def render_evaluator_quick_actions(u: Dict[str, Any]) -> None:
+    """Render a compact command center above evaluator analytics.
+
+    The dashboard previously placed operational shortcuts beneath the participant
+    table, forcing laptop users to scroll past a long dataset before reaching
+    common tasks. This command center keeps those routes visible at the top while
+    preserving the native sidebar as the complete navigation source.
+    """
+    actions = [
+        ("01", "👥", u["open_students"], u["quick_students_sub"], "Students", "v49_quick_students"),
+        ("02", "◈", u["open_ai_logs"], u["quick_ai_sub"], "AI Tutor Logs", "v49_quick_ai"),
+        ("03", "✓", u["open_quality"], u["quick_quality_sub"], "AI Response Evaluation", "v49_quick_quality"),
+        ("04", "⇩", u["open_exports"], u["quick_exports_sub"], "Exports", "v49_quick_exports"),
+    ]
+    with st.container(border=True):
+        st.markdown("<span class='v49-command-center-marker'></span>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='v49-command-head' dir='{u['dir']}'><div><span>3alimnIA Research</span><h3>{escape(u['quick_actions'])}</h3></div><p>{escape(u['quick_actions_sub'])}</p></div>",
+            unsafe_allow_html=True,
+        )
+        cols = st.columns(4, gap="small")
+        for col, (number, icon, title, subtitle, route, key) in zip(cols, actions):
+            with col:
+                st.markdown(
+                    f"<article class='v49-action-card' dir='{u['dir']}'><div class='v49-action-top'><span class='v49-action-icon'>{escape(icon)}</span><small>{escape(number)}</small></div><h4>{escape(title)}</h4><p>{escape(subtitle)}</p></article>",
+                    unsafe_allow_html=True,
+                )
+                if st.button(title, key=key, use_container_width=True):
+                    set_evaluator_page(route)
+
 def render_evaluator_dashboard() -> None:
     u = evaluator_ui()
     hero(u["dashboard_title"], u["dashboard_sub"], localized=True)
+    render_evaluator_quick_actions(u)
     df = evaluator_filtered_progress()
     all_progress = db.progress_summary_df(len(content.LESSONS))
     evaluations = db.llm_evaluations_df()
@@ -3286,26 +3318,17 @@ def render_evaluator_dashboard() -> None:
                 bars = funnel.rename(columns={u["stage"]: "stage", u["percent"]: "percent"})
                 render_progress_bars(bars, "stage", "percent")
 
-            evaluator_section(u["recent"], u["recent_sub"])
-            cols = ["participant_code", "full_name", "preferred_language", "study_group", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions", "is_complete_case"]
-            recent = df[[c for c in cols if c in df.columns]].head(20).copy()
-            recent = recent.rename(columns={
-                "participant_code": "Code", "full_name": u["students"], "preferred_language": u["language"], "study_group": u["group"],
-                "academic_level": u["level"], "pre_score": u["pre"], "post_score": u["post"], "learning_gain": u["mean_gain"],
-                "progress_percent": u["percent"], "ai_interactions": u["ai_logs"], "is_complete_case": u["complete_cases"],
-            })
-            st.dataframe(recent, use_container_width=True, hide_index=True)
-
-        evaluator_section(u["quick_actions"])
-        q1, q2, q3, q4 = st.columns(4)
-        if q1.button(u["open_students"], use_container_width=True):
-            set_evaluator_page("Students")
-        if q2.button(u["open_ai_logs"], use_container_width=True):
-            set_evaluator_page("AI Tutor Logs")
-        if q3.button(u["open_quality"], use_container_width=True):
-            set_evaluator_page("AI Response Evaluation")
-        if q4.button(u["open_exports"], use_container_width=True):
-            set_evaluator_page("Exports")
+            with st.container(border=True):
+                st.markdown("<span class='v49-data-card-marker'></span>", unsafe_allow_html=True)
+                evaluator_section(u["recent"], u["recent_sub"])
+                cols = ["participant_code", "full_name", "preferred_language", "study_group", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions", "is_complete_case"]
+                recent = df[[c for c in cols if c in df.columns]].head(20).copy()
+                recent = recent.rename(columns={
+                    "participant_code": u["participant_code"], "full_name": u["students"], "preferred_language": u["language"], "study_group": u["group"],
+                    "academic_level": u["level"], "pre_score": u["pre"], "post_score": u["post"], "learning_gain": u["mean_gain"],
+                    "progress_percent": u["percent"], "ai_interactions": u["ai_logs"], "is_complete_case": u["complete_cases"],
+                })
+                st.dataframe(recent, use_container_width=True, hide_index=True, height=352)
 
     with tab_learning:
         evaluator_section(u["score_summary"])

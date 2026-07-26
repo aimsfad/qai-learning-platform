@@ -1,3 +1,11 @@
+## V4.9 - Evaluator Command Center
+
+- Moved evaluator quick actions from below the participant table to the top of the dashboard.
+- Added a multilingual four-card command center for learners, AI logs, LPQS evaluation, and exports.
+- Wrapped the recent-participant dataset in a bounded, scrollable data card to reduce page length.
+- Localized the participant-code column header and refined responsive dashboard spacing.
+- Updated the instrumented app version to `v4.9-evaluator-command-center`.
+
 ## V4.8 - Native Docked Navigation
 
 - Replaced the page-column navigation shell with Streamlit's native sidebar.
