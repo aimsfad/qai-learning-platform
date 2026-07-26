@@ -1,3 +1,10 @@
+# V5.0.1 - Branding startup hotfix
+
+- Fixed the startup `AttributeError` caused by an obsolete `branding.BRAND_NAME_LATIN` reference.
+- Added a backward-compatible brand-name alias.
+- Made toolbar fallback resolution safe even when the user role is not set.
+- Added a static validation that checks all `branding.*` references against exported symbols.
+
 ## V4.8 - Native Docked Navigation
 
 - Replaced the page-column navigation shell with Streamlit's native sidebar.

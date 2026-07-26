@@ -120,7 +120,7 @@ def _render_toolbar(current_title: str) -> None:
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
     copy = _toolbar_copy()
-    workspace = copy.get(role, branding.BRAND_NAME_LATIN)
+    workspace = copy.get(role) or getattr(branding, "BRAND_NAME_LATIN", branding.BRAND_NAME)
 
     with st.container(border=True):
         st.markdown("<span class='v5-toolbar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)

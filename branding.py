@@ -8,6 +8,8 @@ from textwrap import dedent
 from typing import Dict
 
 BRAND_NAME = "3alimnIA"
+# Backward-compatible alias used by older UI components.
+BRAND_NAME_LATIN = BRAND_NAME
 BRAND_NAME_AR = "علّمنيا"
 BRAND_TAGLINE_EN = "Difficult concepts, guided by generative AI."
 BRAND_TAGLINE_AR = "نفهم المفاهيم الصعبة خطوة بخطوة بالذكاء التوليدي."
