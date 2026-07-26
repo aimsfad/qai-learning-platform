@@ -1,3 +1,10 @@
+## V4.7.1 - Study Protocol Hotfix
+
+- Fixed the evaluator Study Protocol crash caused by outdated PRE_TEST_QUESTIONS and POST_TEST_QUESTIONS attribute names.
+- Added backward-compatible assessment collection lookup.
+- Localized the full Study Protocol page in Arabic, French, and English.
+- Preserved database, assessment content, research exports, and stable Excel sheet names.
+
 
 ## V4.7 - Sticky Compact Navigation
 

@@ -2951,12 +2951,203 @@ def consent_audit_table() -> pd.DataFrame:
     return audit
 
 
+
+def _content_collection_size(*names: str) -> int:
+    """Return the size of the first available content collection.
+
+    Older platform revisions used *_QUESTIONS names while the current content
+    module exposes PRE_TEST and POST_TEST. Keeping a small compatibility helper
+    prevents evaluator pages from failing when one naming convention changes.
+    """
+    for name in names:
+        value = getattr(content, name, None)
+        if value is not None:
+            try:
+                return len(value)
+            except TypeError:
+                continue
+    return 0
+
+
+def _study_protocol_copy() -> Dict[str, Any]:
+    lang = i18n.current_lang(st)
+    copies: Dict[str, Dict[str, Any]] = {
+        "ar": {
+            "dir": "rtl",
+            "title": "بروتوكول الدراسة",
+            "subtitle": "قائمة تشغيلية لإدارة تجربة 3alimnIA بوصفها دراسة تعليمية مضبوطة.",
+            "info": "لا تغيّر هذه الصفحة قاعدة البيانات. إنها توثّق تصميم الدراسة النشط، وتتحقق من الموافقة وجاهزية سير العمل، وتجهّز أدلة البروتوكول للمقيّم.",
+            "registered": "المتعلمون المسجلون",
+            "consent": "الموافقات المؤكدة",
+            "complete": "الحالات المكتملة",
+            "design": "تصميم الدراسة",
+            "design_control": "ضابطة / تجريبية",
+            "design_single": "دراسة استطلاعية أحادية المجموعة",
+            "config_title": "إعدادات الدراسة الحالية",
+            "setting": "الإعداد",
+            "value": "القيمة",
+            "config_rows": [
+                ("إصدار التطبيق", "app_version"),
+                ("المجموعة الضابطة مفعلة", "control_enabled"),
+                ("سير العمل الافتراضي", "workflow"),
+                ("عدد أسئلة الاختبار القبلي", "pre_items"),
+                ("عدد أسئلة الاختبار البعدي", "post_items"),
+                ("عدد الوحدات التعليمية", "modules"),
+                ("مزوّد الذكاء الاصطناعي", "provider"),
+                ("منشئ المفاهيم", "concept_builder"),
+                ("تسجيل بيانات الذكاء الاصطناعي", "ai_logging"),
+            ],
+            "enabled": "مفعّل",
+            "disabled": "غير مفعّل",
+            "workflow": "الموافقة ← الاختبار القبلي ← 6 وحدات تعليمية ← الاختبار البعدي ← الاستبيان",
+            "concept_builder": "متاح للمجموعة التجريبية أو الدراسة الأحادية، ويُخفى عن المجموعة الضابطة عند تفعيل وضع الضبط.",
+            "ai_logging": "تُسجَّل المهمة والنمط والمزوّد وزمن الاستجابة وتقييم الفائدة وتوقيت الطلب.",
+            "safeguards_title": "ضوابط سير العمل البحثي",
+            "safeguard": "الضابط",
+            "status": "الحالة",
+            "evidence": "الدليل",
+            "implemented": "مطبّق",
+            "conditional": "مشروط",
+            "safeguards": [
+                ("بوابة الموافقة قبل أنشطة التعلم", "implemented", "صفحة إشعار البحث وجدول consent_records"),
+                ("الاختبار القبلي قبل الوصول إلى الدروس", "implemented", "يقفل تنقل المتعلم الوحدات حتى إتمام الاختبار القبلي"),
+                ("طلاب المجموعة الضابطة لا يتلقون دعم الذكاء الاصطناعي", "conditional", "يُطبّق فقط عند ENABLE_CONTROL_GROUP=true"),
+                ("الاختبار البعدي بعد المسار التعليمي", "implemented", "يُفتح بعد إكمال أنشطة التعلم المطلوبة"),
+                ("تصدير مجهول الهوية للتحليل", "implemented", "تجهّز صفحة التصدير مصنفًا مجهول الهوية"),
+                ("مراجعة جودة استجابات الذكاء الاصطناعي", "implemented", "مقياس تقييم المقيّم لاستجابات الذكاء الاصطناعي"),
+            ],
+            "audit_title": "مراجعة الموافقة والاكتمال",
+            "no_participants": "لم يُسجَّل أي مشارك بعد.",
+            "missing_consent": "مشارك/مشاركون بلا موافقة مسجلة. يجب عدم إدراجهم في التحليل إلى أن تُحل الحالة.",
+            "audit_columns": {
+                "participant_code": "رمز المشارك", "full_name": "الاسم", "study_group": "مجموعة الدراسة",
+                "consent_done": "الموافقة", "pre_done": "القبلي", "completed_lessons": "الوحدات المكتملة",
+                "ai_interactions": "تفاعلات AI", "post_done": "البعدي", "survey_done": "الاستبيان",
+                "is_complete_case": "حالة مكتملة", "complete_case_missing": "العناصر الناقصة", "progress_percent": "نسبة التقدم",
+            },
+            "download_title": "تنزيل أدلة البروتوكول",
+            "download_button": "تنزيل مصنف بروتوكول الدراسة",
+        },
+        "fr": {
+            "dir": "ltr",
+            "title": "Protocole d’étude",
+            "subtitle": "Liste opérationnelle pour conduire le pilote 3alimnIA comme étude éducative contrôlée.",
+            "info": "Cette page ne modifie pas la base de données. Elle documente le plan d’étude actif, vérifie le consentement et la préparation du parcours, puis prépare les preuves du protocole pour l’évaluateur.",
+            "registered": "Apprenants inscrits",
+            "consent": "Consentements confirmés",
+            "complete": "Cas complets",
+            "design": "Plan d’étude",
+            "design_control": "Contrôle / expérimental",
+            "design_single": "Pilote à groupe unique",
+            "config_title": "Configuration active de l’étude",
+            "setting": "Paramètre",
+            "value": "Valeur",
+            "config_rows": [
+                ("Version de l’application", "app_version"),
+                ("Groupe contrôle activé", "control_enabled"),
+                ("Parcours par défaut", "workflow"),
+                ("Questions du pré-test", "pre_items"),
+                ("Questions du post-test", "post_items"),
+                ("Modules d’apprentissage", "modules"),
+                ("Fournisseur IA", "provider"),
+                ("Concept Builder", "concept_builder"),
+                ("Journalisation des données IA", "ai_logging"),
+            ],
+            "enabled": "Activé",
+            "disabled": "Désactivé",
+            "workflow": "Consentement → Pré-test → 6 modules → Post-test → Enquête",
+            "concept_builder": "Disponible pour les apprenants expérimentaux ou à groupe unique; masqué aux contrôles lorsque le mode contrôle est activé.",
+            "ai_logging": "La tâche, le mode, le fournisseur, la latence, l’utilité et l’heure de la requête sont journalisés.",
+            "safeguards_title": "Garanties du parcours de recherche",
+            "safeguard": "Garantie",
+            "status": "État",
+            "evidence": "Preuve",
+            "implemented": "Implémenté",
+            "conditional": "Conditionnel",
+            "safeguards": [
+                ("Consentement avant les activités d’apprentissage", "implemented", "Page Notice de recherche et table consent_records"),
+                ("Pré-test avant l’accès aux leçons", "implemented", "La navigation verrouille les modules jusqu’à la fin du pré-test"),
+                ("Aucun soutien IA pour le groupe contrôle", "conditional", "Actif uniquement lorsque ENABLE_CONTROL_GROUP=true"),
+                ("Post-test après le parcours d’apprentissage", "implemented", "Débloqué après les activités requises"),
+                ("Export anonymisé pour l’analyse", "implemented", "La page Export prépare un classeur anonymisé"),
+                ("Révision de la qualité des réponses IA", "implemented", "Grille d’évaluation des réponses IA"),
+            ],
+            "audit_title": "Audit du consentement et de l’achèvement",
+            "no_participants": "Aucun participant n’est encore inscrit.",
+            "missing_consent": "participant(s) sans consentement enregistré. Ne pas les inclure dans l’analyse avant résolution.",
+            "audit_columns": {
+                "participant_code": "Code participant", "full_name": "Nom", "study_group": "Groupe d’étude",
+                "consent_done": "Consentement", "pre_done": "Pré-test", "completed_lessons": "Modules terminés",
+                "ai_interactions": "Interactions IA", "post_done": "Post-test", "survey_done": "Enquête",
+                "is_complete_case": "Cas complet", "complete_case_missing": "Éléments manquants", "progress_percent": "Progression (%)",
+            },
+            "download_title": "Télécharger les preuves du protocole",
+            "download_button": "Télécharger le classeur du protocole",
+        },
+        "en": {
+            "dir": "ltr",
+            "title": "Study Protocol",
+            "subtitle": "Operational checklist for running the 3alimnIA pilot as a controlled educational study.",
+            "info": "This page does not change the database. It documents the active study design, checks consent and workflow readiness, and prepares protocol evidence for the evaluator.",
+            "registered": "Registered students",
+            "consent": "Consent confirmed",
+            "complete": "Complete cases",
+            "design": "Study design",
+            "design_control": "Control / experimental",
+            "design_single": "Single-arm pilot",
+            "config_title": "Active study configuration",
+            "setting": "Setting",
+            "value": "Value",
+            "config_rows": [
+                ("App version", "app_version"),
+                ("Control group enabled", "control_enabled"),
+                ("Default workflow", "workflow"),
+                ("Pre-test items", "pre_items"),
+                ("Post-test items", "post_items"),
+                ("Learning modules", "modules"),
+                ("AI provider", "provider"),
+                ("Concept Builder", "concept_builder"),
+                ("AI data logging", "ai_logging"),
+            ],
+            "enabled": "Enabled",
+            "disabled": "Disabled",
+            "workflow": "Consent → Pre-test → 6 learning modules → Post-test → Survey",
+            "concept_builder": "Enabled for experimental/single-arm students; hidden for control students when control mode is enabled.",
+            "ai_logging": "AI task, mode, provider, latency, usefulness rating, and request timing are logged.",
+            "safeguards_title": "Research workflow safeguards",
+            "safeguard": "Safeguard",
+            "status": "Status",
+            "evidence": "Evidence",
+            "implemented": "Implemented",
+            "conditional": "Conditional",
+            "safeguards": [
+                ("Consent gate before learning tasks", "implemented", "Research Notice page and consent_records table"),
+                ("Pre-test before access to lessons", "implemented", "Student navigation locks learning modules until pre-test is complete"),
+                ("Control students do not receive AI support", "conditional", "Active only when ENABLE_CONTROL_GROUP=true"),
+                ("Post-test after learning path", "implemented", "Post-test unlocks after required learning activities"),
+                ("Anonymized export for analysis", "implemented", "Exports page prepares anonymized workbook"),
+                ("AI response quality review", "implemented", "Evaluator rubric for AI responses"),
+            ],
+            "audit_title": "Consent and completion audit",
+            "no_participants": "No participants have been registered yet.",
+            "missing_consent": "participant(s) have no recorded consent. They should not be included in analysis until resolved.",
+            "audit_columns": {
+                "participant_code": "Participant code", "full_name": "Full name", "study_group": "Study group",
+                "consent_done": "Consent", "pre_done": "Pre-test", "completed_lessons": "Completed lessons",
+                "ai_interactions": "AI interactions", "post_done": "Post-test", "survey_done": "Survey",
+                "is_complete_case": "Complete case", "complete_case_missing": "Missing items", "progress_percent": "Progress (%)",
+            },
+            "download_title": "Download protocol evidence",
+            "download_button": "Download study protocol workbook",
+        },
+    }
+    return copies.get(lang, copies["en"])
+
+
 def render_study_protocol() -> None:
-    hero("Study Protocol", "Operational checklist for running the 3alimnIA pilot as a controlled educational study.")
-    st.info(
-        "This page does not change the database. It documents the active study design, checks consent and workflow readiness, "
-        "and prepares protocol evidence for the evaluator."
-    )
+    copy = _study_protocol_copy()
+    hero(copy["title"], copy["subtitle"], localized=True)
+    st.info(copy["info"])
 
     progress = db.progress_summary_df(len(content.LESSONS))
     students = db.students_df()
@@ -2964,58 +3155,71 @@ def render_study_protocol() -> None:
     control_enabled = control_group_enabled()
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Registered students", _safe_count(students))
-    c2.metric("Consent confirmed", int(progress["consent_done"].sum()) if not progress.empty and "consent_done" in progress else 0)
-    c3.metric("Complete cases", int(progress["is_complete_case"].sum()) if not progress.empty and "is_complete_case" in progress else 0)
-    c4.metric("Design", "Control/experimental" if control_enabled else "Single-arm pilot")
+    c1.metric(copy["registered"], _safe_count(students))
+    c2.metric(copy["consent"], int(progress["consent_done"].sum()) if not progress.empty and "consent_done" in progress else 0)
+    c3.metric(copy["complete"], int(progress["is_complete_case"].sum()) if not progress.empty and "is_complete_case" in progress else 0)
+    c4.metric(copy["design"], copy["design_control"] if control_enabled else copy["design_single"])
 
-    st.markdown("### Active study configuration")
+    st.markdown(f"### {copy['config_title']}")
+    config_values = {
+        "app_version": getattr(db, "APP_VERSION", "unknown"),
+        "control_enabled": copy["enabled"] if control_enabled else copy["disabled"],
+        "workflow": copy["workflow"],
+        "pre_items": str(_content_collection_size("PRE_TEST", "PRE_TEST_QUESTIONS")),
+        "post_items": str(_content_collection_size("POST_TEST", "POST_TEST_QUESTIONS")),
+        "modules": str(len(content.LESSONS)),
+        "provider": secret("LLM_PROVIDER", "local") or "local",
+        "concept_builder": copy["concept_builder"],
+        "ai_logging": copy["ai_logging"],
+    }
     config_rows = [
-        {"setting": "App version", "value": getattr(db, "APP_VERSION", "unknown")},
-        {"setting": "Control group enabled", "value": str(control_enabled)},
-        {"setting": "Default workflow", "value": "Consent → Pre-test → 6 learning modules → Post-test → Survey"},
-        {"setting": "Pre-test items", "value": str(len(content.PRE_TEST_QUESTIONS))},
-        {"setting": "Post-test items", "value": str(len(content.POST_TEST_QUESTIONS))},
-        {"setting": "Learning modules", "value": str(len(content.LESSONS))},
-        {"setting": "AI provider", "value": secret("LLM_PROVIDER", "local") or "local"},
-        {"setting": "Concept Builder", "value": "Enabled for experimental/single-arm students; hidden for control students when control mode is enabled."},
-        {"setting": "AI data logging", "value": "AI task, mode, provider, latency, usefulness rating, and request timing are logged."},
+        {copy["setting"]: label, copy["value"]: config_values[key]}
+        for label, key in copy["config_rows"]
     ]
     config_df = pd.DataFrame(config_rows)
     st.dataframe(config_df, use_container_width=True, hide_index=True)
 
-    st.markdown("### Research workflow safeguards")
-    checklist = pd.DataFrame([
-        {"safeguard": "Consent gate before learning tasks", "status": "Implemented", "evidence": "Research Notice page and consent_records table"},
-        {"safeguard": "Pre-test before access to lessons", "status": "Implemented", "evidence": "Student navigation locks learning modules until pre-test is complete"},
-        {"safeguard": "Control students do not receive AI support", "status": "Conditional", "evidence": "Active only when ENABLE_CONTROL_GROUP=true"},
-        {"safeguard": "Post-test after learning path", "status": "Implemented", "evidence": "Post-test unlocks after required learning activities"},
-        {"safeguard": "Anonymized export for analysis", "status": "Implemented", "evidence": "Exports page prepares anonymized workbook"},
-        {"safeguard": "AI response quality review", "status": "Implemented", "evidence": "Evaluator rubric for AI responses"},
-    ])
+    st.markdown(f"### {copy['safeguards_title']}")
+    checklist_rows = []
+    for safeguard, status_key, evidence in copy["safeguards"]:
+        checklist_rows.append({
+            copy["safeguard"]: safeguard,
+            copy["status"]: copy[status_key],
+            copy["evidence"]: evidence,
+        })
+    checklist = pd.DataFrame(checklist_rows)
     st.dataframe(checklist, use_container_width=True, hide_index=True)
 
-    st.markdown("### Consent and completion audit")
+    st.markdown(f"### {copy['audit_title']}")
     if consent_audit.empty:
-        st.info("No participants have been registered yet.")
+        st.info(copy["no_participants"])
     else:
         show_cols = [
             "participant_code", "full_name", "study_group", "consent_done", "pre_done", "completed_lessons",
             "ai_interactions", "post_done", "survey_done", "is_complete_case", "complete_case_missing", "progress_percent"
         ]
-        st.dataframe(consent_audit[[c for c in show_cols if c in consent_audit.columns]], use_container_width=True, hide_index=True)
+        audit_display = consent_audit[[c for c in show_cols if c in consent_audit.columns]].copy()
+        audit_display = audit_display.rename(columns=copy["audit_columns"])
+        st.dataframe(audit_display, use_container_width=True, hide_index=True)
         missing_consent = consent_audit[consent_audit.get("consent_done", 0).eq(0)] if "consent_done" in consent_audit else pd.DataFrame()
         if not missing_consent.empty:
-            st.warning(f"{len(missing_consent)} participant(s) have no recorded consent. They should not be included in analysis until resolved.")
+            st.warning(f"{len(missing_consent)} {copy['missing_consent']}")
 
-    st.markdown("### Download protocol evidence")
+    st.markdown(f"### {copy['download_title']}")
+    # Keep stable English sheet names for research scripts while localizing the UI.
     protocol_tables = {
-        "study_configuration": config_df,
-        "workflow_safeguards": checklist,
+        "study_configuration": pd.DataFrame([
+            {"setting": label, "value": config_values[key]}
+            for label, key in copy["config_rows"]
+        ]),
+        "workflow_safeguards": pd.DataFrame([
+            {"safeguard": safeguard, "status": copy[status_key], "evidence": evidence}
+            for safeguard, status_key, evidence in copy["safeguards"]
+        ]),
         "consent_completion_audit": consent_audit,
     }
     st.download_button(
-        "Download study protocol workbook",
+        copy["download_button"],
         data=to_excel_bytes(protocol_tables),
         file_name="qai_study_protocol_evidence.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
