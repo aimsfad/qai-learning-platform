@@ -1,13 +1,3 @@
-# 3alimnIA V4.9 - Evaluator Command Center
-
-## الجديد في V4.9
-
-- مركز إجراءات احترافي في أعلى لوحة المقيّم.
-- وصول مباشر إلى إدارة المتعلمين وسجلات AI وتقييم LPQS والتصدير.
-- جدول المشاركين داخل مساحة مضبوطة الارتفاع بتمرير داخلي.
-- تقليل طول الصفحة ومنع دفع الوظائف المهمة إلى أسفل الشاشة.
-- دعم كامل للعربية والفرنسية والإنجليزية واستجابة محسنة للحاسوب المحمول والهاتف.
-
 # 3alimnIA V4.8 - Premium Multilingual Learning & Research Platform
 
 ## الجديد في V4.8
@@ -125,3 +115,6 @@ streamlit run app.py
 
 ## V4.8.1 persistent navigation hotfix
 The native sidebar can always be reopened after collapse. Evaluator tools such as research exports remain grouped under Data & exports and are never removed.
+
+### V4.10 interface refinement
+The main content begins closer to the browser top, and horizontal analysis tabs now show an explicit high-contrast selected state.
