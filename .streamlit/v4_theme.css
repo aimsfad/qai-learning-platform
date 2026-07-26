@@ -828,3 +828,165 @@ html[dir="rtl"] .v4-hero-copy h1 {
 }
 [data-testid="stDataFrame"] { direction: inherit; }
 html[dir="rtl"] [data-testid="stDataFrame"] { direction: rtl; }
+
+/* ========================================================================== 
+   3alimnIA V4.7 - Sticky compact navigation across the whole platform
+   ========================================================================== */
+
+/* Keep the navigation rail visible while the page content scrolls. The rail
+   has its own discreet scrollbar, so every learner/evaluator destination stays
+   reachable without forcing the main document to scroll. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) {
+  position: sticky !important;
+  top: .35rem !important;
+  max-height: calc(100vh - .7rem) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(31,107,255,.35) transparent !important;
+  align-self: flex-start !important;
+  padding-bottom: .45rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker)::-webkit-scrollbar {
+  width: 7px;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker)::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker)::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(31,107,255,.25), rgba(19,181,234,.45));
+  border-radius: 999px;
+}
+[data-testid="stHorizontalBlock"]:has(.v47-shell-marker) > div:first-child {
+  align-self: flex-start !important;
+  min-width: 0 !important;
+}
+[data-testid="stHorizontalBlock"]:has(.v47-shell-marker) > div:last-child {
+  min-width: 0 !important;
+}
+
+/* Denser brand and profile treatment inside the persistent rail. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stImage"] {
+  margin-bottom: 0 !important;
+  padding-bottom: .15rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stImage"] img {
+  max-height: 58px !important;
+  object-fit: contain !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .v4-sidebar-tagline {
+  margin-top: -.08rem !important;
+  padding-bottom: .15rem !important;
+  font-size: .75rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .v43-side-profile,
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .v45-eval-profile {
+  margin: .42rem 0 .55rem !important;
+  padding: .68rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .v45-eval-status {
+  margin: .55rem 0 !important;
+  padding: .62rem .7rem !important;
+}
+
+/* Accordion navigation: only the active group is expanded. Streamlit's native
+   expander keeps keyboard support while reducing the rail's total height. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stExpander"] {
+  border: 1px solid #dce6f3 !important;
+  border-radius: 14px !important;
+  background: rgba(248,251,255,.82) !important;
+  box-shadow: none !important;
+  margin: .36rem 0 !important;
+  overflow: hidden !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stExpander"] details {
+  border: 0 !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stExpander"] summary {
+  min-height: 2.42rem !important;
+  padding: .45rem .62rem !important;
+  color: #53627a !important;
+  font-size: .72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: .02em !important;
+}
+html[dir="rtl"] [data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stExpander"] summary {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: "Alexandria", "Tajawal", sans-serif !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) [data-testid="stExpander"] [data-testid="stVerticalBlock"] {
+  gap: .18rem !important;
+  padding: 0 .42rem .42rem !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .stButton > button {
+  min-height: 2.35rem !important;
+  padding: .34rem .58rem !important;
+  border-radius: 11px !important;
+  font-size: .76rem !important;
+  line-height: 1.25 !important;
+  margin: 0 !important;
+}
+html[dir="rtl"] [data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .stButton > button {
+  font-family: "Alexandria", "Tajawal", sans-serif !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) .v43-nav-lock {
+  padding: .48rem .56rem !important;
+  margin: .08rem 0 !important;
+  border-radius: 10px !important;
+  font-size: .7rem !important;
+}
+
+/* Evaluator pages are operational screens, so their page header uses a compact
+   density and exposes controls immediately below the fold. */
+.v4-page-hero.v47-page-hero-compact {
+  padding: 1rem 1.25rem !important;
+  margin: .02rem 0 .8rem !important;
+  border-radius: 1.12rem !important;
+  box-shadow: 0 12px 30px rgba(11,31,77,.15) !important;
+}
+.v4-page-hero.v47-page-hero-compact .v4-page-hero-kicker {
+  margin-bottom: .25rem !important;
+  font-size: .62rem !important;
+}
+.v4-page-hero.v47-page-hero-compact h1 {
+  font-size: clamp(1.45rem, 2.25vw, 2rem) !important;
+  margin-bottom: .28rem !important;
+  line-height: 1.22 !important;
+}
+.v4-page-hero.v47-page-hero-compact p {
+  font-size: .82rem !important;
+  line-height: 1.55 !important;
+  max-width: 900px !important;
+}
+.v4-page-hero.v47-page-hero-compact .v4-page-hero-glow {
+  width: 180px !important;
+  height: 180px !important;
+  top: -105px !important;
+}
+
+/* Remove unnecessary vertical expansion from short operational pages while
+   retaining natural document flow on analytics-heavy pages. */
+.v45-export-grid {
+  margin-top: .45rem !important;
+}
+[data-testid="stMainBlockContainer"] {
+  min-height: 0 !important;
+}
+
+/* At tablet/mobile width the rail returns to normal document flow. This avoids
+   trapping touch users inside a narrow independently scrolling region. */
+@media (max-width: 900px) {
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v47-shell-marker) {
+    position: static !important;
+    top: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    scrollbar-gutter: auto !important;
+  }
+  .v4-page-hero.v47-page-hero-compact {
+    padding: .9rem 1rem !important;
+  }
+}
