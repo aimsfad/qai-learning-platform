@@ -922,6 +922,12 @@ def render_sidebar(target=st) -> None:
         eu = evaluator_ui()
         target.markdown(f"<div class='v45-eval-profile' dir='{eu['dir']}'><div class='v45-eval-avatar'>ER</div><div><b>{escape(eu['workspace'])}</b><span>{escape(eu['workspace_sub'])}</span></div></div>", unsafe_allow_html=True)
         if st.session_state.evaluator_logged_in:
+            nav_hint = {
+                "ar": "جميع أدوات المقيّم - ومنها التصدير - موجودة داخل الأقسام أدناه. مرّر هذه القائمة فقط للوصول إليها.",
+                "fr": "Tous les outils d’évaluation, y compris l’export, se trouvent dans les sections ci-dessous. Faites défiler uniquement ce panneau.",
+                "en": "All evaluator tools, including exports, are in the sections below. Scroll this panel independently.",
+            }.get(lang, "")
+            target.markdown(f"<div class='v481-navigation-note' dir='{eu['dir']}'>{escape(nav_hint)}</div>", unsafe_allow_html=True)
             groups = [
                 (eu["overview_group"], [("Evaluator Dashboard", "⌂"), ("Study Protocol", "◎")]),
                 (eu["participants_group"], [("Students", "◉"), ("Registration Accounts", "▤"), ("Student Details", "↗")]),
