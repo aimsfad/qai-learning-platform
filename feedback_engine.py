@@ -152,9 +152,13 @@ def resolve_response_language(
 
 def system_prompt(response_language: str = "English") -> str:
     language_rule = (
-        f"Respond in {response_language}. Respect the learner's requested language. "
-        "If the learner asks in Arabic, answer in clear Modern Standard Arabic while keeping technical terms such as qubit, gate, measurement, counts, and Qiskit when useful. "
-        "Do not switch back to English unless the learner requests it."
+        f"Respond exclusively in {response_language}. Respect the learner's requested language. "
+        "All headings, numbered steps, explanations, feedback, and pedagogical labels must use that language. "
+        "Do not repeat English JSON keys or English section labels. "
+        "For Arabic, write clear Modern Standard Arabic and introduce a technical English token only when useful, after its Arabic term or inside parentheses. "
+        "For French, use clear academic French and keep only indispensable code/API identifiers in English. "
+        "Code identifiers and gate names such as Qiskit, QuantumCircuit, H, CNOT, shots, and counts may remain in Latin script. "
+        "Never switch the surrounding prose back to English unless the learner explicitly requests it."
     )
     return (
         "You are an educational AI tutor for an introductory quantum programming pilot study. "
@@ -179,9 +183,19 @@ def build_prompt(
     response_language = resolve_response_language(student_input, student_profile, lesson_context)
     language_extra = ""
     if response_language == "Arabic":
-        language_extra = "اكتب الرد بالعربية الفصحى المبسطة. حافظ على المصطلحات التقنية الأساسية عند الحاجة مثل qubit و gate و measurement و Qiskit. لا تقدم الحل النهائي مباشرة؛ ابدأ بتلميحات وأسئلة موجهة."
+        language_extra = (
+            "اكتب جميع العناوين والخطوات والشرح بالعربية الفصحى المبسطة. "
+            "لا تنقل أسماء حقول السياق الإنجليزية ولا تستخدم عنوانًا إنجليزيًا. "
+            "اكتب المصطلح العربي أولًا، ثم أضف المصطلح التقني الإنجليزي بين قوسين عند الحاجة، "
+            "مع إبقاء أسماء الكود وQiskit والبوابات H وCNOT كما هي. "
+            "لا تقدم الحل النهائي مباشرة؛ ابدأ بتلميحات وأسئلة موجهة."
+        )
     elif response_language == "French":
-        language_extra = "Réponds en français clair et pédagogique. Garde les termes techniques essentiels si nécessaire. Commence par des indices et un raisonnement guidé avant la réponse complète."
+        language_extra = (
+            "Rédige tous les titres, étapes et explications en français clair et pédagogique. "
+            "Ne reproduis pas les noms de champs anglais du contexte. Conserve uniquement les identifiants de code, "
+            "Qiskit et les noms de portes indispensables. Commence par des indices et un raisonnement guidé."
+        )
     return f"""
 Task: {task}
 Concept focus: {concept}
@@ -207,6 +221,7 @@ Response requirements:
 - Include a Qiskit snippet only if it helps, and keep it minimal.
 - End with a reflective prompt that requires the learner to write something in their own words.
 - Strictly use the requested response language above.
+- Translate every prose heading and context label; leave only code identifiers and essential technical tokens untranslated.
 """.strip()
 
 

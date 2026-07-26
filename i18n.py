@@ -699,6 +699,40 @@ FR.update({'Interface language / لغة الواجهة / Langue de l’interface
 
 FR.update({"Post-test is locked until at least one AI Tutor interaction is recorded for the experimental group.": "Le post-test reste verrouillé jusqu’à l’enregistrement d’au moins une interaction avec le coach IA pour le groupe expérimental."})
 
+
+# V4.4: complete localization for dynamic plan guidance and pedagogical guardrails.
+AR.update({
+    "How to read this plan:": "كيف تقرأ هذه الخطة؟",
+    "Start with the concepts listed as weak or recommended.": "ابدأ بالمفاهيم التي ظهرت حاجتها إلى التعزيز أو التي أوصت بها المنصة.",
+    "Complete the learning module before relying on the AI tutor.": "أكمل الوحدة التعليمية وحاول بنفسك قبل الاعتماد على المدرّب الذكي.",
+    "Use the AI tutor for hints and explanations, not for copying final answers.": "استخدم المدرّب الذكي للتلميحات والتوضيح، لا لنسخ إجابات نهائية.",
+    "Next interactive step: click “Start learning module” and complete at least one learning activity.": "الخطوة التفاعلية التالية: اضغط «بدء الوحدة التعليمية» وأكمل نشاطًا تعليميًا واحدًا على الأقل.",
+    "Design decision: old static images and legacy micro-videos are hidden from the student path. Active materials are the micro-animation, simulator, code bridge, and check.": "ملاحظة تربوية: أُخفيت الصور الثابتة القديمة والمقاطع المصغرة السابقة من مسار المتعلم. وتعتمد الوحدة الآن على الحركة المصغرة والمحاكي وجسر الكود وفحص الفهم.",
+    "AI use reminder: use the AI concept coach tab after writing a short attempt. This keeps generative AI as a formative learning scaffold, not a shortcut.": "تذكير باستخدام الذكاء الاصطناعي: استخدم تبويب مدرّب المفهوم بعد كتابة محاولة قصيرة، حتى يبقى الذكاء التوليدي دعامةً تكوينية للتعلم لا طريقًا مختصرًا إلى الإجابة.",
+    "Qiskit documentation": "توثيق Qiskit",
+    "IBM Quantum documentation: visualization": "توثيق IBM Quantum: العرض البصري",
+    "Qiskit guide: visualize results": "دليل Qiskit لعرض النتائج",
+    "Bloch sphere explanation": "شرح كرة بلوخ",
+    "IBM Quantum Learning": "IBM Quantum Learning",
+    "Microsoft Quantum Katas": "Microsoft Quantum Katas",
+})
+
+FR.update({
+    "How to read this plan:": "Comment lire ce plan ?",
+    "Start with the concepts listed as weak or recommended.": "Commencez par les concepts à renforcer ou recommandés par la plateforme.",
+    "Complete the learning module before relying on the AI tutor.": "Terminez le module et effectuez votre propre tentative avant de vous appuyer sur le coach IA.",
+    "Use the AI tutor for hints and explanations, not for copying final answers.": "Utilisez le coach IA pour obtenir des indices et des explications, et non pour copier des réponses finales.",
+    "Next interactive step: click “Start learning module” and complete at least one learning activity.": "Étape interactive suivante : cliquez sur « Commencer le module » et terminez au moins une activité d’apprentissage.",
+    "Design decision: old static images and legacy micro-videos are hidden from the student path. Active materials are the micro-animation, simulator, code bridge, and check.": "Note pédagogique : les anciennes images statiques et micro-vidéos ont été retirées du parcours. Le module s’appuie désormais sur la micro-animation, le simulateur, le pont vers le code et la vérification de compréhension.",
+    "AI use reminder: use the AI concept coach tab after writing a short attempt. This keeps generative AI as a formative learning scaffold, not a shortcut.": "Rappel d’usage de l’IA : utilisez l’onglet du coach de concept après une courte tentative afin que l’IA générative reste un étayage formatif, et non un raccourci vers la réponse.",
+    "Qiskit documentation": "Documentation Qiskit",
+    "IBM Quantum documentation: visualization": "Documentation IBM Quantum : visualisation",
+    "Qiskit guide: visualize results": "Guide Qiskit : visualiser les résultats",
+    "Bloch sphere explanation": "Explication de la sphère de Bloch",
+    "IBM Quantum Learning": "IBM Quantum Learning",
+    "Microsoft Quantum Katas": "Microsoft Quantum Katas",
+})
+
 TRANSLATIONS = {"ar": AR, "fr": FR, "en": {}}
 
 
@@ -776,6 +810,85 @@ def translate(text: str, lang: str = DEFAULT_LANGUAGE) -> str:
             out = out.replace(source, mapping[source])
     return _replace_dynamic_patterns(out, code)
 
+
+
+def localize_generated_text(text: str, lang: str | None = None) -> str:
+    """Normalize learner-visible generated prose without touching code blocks.
+
+    LLMs occasionally repeat English context keys or concept labels even when a
+    non-English response was requested. This display-level pass localizes known
+    pedagogical labels while preserving fenced Qiskit/Python code verbatim.
+    """
+    code = normalize_lang(lang)
+    if code == "en" or not isinstance(text, str) or not text:
+        return text
+
+    ar_terms = {
+        "How to read this plan": "كيف تقرأ هذه الخطة؟",
+        "Personalized plan": "الخطة الشخصية",
+        "Personal study plan": "الخطة الدراسية الشخصية",
+        "Concepts to reinforce": "المفاهيم التي تحتاج إلى تعزيز",
+        "Recommended lesson sequence": "تسلسل الدروس المقترح",
+        "Weak concepts": "المفاهيم التي تحتاج إلى تعزيز",
+        "Next step": "الخطوة التالية",
+        "Step 1": "الخطوة الأولى",
+        "Step 2": "الخطوة الثانية",
+        "Step 3": "الخطوة الثالثة",
+        "Step 4": "الخطوة الرابعة",
+        "Diagnosis": "التشخيص",
+        "Recommended steps": "الخطوات المقترحة",
+        "Practice guidance": "إرشادات التطبيق",
+        "Reflection question": "سؤال التأمل",
+        "Review": "راجع",
+        "Practice": "طبّق",
+        "Complete": "أكمل",
+        "AI tutor": "المدرّب الذكي",
+        "learning module": "الوحدة التعليمية",
+        "Shots and counts": "التكرارات والعدّادات (shots and counts)",
+        "Qiskit debugging": "تصحيح أخطاء Qiskit",
+        "Circuit basics": "أساسيات الدارة الكمية",
+        "Qubit measurement": "قياس الكيوبت",
+        "Hadamard and superposition": "بوابة هادامارد والتراكب",
+        "CNOT and correlation": "بوابة CNOT والارتباط",
+        "debugging": "تصحيح الأخطاء",
+    }
+    fr_terms = {
+        "How to read this plan": "Comment lire ce plan ?",
+        "Personalized plan": "Plan personnalisé",
+        "Personal study plan": "Plan d’étude personnalisé",
+        "Concepts to reinforce": "Concepts à renforcer",
+        "Recommended lesson sequence": "Séquence de leçons recommandée",
+        "Weak concepts": "Concepts à renforcer",
+        "Next step": "Étape suivante",
+        "Step 1": "Étape 1",
+        "Step 2": "Étape 2",
+        "Step 3": "Étape 3",
+        "Step 4": "Étape 4",
+        "Diagnosis": "Diagnostic",
+        "Recommended steps": "Étapes recommandées",
+        "Practice guidance": "Conseils de pratique",
+        "Reflection question": "Question de réflexion",
+        "Review": "Réviser",
+        "Practice": "Pratiquer",
+        "Complete": "Terminer",
+        "AI tutor": "coach IA",
+        "learning module": "module d’apprentissage",
+        "Shots and counts": "shots et comptages",
+        "Qiskit debugging": "débogage Qiskit",
+        "Circuit basics": "bases du circuit quantique",
+        "Qubit measurement": "mesure du qubit",
+        "Hadamard and superposition": "Hadamard et superposition",
+        "CNOT and correlation": "CNOT et corrélation",
+        "debugging": "débogage",
+    }
+    terms = ar_terms if code == "ar" else fr_terms
+    chunks = re.split(r"(```[\\s\\S]*?```)", text)
+    for index in range(0, len(chunks), 2):
+        chunk = chunks[index]
+        for source in sorted(terms, key=len, reverse=True):
+            chunk = re.sub(re.escape(source), terms[source], chunk, flags=re.IGNORECASE)
+        chunks[index] = chunk
+    return "".join(chunks)
 
 def tr(text: Any, lang: str | None = None) -> Any:
     if not isinstance(text, str):

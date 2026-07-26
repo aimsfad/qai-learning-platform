@@ -1328,58 +1328,144 @@ def render_test_page(student: Dict[str, Any], kind: str) -> None:
         st.rerun()
 
 def render_adaptive_plan(student: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    copy = {
+        "ar": {
+            "intro_title": "كيف تقرأ هذه الخطة؟",
+            "steps": [
+                "ابدأ بالمفاهيم التي ظهرت حاجتها إلى التعزيز أو التي أوصت بها المنصة.",
+                "أكمل الوحدة التعليمية وحاول بنفسك قبل الاعتماد على المدرّب الذكي.",
+                "استخدم المدرّب الذكي للتلميحات والتوضيح، لا لنسخ إجابات نهائية.",
+            ],
+            "input": "أنشئ خطة دراسية موجزة ومنظمة اعتمادًا على ملف المتعلم والمفاهيم التي تحتاج إلى تعزيز. استخدم العربية الفصحى في جميع العناوين والخطوات، وأبقِ أسماء Qiskit والكود فقط بصيغتها التقنية عند الحاجة.",
+            "task": "إنشاء خطة تعلم شخصية منظمة",
+            "concept": "التعلم التكيفي في البرمجة الكمية",
+            "next": "الخطوة التفاعلية التالية: اضغط «بدء الوحدة التعليمية» وأكمل نشاطًا تعليميًا واحدًا على الأقل.",
+        },
+        "fr": {
+            "intro_title": "Comment lire ce plan ?",
+            "steps": [
+                "Commencez par les concepts à renforcer ou recommandés par la plateforme.",
+                "Terminez le module et effectuez votre propre tentative avant de vous appuyer sur le coach IA.",
+                "Utilisez le coach IA pour obtenir des indices et des explications, et non pour copier des réponses finales.",
+            ],
+            "input": "Génère un plan d’étude concis et structuré à partir du profil de l’apprenant et des concepts à renforcer. Rédige tous les titres et toutes les étapes en français ; conserve uniquement les identifiants Qiskit et le code dans leur forme technique.",
+            "task": "Générer un plan d’apprentissage personnalisé et structuré",
+            "concept": "Apprentissage adaptatif de la programmation quantique",
+            "next": "Étape interactive suivante : cliquez sur « Commencer le module » et terminez au moins une activité d’apprentissage.",
+        },
+        "en": {
+            "intro_title": "How to read this plan",
+            "steps": [
+                "Start with the concepts listed as weak or recommended.",
+                "Complete the learning module before relying on the AI tutor.",
+                "Use the AI tutor for hints and explanations, not for copying final answers.",
+            ],
+            "input": "Generate a concise, structured study plan based on the learner profile and concepts to reinforce.",
+            "task": "Generate a structured personalized study plan",
+            "concept": "Adaptive quantum-programming learning",
+            "next": "Next interactive step: click “Start learning module” and complete at least one learning activity.",
+        },
+    }[lang]
+
     hero("Adaptive Learning Plan", "The platform uses your pre-test results to recommend learning sections and AI-supported practice.")
     if not test_is_done(student["id"], "pre"):
         st.warning("Complete the pre-test first.")
         return
+
     rec = db.get_recommendation(student["id"]) or db.compute_adaptive_recommendation(student["id"], content.CONCEPT_TO_LESSONS)
     weak = rec.get("weak_concepts", [])
     recommended = rec.get("recommended_lessons", [])
+    weak_localized = [i18n.concept_label(concept, lang) for concept in weak]
+    lesson_map = {lesson["id"]: lesson["title"] for lesson in localized_lessons()}
+    recommended_localized = [lesson_map.get(lesson_id, lesson_id) for lesson_id in recommended]
+
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("### Concepts to reinforce")
-        if weak:
-            for concept in weak:
-                st.markdown(f"- {i18n.concept_label(concept, i18n.current_lang(st))}")
+        if weak_localized:
+            for concept in weak_localized:
+                st.markdown(f"- {concept}")
         else:
             st.markdown("No major weakness detected. Continue with the full learning sequence.")
     with c2:
         st.markdown("### Recommended lesson sequence")
-        lesson_map = {lesson["id"]: lesson["title"] for lesson in localized_lessons()}
-        for lesson_id in recommended:
-            st.markdown(f"- {lesson_map.get(lesson_id, lesson_id)}")
+        for title in recommended_localized:
+            st.markdown(f"- {title}")
 
     st.divider()
     plan_language = st.selectbox(
         "AI response language",
         ["Auto-detect", "English", "Arabic", "French"],
-        index={"en": 1, "ar": 2, "fr": 3}[i18n.current_lang(st)],
+        index={"en": 1, "ar": 2, "fr": 3}[lang],
         key="adaptive_plan_language",
         format_func=lambda value: i18n.tr(value),
     )
+    target_lang = lang if plan_language == "Auto-detect" else {"English": "en", "Arabic": "ar", "French": "fr"}[plan_language]
+    target_direction = i18n.direction(target_lang)
+
     if st.button("Generate AI personalized study plan", type="primary"):
         profile = student_profile(student)
+        # Pass learner-visible labels rather than internal English identifiers.
+        plan_profile = {
+            "participant_code": profile.get("participant_code"),
+            "academic_level": profile.get("academic_level"),
+            "prior_python_level": profile.get("prior_python_level"),
+            "prior_quantum_level": profile.get("prior_quantum_level"),
+            "pre_test_score": profile.get("pre_test_score"),
+            "concepts_to_reinforce": weak_localized,
+            "recommended_sequence": recommended_localized,
+            "completed_modules": len(profile.get("completed_lessons", [])),
+        }
+        target_copy = copy if target_lang == lang else {
+            "ar": {
+                "input": "أنشئ خطة دراسية موجزة ومنظمة اعتمادًا على ملف المتعلم والمفاهيم التي تحتاج إلى تعزيز. استخدم العربية الفصحى في جميع العناوين والخطوات، وأبقِ أسماء Qiskit والكود فقط بصيغتها التقنية عند الحاجة.",
+                "task": "إنشاء خطة تعلم شخصية منظمة", "concept": "التعلم التكيفي في البرمجة الكمية",
+            },
+            "fr": {
+                "input": "Génère un plan d’étude concis et structuré à partir du profil de l’apprenant et des concepts à renforcer. Rédige tous les titres et toutes les étapes en français.",
+                "task": "Générer un plan d’apprentissage personnalisé et structuré", "concept": "Apprentissage adaptatif de la programmation quantique",
+            },
+            "en": {
+                "input": "Generate a concise, structured study plan based on the learner profile and concepts to reinforce.",
+                "task": "Generate a structured personalized study plan", "concept": "Adaptive quantum-programming learning",
+            },
+        }[target_lang]
         tutor = feedback_engine.generate_tutor_response(
-            task="Generate a personalized study plan",
-            concept="Adaptive quantum programming learning",
-            student_input="Generate a concise study plan based on the learner profile and weak concepts.",
-            student_profile=profile,
-            lesson_context={"recommended_lessons": recommended, "weak_concepts": weak, "response_language": plan_language},
+            task=target_copy["task"],
+            concept=target_copy["concept"],
+            student_input=target_copy["input"],
+            student_profile=plan_profile,
+            lesson_context={
+                "recommended_sequence": recommended_localized,
+                "concepts_to_reinforce": weak_localized,
+                "response_language": i18n.response_language(target_lang),
+                "required_structure": ["diagnosis", "ordered learning steps", "practice guidance", "reflection question"],
+                "language_contract": "All prose headings and steps must use the requested language. Keep only code identifiers and essential Qiskit tokens in English.",
+            },
         )
+        tutor.response = i18n.localize_generated_text(tutor.response, target_lang)
         log_tutor_interaction(
             student["id"], "adaptive_plan", "Adaptive learning", "Generate personalized study plan",
-            "Generate a concise study plan based on pre-test results.", tutor,
+            target_copy["input"], tutor,
         )
         st.markdown("### 📋 AI-generated study plan")
-        ux_note(
-            "<b>How to read this plan:</b><br>"
-            "1. Start with the concepts listed as weak or recommended.<br>"
-            "2. Complete the learning module before relying on the AI tutor.<br>"
-            "3. Use the AI tutor for hints and explanations, not for copying final answers."
+        steps_html = "".join(f"<li>{escape(step)}</li>" for step in copy["steps"])
+        st.markdown(
+            f"<aside class='v44-plan-guide' dir='{direction}'><strong>{escape(copy['intro_title'])}</strong><ol>{steps_html}</ol></aside>",
+            unsafe_allow_html=True,
         )
         st.markdown("#### Personalized plan")
-        st.write(tutor.response)
-        interactive_note("Next interactive step: click “Start learning module” and complete at least one learning activity.")
+        safe_response = escape(tutor.response).replace("\n", "<br>")
+        st.markdown(
+            f"<section class='v44-generated-plan' dir='{target_direction}'>{safe_response}</section>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<div class='qai-interactive' dir='{direction}'>{escape(copy['next'])}</div>",
+            unsafe_allow_html=True,
+        )
         if tutor.mode == "llm_error":
             st.info("The LLM service was unavailable, so a local fallback was shown and logged for the evaluator.")
     if st.button("Start learning module →", type="primary", use_container_width=True):
@@ -2189,7 +2275,15 @@ def render_lesson_media(lesson_id: str, student: Optional[Dict[str, Any]] = None
             except Exception: pass
         st.success("Saved.")
     st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("<div class='qai-v11-no-legacy'><b>Design decision:</b> old static images and legacy micro-videos are hidden from the student path. Active materials are the micro-animation, simulator, code bridge, and check.</div>", unsafe_allow_html=True)
+    guardrail_copy = {
+        "ar": ("ملاحظة تربوية", "أُخفيت الصور الثابتة القديمة والمقاطع المصغرة السابقة من مسار المتعلم. وتعتمد الوحدة الآن على الحركة المصغرة والمحاكي وجسر الكود وفحص الفهم."),
+        "fr": ("Note pédagogique", "Les anciennes images statiques et micro-vidéos ont été retirées du parcours. Le module s’appuie désormais sur la micro-animation, le simulateur, le pont vers le code et la vérification de compréhension."),
+        "en": ("Pedagogical note", "Old static images and legacy micro-videos are hidden from the learner path. Active materials are the micro-animation, simulator, code bridge, and understanding check."),
+    }[i18n.current_lang(st)]
+    st.markdown(
+        f"<div class='qai-v11-no-legacy' dir='{i18n.direction(i18n.current_lang(st))}'><b>{escape(guardrail_copy[0])}:</b> {escape(guardrail_copy[1])}</div>",
+        unsafe_allow_html=True,
+    )
     resource_url = media.get("resource_url")
     resource_label = media.get("resource_label", "Optional external resource")
     if resource_url:
@@ -2334,7 +2428,15 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.write(lesson["reflective_prompt"])
 
     st.divider()
-    st.markdown("<div class='qai-ai-reminder'><b>AI use reminder:</b> use the <i>AI concept coach</i> tab after writing a short attempt. This keeps generative AI as a formative learning scaffold, not a shortcut.</div>", unsafe_allow_html=True)
+    reminder_copy = {
+        "ar": ("تذكير باستخدام الذكاء الاصطناعي", "استخدم تبويب مدرّب المفهوم بعد كتابة محاولة قصيرة، حتى يبقى الذكاء التوليدي دعامةً تكوينية للتعلم لا طريقًا مختصرًا إلى الإجابة."),
+        "fr": ("Rappel d’usage de l’IA", "Utilisez l’onglet du coach de concept après une courte tentative afin que l’IA générative reste un étayage formatif, et non un raccourci vers la réponse."),
+        "en": ("AI-use reminder", "Use the AI concept coach after writing a short attempt. This keeps generative AI as a formative learning scaffold rather than a shortcut."),
+    }[i18n.current_lang(st)]
+    st.markdown(
+        f"<div class='qai-ai-reminder' dir='{i18n.direction(i18n.current_lang(st))}'><b>{escape(reminder_copy[0])}:</b> {escape(reminder_copy[1])}</div>",
+        unsafe_allow_html=True,
+    )
 
     st.divider()
     st.markdown("### Reflection and completion")
