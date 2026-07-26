@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v4.0-premium-ui-multilingual"
+APP_VERSION = "v4.5-evaluator-research-dashboard"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -1022,6 +1022,7 @@ def get_survey(student_id: int) -> Optional[Dict[str, Any]]:
 def students_df(limit: Optional[int] = None) -> pd.DataFrame:
     sql = """
         SELECT id, participant_code, full_name, email, institution, academic_level,
+               COALESCE(preferred_language, 'ar') AS preferred_language,
                prior_python_level, prior_quantum_level, COALESCE(study_group, 'single_arm') AS study_group, created_at, last_login_at, is_active
         FROM students
         ORDER BY created_at DESC

@@ -733,6 +733,61 @@ FR.update({
     "Microsoft Quantum Katas": "Microsoft Quantum Katas",
 })
 
+# V4.5 evaluator/research workspace translations for legacy pages that still
+# use canonical English strings internally.
+AR.update({
+    "Study Protocol": "بروتوكول الدراسة",
+    "Operational checklist for running the 3alimnIA pilot as a controlled educational study.": "قائمة تشغيلية لتنفيذ تجربة 3alimnIA بوصفها دراسة تعليمية مضبوطة.",
+    "Registered students": "المتعلمون المسجلون",
+    "Consent confirmed": "الموافقات المسجلة",
+    "Complete cases": "الحالات المكتملة",
+    "Design": "تصميم الدراسة",
+    "Active study configuration": "إعدادات الدراسة الحالية",
+    "Research workflow safeguards": "ضوابط سير العمل البحثي",
+    "Consent and completion audit": "تدقيق الموافقة والاكتمال",
+    "Download protocol evidence": "تنزيل أدلة البروتوكول",
+    "Download study protocol workbook": "تنزيل مصنف بروتوكول الدراسة",
+    "Create participant account as evaluator": "إنشاء حساب مشارك من فضاء المقيّم",
+    "Full name": "الاسم الكامل", "Email": "البريد الإلكتروني", "Institution": "المؤسسة",
+    "Academic level": "المستوى الأكاديمي", "Prior Python level": "المستوى السابق في Python",
+    "Prior quantum knowledge": "المعرفة السابقة بالكوانتوم", "Initial password": "كلمة المرور الأولية",
+    "Create participant": "إنشاء المشارك", "Could not create participant": "تعذر إنشاء المشارك",
+    "Search by participant code, name, email, or institution": "البحث برمز المشارك أو الاسم أو البريد أو المؤسسة",
+    "Only active accounts": "الحسابات النشطة فقط", "Only accounts missing email": "الحسابات دون بريد فقط",
+    "Only never signed in": "من لم يسجلوا الدخول بعد", "Registered accounts": "الحسابات المسجلة",
+    "Active accounts": "الحسابات النشطة", "Missing email": "بريد مفقود",
+    "Signed in at least once": "سجل الدخول مرة على الأقل", "Download account registration list (CSV)": "تنزيل قائمة الحسابات CSV",
+    "Select participant": "اختر المشارك", "Learning timeline": "الخط الزمني للتعلم",
+    "Likert responses": "استجابات ليكرت", "Open-ended feedback": "التغذية الراجعة المفتوحة",
+    "Download group comparison CSV": "تنزيل مقارنة المجموعات CSV",
+    "Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment.": "كلمة مرور المقيّم الافتراضية ما تزال فعالة. غيّر ADMIN_PASSWORD أو استخدم EVALUATOR_PASSWORD_HASH قبل النشر السحابي.",
+})
+FR.update({
+    "Study Protocol": "Protocole d'étude",
+    "Operational checklist for running the 3alimnIA pilot as a controlled educational study.": "Liste opérationnelle pour conduire le pilote 3alimnIA comme étude éducative contrôlée.",
+    "Registered students": "Apprenants inscrits", "Consent confirmed": "Consentements confirmés",
+    "Complete cases": "Cas complets", "Design": "Plan d'étude",
+    "Active study configuration": "Configuration active de l'étude",
+    "Research workflow safeguards": "Garanties du protocole de recherche",
+    "Consent and completion audit": "Audit du consentement et de l'achèvement",
+    "Download protocol evidence": "Télécharger les preuves du protocole",
+    "Download study protocol workbook": "Télécharger le classeur du protocole",
+    "Create participant account as evaluator": "Créer un compte participant",
+    "Full name": "Nom complet", "Email": "E-mail", "Institution": "Établissement",
+    "Academic level": "Niveau académique", "Prior Python level": "Niveau antérieur en Python",
+    "Prior quantum knowledge": "Connaissances quantiques antérieures", "Initial password": "Mot de passe initial",
+    "Create participant": "Créer le participant", "Could not create participant": "Impossible de créer le participant",
+    "Search by participant code, name, email, or institution": "Rechercher par code, nom, e-mail ou établissement",
+    "Only active accounts": "Comptes actifs uniquement", "Only accounts missing email": "Comptes sans e-mail uniquement",
+    "Only never signed in": "Jamais connectés uniquement", "Registered accounts": "Comptes inscrits",
+    "Active accounts": "Comptes actifs", "Missing email": "E-mail manquant",
+    "Signed in at least once": "Connectés au moins une fois", "Download account registration list (CSV)": "Télécharger la liste des comptes CSV",
+    "Select participant": "Sélectionner un participant", "Learning timeline": "Chronologie d'apprentissage",
+    "Likert responses": "Réponses Likert", "Open-ended feedback": "Commentaires ouverts",
+    "Download group comparison CSV": "Télécharger la comparaison des groupes CSV",
+    "Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment.": "Le mot de passe évaluateur par défaut est encore actif. Modifiez ADMIN_PASSWORD ou utilisez EVALUATOR_PASSWORD_HASH avant le déploiement.",
+})
+
 TRANSLATIONS = {"ar": AR, "fr": FR, "en": {}}
 
 

@@ -58,3 +58,20 @@
 - Embedded the logo as a base64 data URI to prevent broken paths on Streamlit Cloud.
 - Removed the replacement SVG wordmark from the visible interface.
 - Added responsive sizing for hero and sidebar use.
+
+## V4.3 - Learning Experience & Navigation
+- Grouped learner navigation and adaptive-plan access.
+- Premium learner dashboard and progress topbar.
+- Assessment cards with question progress.
+- Unified lesson selector cards.
+- Localized AI Coach quick-start actions.
+
+## V4.5 - Evaluator & Research Dashboard
+- Rebuilt the evaluator sidebar into grouped research navigation with system-status visibility.
+- Added a multilingual global analysis filter for study group, academic level, learner language, and completion status.
+- Added six evaluator KPI cards: learners, complete cases, paired tests, mean gain, AI interactions, and mean LPQS.
+- Added tabbed dashboard views for completion workflow, learning outcomes, AI usage, LPQS quality, and system readiness.
+- Redesigned learner/account management, participant details, AI logs, response inspection, and LPQS evaluation.
+- Added a safer two-track export interface for anonymized research data and full administrative backup.
+- Exposed `preferred_language` in evaluator data while preserving the database schema and existing records.
+- Added responsive evaluator styling and `validate_v45_evaluator.py`.

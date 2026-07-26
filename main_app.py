@@ -903,13 +903,29 @@ def render_sidebar(target=st) -> None:
             switch_role(None)
         render_status_badge(target)
     elif role == "evaluator":
-        target.markdown(f"<div class='v43-guest-card' dir='{u['dir']}'><b>{escape(i18n.tr('Evaluator workspace'))}</b><span>{escape(i18n.tr('Monitor progress, AI usage, and exports.'))}</span></div>", unsafe_allow_html=True)
+        eu = evaluator_ui()
+        target.markdown(f"<div class='v45-eval-profile' dir='{eu['dir']}'><div class='v45-eval-avatar'>ER</div><div><b>{escape(eu['workspace'])}</b><span>{escape(eu['workspace_sub'])}</span></div></div>", unsafe_allow_html=True)
         if st.session_state.evaluator_logged_in:
-            pages = ["Evaluator Dashboard", "Study Protocol", "Students", "Registration Accounts", "Student Details", "AI Tutor Logs", "AI Response Evaluation", "AI Metrics", "Exports"]
-            for page in pages:
-                if target.button(i18n.page_label(page, lang), key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if st.session_state.evaluator_page == page else "secondary"):
-                    st.session_state.evaluator_page = page
-                    st.rerun()
+            groups = [
+                (eu["overview_group"], [("Evaluator Dashboard", "⌂"), ("Study Protocol", "◎")]),
+                (eu["participants_group"], [("Students", "◉"), ("Registration Accounts", "▤"), ("Student Details", "↗")]),
+                (eu["ai_group"], [("AI Tutor Logs", "◈"), ("AI Response Evaluation", "★"), ("AI Metrics", "▥")]),
+                (eu["data_group"], [("Exports", "⇩")]),
+            ]
+            for title, pages in groups:
+                target.markdown(f"<div class='v45-eval-nav-group' dir='{eu['dir']}'>{escape(title)}</div>", unsafe_allow_html=True)
+                for page, icon in pages:
+                    label = i18n.page_label(page, lang)
+                    if target.button(f"{icon}  {label}", key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if st.session_state.evaluator_page == page else "secondary"):
+                        st.session_state.evaluator_page = page
+                        st.rerun()
+            status = feedback_engine.provider_status()
+            readiness = db.system_readiness(len(content.LESSONS))
+            ai_state = eu["available"] if status.get("available") else eu["unavailable"]
+            target.markdown(
+                f"<div class='v45-eval-status' dir='{eu['dir']}'><span>{escape(eu['system_status'])}</span><b>{escape(str(readiness.get('database_dialect','—')))} · {escape(ai_state)}</b><small>{escape(str(readiness.get('app_version','—')))}</small></div>",
+                unsafe_allow_html=True,
+            )
             if target.button(i18n.tr("Sign out"), use_container_width=True):
                 st.session_state.evaluator_logged_in = False
                 st.rerun()
@@ -2659,6 +2675,165 @@ def render_survey(student: Dict[str, Any]) -> None:
 # Evaluator workspace
 # -----------------------------------------------------------------------------
 
+
+def evaluator_ui() -> Dict[str, Any]:
+    """Localized copy for the evaluator/research workspace.
+
+    Internal route names remain stable in English while all visible copy follows
+    the selected UI language. This avoids route/database changes and makes the
+    research workspace consistent with the learner experience.
+    """
+    lang = i18n.current_lang(st)
+    common = {
+        "ar": {
+            "dir": "rtl", "workspace": "فضاء المقيّم والباحث", "workspace_sub": "مراقبة التقدم، جودة دعم الذكاء الاصطناعي، والبيانات البحثية.",
+            "overview_group": "نظرة عامة", "participants_group": "المشاركون", "ai_group": "الذكاء الاصطناعي والجودة", "data_group": "البيانات والتصدير",
+            "dashboard_title": "لوحة المقيّم والباحث", "dashboard_sub": "نظرة موحدة على تقدم المتعلمين، نتائج التعلم، استخدام الذكاء الاصطناعي وجودة استجاباته.",
+            "filters": "مرشحات التحليل", "group": "مجموعة الدراسة", "level": "المستوى الأكاديمي", "language": "لغة الواجهة", "completion": "حالة الاكتمال",
+            "all": "الكل", "complete": "حالة مكتملة", "incomplete": "غير مكتملة", "reset": "إعادة ضبط المرشحات",
+            "students": "المتعلمون", "complete_cases": "الحالات المكتملة", "paired_tests": "اختبارات مزدوجة", "mean_gain": "متوسط التحسن", "ai_logs": "تفاعلات الذكاء الاصطناعي", "lpqs": "متوسط LPQS",
+            "registered_note": "الحسابات المسجلة ضمن المرشحات الحالية", "complete_note": "موافقة + قبلي + تعلم + AI + بعدي + استبيان", "paired_note": "متعلمين لديهم اختبار قبلي وبعدي", "gain_note": "فرق الدرجة البعدية عن القبلية", "ai_note": "إجمالي التفاعلات المسجلة", "lpqs_note": "متوسط التقييم التربوي للاستجابات",
+            "overview": "نظرة عامة", "learning": "نتائج التعلم", "ai_usage": "استخدام الذكاء الاصطناعي", "quality_system": "الجودة وجاهزية النظام",
+            "workflow": "مسار إكمال الدراسة", "workflow_sub": "عدد المشاركين الذين وصلوا إلى كل مرحلة من البروتوكول.",
+            "stage": "المرحلة", "count": "العدد", "percent": "النسبة", "consent": "الموافقة", "pre": "الاختبار القبلي", "lesson": "نشاط تعليمي", "ai": "تفاعل AI", "post": "الاختبار البعدي", "survey": "الاستبيان",
+            "recent": "أحدث المشاركين", "recent_sub": "عرض تشغيلي سريع مع إبقاء التصدير الكامل في صفحة التصدير.", "no_data": "لا توجد بيانات مطابقة للمرشحات الحالية.",
+            "quick_actions": "إجراءات سريعة", "open_students": "إدارة المتعلمين", "open_ai_logs": "مراجعة سجلات AI", "open_quality": "تقييم الاستجابات", "open_exports": "فتح التصدير",
+            "score_summary": "ملخص الدرجات", "mean_pre": "متوسط القبلي", "mean_post": "متوسط البعدي", "normalized": "الحالات المستخدمة", "concepts": "الأداء حسب المفهوم",
+            "usage_provider": "الاستخدام حسب النمط والمزوّد", "usage_task": "الاستخدام حسب نوع الدعم", "interaction_health": "صحة التفاعلات", "fallback_rate": "نسبة الاستجابات الاحتياطية", "latency": "متوسط زمن الاستجابة", "usefulness": "متوسط فائدة الاستجابة",
+            "quality_summary": "ملخص جودة استجابات الذكاء الاصطناعي", "evaluated": "الاستجابات المقيّمة", "unrated": "المتبقية للتقييم", "provider_status": "حالة مزوّد الذكاء الاصطناعي", "system_status": "جاهزية النظام",
+            "available": "متاح", "unavailable": "غير متاح", "database": "قاعدة البيانات", "app_version": "إصدار التطبيق", "model": "النموذج",
+            "login_title": "دخول المقيّم", "login_sub": "مساحة محمية لمتابعة المشاركين، تقييم استجابات الذكاء الاصطناعي وتصدير بيانات الدراسة.", "username": "اسم المستخدم", "password": "كلمة المرور", "sign_in": "تسجيل الدخول", "invalid": "بيانات الدخول غير صحيحة.", "signed_in": "تم تسجيل الدخول.",
+            "logs_title": "سجلات المدرّب الذكي", "logs_sub": "راجع المطالبات، الاستجابات، النمط، المزوّد، الزمن والأخطاء المسجلة.", "mode": "النمط", "module": "الوحدة", "concept": "المفهوم", "rows": "عدد السجلات", "search_code": "رمز المشارك", "matches": "السجلات المطابقة", "inspect": "فحص تفاعل", "prompt": "مدخل المتعلم", "response": "استجابة الذكاء الاصطناعي", "diagnostic": "التشخيص التقني", "no_logs": "لا توجد تفاعلات مطابقة لهذه المرشحات.",
+            "eval_title": "تقييم استجابات الذكاء الاصطناعي", "eval_sub": "قيّم الاستجابات وفق مقياس LPQS ذي المعايير السبعة لإنتاج دليل تربوي قابل للتحليل.", "load": "عدد الاستجابات", "only_unrated": "غير المقيّمة فقط", "only_llm": "استجابات LLM والأخطاء فقط", "candidate": "الاستجابات المرشحة", "select_interaction": "اختر تفاعلًا للتقييم", "rubric": "تقييم الخبير", "rubric_help": "1 = ضعيف أو غير صحيح، 3 = مقبول جزئيًا، 5 = ممتاز ومناسب تربويًا", "comment": "تعليق المقيّم", "save_eval": "حفظ تقييم الاستجابة", "saved": "تم حفظ التقييم.", "current_summary": "ملخص LPQS الحالي", "full_evals": "جميع التقييمات المحفوظة",
+            "conceptual_accuracy": "الدقة المفاهيمية", "answer_relevance": "ملاءمة الإجابة", "pedagogical_clarity": "الوضوح التربوي", "scaffolding_quality": "جودة السقالات التعليمية", "qiskit_alignment": "التوافق مع Qiskit", "reflection_support": "دعم التأمل", "personalization": "التخصيص",
+            "analytics_title": "تحليلات التعلم والذكاء الاصطناعي", "analytics_sub": "حلّل الدرجات، التقدم، أداء المفاهيم، أنماط دعم AI والفروق بين المجموعات.", "participants_table": "ملخص المشاركين", "group_comparison": "مقارنة مجموعات الدراسة",
+            "exports_title": "تصدير البيانات البحثية", "exports_sub": "حضّر بيانات الدراسة الآمنة للتحليل أو نسخة إدارية كاملة للحفظ المؤمّن.", "anon_title": "تصدير بحثي مجهول الهوية", "anon_body": "مناسب للتحليل، الجداول العلمية والمشاركة داخل فريق البحث دون معلومات تعريفية مباشرة.", "full_title": "نسخة إدارية كاملة", "full_body": "تتضمن بيانات الحسابات لأغراض النسخ الاحتياطي الإداري فقط. تحفظ في مكان آمن.", "prepare_anon": "تحضير التصدير المجهول", "prepare_full": "تحضير النسخة الكاملة", "download": "تنزيل الملف المحضّر", "preview": "معاينة مجموعة البيانات", "dataset": "مجموعة البيانات", "preparing": "جارٍ تحضير المصنف...",
+            "students_title": "إدارة المتعلمين", "students_sub": "أنشئ حسابات المشاركين، راجع التسجيلات وحالة الوصول، وابحث في القائمة.", "accounts_title": "حسابات التسجيل", "accounts_sub": "راجع معلومات التسجيل وحالة أول دخول واستعداد الحسابات دون إظهار كلمات المرور.", "details_title": "تفاصيل المتعلم", "details_sub": "راجع الاختبارات، التقدم، التأملات، التفاعلات والاستبيان لمشارك واحد.",
+            "survey_title": "نتائج الاستبيان", "survey_sub": "راجع تقييمات قابلية الاستخدام والتغذية الراجعة المفتوحة.",
+        },
+        "fr": {
+            "dir": "ltr", "workspace": "Espace évaluateur et recherche", "workspace_sub": "Suivi de la progression, qualité de l’IA et données de recherche.",
+            "overview_group": "Vue d’ensemble", "participants_group": "Participants", "ai_group": "IA et qualité", "data_group": "Données et export",
+            "dashboard_title": "Tableau de bord évaluateur", "dashboard_sub": "Vue unifiée de la progression, des résultats, de l’usage de l’IA et de la qualité pédagogique des réponses.",
+            "filters": "Filtres d’analyse", "group": "Groupe d’étude", "level": "Niveau académique", "language": "Langue d’interface", "completion": "État d’achèvement",
+            "all": "Tous", "complete": "Cas complet", "incomplete": "Incomplet", "reset": "Réinitialiser les filtres",
+            "students": "Apprenants", "complete_cases": "Cas complets", "paired_tests": "Paires pré/post", "mean_gain": "Gain moyen", "ai_logs": "Interactions IA", "lpqs": "LPQS moyen",
+            "registered_note": "Comptes correspondant aux filtres", "complete_note": "Consentement + pré + apprentissage + IA + post + enquête", "paired_note": "Apprenants avec pré-test et post-test", "gain_note": "Différence post-test moins pré-test", "ai_note": "Interactions enregistrées", "lpqs_note": "Qualité pédagogique moyenne des réponses",
+            "overview": "Vue d’ensemble", "learning": "Résultats d’apprentissage", "ai_usage": "Usage de l’IA", "quality_system": "Qualité et système",
+            "workflow": "Parcours d’achèvement", "workflow_sub": "Nombre de participants ayant atteint chaque étape du protocole.",
+            "stage": "Étape", "count": "Nombre", "percent": "Pourcentage", "consent": "Consentement", "pre": "Pré-test", "lesson": "Activité d’apprentissage", "ai": "Interaction IA", "post": "Post-test", "survey": "Enquête",
+            "recent": "Participants récents", "recent_sub": "Vue opérationnelle rapide; utilisez l’export pour le jeu complet.", "no_data": "Aucune donnée ne correspond aux filtres.",
+            "quick_actions": "Actions rapides", "open_students": "Gérer les apprenants", "open_ai_logs": "Voir les journaux IA", "open_quality": "Évaluer les réponses", "open_exports": "Ouvrir les exports",
+            "score_summary": "Résumé des scores", "mean_pre": "Moyenne pré-test", "mean_post": "Moyenne post-test", "normalized": "Cas analysés", "concepts": "Performance par concept",
+            "usage_provider": "Usage par mode et fournisseur", "usage_task": "Usage par type de soutien", "interaction_health": "Santé des interactions", "fallback_rate": "Taux de fallback", "latency": "Latence moyenne", "usefulness": "Utilité moyenne",
+            "quality_summary": "Qualité des réponses IA", "evaluated": "Réponses évaluées", "unrated": "Restant à évaluer", "provider_status": "Fournisseur IA", "system_status": "État du système",
+            "available": "Disponible", "unavailable": "Indisponible", "database": "Base de données", "app_version": "Version", "model": "Modèle",
+            "login_title": "Connexion évaluateur", "login_sub": "Espace protégé pour suivre les participants, évaluer l’IA et exporter les données.", "username": "Nom d’utilisateur", "password": "Mot de passe", "sign_in": "Se connecter", "invalid": "Identifiants invalides.", "signed_in": "Connexion réussie.",
+            "logs_title": "Journaux du coach IA", "logs_sub": "Examinez les requêtes, réponses, modes, fournisseurs, latences et erreurs.", "mode": "Mode", "module": "Module", "concept": "Concept", "rows": "Lignes", "search_code": "Code participant", "matches": "Interactions correspondantes", "inspect": "Inspecter une interaction", "prompt": "Entrée apprenant", "response": "Réponse IA", "diagnostic": "Diagnostic technique", "no_logs": "Aucune interaction ne correspond aux filtres.",
+            "eval_title": "Évaluation des réponses IA", "eval_sub": "Évaluez les réponses avec les sept critères LPQS pour produire une preuve pédagogique analysable.", "load": "Réponses à charger", "only_unrated": "Non évaluées uniquement", "only_llm": "LLM et erreurs uniquement", "candidate": "Réponses candidates", "select_interaction": "Sélectionner une interaction", "rubric": "Grille d’expertise", "rubric_help": "1 = faible/incorrect, 3 = acceptable/partiel, 5 = excellent et pédagogiquement adapté", "comment": "Commentaire évaluateur", "save_eval": "Enregistrer l’évaluation", "saved": "Évaluation enregistrée.", "current_summary": "Résumé LPQS actuel", "full_evals": "Évaluations enregistrées",
+            "conceptual_accuracy": "Exactitude conceptuelle", "answer_relevance": "Pertinence", "pedagogical_clarity": "Clarté pédagogique", "scaffolding_quality": "Qualité de l’étayage", "qiskit_alignment": "Alignement Qiskit", "reflection_support": "Soutien à la réflexion", "personalization": "Personnalisation",
+            "analytics_title": "Analytique d’apprentissage et IA", "analytics_sub": "Analysez les scores, la progression, les concepts, les modes de soutien IA et les groupes.", "participants_table": "Résumé des participants", "group_comparison": "Comparaison des groupes",
+            "exports_title": "Export des données de recherche", "exports_sub": "Préparez un jeu anonymisé pour l’analyse ou une sauvegarde administrative complète.", "anon_title": "Export de recherche anonymisé", "anon_body": "Adapté à l’analyse et aux tableaux scientifiques sans identifiants directs.", "full_title": "Sauvegarde administrative complète", "full_body": "Inclut les données de compte; à conserver uniquement dans un emplacement sécurisé.", "prepare_anon": "Préparer l’export anonymisé", "prepare_full": "Préparer la sauvegarde complète", "download": "Télécharger le classeur", "preview": "Aperçu du jeu de données", "dataset": "Jeu de données", "preparing": "Préparation du classeur...",
+            "students_title": "Gestion des apprenants", "students_sub": "Créez des comptes, examinez les inscriptions et recherchez les participants.", "accounts_title": "Comptes d’inscription", "accounts_sub": "Examinez les métadonnées d’inscription sans exposer les mots de passe.", "details_title": "Détails de l’apprenant", "details_sub": "Consultez les tests, la progression, les réflexions, les interactions et l’enquête.",
+            "survey_title": "Résultats de l’enquête", "survey_sub": "Examinez les scores d’utilisabilité et les commentaires ouverts.",
+        },
+        "en": {
+            "dir": "ltr", "workspace": "Evaluator & research workspace", "workspace_sub": "Monitor progress, AI quality, and research data.",
+            "overview_group": "Overview", "participants_group": "Participants", "ai_group": "AI & quality", "data_group": "Data & exports",
+            "dashboard_title": "Evaluator & Research Dashboard", "dashboard_sub": "A unified view of learner progress, outcomes, AI use, and pedagogical response quality.",
+            "filters": "Analysis filters", "group": "Study group", "level": "Academic level", "language": "Interface language", "completion": "Completion status",
+            "all": "All", "complete": "Complete case", "incomplete": "Incomplete", "reset": "Reset filters",
+            "students": "Learners", "complete_cases": "Complete cases", "paired_tests": "Paired tests", "mean_gain": "Mean gain", "ai_logs": "AI interactions", "lpqs": "Mean LPQS",
+            "registered_note": "Accounts matching current filters", "complete_note": "Consent + pre + learning + AI + post + survey", "paired_note": "Learners with both pre- and post-test", "gain_note": "Post-test minus pre-test", "ai_note": "Recorded interactions", "lpqs_note": "Mean pedagogical response quality",
+            "overview": "Overview", "learning": "Learning outcomes", "ai_usage": "AI usage", "quality_system": "Quality & system",
+            "workflow": "Study completion funnel", "workflow_sub": "Participants who reached each stage of the protocol.",
+            "stage": "Stage", "count": "Count", "percent": "Percent", "consent": "Consent", "pre": "Pre-test", "lesson": "Learning activity", "ai": "AI interaction", "post": "Post-test", "survey": "Survey",
+            "recent": "Recent participants", "recent_sub": "Operational snapshot; use Exports for the full dataset.", "no_data": "No data match the current filters.",
+            "quick_actions": "Quick actions", "open_students": "Manage learners", "open_ai_logs": "Review AI logs", "open_quality": "Evaluate responses", "open_exports": "Open exports",
+            "score_summary": "Score summary", "mean_pre": "Mean pre-test", "mean_post": "Mean post-test", "normalized": "Cases analyzed", "concepts": "Concept performance",
+            "usage_provider": "Usage by mode and provider", "usage_task": "Usage by support type", "interaction_health": "Interaction health", "fallback_rate": "Fallback rate", "latency": "Mean latency", "usefulness": "Mean usefulness",
+            "quality_summary": "AI response quality summary", "evaluated": "Evaluated responses", "unrated": "Remaining unrated", "provider_status": "AI provider status", "system_status": "System readiness",
+            "available": "Available", "unavailable": "Unavailable", "database": "Database", "app_version": "App version", "model": "Model",
+            "login_title": "Evaluator sign in", "login_sub": "Protected workspace for monitoring participants, evaluating AI responses, and exporting study data.", "username": "Evaluator username", "password": "Evaluator password", "sign_in": "Sign in", "invalid": "Invalid evaluator credentials.", "signed_in": "Signed in.",
+            "logs_title": "AI Tutor Logs", "logs_sub": "Review prompts, responses, modes, providers, latency, and recorded diagnostics.", "mode": "Mode", "module": "Module", "concept": "Concept", "rows": "Rows", "search_code": "Participant code", "matches": "Matching interactions", "inspect": "Inspect interaction", "prompt": "Learner prompt", "response": "AI response", "diagnostic": "Technical diagnostic", "no_logs": "No interactions match these filters.",
+            "eval_title": "AI Response Evaluation", "eval_sub": "Rate responses with the seven LPQS criteria to create analyzable pedagogical evidence.", "load": "Responses to load", "only_unrated": "Only unrated responses", "only_llm": "LLM and LLM-error responses only", "candidate": "Candidate responses", "select_interaction": "Select an interaction", "rubric": "Expert rubric", "rubric_help": "1 = poor/incorrect, 3 = acceptable/partial, 5 = excellent and pedagogically appropriate", "comment": "Evaluator comment", "save_eval": "Save evaluation", "saved": "Evaluation saved.", "current_summary": "Current LPQS summary", "full_evals": "Saved evaluations",
+            "conceptual_accuracy": "Conceptual accuracy", "answer_relevance": "Answer relevance", "pedagogical_clarity": "Pedagogical clarity", "scaffolding_quality": "Scaffolding quality", "qiskit_alignment": "Qiskit alignment", "reflection_support": "Reflection support", "personalization": "Personalization",
+            "analytics_title": "Learning & AI Analytics", "analytics_sub": "Analyze scores, progress, concepts, AI support modes, and study-group differences.", "participants_table": "Participant summary", "group_comparison": "Study-group comparison",
+            "exports_title": "Research Data Exports", "exports_sub": "Prepare a safe anonymized dataset for analysis or a complete administrative backup.", "anon_title": "Anonymized research export", "anon_body": "Suitable for analysis, manuscript tables, and research-team sharing without direct identifiers.", "full_title": "Full administrative backup", "full_body": "Includes account data for secure administrative backup only.", "prepare_anon": "Prepare anonymized export", "prepare_full": "Prepare full backup", "download": "Download prepared workbook", "preview": "Dataset preview", "dataset": "Dataset", "preparing": "Preparing workbook...",
+            "students_title": "Learner Management", "students_sub": "Create participant accounts, review registration, and search the learner list.", "accounts_title": "Registration Accounts", "accounts_sub": "Review registration metadata and access readiness without exposing passwords.", "details_title": "Learner Details", "details_sub": "Inspect tests, progress, reflections, interactions, and survey data for one participant.",
+            "survey_title": "Survey Results", "survey_sub": "Review usability ratings and open-ended feedback.",
+        },
+    }
+    return common[lang]
+
+
+def evaluator_section(title: str, subtitle: str = "") -> None:
+    u = evaluator_ui()
+    st.markdown(
+        f"<section class='v45-section-head' dir='{u['dir']}'><span>3alimnIA Research</span><h3>{escape(title)}</h3><p>{escape(subtitle)}</p></section>",
+        unsafe_allow_html=True,
+    )
+
+
+def evaluator_metric_cards(items: List[Tuple[str, str, str, str]]) -> None:
+    """Render evaluator KPIs with consistent multilingual typography."""
+    u = evaluator_ui()
+    cards = []
+    for label, value, note, accent in items:
+        cards.append(
+            f"<article class='v45-metric {escape(accent)}'><span>{escape(label)}</span><strong>{escape(value)}</strong><small>{escape(note)}</small><i></i></article>"
+        )
+    st.markdown(f"<div class='v45-metric-grid' dir='{u['dir']}'>{''.join(cards)}</div>", unsafe_allow_html=True)
+
+
+def evaluator_label_metric(metric: str) -> str:
+    u = evaluator_ui()
+    return {
+        "conceptual_accuracy": u["conceptual_accuracy"],
+        "answer_relevance": u["answer_relevance"],
+        "pedagogical_clarity": u["pedagogical_clarity"],
+        "scaffolding_quality": u["scaffolding_quality"],
+        "qiskit_alignment": u["qiskit_alignment"],
+        "reflection_support": u["reflection_support"],
+        "personalization": u["personalization"],
+        "pedagogical_quality_score": "LPQS",
+    }.get(str(metric), str(metric).replace("_", " ").title())
+
+
+def evaluator_filtered_progress() -> pd.DataFrame:
+    """Return progress data after evaluator-selected global filters."""
+    u = evaluator_ui()
+    df = db.progress_summary_df(len(content.LESSONS))
+    if df.empty:
+        return df
+    with st.expander(f"⚙ {u['filters']}", expanded=False):
+        c1, c2, c3, c4 = st.columns(4)
+        groups = sorted([x for x in df.get("study_group", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if x])
+        levels = sorted([x for x in df.get("academic_level", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if x])
+        languages = sorted([x for x in df.get("preferred_language", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if x])
+        selected_groups = c1.multiselect(u["group"], groups, key="v45_filter_groups")
+        selected_levels = c2.multiselect(u["level"], levels, key="v45_filter_levels")
+        lang_names = {"ar": "العربية", "fr": "Français", "en": "English"}
+        selected_languages = c3.multiselect(u["language"], languages, format_func=lambda x: lang_names.get(x, x), key="v45_filter_languages")
+        completion_options = [u["all"], u["complete"], u["incomplete"]]
+        selected_completion = c4.selectbox(u["completion"], completion_options, key="v45_filter_completion")
+        if st.button(u["reset"], key="v45_reset_filters"):
+            for key in ["v45_filter_groups", "v45_filter_levels", "v45_filter_languages", "v45_filter_completion"]:
+                st.session_state.pop(key, None)
+            st.rerun()
+    out = df.copy()
+    if selected_groups and "study_group" in out:
+        out = out[out["study_group"].astype(str).isin(selected_groups)]
+    if selected_levels and "academic_level" in out:
+        out = out[out["academic_level"].astype(str).isin(selected_levels)]
+    if selected_languages and "preferred_language" in out:
+        out = out[out["preferred_language"].astype(str).isin(selected_languages)]
+    if selected_completion == u["complete"] and "is_complete_case" in out:
+        out = out[out["is_complete_case"].astype(bool)]
+    elif selected_completion == u["incomplete"] and "is_complete_case" in out:
+        out = out[~out["is_complete_case"].astype(bool)]
+    return out
+
 def render_evaluator_app() -> None:
     if not st.session_state.evaluator_logged_in:
         render_evaluator_login()
@@ -2712,22 +2887,23 @@ def render_evaluator_app() -> None:
 
 
 def render_evaluator_login() -> None:
-    hero("Evaluator Sign in", "Protected workspace for monitoring participants and exporting study data.")
+    u = evaluator_ui()
+    hero(u["login_title"], u["login_sub"])
+    st.markdown(f"<div class='v45-login-note' dir='{u['dir']}'><b>3alimnIA Research</b><span>{escape(u['workspace_sub'])}</span></div>", unsafe_allow_html=True)
     if secret("ADMIN_PASSWORD", "admin123") == "admin123" and not secret("EVALUATOR_PASSWORD_HASH", ""):
-        st.warning("Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment.")
+        st.warning(i18n.tr("Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment."))
     with st.form("eval_login"):
-        username = st.text_input("Evaluator username", value=secret("EVALUATOR_USERNAME", "evaluator"))
-        password = st.text_input("Evaluator password", type="password")
-        submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+        username = st.text_input(u["username"], value=secret("EVALUATOR_USERNAME", "evaluator"))
+        password = st.text_input(u["password"], type="password")
+        submitted = st.form_submit_button(u["sign_in"], type="primary", use_container_width=True)
     if submitted:
         if evaluator_password_is_valid(username, password):
             db.log_event(None, "evaluator", "sign_in", f"Evaluator username: {username.strip()}")
             st.session_state.evaluator_logged_in = True
-            st.success("Signed in.")
+            st.success(u["signed_in"])
             st.rerun()
         else:
-            st.error("Invalid evaluator credentials.")
-
+            st.error(u["invalid"])
 
 
 def _safe_count(df: pd.DataFrame) -> int:
@@ -2830,225 +3006,326 @@ def render_study_protocol() -> None:
 
 
 def render_evaluator_dashboard() -> None:
-    hero("Evaluator Dashboard", "Monitor study progress, learning outcomes, AI tutor usage, reflections, and exports.")
-    df = db.progress_summary_df(len(content.LESSONS))
-    survey_count = db.count_rows("survey_responses")
-    ai_count = db.count_rows("ai_interactions")
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("Students", len(df))
-    c2.metric("Pre-tests", int(df["pre_done"].sum()) if not df.empty else 0)
-    c3.metric("Post-tests", int(df["post_done"].sum()) if not df.empty else 0)
-    c4.metric("Complete cases", int(df["is_complete_case"].sum()) if not df.empty and "is_complete_case" in df else 0)
-    c5.metric("Surveys", survey_count)
-    c6.metric("AI logs", ai_count)
+    u = evaluator_ui()
+    hero(u["dashboard_title"], u["dashboard_sub"])
+    df = evaluator_filtered_progress()
+    all_progress = db.progress_summary_df(len(content.LESSONS))
+    evaluations = db.llm_evaluations_df()
+    allowed_codes = set(df["participant_code"].dropna().astype(str).tolist()) if not df.empty and "participant_code" in df else set()
+    if allowed_codes and not evaluations.empty and "participant_code" in evaluations:
+        evaluations = evaluations[evaluations["participant_code"].astype(str).isin(allowed_codes)].copy()
+    summary = pd.DataFrame()
+    if not evaluations.empty:
+        metric_cols = ["conceptual_accuracy", "answer_relevance", "pedagogical_clarity", "scaffolding_quality", "qiskit_alignment", "reflection_support", "personalization", "pedagogical_quality_score"]
+        summary = pd.DataFrame([{"metric": col, "mean_score": round(float(pd.to_numeric(evaluations[col], errors="coerce").mean()), 2), "n": int(evaluations[col].notna().sum())} for col in metric_cols if col in evaluations])
+    total_ai = int(pd.to_numeric(df.get("ai_interactions", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not df.empty else 0
+    paired = df[df.get("pre_done", False).astype(bool) & df.get("post_done", False).astype(bool)].copy() if not df.empty and "pre_done" in df and "post_done" in df else pd.DataFrame()
+    complete_cases = int(df["is_complete_case"].astype(bool).sum()) if not df.empty and "is_complete_case" in df else 0
+    gain = pd.to_numeric(paired.get("learning_gain", pd.Series(dtype=float)), errors="coerce").dropna()
+    mean_gain = float(gain.mean()) if not gain.empty else None
+    lpqs_series = pd.to_numeric(evaluations.get("pedagogical_quality_score", pd.Series(dtype=float)), errors="coerce").dropna()
+    mean_lpqs = float(lpqs_series.mean()) if not lpqs_series.empty else None
 
-    status = feedback_engine.provider_status()
-    readiness = db.system_readiness(len(content.LESSONS))
-    st.markdown("### Deployment status")
-    st.write({
-        "app_version": readiness.get("app_version"),
-        "database_dialect": readiness.get("database_dialect"),
-        "database_ok": readiness.get("database_ok"),
-        "provider": status["provider"],
-        "available": status["available"],
-        "model": status["model"],
-        "gemini_key_detected": status["gemini_key_detected"],
-        "openai_key_detected": status["openai_key_detected"],
-        "groq_key_detected": status.get("groq_key_detected", False),
-    })
+    evaluator_metric_cards([
+        (u["students"], str(len(df)), u["registered_note"], "blue"),
+        (u["complete_cases"], str(complete_cases), u["complete_note"], "cyan"),
+        (u["paired_tests"], str(len(paired)), u["paired_note"], "navy"),
+        (u["mean_gain"], f"{mean_gain:.1f} pp" if mean_gain is not None else "—", u["gain_note"], "gold"),
+        (u["ai_logs"], str(total_ai), u["ai_note"], "blue"),
+        (u["lpqs"], f"{mean_lpqs:.2f}/5" if mean_lpqs is not None else "—", u["lpqs_note"], "cyan"),
+    ])
 
-    usage = db.ai_usage_df()
-    if not usage.empty:
-        st.markdown("### AI tutor usage by mode")
-        st.dataframe(usage, use_container_width=True, hide_index=True)
-        usage_bar = usage.copy()
-        usage_bar["provider_mode"] = usage_bar["provider"].astype(str) + " / " + usage_bar["mode"].astype(str)
-        render_progress_bars(usage_bar, "provider_mode", "interactions", "Interactions by provider and mode")
+    tab_overview, tab_learning, tab_ai, tab_quality = st.tabs([u["overview"], u["learning"], u["ai_usage"], u["quality_system"]])
 
-    if not df.empty:
-        st.markdown("### Recent participants")
-        recent_cols = ["participant_code", "full_name", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions", "is_complete_case", "complete_case_missing"]
-        recent = df[[c for c in recent_cols if c in df.columns]].head(30)
-        st.dataframe(recent, use_container_width=True, hide_index=True)
-        if len(df) > 30:
-            st.caption(f"Showing 30 most recent participants out of {len(df)}. Use Results Export for the full dataset.")
+    with tab_overview:
+        evaluator_section(u["workflow"], u["workflow_sub"])
+        if df.empty:
+            st.info(u["no_data"])
+        else:
+            stages = [
+                (u["consent"], int((pd.to_numeric(df.get("consent_done", 0), errors="coerce").fillna(0) > 0).sum())),
+                (u["pre"], int(df.get("pre_done", False).astype(bool).sum())),
+                (u["lesson"], int((pd.to_numeric(df.get("completed_lessons", 0), errors="coerce").fillna(0) > 0).sum())),
+                (u["ai"], int((pd.to_numeric(df.get("ai_interactions", 0), errors="coerce").fillna(0) > 0).sum())),
+                (u["post"], int(df.get("post_done", False).astype(bool).sum())),
+                (u["survey"], int((pd.to_numeric(df.get("survey_done", 0), errors="coerce").fillna(0) > 0).sum())),
+            ]
+            funnel = pd.DataFrame([{u["stage"]: name, u["count"]: count, u["percent"]: round(count / max(len(df), 1) * 100, 1)} for name, count in stages])
+            c1, c2 = st.columns([1.15, .85])
+            with c1:
+                st.dataframe(funnel, use_container_width=True, hide_index=True)
+            with c2:
+                bars = funnel.rename(columns={u["stage"]: "stage", u["percent"]: "percent"})
+                render_progress_bars(bars, "stage", "percent")
+
+            evaluator_section(u["recent"], u["recent_sub"])
+            cols = ["participant_code", "full_name", "preferred_language", "study_group", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions", "is_complete_case"]
+            recent = df[[c for c in cols if c in df.columns]].head(20).copy()
+            recent = recent.rename(columns={
+                "participant_code": "Code", "full_name": u["students"], "preferred_language": u["language"], "study_group": u["group"],
+                "academic_level": u["level"], "pre_score": u["pre"], "post_score": u["post"], "learning_gain": u["mean_gain"],
+                "progress_percent": u["percent"], "ai_interactions": u["ai_logs"], "is_complete_case": u["complete_cases"],
+            })
+            st.dataframe(recent, use_container_width=True, hide_index=True)
+
+        evaluator_section(u["quick_actions"])
+        q1, q2, q3, q4 = st.columns(4)
+        if q1.button(u["open_students"], use_container_width=True):
+            set_evaluator_page("Students")
+        if q2.button(u["open_ai_logs"], use_container_width=True):
+            set_evaluator_page("AI Tutor Logs")
+        if q3.button(u["open_quality"], use_container_width=True):
+            set_evaluator_page("AI Response Evaluation")
+        if q4.button(u["open_exports"], use_container_width=True):
+            set_evaluator_page("Exports")
+
+    with tab_learning:
+        evaluator_section(u["score_summary"])
+        pre_values = pd.to_numeric(paired.get("pre_score", pd.Series(dtype=float)), errors="coerce").dropna()
+        post_values = pd.to_numeric(paired.get("post_score", pd.Series(dtype=float)), errors="coerce").dropna()
+        evaluator_metric_cards([
+            (u["mean_pre"], f"{pre_values.mean():.1f}%" if not pre_values.empty else "—", u["normalized"], "navy"),
+            (u["mean_post"], f"{post_values.mean():.1f}%" if not post_values.empty else "—", u["normalized"], "blue"),
+            (u["mean_gain"], f"{mean_gain:.1f} pp" if mean_gain is not None else "—", f"n = {len(paired)}", "gold"),
+        ])
+        if not paired.empty:
+            score_table = paired[[c for c in ["participant_code", "pre_score", "post_score", "learning_gain", "completed_lessons", "progress_percent"] if c in paired.columns]].copy()
+            st.dataframe(score_table, use_container_width=True, hide_index=True)
+        concept_df = db.concept_scores_df()
+        if not concept_df.empty and not df.empty and "student_id" in concept_df and "student_id" in df:
+            concept_df = concept_df[concept_df["student_id"].isin(df["student_id"].tolist())].copy()
+        if not concept_df.empty:
+            evaluator_section(u["concepts"])
+            concept_df = concept_df.copy()
+            concept_df["concept"] = concept_df["concept"].astype(str).map(lambda x: i18n.concept_label(x, i18n.current_lang(st)))
+            pivot = concept_df.pivot_table(index="concept", columns="attempt_type", values="percentage", aggfunc="mean").reset_index()
+            pivot.columns.name = None
+            for col in [c for c in pivot.columns if c != "concept"]:
+                pivot[col] = pd.to_numeric(pivot[col], errors="coerce").round(1)
+            st.dataframe(pivot, use_container_width=True, hide_index=True)
+            if "post" in pivot.columns:
+                render_progress_bars(pivot.rename(columns={"concept": "label", "post": "value"}), "label", "value")
+        else:
+            st.info(u["no_data"])
+
+    with tab_ai:
+        logs = db.ai_logs_df(limit=None)
+        if allowed_codes and not logs.empty and "participant_code" in logs:
+            logs = logs[logs["participant_code"].astype(str).isin(allowed_codes)].copy()
+        usage = pd.DataFrame()
+        if not logs.empty:
+            usage = logs.groupby(["mode", "provider", "model"], dropna=False).size().reset_index(name="interactions").sort_values("interactions", ascending=False)
+        evaluator_section(u["usage_provider"])
+        if usage.empty:
+            st.info(u["no_data"])
+        else:
+            st.dataframe(usage, use_container_width=True, hide_index=True)
+            usage_bar = usage.copy()
+            usage_bar["provider_mode"] = usage_bar["provider"].astype(str) + " / " + usage_bar["mode"].astype(str)
+            render_progress_bars(usage_bar, "provider_mode", "interactions")
+
+        fallback_rate = None
+        mean_latency = None
+        mean_usefulness = None
+        if not logs.empty:
+            fallback = pd.to_numeric(logs.get("is_fallback_used", pd.Series(dtype=float)), errors="coerce").fillna(0)
+            fallback_rate = float(fallback.mean() * 100) if len(fallback) else None
+            latency = pd.to_numeric(logs.get("latency_ms", pd.Series(dtype=float)), errors="coerce").dropna()
+            mean_latency = float(latency.mean()) if not latency.empty else None
+            usefulness = pd.to_numeric(logs.get("student_usefulness_rating", pd.Series(dtype=float)), errors="coerce").dropna()
+            mean_usefulness = float(usefulness.mean()) if not usefulness.empty else None
+        evaluator_section(u["interaction_health"])
+        evaluator_metric_cards([
+            (u["fallback_rate"], f"{fallback_rate:.1f}%" if fallback_rate is not None else "—", "", "gold"),
+            (u["latency"], f"{mean_latency:.0f} ms" if mean_latency is not None else "—", "", "blue"),
+            (u["usefulness"], f"{mean_usefulness:.2f}/5" if mean_usefulness is not None else "—", "", "cyan"),
+        ])
+        task_df = pd.DataFrame()
+        if not logs.empty:
+            task_df = logs.groupby("task", dropna=False).size().reset_index(name="interactions")
+        if not task_df.empty:
+            evaluator_section(u["usage_task"])
+            task_summary = task_df.groupby("task", as_index=False)["interactions"].sum().sort_values("interactions", ascending=False)
+            st.dataframe(task_summary, use_container_width=True, hide_index=True)
+            render_progress_bars(task_summary, "task", "interactions")
+
+    with tab_quality:
+        evaluator_section(u["quality_summary"])
+        total_llm = db.count_rows("ai_interactions")
+        evaluated_n = int(len(evaluations))
+        evaluator_metric_cards([
+            (u["evaluated"], str(evaluated_n), "", "cyan"),
+            (u["unrated"], str(max(total_llm - evaluated_n, 0)), "", "gold"),
+            (u["lpqs"], f"{mean_lpqs:.2f}/5" if mean_lpqs is not None else "—", "", "blue"),
+        ])
+        if not summary.empty:
+            localized_summary = summary.copy()
+            localized_summary["metric"] = localized_summary["metric"].map(evaluator_label_metric)
+            st.dataframe(localized_summary, use_container_width=True, hide_index=True)
+            render_progress_bars(localized_summary, "metric", "mean_score")
+
+        status = feedback_engine.provider_status()
+        readiness = db.system_readiness(len(content.LESSONS))
+        evaluator_section(u["system_status"])
+        provider_ok = u["available"] if status.get("available") else u["unavailable"]
+        db_ok = u["available"] if readiness.get("database_ok") else u["unavailable"]
+        system_df = pd.DataFrame([
+            {"item": u["provider_status"], "value": f"{status.get('provider','—')} · {provider_ok}"},
+            {"item": u["model"], "value": status.get("model", "—")},
+            {"item": u["database"], "value": f"{readiness.get('database_dialect','—')} · {db_ok}"},
+            {"item": u["app_version"], "value": readiness.get("app_version", "—")},
+        ])
+        st.dataframe(system_df, use_container_width=True, hide_index=True)
+        if readiness.get("database_error"):
+            st.error(str(readiness["database_error"]))
 
 def render_students_admin() -> None:
-    hero("Students", "Create participant accounts, review student list, and manage access.")
-    with st.expander("Create participant account as evaluator", expanded=False):
+    u = evaluator_ui()
+    hero(u["students_title"], u["students_sub"])
+    with st.expander(f"+ {i18n.tr('Create participant account as evaluator')}", expanded=False):
         with st.form("evaluator_create_student"):
             c1, c2 = st.columns(2)
             with c1:
-                full_name = st.text_input("Full name")
-                email = st.text_input("Email")
-                institution = st.text_input("Institution")
+                full_name = st.text_input(i18n.tr("Full name"))
+                email = st.text_input(i18n.tr("Email"))
+                institution = st.text_input(i18n.tr("Institution"))
             with c2:
-                academic_level = st.selectbox("Academic level", ["Licence", "Master", "PhD", "Other"], key="eval_level")
-                prior_python = st.slider("Prior Python level", 0, 3, 1, key="eval_python")
-                prior_quantum = st.slider("Prior quantum knowledge", 0, 3, 0, key="eval_quantum")
-            password = st.text_input("Initial password", type="password", help="Give this to the student; ask them to keep it private.")
-            submitted = st.form_submit_button("Create participant", type="primary")
+                academic_level = st.selectbox(i18n.tr("Academic level"), ["Licence", "Master", "PhD", "Other"], key="eval_level")
+                preferred_language = st.selectbox(u["language"], ["ar", "fr", "en"], format_func=lambda x: {"ar": "العربية", "fr": "Français", "en": "English"}[x])
+                prior_python = st.slider(i18n.tr("Prior Python level"), 0, 3, 1, key="eval_python")
+                prior_quantum = st.slider(i18n.tr("Prior quantum knowledge"), 0, 3, 0, key="eval_quantum")
+            password = st.text_input(i18n.tr("Initial password"), type="password")
+            submitted = st.form_submit_button(i18n.tr("Create participant"), type="primary", use_container_width=True)
         if submitted:
             try:
                 assigned_group = "" if control_group_enabled() else "single_arm"
                 student = db.create_student(
                     full_name, email, institution, academic_level, prior_python, prior_quantum, password,
-                    study_group=assigned_group,
+                    study_group=assigned_group, preferred_language=preferred_language,
                 )
                 if control_group_enabled():
                     group = db.assign_study_group(student["id"])
                     student = db.get_student(student["id"]) or student
                     db.log_event(student["id"], "system", "study_group_assigned", json.dumps({"study_group": group, "method": "balanced_alternation"}))
                 db.log_event(student["id"], "evaluator", "account_created_by_evaluator", "Evaluator created participant account")
-                group_note = f" | Group: {study_group_label(student)}" if control_group_enabled() else ""
-                st.success(f"Created: {student['participant_code']} | Initial password set.{group_note}")
+                st.success(f"{student['participant_code']} · {study_group_label(student)}")
             except Exception as exc:
-                st.error(f"Could not create participant: {exc}")
+                st.error(f"{i18n.tr('Could not create participant')}: {exc}")
 
     df = db.students_df()
-    st.markdown("### Registered students")
     if df.empty:
-        st.info("No students registered yet.")
+        st.info(u["no_data"])
         return
-    st.dataframe(df, use_container_width=True)
-
+    evaluator_section(u["participants_table"])
+    c1, c2, c3 = st.columns([1.4, 1, 1])
+    query = c1.text_input(i18n.tr("Search by participant code, name, email, or institution"), key="v45_student_search")
+    groups = sorted(df["study_group"].dropna().astype(str).unique().tolist()) if "study_group" in df else []
+    selected_groups = c2.multiselect(u["group"], groups, key="v45_student_groups")
+    only_active = c3.checkbox(i18n.tr("Only active accounts"), key="v45_students_active")
+    filtered = df.copy()
+    if query.strip():
+        q = query.strip().lower()
+        searchable = (filtered["participant_code"].astype(str)+" "+filtered["full_name"].astype(str)+" "+filtered.get("email","").astype(str)+" "+filtered.get("institution","").astype(str)).str.lower()
+        filtered = filtered[searchable.str.contains(q, na=False)]
+    if selected_groups:
+        filtered = filtered[filtered["study_group"].astype(str).isin(selected_groups)]
+    if only_active and "is_active" in filtered:
+        filtered = filtered[pd.to_numeric(filtered["is_active"], errors="coerce").fillna(0).eq(1)]
+    st.dataframe(filtered, use_container_width=True, hide_index=True)
 
 
 def render_registration_accounts() -> None:
-    hero("Registration Accounts", "Review account-registration information, sign-in status, and access readiness for participants.")
-    st.info(
-        "This evaluator view shows registration metadata needed to support the pilot study. "
-        "It never displays student passwords, password hashes, or password-reset tokens."
-    )
-
+    u = evaluator_ui()
+    hero(u["accounts_title"], u["accounts_sub"])
+    st.info(i18n.tr("This evaluator view shows registration metadata needed to support the pilot study. It never displays student passwords, password hashes, or password-reset tokens."))
     df = db.students_df()
     if df.empty:
-        st.info("No registered student accounts yet.")
+        st.info(u["no_data"])
         return
-
     accounts = df.copy()
-    for col in ["email", "institution", "academic_level", "created_at", "last_login_at"]:
+    for col in ["email", "institution", "academic_level", "preferred_language", "created_at", "last_login_at"]:
         if col not in accounts.columns:
             accounts[col] = ""
         accounts[col] = accounts[col].fillna("")
-    accounts["is_active"] = accounts.get("is_active", 1).fillna(1).astype(int)
+    accounts["is_active"] = pd.to_numeric(accounts.get("is_active", 1), errors="coerce").fillna(1).astype(int)
     accounts["email_missing"] = accounts["email"].astype(str).str.strip().eq("")
     accounts["has_signed_in"] = accounts["last_login_at"].astype(str).str.strip().ne("")
-
-    total = len(accounts)
-    active = int(accounts["is_active"].sum())
-    email_missing = int(accounts["email_missing"].sum())
-    signed_in = int(accounts["has_signed_in"].sum())
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Registered accounts", total)
-    c2.metric("Active accounts", active)
-    c3.metric("Missing email", email_missing)
-    c4.metric("Signed in at least once", signed_in)
-
-    st.markdown("### Search and filters")
-    q = st.text_input("Search by participant code, name, email, or institution")
+    evaluator_metric_cards([
+        (i18n.tr("Registered accounts"), str(len(accounts)), "", "blue"),
+        (i18n.tr("Active accounts"), str(int(accounts["is_active"].sum())), "", "cyan"),
+        (i18n.tr("Missing email"), str(int(accounts["email_missing"].sum())), "", "gold"),
+        (i18n.tr("Signed in at least once"), str(int(accounts["has_signed_in"].sum())), "", "navy"),
+    ])
+    evaluator_section(u["filters"])
+    q = st.text_input(i18n.tr("Search by participant code, name, email, or institution"), key="v45_accounts_search")
     fc1, fc2, fc3 = st.columns(3)
-    with fc1:
-        only_active = st.checkbox("Only active accounts", value=False)
-    with fc2:
-        only_missing_email = st.checkbox("Only accounts missing email", value=False)
-    with fc3:
-        only_never_signed = st.checkbox("Only never signed in", value=False)
-
+    only_active = fc1.checkbox(i18n.tr("Only active accounts"), value=False)
+    only_missing_email = fc2.checkbox(i18n.tr("Only accounts missing email"), value=False)
+    only_never_signed = fc3.checkbox(i18n.tr("Only never signed in"), value=False)
     filtered = accounts.copy()
     if q.strip():
         query = q.strip().lower()
-        searchable = (
-            filtered["participant_code"].astype(str) + " "
-            + filtered["full_name"].astype(str) + " "
-            + filtered["email"].astype(str) + " "
-            + filtered["institution"].astype(str)
-        ).str.lower()
+        searchable = (filtered["participant_code"].astype(str)+" "+filtered["full_name"].astype(str)+" "+filtered["email"].astype(str)+" "+filtered["institution"].astype(str)).str.lower()
         filtered = filtered[searchable.str.contains(query, na=False)]
     if only_active:
-        filtered = filtered[filtered["is_active"] == 1]
+        filtered = filtered[filtered["is_active"].eq(1)]
     if only_missing_email:
         filtered = filtered[filtered["email_missing"]]
     if only_never_signed:
         filtered = filtered[~filtered["has_signed_in"]]
-
-    st.markdown("### Registration account list")
-    display_cols = [
-        "participant_code", "full_name", "email", "institution", "academic_level",
-        "prior_python_level", "prior_quantum_level", "created_at", "last_login_at", "is_active",
-    ]
+    display_cols = ["participant_code", "full_name", "email", "institution", "academic_level", "preferred_language", "study_group", "created_at", "last_login_at", "is_active"]
     display = filtered[[c for c in display_cols if c in filtered.columns]].copy()
-    display = display.rename(columns={
-        "participant_code": "Participant code",
-        "full_name": "Full name",
-        "email": "Email",
-        "institution": "Institution",
-        "academic_level": "Academic level",
-        "prior_python_level": "Python level",
-        "prior_quantum_level": "Quantum level",
-        "created_at": "Created at",
-        "last_login_at": "Last login",
-        "is_active": "Active",
-    })
     st.dataframe(display, use_container_width=True, hide_index=True)
+    st.download_button(i18n.tr("Download account registration list (CSV)"), data=display.to_csv(index=False).encode("utf-8-sig"), file_name="3alimnia_registration_accounts.csv", mime="text/csv", use_container_width=True)
 
-    csv = display.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "Download account registration list (CSV)",
-        data=csv,
-        file_name="qai_registration_accounts.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
-
-    st.markdown("### Account support notes")
-    st.markdown(
-        "- Use this page to identify students who forgot their participant code, used the wrong email, or never signed in after registration.\n"
-        "- For password recovery, students should use the **Forgot password** link on the sign-in page.\n"
-        "- The evaluator can see registration contact information, but passwords remain protected and are not recoverable."
-    )
 
 def render_student_details() -> None:
-    hero("Student Details", "Inspect a participant's tests, lesson reflections, AI interactions, and survey data.")
+    u = evaluator_ui()
+    hero(u["details_title"], u["details_sub"])
     df = db.students_df()
     if df.empty:
-        st.info("No students registered yet.")
+        st.info(u["no_data"])
         return
-    code = st.selectbox("Select participant", df["participant_code"].tolist(), format_func=lambda c: f"{c} - {df[df['participant_code']==c]['full_name'].iloc[0]}")
+    code = st.selectbox(i18n.tr("Select participant"), df["participant_code"].tolist(), format_func=lambda c: f"{c} · {df[df['participant_code']==c]['full_name'].iloc[0]}")
     student = db.get_student_by_code(code)
     if not student:
         return
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Participant code", student["participant_code"])
-    c2.metric("Academic level", student.get("academic_level") or "-")
-    c3.metric("Active", "Yes" if student.get("is_active") else "No")
-
     pre = db.get_test_attempt(student["id"], "pre")
     post = db.get_test_attempt(student["id"], "post")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Pre-test", f"{pre['score']:.1f}%" if pre else "Pending")
-    c2.metric("Post-test", f"{post['score']:.1f}%" if post else "Pending")
-    if pre and post:
-        c3.metric("Learning gain", f"{post['score'] - pre['score']:.1f}")
-    else:
-        c3.metric("Learning gain", "-")
-
-    st.markdown("### Completion requirements")
-    render_completion_requirements(student)
-
-    st.markdown("### Lesson reflections")
     progress = db.get_lesson_progress(student["id"])
-    st.dataframe(progress, use_container_width=True)
-
-    st.markdown("### Learning timeline")
-    timeline = db.student_events_df(student["id"], limit=150)
-    st.dataframe(timeline, use_container_width=True, hide_index=True)
-
-    st.markdown("### AI interactions")
-    logs = db.ai_logs_df(limit=100, participant_code=student["participant_code"])
-    st.dataframe(logs, use_container_width=True, hide_index=True)
-    if len(logs) >= 100:
-        st.caption("Showing the latest 100 AI interactions for this participant.")
+    logs = db.ai_logs_df(limit=250, participant_code=student["participant_code"])
+    evaluator_metric_cards([
+        ("Code", str(student["participant_code"]), student.get("academic_level") or "—", "navy"),
+        (u["pre"], f"{pre['score']:.1f}%" if pre else "—", "", "blue"),
+        (u["post"], f"{post['score']:.1f}%" if post else "—", "", "cyan"),
+        (u["mean_gain"], f"{post['score']-pre['score']:.1f} pp" if pre and post else "—", "", "gold"),
+        (u["ai_logs"], str(len(logs)), "", "blue"),
+    ])
+    tab_summary, tab_learning, tab_ai, tab_timeline = st.tabs([u["overview"], u["learning"], u["ai_usage"], i18n.tr("Learning timeline")])
+    with tab_summary:
+        profile = pd.DataFrame([{
+            "participant_code": student.get("participant_code"), "full_name": student.get("full_name"), "email": student.get("email"),
+            "institution": student.get("institution"), "academic_level": student.get("academic_level"), "preferred_language": student.get("preferred_language"),
+            "study_group": student.get("study_group"), "last_login_at": student.get("last_login_at"), "is_active": student.get("is_active"),
+        }])
+        st.dataframe(profile, use_container_width=True, hide_index=True)
+        render_completion_requirements(student)
+    with tab_learning:
+        if progress.empty:
+            st.info(u["no_data"])
+        else:
+            st.dataframe(progress, use_container_width=True, hide_index=True)
+    with tab_ai:
+        if logs.empty:
+            st.info(u["no_data"])
+        else:
+            st.dataframe(logs, use_container_width=True, hide_index=True)
+    with tab_timeline:
+        timeline = db.student_events_df(student["id"], limit=250)
+        if timeline.empty:
+            st.info(u["no_data"])
+        else:
+            st.dataframe(timeline, use_container_width=True, hide_index=True)
 
 
 def render_progress_monitor() -> None:
@@ -3289,82 +3566,103 @@ def render_v125_research_dashboard() -> None:
             st.warning(f"Could not build group comparison yet: {exc}")
 
 def render_learning_analytics() -> None:
-    hero("Learning Analytics", "Analyze pre/post scores, concept-level performance, and learning gain.")
-    df = db.progress_summary_df(len(content.LESSONS))
+    u = evaluator_ui()
+    hero(u["analytics_title"], u["analytics_sub"])
+    df = evaluator_filtered_progress()
     if df.empty:
-        st.info("No student data yet.")
+        st.info(u["no_data"])
         return
-    st.markdown("### Score summary")
-    show_cols = ["participant_code", "full_name", "study_group", "pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions", "is_complete_case", "complete_case_missing"]
-    show = df[[c for c in show_cols if c in df.columns]]
-    st.dataframe(show, use_container_width=True)
-    numeric = show[["pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions"]].dropna(how="all")
-    if not numeric.empty:
-        st.write(numeric.describe())
-
-    render_v125_research_dashboard()
-
-    st.markdown("### AI-supported learning observer")
-    observer = db.ai_learning_observer_df()
-    if observer.empty:
-        st.info("No AI interaction analytics available yet.")
-    else:
-        st.dataframe(observer, use_container_width=True, hide_index=True)
-        if "interactions" in observer.columns:
-            render_progress_bars(observer, "module", "interactions", "AI interactions by module")
-
-    st.markdown("### AI support mode by lesson and task")
-    task_df = db.ai_task_mode_df()
-    if task_df.empty:
-        st.info("No AI task-mode evidence yet.")
-    else:
-        st.dataframe(task_df, use_container_width=True, hide_index=True)
-        task_summary = task_df.groupby("task", as_index=False)["interactions"].sum().sort_values("interactions", ascending=False)
-        render_progress_bars(task_summary, "task", "interactions", "AI interactions by support type")
-
-    st.markdown("### Time before AI request")
-    timing_raw = db.ai_request_timing_events_df()
-    if timing_raw.empty:
-        st.info("No AI timing events recorded yet.")
-    else:
-        rows = []
-        for _, row in timing_raw.iterrows():
-            try:
-                detail = json.loads(row.get("event_detail") or "{}")
-            except Exception:
-                detail = {}
-            rows.append({
-                "created_at": row.get("created_at"),
-                "participant_code": row.get("participant_code"),
-                "lesson_id": detail.get("lesson_id", ""),
-                "source": detail.get("source", ""),
-                "task": detail.get("task", ""),
-                "step": detail.get("step", ""),
-                "seconds_before_ai": detail.get("seconds_before_ai"),
-            })
-        timing = pd.DataFrame(rows)
-        if "seconds_before_ai" in timing:
-            timing["seconds_before_ai"] = pd.to_numeric(timing["seconds_before_ai"], errors="coerce")
-        st.dataframe(timing, use_container_width=True, hide_index=True)
-        if not timing.empty and "seconds_before_ai" in timing:
-            by_task = timing.groupby("task", as_index=False)["seconds_before_ai"].mean().dropna()
-            if not by_task.empty:
-                by_task = by_task.rename(columns={"seconds_before_ai": "mean_seconds_before_ai"}).sort_values("mean_seconds_before_ai", ascending=False)
-                st.dataframe(by_task, use_container_width=True, hide_index=True)
-                render_progress_bars(by_task, "task", "mean_seconds_before_ai", "Mean seconds before AI request by task")
-
-    concept_df = db.concept_scores_df()
-    if not concept_df.empty:
-        st.markdown("### Concept-level performance")
-        pivot = concept_df.pivot_table(index="concept", columns="attempt_type", values="percentage", aggfunc="mean").reset_index()
-        st.dataframe(pivot, use_container_width=True)
-        # Stable, Streamlit-version-safe visualization.
-        for col in [c for c in pivot.columns if c != "concept"]:
-            bars = pivot[["concept", col]].rename(columns={col: "percentage"}).copy()
-            render_progress_bars(bars, "concept", "percentage", f"Mean {col} score by concept")
-    else:
-        st.info("No concept scores available yet.")
-
+    paired = df[df.get("pre_done", False).astype(bool) & df.get("post_done", False).astype(bool)].copy()
+    allowed_ids = set(pd.to_numeric(df.get("student_id", pd.Series(dtype=float)), errors="coerce").dropna().astype(int).tolist())
+    allowed_codes = set(df.get("participant_code", pd.Series(dtype=str)).dropna().astype(str).tolist())
+    pre = pd.to_numeric(paired.get("pre_score", pd.Series(dtype=float)), errors="coerce").dropna()
+    post = pd.to_numeric(paired.get("post_score", pd.Series(dtype=float)), errors="coerce").dropna()
+    gain = pd.to_numeric(paired.get("learning_gain", pd.Series(dtype=float)), errors="coerce").dropna()
+    evaluator_metric_cards([
+        (u["students"], str(len(df)), "", "navy"),
+        (u["paired_tests"], str(len(paired)), "", "blue"),
+        (u["mean_pre"], f"{pre.mean():.1f}%" if not pre.empty else "—", "", "blue"),
+        (u["mean_post"], f"{post.mean():.1f}%" if not post.empty else "—", "", "cyan"),
+        (u["mean_gain"], f"{gain.mean():.1f} pp" if not gain.empty else "—", "", "gold"),
+        (u["ai_logs"], str(int(pd.to_numeric(df.get('ai_interactions',0), errors='coerce').fillna(0).sum())), "", "cyan"),
+    ])
+    tab1, tab2, tab3, tab4 = st.tabs([u["participants_table"], u["concepts"], u["ai_usage"], u["group_comparison"]])
+    with tab1:
+        cols = ["participant_code", "full_name", "preferred_language", "study_group", "pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions", "progress_percent", "is_complete_case"]
+        st.dataframe(df[[c for c in cols if c in df.columns]], use_container_width=True, hide_index=True)
+        numeric_cols = [c for c in ["pre_score", "post_score", "learning_gain", "completed_lessons", "ai_interactions", "progress_percent"] if c in df]
+        if numeric_cols:
+            stats = df[numeric_cols].apply(pd.to_numeric, errors="coerce").describe().round(2)
+            st.dataframe(stats, use_container_width=True)
+    with tab2:
+        concept_df = db.concept_scores_df()
+        if not concept_df.empty and allowed_ids and "student_id" in concept_df:
+            concept_df = concept_df[pd.to_numeric(concept_df["student_id"], errors="coerce").isin(allowed_ids)].copy()
+        if concept_df.empty:
+            st.info(u["no_data"])
+        else:
+            concept_df = concept_df.copy()
+            concept_df["concept"] = concept_df["concept"].astype(str).map(lambda x: i18n.concept_label(x, i18n.current_lang(st)))
+            pivot = concept_df.pivot_table(index="concept", columns="attempt_type", values="percentage", aggfunc="mean").reset_index()
+            pivot.columns.name = None
+            if "pre" in pivot and "post" in pivot:
+                pivot["gain"] = pd.to_numeric(pivot["post"], errors="coerce") - pd.to_numeric(pivot["pre"], errors="coerce")
+            for col in [c for c in pivot.columns if c != "concept"]:
+                pivot[col] = pd.to_numeric(pivot[col], errors="coerce").round(1)
+            st.dataframe(pivot, use_container_width=True, hide_index=True)
+            if "gain" in pivot:
+                render_progress_bars(pivot.rename(columns={"concept":"label","gain":"value"}), "label", "value")
+    with tab3:
+        logs = db.ai_logs_df(limit=None)
+        if not logs.empty and allowed_codes and "participant_code" in logs:
+            logs = logs[logs["participant_code"].astype(str).isin(allowed_codes)].copy()
+        if logs.empty:
+            st.info(u["no_data"])
+        else:
+            observer = logs.groupby(["module", "lesson_id"], dropna=False).agg(
+                interactions=("interaction_id", "count"),
+                avg_latency_ms=("latency_ms", "mean"),
+                avg_response_words=("response_word_count", "mean"),
+                avg_student_usefulness=("student_usefulness_rating", "mean"),
+                fallback_count=("is_fallback_used", "sum"),
+            ).reset_index().sort_values("interactions", ascending=False)
+            for col in ["avg_latency_ms", "avg_response_words", "avg_student_usefulness"]:
+                if col in observer:
+                    observer[col] = pd.to_numeric(observer[col], errors="coerce").round(2)
+            st.dataframe(observer, use_container_width=True, hide_index=True)
+            render_progress_bars(observer, "module", "interactions")
+            task_summary = logs.groupby("task", dropna=False).size().reset_index(name="interactions").sort_values("interactions", ascending=False)
+            st.dataframe(task_summary, use_container_width=True, hide_index=True)
+            render_progress_bars(task_summary, "task", "interactions")
+        timing_raw = db.ai_request_timing_events_df()
+        if not timing_raw.empty and allowed_codes and "participant_code" in timing_raw:
+            timing_raw = timing_raw[timing_raw["participant_code"].astype(str).isin(allowed_codes)].copy()
+        if not timing_raw.empty:
+            rows=[]
+            for _, row in timing_raw.iterrows():
+                try: detail=json.loads(row.get("event_detail") or "{}")
+                except Exception: detail={}
+                rows.append({"participant_code":row.get("participant_code"),"lesson_id":detail.get("lesson_id",""),"source":detail.get("source",""),"task":detail.get("task",""),"seconds_before_ai":detail.get("seconds_before_ai")})
+            timing=pd.DataFrame(rows)
+            if not timing.empty:
+                timing["seconds_before_ai"]=pd.to_numeric(timing["seconds_before_ai"],errors="coerce")
+                st.dataframe(timing, use_container_width=True, hide_index=True)
+    with tab4:
+        if "study_group" not in df:
+            st.info(u["no_data"])
+        else:
+            group_summary = df.groupby("study_group", dropna=False).agg(
+                participants=("participant_code","count"),
+                mean_pre_score=("pre_score","mean"),
+                mean_post_score=("post_score","mean"),
+                mean_learning_gain=("learning_gain","mean"),
+                mean_completed_lessons=("completed_lessons","mean"),
+                mean_ai_interactions=("ai_interactions","mean"),
+            ).reset_index()
+            for col in [c for c in group_summary.columns if c.startswith("mean_")]:
+                group_summary[col]=pd.to_numeric(group_summary[col],errors="coerce").round(2)
+            st.dataframe(group_summary, use_container_width=True, hide_index=True)
+            st.download_button(i18n.tr("Download group comparison CSV"), data=group_summary.to_csv(index=False).encode("utf-8-sig"), file_name="3alimnia_group_comparison.csv", mime="text/csv", use_container_width=True)
 
 
 def render_paper_ready_analysis() -> None:
@@ -3510,144 +3808,164 @@ def render_paper_ready_analysis() -> None:
 
 
 def render_llm_performance_evaluation() -> None:
-    hero("LLM Performance Evaluation", "Rate AI tutor responses using a pedagogical rubric for journal-level analysis.")
-    st.markdown("""
-    This page evaluates the LLM tutor itself, not the student. Rate sampled AI responses from 1 to 5 across
-    conceptual, pedagogical, and technical criteria. These ratings will be used to report LLM pedagogical
-    quality in addition to student learning gain.
-    """)
-
-    c1, c2, c3 = st.columns(3)
-    limit = c1.selectbox("Responses to load", [10, 20, 50, 100], index=1)
-    only_unrated = c2.checkbox("Show only unrated responses", value=True)
-    only_llm = c3.checkbox("Focus on LLM / LLM-error responses", value=True)
+    u = evaluator_ui()
+    hero(u["eval_title"], u["eval_sub"])
+    saved = db.llm_evaluations_df()
+    all_ai = db.ai_logs_df(limit=None)
+    llm_total = int(all_ai["mode"].isin(["llm", "llm_error"]).sum()) if not all_ai.empty and "mode" in all_ai else len(all_ai)
+    evaluated_n = len(saved)
+    lpqs_values = pd.to_numeric(saved.get("pedagogical_quality_score", pd.Series(dtype=float)), errors="coerce").dropna()
+    evaluator_metric_cards([
+        (u["evaluated"], str(evaluated_n), "", "cyan"),
+        (u["unrated"], str(max(llm_total-evaluated_n, 0)), "", "gold"),
+        (u["lpqs"], f"{lpqs_values.mean():.2f}/5" if not lpqs_values.empty else "—", "", "blue"),
+    ])
+    with st.container(border=True):
+        c1, c2, c3 = st.columns(3)
+        limit = c1.selectbox(u["load"], [10, 20, 50, 100], index=1)
+        only_unrated = c2.checkbox(u["only_unrated"], value=True)
+        only_llm = c3.checkbox(u["only_llm"], value=True)
     candidates = db.llm_candidate_interactions_df(limit=limit, only_unrated=only_unrated, only_llm=only_llm)
     if candidates.empty:
-        st.info("No AI responses match these filters.")
+        st.info(u["no_data"])
         summary = db.llm_evaluation_summary_df()
         if not summary.empty:
-            st.markdown("### Current rating summary")
+            summary = summary.copy(); summary["metric"] = summary["metric"].map(evaluator_label_metric)
             st.dataframe(summary, use_container_width=True, hide_index=True)
         return
 
-    st.markdown("### Candidate AI responses")
-    preview_cols = [
-        "interaction_id", "created_at", "participant_code", "concept", "task", "mode", "provider", "model",
-        "latency_ms", "response_word_count", "existing_quality_score",
-    ]
-    available_preview = [c for c in preview_cols if c in candidates.columns]
-    st.dataframe(candidates[available_preview], use_container_width=True, hide_index=True)
-
+    evaluator_section(u["candidate"])
+    preview_cols = ["interaction_id", "created_at", "participant_code", "concept", "task", "mode", "provider", "model", "latency_ms", "response_word_count", "existing_quality_score"]
+    st.dataframe(candidates[[c for c in preview_cols if c in candidates.columns]], use_container_width=True, hide_index=True)
     interaction_ids = candidates["interaction_id"].astype(int).tolist()
-    selected_id = st.selectbox("Select an AI interaction to evaluate", interaction_ids)
+    selected_id = st.selectbox(u["select_interaction"], interaction_ids, format_func=lambda x: f"#{x} · {candidates[candidates['interaction_id']==x]['participant_code'].iloc[0] or '—'}")
     row = candidates[candidates["interaction_id"] == selected_id].iloc[0].to_dict()
 
-    st.markdown("### Prompt and AI response")
-    st.caption(f"Participant: {row.get('participant_code', '-')} | Concept: {row.get('concept', '-')} | Task: {row.get('task', '-')}")
-    with st.expander("Student prompt / input", expanded=True):
-        st.write(row.get("prompt") or "[No student free text recorded]")
-    with st.expander("AI tutor response", expanded=True):
-        st.write(row.get("response") or "")
+    st.markdown(f"<div class='v45-ai-context' dir='{u['dir']}'><span>{escape(str(row.get('participant_code') or '—'))}</span><b>{escape(i18n.concept_label(str(row.get('concept') or '—'), i18n.current_lang(st)))}</b><small>{escape(str(row.get('task') or '—'))} · {escape(str(row.get('provider') or '—'))}</small></div>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        evaluator_section(u["prompt"])
+        st.markdown(f"<div class='v45-transcript learner' dir='{u['dir']}'>{escape(str(row.get('prompt') or '[No input]'))}</div>", unsafe_allow_html=True)
+    with c2:
+        evaluator_section(u["response"])
+        st.markdown(f"<div class='v45-transcript ai' dir='{u['dir']}'>{escape(str(row.get('response') or ''))}</div>", unsafe_allow_html=True)
     if row.get("diagnostic"):
-        with st.expander("Technical diagnostic"):
-            st.code(str(row.get("diagnostic"))[:3000])
+        with st.expander(u["diagnostic"]):
+            st.code(str(row.get("diagnostic"))[:4000])
 
-    st.markdown("### Expert rubric rating")
-    st.caption("1 = poor/incorrect, 3 = acceptable/partial, 5 = excellent/highly appropriate")
+    evaluator_section(u["rubric"], u["rubric_help"])
     with st.form(f"llm_eval_{selected_id}"):
         c1, c2 = st.columns(2)
         with c1:
-            conceptual_accuracy = st.slider("Conceptual accuracy", 1, 5, 3, help="Scientific correctness of quantum/Qiskit explanation.")
-            answer_relevance = st.slider("Answer relevance", 1, 5, 3, help="How directly the response addresses the student's request.")
-            pedagogical_clarity = st.slider("Pedagogical clarity", 1, 5, 3, help="Clarity and usefulness for an introductory learner.")
-            scaffolding_quality = st.slider("Scaffolding quality", 1, 5, 3, help="Stepwise guidance rather than direct answer dumping.")
+            conceptual_accuracy = st.slider(u["conceptual_accuracy"], 1, 5, 3)
+            answer_relevance = st.slider(u["answer_relevance"], 1, 5, 3)
+            pedagogical_clarity = st.slider(u["pedagogical_clarity"], 1, 5, 3)
+            scaffolding_quality = st.slider(u["scaffolding_quality"], 1, 5, 3)
         with c2:
-            qiskit_alignment = st.slider("Qiskit alignment", 1, 5, 3, help="Correctness and appropriateness of Qiskit examples or interpretation.")
-            reflection_support = st.slider("Reflection support", 1, 5, 3, help="Encourages learner reflection and reduces over-reliance.")
-            personalization = st.slider("Personalization", 1, 5, 3, help="Adapts to learner profile, pre-test weaknesses, or question language.")
-        overall_comment = st.text_area("Evaluator comment", height=100, placeholder="Optional notes about strengths, errors, or pedagogical value.")
-        submitted = st.form_submit_button("Save LLM evaluation", type="primary", use_container_width=True)
+            qiskit_alignment = st.slider(u["qiskit_alignment"], 1, 5, 3)
+            reflection_support = st.slider(u["reflection_support"], 1, 5, 3)
+            personalization = st.slider(u["personalization"], 1, 5, 3)
+            preview_score = (conceptual_accuracy + answer_relevance + pedagogical_clarity + scaffolding_quality + qiskit_alignment + reflection_support + personalization) / 7
+            st.metric("LPQS", f"{preview_score:.2f}/5")
+        overall_comment = st.text_area(u["comment"], height=110)
+        submitted = st.form_submit_button(u["save_eval"], type="primary", use_container_width=True)
     if submitted:
-        db.save_llm_evaluation(
-            selected_id,
-            secret("EVALUATOR_USERNAME", "evaluator"),
-            conceptual_accuracy,
-            answer_relevance,
-            pedagogical_clarity,
-            scaffolding_quality,
-            qiskit_alignment,
-            reflection_support,
-            personalization,
-            overall_comment,
-        )
-        st.success("LLM evaluation saved.")
+        db.save_llm_evaluation(selected_id, secret("EVALUATOR_USERNAME", "evaluator"), conceptual_accuracy, answer_relevance, pedagogical_clarity, scaffolding_quality, qiskit_alignment, reflection_support, personalization, overall_comment)
+        st.success(u["saved"])
         st.rerun()
 
-    st.markdown("### Current LLM performance summary")
+    evaluator_section(u["current_summary"])
     summary = db.llm_evaluation_summary_df()
     if summary.empty:
-        st.info("No expert ratings saved yet.")
+        st.info(u["no_data"])
     else:
+        summary = summary.copy(); summary["metric"] = summary["metric"].map(evaluator_label_metric)
         st.dataframe(summary, use_container_width=True, hide_index=True)
-        render_progress_bars(summary, "metric", "mean_score", "Mean rating by criterion")
-
-    with st.expander("Full saved evaluations"):
-        saved = db.llm_evaluations_df()
-        st.dataframe(saved, use_container_width=True, hide_index=True)
+        render_progress_bars(summary, "metric", "mean_score")
+    with st.expander(u["full_evals"]):
+        st.dataframe(db.llm_evaluations_df(), use_container_width=True, hide_index=True)
 
 
 def render_feedback_logs() -> None:
-    hero("Feedback Logs", "Review prompts, AI tutor responses, provider mode, and diagnostics recorded during the study.")
+    u = evaluator_ui()
+    hero(u["logs_title"], u["logs_sub"])
     options = db.ai_filter_options()
     if not any(options.values()) and db.count_rows("ai_interactions") == 0:
-        st.info("No AI tutor interactions recorded yet.")
+        st.info(u["no_data"])
         return
-
-    c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-    mode_filter = c1.multiselect("Mode", options.get("mode", []))
-    module_filter = c2.multiselect("Module", options.get("module", []))
-    concept_filter = c3.multiselect("Concept", options.get("concept", []))
-    max_rows = c4.selectbox("Rows", [50, 100, 200, 500], index=1)
-
-    filtered = db.ai_logs_df(limit=max_rows, mode=mode_filter, module=module_filter, concept=concept_filter)
+    with st.container(border=True):
+        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
+        mode_filter = c1.multiselect(u["mode"], options.get("mode", []))
+        module_filter = c2.multiselect(u["module"], options.get("module", []))
+        concept_filter = c3.multiselect(u["concept"], options.get("concept", []), format_func=lambda x: i18n.concept_label(x, i18n.current_lang(st)))
+        participant_code = c4.text_input(u["search_code"])
+        max_rows = c5.selectbox(u["rows"], [50, 100, 200, 500], index=1)
+    filtered = db.ai_logs_df(limit=max_rows, mode=mode_filter, module=module_filter, concept=concept_filter, participant_code=participant_code.strip() or None)
     if filtered.empty:
-        st.info("No logs match the selected filters.")
+        st.info(u["no_logs"])
         return
-    st.caption(f"Showing up to {max_rows} most recent rows. Use Results Export to download the full dataset.")
-    st.dataframe(filtered, use_container_width=True, hide_index=True)
-    if "diagnostic" in filtered.columns:
-        errors = filtered[filtered["mode"] == "llm_error"]
-        if not errors.empty:
-            st.markdown("### LLM error diagnostics")
-            st.dataframe(errors[["created_at", "participant_code", "provider", "model", "diagnostic"]], use_container_width=True, hide_index=True)
+
+    fallback = pd.to_numeric(filtered.get("is_fallback_used", pd.Series(dtype=float)), errors="coerce").fillna(0)
+    latency = pd.to_numeric(filtered.get("latency_ms", pd.Series(dtype=float)), errors="coerce").dropna()
+    usefulness = pd.to_numeric(filtered.get("student_usefulness_rating", pd.Series(dtype=float)), errors="coerce").dropna()
+    evaluator_metric_cards([
+        (u["matches"], str(len(filtered)), "", "blue"),
+        (u["fallback_rate"], f"{fallback.mean()*100:.1f}%" if len(fallback) else "—", "", "gold"),
+        (u["latency"], f"{latency.mean():.0f} ms" if not latency.empty else "—", "", "cyan"),
+        (u["usefulness"], f"{usefulness.mean():.2f}/5" if not usefulness.empty else "—", "", "navy"),
+    ])
+
+    evaluator_section(u["matches"])
+    compact_cols = ["interaction_id", "created_at", "participant_code", "module", "concept", "task", "mode", "provider", "model", "latency_ms", "response_word_count", "student_usefulness_rating", "is_fallback_used", "error_type"]
+    compact = filtered[[c for c in compact_cols if c in filtered.columns]].copy()
+    if "concept" in compact:
+        compact["concept"] = compact["concept"].astype(str).map(lambda x: i18n.concept_label(x, i18n.current_lang(st)))
+    st.dataframe(compact, use_container_width=True, hide_index=True)
+
+    evaluator_section(u["inspect"])
+    ids = filtered["interaction_id"].astype(int).tolist()
+    selected_id = st.selectbox(u["inspect"], ids, format_func=lambda x: f"#{x} · {filtered[filtered['interaction_id']==x]['participant_code'].iloc[0] or '—'}", key="v45_log_inspector")
+    row = filtered[filtered["interaction_id"] == selected_id].iloc[0].to_dict()
+    st.markdown(f"<div class='v45-ai-context' dir='{u['dir']}'><span>{escape(str(row.get('participant_code') or '—'))}</span><b>{escape(i18n.concept_label(str(row.get('concept') or '—'), i18n.current_lang(st)))}</b><small>{escape(str(row.get('task') or '—'))} · {escape(str(row.get('mode') or '—'))} · {escape(str(row.get('provider') or '—'))}</small></div>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(f"<div class='v45-transcript learner' dir='{u['dir']}'><b>{escape(u['prompt'])}</b><p>{escape(str(row.get('prompt') or ''))}</p></div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"<div class='v45-transcript ai' dir='{u['dir']}'><b>{escape(u['response'])}</b><p>{escape(str(row.get('response') or ''))}</p></div>", unsafe_allow_html=True)
+    if row.get("diagnostic"):
+        with st.expander(u["diagnostic"]):
+            st.code(str(row.get("diagnostic"))[:5000])
+
 
 def render_survey_results() -> None:
-    hero("Survey Results", "Review usability questionnaire and open-ended feedback.")
+    u = evaluator_ui()
+    hero(u["survey_title"], u["survey_sub"])
     survey = db.survey_df()
     if survey.empty:
-        st.info("No survey responses yet.")
+        st.info(u["no_data"])
         return
-    rows = []
-    open_rows = []
+    rows, open_rows = [], []
     for _, row in survey.iterrows():
         responses = json.loads(row.get("responses_json") or "{}")
         open_feedback = json.loads(row.get("open_feedback_json") or "{}")
         rows.append({"participant_code": row["participant_code"], "full_name": row["full_name"], **responses})
         open_rows.append({"participant_code": row["participant_code"], "full_name": row["full_name"], **open_feedback})
-    likert_df = pd.DataFrame(rows)
-    open_df = pd.DataFrame(open_rows)
-    st.markdown("### Likert responses")
-    st.dataframe(likert_df, use_container_width=True)
+    likert_df, open_df = pd.DataFrame(rows), pd.DataFrame(open_rows)
     numeric_cols = [key for key, _ in content.SURVEY_ITEMS if key in likert_df]
-    if numeric_cols:
-        st.write(likert_df[numeric_cols].describe())
-        means = likert_df[numeric_cols].mean().reset_index()
-        means.columns = ["item", "mean_score"]
-        st.dataframe(means, use_container_width=True)
-        render_progress_bars(means, "item", "mean_score", "Mean usability scores")
-    st.markdown("### Open-ended feedback")
-    st.dataframe(open_df, use_container_width=True)
-
+    mean_score = float(likert_df[numeric_cols].stack().mean()) if numeric_cols else None
+    evaluator_metric_cards([
+        (u["survey"], str(len(likert_df)), "", "blue"),
+        (u["usefulness"], f"{mean_score:.2f}/5" if mean_score is not None else "—", "", "cyan"),
+    ])
+    tab1, tab2 = st.tabs([i18n.tr("Likert responses"), i18n.tr("Open-ended feedback")])
+    with tab1:
+        st.dataframe(likert_df, use_container_width=True, hide_index=True)
+        if numeric_cols:
+            means = likert_df[numeric_cols].mean().reset_index(); means.columns = ["item", "mean_score"]
+            st.dataframe(means, use_container_width=True, hide_index=True)
+            render_progress_bars(means, "item", "mean_score")
+    with tab2:
+        st.dataframe(open_df, use_container_width=True, hide_index=True)
 
 
 def render_event_logs() -> None:
@@ -3704,52 +4022,44 @@ def render_system_readiness() -> None:
 
 
 def render_results_export() -> None:
-    hero("Results Export", "Download pilot-safe study data without losing existing participant information.")
-    st.info("Use the anonymized workbook for analysis and manuscript tables. Use the full backup only for secure administrative backup.")
-
+    u = evaluator_ui()
+    hero(u["exports_title"], u["exports_sub"])
+    st.markdown(f"<div class='v45-export-grid' dir='{u['dir']}'><article><span>01</span><h3>{escape(u['anon_title'])}</h3><p>{escape(u['anon_body'])}</p></article><article class='secure'><span>02</span><h3>{escape(u['full_title'])}</h3><p>{escape(u['full_body'])}</p></article></div>", unsafe_allow_html=True)
     col_a, col_b = st.columns(2)
-    with col_a:
-        prepare_anon = st.button("Prepare anonymized research export", type="primary", use_container_width=True)
-    with col_b:
-        prepare_full = st.button("Prepare full admin backup", use_container_width=True)
-
+    prepare_anon = col_a.button(u["prepare_anon"], type="primary", use_container_width=True)
+    prepare_full = col_b.button(u["prepare_full"], use_container_width=True)
     if prepare_anon:
-        with st.spinner("Preparing anonymized workbook from Neon..."):
+        with st.spinner(u["preparing"]):
             dfs = db.research_export_tables(len(content.LESSONS), anonymized=True)
             dfs.update(v125_research_interaction_tables(anonymized=True))
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
             st.session_state["export_filename"] = "3alimnia_research_export_anonymized.xlsx"
+            st.session_state["export_kind"] = "anonymized"
             db.log_event(None, "evaluator", "anonymized_export_prepared", "Evaluator prepared anonymized research export")
-
     if prepare_full:
-        with st.spinner("Preparing full administrative backup from Neon..."):
-            dfs = {
-                "students": db.students_df(),
-                **db.research_export_tables(len(content.LESSONS), anonymized=False),
-            }
+        with st.spinner(u["preparing"]):
+            dfs = {"students": db.students_df(), **db.research_export_tables(len(content.LESSONS), anonymized=False)}
             dfs.update(v125_research_interaction_tables(anonymized=False))
             st.session_state["export_tables"] = dfs
             st.session_state["export_excel"] = to_excel_bytes(dfs)
             st.session_state["export_filename"] = "3alimnia_full_admin_backup.xlsx"
+            st.session_state["export_kind"] = "full"
             db.log_event(None, "evaluator", "full_backup_prepared", "Evaluator prepared full administrative backup")
-
     if "export_excel" in st.session_state:
-        st.download_button(
-            "Download prepared workbook",
-            data=st.session_state["export_excel"],
-            file_name=st.session_state.get("export_filename", "3alimnia_export.xlsx"),
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="primary",
-        )
+        kind = st.session_state.get("export_kind", "anonymized")
+        st.success(u["anon_title"] if kind == "anonymized" else u["full_title"])
+        st.download_button(u["download"], data=st.session_state["export_excel"], file_name=st.session_state.get("export_filename", "3alimnia_export.xlsx"), mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", use_container_width=True)
         dfs = st.session_state.get("export_tables", {})
         if dfs:
-            st.markdown("### Preview")
-            selected = st.selectbox("Dataset", list(dfs.keys()))
-            preview = dfs[selected].head(200) if hasattr(dfs[selected], "head") else dfs[selected]
+            evaluator_section(u["preview"])
+            selected = st.selectbox(u["dataset"], list(dfs.keys()))
+            data = dfs[selected]
+            preview = data.head(200) if hasattr(data, "head") else data
             st.dataframe(preview, use_container_width=True, hide_index=True)
-            if hasattr(dfs[selected], "__len__") and len(dfs[selected]) > 200:
-                st.caption(f"Preview shows first 200 rows out of {len(dfs[selected])}. Download the workbook for all rows.")
+            if hasattr(data, "__len__") and len(data) > 200:
+                st.caption(f"200 / {len(data)}")
+
 
 # -----------------------------------------------------------------------------
 # Main
