@@ -978,6 +978,8 @@ def apply_language_css(st_module: Any, lang: str | None = None) -> None:
     # on the left, while the main document retains its own independent scroll.
     rail_side = "right:0 !important; left:auto !important;" if code == "ar" else "left:0 !important; right:auto !important;"
     main_offset = "margin-right:var(--v48-rail-width) !important; margin-left:0 !important;" if code == "ar" else "margin-left:var(--v48-rail-width) !important; margin-right:0 !important;"
+    reopen_side = "right:.72rem !important; left:auto !important;" if code == "ar" else "left:.72rem !important; right:auto !important;"
+    collapse_side = "left:.45rem !important; right:auto !important;" if code == "ar" else "right:.45rem !important; left:auto !important;"
     st_module.markdown(
         f"""
         <style>
@@ -999,6 +1001,10 @@ def apply_language_css(st_module: Any, lang: str | None = None) -> None:
         /* V4.8 - native docked navigation. The sidebar is a viewport-level
            application rail, not a column inside the scrolling document. */
         @media (min-width: 901px) {{
+          [data-testid="stSidebarCollapsedControl"] {{ {reopen_side} }}
+          section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) [data-testid="stSidebarCollapseButton"] {{
+            {collapse_side}
+          }}
           section[data-testid="stSidebar"]:has(.v48-native-sidebar-marker) {{
             {rail_side}
             top:0 !important;
