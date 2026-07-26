@@ -326,17 +326,261 @@ def switch_role(role: Optional[str] = None) -> None:
     st.session_state.student_page = "Student Home"
     st.session_state.student_access_page = "Sign in"
     st.session_state.evaluator_page = "Evaluator Dashboard"
+    st.session_state["_v411_history"] = []
+    st.session_state["_v411_current_route"] = None
     st.rerun()
 
 
 def set_student_page(page: str) -> None:
     st.session_state.student_page = page
+    request_scroll_top()
     st.rerun()
 
 
 def set_evaluator_page(page: str) -> None:
     st.session_state.evaluator_page = page
+    request_scroll_top()
     st.rerun()
+
+
+def _v411_navigation_copy() -> Dict[str, str]:
+    """Short, stable labels for the always-visible escape/navigation bar."""
+    lang = i18n.current_lang(st)
+    values = {
+        "ar": {
+            "page": "الانتقال إلى",
+            "menu": "القائمة",
+            "back": "رجوع",
+            "home": "الرئيسية",
+            "account": "تغيير الحساب",
+            "logout": "خروج",
+            "student": "فضاء المتعلم",
+            "evaluator": "فضاء المقيّم",
+        },
+        "fr": {
+            "page": "Aller à",
+            "menu": "Menu",
+            "back": "Retour",
+            "home": "Accueil",
+            "account": "Changer de compte",
+            "logout": "Quitter",
+            "student": "Espace apprenant",
+            "evaluator": "Espace évaluateur",
+        },
+        "en": {
+            "page": "Go to",
+            "menu": "Menu",
+            "back": "Back",
+            "home": "Home",
+            "account": "Change account",
+            "logout": "Exit",
+            "student": "Learner workspace",
+            "evaluator": "Evaluator workspace",
+        },
+    }
+    return values.get(lang, values["en"])
+
+
+def _v411_current_route() -> Tuple[Optional[str], Optional[str]]:
+    role = st.session_state.get("role")
+    if role == "student":
+        return role, st.session_state.get("student_page", "Student Home")
+    if role == "evaluator":
+        return role, st.session_state.get("evaluator_page", "Evaluator Dashboard")
+    return None, None
+
+
+def _v411_record_route() -> None:
+    """Keep a lightweight in-app page history without using browser history."""
+    role, page = _v411_current_route()
+    token = (role, page)
+    previous = st.session_state.get("_v411_current_route")
+    suppress = bool(st.session_state.pop("_v411_suppress_history", False))
+    if previous and previous != token and not suppress:
+        history = list(st.session_state.get("_v411_history", []))
+        if not history or history[-1] != previous:
+            history.append(previous)
+        st.session_state["_v411_history"] = history[-20:]
+    st.session_state["_v411_current_route"] = token
+
+
+def _v411_go_back() -> None:
+    history = list(st.session_state.get("_v411_history", []))
+    current_role = st.session_state.get("role")
+    while history:
+        role, page = history.pop()
+        if role not in {"student", "evaluator"} or not page:
+            continue
+        # Keep role changes explicit; Back navigates inside the current workspace.
+        if role != current_role:
+            continue
+        st.session_state["_v411_history"] = history
+        st.session_state["_v411_suppress_history"] = True
+        if role == "student":
+            st.session_state.student_page = page
+        else:
+            st.session_state.evaluator_page = page
+        request_scroll_top()
+        st.rerun()
+    # There is no earlier in-workspace page: return to the workspace home.
+    if current_role == "student":
+        st.session_state.student_page = "Student Home"
+    elif current_role == "evaluator":
+        st.session_state.evaluator_page = "Evaluator Dashboard"
+    request_scroll_top()
+    st.rerun()
+
+
+def _v411_change_account() -> None:
+    """Sign out of the active account while keeping the same workspace login."""
+    role = st.session_state.get("role")
+    if role == "student":
+        student = current_student()
+        if student:
+            try:
+                db.log_event(student["id"], "student", "sign_out", "Student changed account from global navigation")
+            except Exception:
+                pass
+        st.session_state.student_id = None
+        st.session_state.student_page = "Sign in"
+    elif role == "evaluator":
+        st.session_state.evaluator_logged_in = False
+        st.session_state.evaluator_page = "Evaluator Dashboard"
+    st.session_state["_v411_history"] = []
+    st.session_state["_v411_current_route"] = None
+    request_scroll_top()
+    st.rerun()
+
+
+def _v411_exit_platform() -> None:
+    """Close the active session and return to the public landing page."""
+    role = st.session_state.get("role")
+    if role == "student":
+        student = current_student()
+        if student:
+            try:
+                db.log_event(student["id"], "student", "sign_out", "Student exited platform from global navigation")
+            except Exception:
+                pass
+        st.session_state.student_id = None
+    elif role == "evaluator":
+        st.session_state.evaluator_logged_in = False
+    st.session_state.role = None
+    st.session_state.student_page = "Student Home"
+    st.session_state.evaluator_page = "Evaluator Dashboard"
+    st.session_state["_v411_history"] = []
+    st.session_state["_v411_current_route"] = None
+    request_scroll_top()
+    st.rerun()
+
+
+def _v411_open_sidebar() -> None:
+    """Ask Streamlit's native collapsed-sidebar control to reopen the rail."""
+    components.html(
+        """
+        <script>
+        try {
+          const doc = window.parent.document;
+          const selectors = [
+            '[data-testid="stSidebarCollapsedControl"] button',
+            '[data-testid="collapsedControl"] button',
+            'button[data-testid="stSidebarCollapsedControl"]'
+          ];
+          let button = null;
+          for (const selector of selectors) {
+            button = doc.querySelector(selector);
+            if (button) break;
+          }
+          if (button) button.click();
+        } catch (error) { console.debug('3alimnIA sidebar open fallback', error); }
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def render_global_escape_navigation() -> None:
+    """Always-visible navigation so no user can become trapped in a page.
+
+    The native sidebar remains the full navigation rail. This compact bar is a
+    safety layer that exposes page switching, back, home, account change and
+    exit even when the sidebar is collapsed by the browser or Streamlit.
+    """
+    role, current_page = _v411_current_route()
+    if role not in {"student", "evaluator"} or not current_page:
+        return
+    _v411_record_route()
+    lang = i18n.current_lang(st)
+    copy = _v411_navigation_copy()
+    direction = i18n.direction(lang)
+
+    if role == "student":
+        student = current_student()
+        pages = student_pages_allowed(student)
+        if not student:
+            pages = ["Sign in", "Create account"]
+        home_page = "Student Home"
+        workspace_label = copy["student"]
+    else:
+        pages = [
+            "Evaluator Dashboard", "Study Protocol", "Students",
+            "Registration Accounts", "Student Details", "AI Tutor Logs",
+            "AI Response Evaluation", "AI Metrics", "Exports",
+        ] if st.session_state.get("evaluator_logged_in") else ["Evaluator Dashboard"]
+        home_page = "Evaluator Dashboard"
+        workspace_label = copy["evaluator"]
+
+    if current_page not in pages:
+        pages = [current_page, *pages]
+    # Deduplicate while preserving the intended order.
+    pages = list(dict.fromkeys(pages))
+
+    with st.container(border=True):
+        st.markdown(
+            f"<span class='v411-global-nav-marker' aria-hidden='true'></span>"
+            f"<div class='v411-workspace-label' dir='{direction}'>{escape(workspace_label)}</div>",
+            unsafe_allow_html=True,
+        )
+        nav_col, menu_col, back_col, home_col, account_col, exit_col = st.columns(
+            [2.7, 1.0, .95, 1.05, 1.35, .9], gap="small"
+        )
+        with nav_col:
+            selected_page = st.selectbox(
+                copy["page"],
+                pages,
+                index=pages.index(current_page),
+                format_func=lambda page: i18n.page_label(page, lang),
+                key=f"v411_route_{role}_{current_page}",
+                label_visibility="collapsed",
+            )
+            if selected_page != current_page:
+                if role == "student":
+                    st.session_state.student_page = selected_page
+                else:
+                    st.session_state.evaluator_page = selected_page
+                request_scroll_top()
+                st.rerun()
+        with menu_col:
+            if st.button(f"☰ {copy['menu']}", key=f"v411_menu_{role}_{current_page}", use_container_width=True):
+                _v411_open_sidebar()
+        with back_col:
+            if st.button(f"↩ {copy['back']}", key=f"v411_back_{role}_{current_page}", use_container_width=True):
+                _v411_go_back()
+        with home_col:
+            if st.button(f"⌂ {copy['home']}", key=f"v411_home_{role}_{current_page}", use_container_width=True):
+                if role == "student":
+                    st.session_state.student_page = home_page
+                else:
+                    st.session_state.evaluator_page = home_page
+                request_scroll_top()
+                st.rerun()
+        with account_col:
+            if st.button(f"⇄ {copy['account']}", key=f"v411_account_{role}_{current_page}", use_container_width=True):
+                _v411_change_account()
+        with exit_col:
+            if st.button(f"⎋ {copy['logout']}", key=f"v411_exit_{role}_{current_page}", use_container_width=True):
+                _v411_exit_platform()
 
 
 def hero(title: str, subtitle: str, *, localized: bool = False, compact: Optional[bool] = None) -> None:
@@ -4348,6 +4592,8 @@ def main() -> None:
     with st.sidebar:
         st.markdown("<span class='v48-native-sidebar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
         render_sidebar(st.sidebar)
+
+    render_global_escape_navigation()
 
     if role == "student":
         render_student_app()

@@ -118,3 +118,6 @@ The native sidebar can always be reopened after collapse. Evaluator tools such a
 
 ### V4.10 interface refinement
 The main content begins closer to the browser top, and horizontal analysis tabs now show an explicit high-contrast selected state.
+
+## V4.11 navigation safety
+Every authenticated workspace now includes an always-visible top navigation bar. It provides page switching, Back, Home, Change account, Sidebar open, and Exit controls even if the native Streamlit sidebar is collapsed.
