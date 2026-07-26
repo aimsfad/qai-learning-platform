@@ -1,3 +1,13 @@
+
+## V4.7 - Sticky Compact Navigation
+
+- Applied the same compact sticky navigation shell across learner and evaluator workspaces.
+- Added independent sidebar scrolling for laptop screens.
+- Reorganized navigation into accessible collapsible groups that keep the active group open.
+- Reduced evaluator page-header height and excess vertical whitespace.
+- Added responsive fallback to normal page flow on tablet and mobile devices.
+- Preserved all multilingual, research, LPQS, database, and export behavior.
+
 # Changelog
 
 ## V4.0 - Premium UI & Typography Refresh
@@ -75,3 +85,8 @@
 - Added a safer two-track export interface for anonymized research data and full administrative backup.
 - Exposed `preferred_language` in evaluator data while preserving the database schema and existing records.
 - Added responsive evaluator styling and `validate_v45_evaluator.py`.
+
+
+## V4.6 - Evaluator localization
+- Fixed mixed Arabic/English evaluator headings and learner-detail metrics.
+- Added RTL-safe typography for evaluator heroes, metrics, and export cards.

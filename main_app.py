@@ -339,20 +339,27 @@ def set_evaluator_page(page: str) -> None:
     st.rerun()
 
 
-def hero(title: str, subtitle: str, *, localized: bool = False) -> None:
+def hero(title: str, subtitle: str, *, localized: bool = False, compact: Optional[bool] = None) -> None:
     """Render a language-aware premium page header used across the platform.
 
     Use ``localized=True`` when text was already selected from a locale-specific
     dictionary. This prevents phrase replacement from producing mixed-language
     titles such as Arabic text with a remaining English word.
+
+    Evaluator pages use a compact header automatically so the operational
+    controls remain visible on laptop screens. Callers may override this with
+    ``compact=True`` or ``compact=False`` when a page needs a different density.
     """
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
     safe_title = escape(title if localized else i18n.tr(title))
     safe_subtitle = escape(subtitle if localized else i18n.tr(subtitle))
+    if compact is None:
+        compact = st.session_state.get("role") == "evaluator"
+    compact_class = " v47-page-hero-compact" if compact else ""
     st.markdown(
         f"""
-        <section class="qai-hero v4-page-hero" dir="{direction}">
+        <section class="qai-hero v4-page-hero{compact_class}" dir="{direction}">
           <div class="v4-page-hero-glow"></div>
           <div class="v4-page-hero-kicker">3alimnIA · {escape(branding.BRAND_NAME_AR)}</div>
           <h1>{safe_title}</h1>
@@ -889,15 +896,19 @@ def render_sidebar(target=st) -> None:
                 (u["assessment"], [("Pre-test", "01", u["pre"]), ("Post-test", "02", u["post"]), ("Satisfaction Survey", "✓", u["survey"])]),
                 (u["research"], [("Research Notice", "◎", u["notice"])])
             ]
-            for title, pages in groups:
-                target.markdown(f"<div class='v43-nav-group' dir='{u['dir']}'>{escape(title)}</div>", unsafe_allow_html=True)
-                for page, icon, label in pages:
-                    if page in allowed:
-                        if target.button(f"{icon}  {label}", key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
-                            st.session_state.student_page = page
-                            st.rerun()
-                    else:
-                        target.markdown(f"<div class='v43-nav-lock' dir='{u['dir']}'><span>{escape(icon)}</span><b>{escape(label)}</b><i>🔒</i></div>", unsafe_allow_html=True)
+            for group_index, (title, pages) in enumerate(groups):
+                active_group = any(page == current_page for page, _, _ in pages)
+                # Keep the active section open and collapse the others. This
+                # prevents the navigation from becoming taller than the laptop
+                # viewport while preserving fast access to every destination.
+                with target.expander(title, expanded=active_group):
+                    for page, icon, label in pages:
+                        if page in allowed:
+                            if target.button(f"{icon}  {label}", key=f"student_nav_{page}", use_container_width=True, type="primary" if current_page == page else "secondary"):
+                                st.session_state.student_page = page
+                                st.rerun()
+                        else:
+                            target.markdown(f"<div class='v43-nav-lock' dir='{u['dir']}'><span>{escape(icon)}</span><b>{escape(label)}</b><i>🔒</i></div>", unsafe_allow_html=True)
         target.markdown("<div class='v43-side-separator'></div>", unsafe_allow_html=True)
         if student and target.button(i18n.tr("Sign out"), use_container_width=True):
             db.log_event(student["id"], "student", "sign_out", "Student signed out from sidebar")
@@ -917,13 +928,15 @@ def render_sidebar(target=st) -> None:
                 (eu["ai_group"], [("AI Tutor Logs", "◈"), ("AI Response Evaluation", "★"), ("AI Metrics", "▥")]),
                 (eu["data_group"], [("Exports", "⇩")]),
             ]
-            for title, pages in groups:
-                target.markdown(f"<div class='v45-eval-nav-group' dir='{eu['dir']}'>{escape(title)}</div>", unsafe_allow_html=True)
-                for page, icon in pages:
-                    label = i18n.page_label(page, lang)
-                    if target.button(f"{icon}  {label}", key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if st.session_state.evaluator_page == page else "secondary"):
-                        st.session_state.evaluator_page = page
-                        st.rerun()
+            current_eval_page = st.session_state.evaluator_page
+            for group_index, (title, pages) in enumerate(groups):
+                active_group = any(page == current_eval_page for page, _ in pages)
+                with target.expander(title, expanded=active_group):
+                    for page, icon in pages:
+                        label = i18n.page_label(page, lang)
+                        if target.button(f"{icon}  {label}", key=f"eval_nav_btn_{page}", use_container_width=True, type="primary" if current_eval_page == page else "secondary"):
+                            st.session_state.evaluator_page = page
+                            st.rerun()
             status = feedback_engine.provider_status()
             readiness = db.system_readiness(len(content.LESSONS))
             ai_state = eu["available"] if status.get("available") else eu["unavailable"]
@@ -4100,13 +4113,18 @@ def main() -> None:
     # The shell is identified through the sidebar marker rendered inside the
     # left column. Avoiding a separate empty marker above the columns removes
     # the large blank strip that Streamlit otherwise inserts at page start.
-    left_col, right_col = st.columns([0.205, 0.795], gap="medium")
+    role = st.session_state.get("role")
+    # The same compact sticky shell is used throughout the learner and
+    # evaluator workspaces. The evaluator receives a slightly wider rail for
+    # long multilingual labels, while the public landing remains balanced.
+    shell_ratio = [0.215, 0.785] if role == "evaluator" else [0.205, 0.795]
+    left_col, right_col = st.columns(shell_ratio, gap="medium")
     with left_col:
         with st.container(border=True):
+            st.markdown("<span class='v47-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
             render_sidebar(st)
 
     with right_col:
-        role = st.session_state.get("role")
         if role == "student":
             render_student_app()
         elif role == "evaluator":
