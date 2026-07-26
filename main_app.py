@@ -339,12 +339,17 @@ def set_evaluator_page(page: str) -> None:
     st.rerun()
 
 
-def hero(title: str, subtitle: str) -> None:
-    """Render a language-aware premium page header used across the platform."""
+def hero(title: str, subtitle: str, *, localized: bool = False) -> None:
+    """Render a language-aware premium page header used across the platform.
+
+    Use ``localized=True`` when text was already selected from a locale-specific
+    dictionary. This prevents phrase replacement from producing mixed-language
+    titles such as Arabic text with a remaining English word.
+    """
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
-    safe_title = escape(i18n.tr(title))
-    safe_subtitle = escape(i18n.tr(subtitle))
+    safe_title = escape(title if localized else i18n.tr(title))
+    safe_subtitle = escape(subtitle if localized else i18n.tr(subtitle))
     st.markdown(
         f"""
         <section class="qai-hero v4-page-hero" dir="{direction}">
@@ -2708,7 +2713,7 @@ def evaluator_ui() -> Dict[str, Any]:
             "conceptual_accuracy": "الدقة المفاهيمية", "answer_relevance": "ملاءمة الإجابة", "pedagogical_clarity": "الوضوح التربوي", "scaffolding_quality": "جودة السقالات التعليمية", "qiskit_alignment": "التوافق مع Qiskit", "reflection_support": "دعم التأمل", "personalization": "التخصيص",
             "analytics_title": "تحليلات التعلم والذكاء الاصطناعي", "analytics_sub": "حلّل الدرجات، التقدم، أداء المفاهيم، أنماط دعم AI والفروق بين المجموعات.", "participants_table": "ملخص المشاركين", "group_comparison": "مقارنة مجموعات الدراسة",
             "exports_title": "تصدير البيانات البحثية", "exports_sub": "حضّر بيانات الدراسة الآمنة للتحليل أو نسخة إدارية كاملة للحفظ المؤمّن.", "anon_title": "تصدير بحثي مجهول الهوية", "anon_body": "مناسب للتحليل، الجداول العلمية والمشاركة داخل فريق البحث دون معلومات تعريفية مباشرة.", "full_title": "نسخة إدارية كاملة", "full_body": "تتضمن بيانات الحسابات لأغراض النسخ الاحتياطي الإداري فقط. تحفظ في مكان آمن.", "prepare_anon": "تحضير التصدير المجهول", "prepare_full": "تحضير النسخة الكاملة", "download": "تنزيل الملف المحضّر", "preview": "معاينة مجموعة البيانات", "dataset": "مجموعة البيانات", "preparing": "جارٍ تحضير المصنف...",
-            "students_title": "إدارة المتعلمين", "students_sub": "أنشئ حسابات المشاركين، راجع التسجيلات وحالة الوصول، وابحث في القائمة.", "accounts_title": "حسابات التسجيل", "accounts_sub": "راجع معلومات التسجيل وحالة أول دخول واستعداد الحسابات دون إظهار كلمات المرور.", "details_title": "تفاصيل المتعلم", "details_sub": "راجع الاختبارات، التقدم، التأملات، التفاعلات والاستبيان لمشارك واحد.",
+            "students_title": "إدارة المتعلمين", "students_sub": "أنشئ حسابات المشاركين، راجع التسجيلات وحالة الوصول، وابحث في القائمة.", "accounts_title": "حسابات التسجيل", "accounts_sub": "راجع معلومات التسجيل وحالة أول دخول واستعداد الحسابات دون إظهار كلمات المرور.", "details_title": "تفاصيل المتعلم", "details_sub": "راجع الاختبارات، التقدم، التأملات، التفاعلات والاستبيان لمشارك واحد.", "select_participant": "اختر مشاركًا", "participant_code": "رمز المشاركة", "academic_level_label": "المستوى الأكاديمي", "active_label": "حالة الحساب", "yes": "نشط", "no": "غير نشط", "pending": "قيد الانتظار", "learning_gain_label": "مكسب التعلم", "percentage_points": "نقطة مئوية",
             "survey_title": "نتائج الاستبيان", "survey_sub": "راجع تقييمات قابلية الاستخدام والتغذية الراجعة المفتوحة.",
         },
         "fr": {
@@ -2734,7 +2739,7 @@ def evaluator_ui() -> Dict[str, Any]:
             "conceptual_accuracy": "Exactitude conceptuelle", "answer_relevance": "Pertinence", "pedagogical_clarity": "Clarté pédagogique", "scaffolding_quality": "Qualité de l’étayage", "qiskit_alignment": "Alignement Qiskit", "reflection_support": "Soutien à la réflexion", "personalization": "Personnalisation",
             "analytics_title": "Analytique d’apprentissage et IA", "analytics_sub": "Analysez les scores, la progression, les concepts, les modes de soutien IA et les groupes.", "participants_table": "Résumé des participants", "group_comparison": "Comparaison des groupes",
             "exports_title": "Export des données de recherche", "exports_sub": "Préparez un jeu anonymisé pour l’analyse ou une sauvegarde administrative complète.", "anon_title": "Export de recherche anonymisé", "anon_body": "Adapté à l’analyse et aux tableaux scientifiques sans identifiants directs.", "full_title": "Sauvegarde administrative complète", "full_body": "Inclut les données de compte; à conserver uniquement dans un emplacement sécurisé.", "prepare_anon": "Préparer l’export anonymisé", "prepare_full": "Préparer la sauvegarde complète", "download": "Télécharger le classeur", "preview": "Aperçu du jeu de données", "dataset": "Jeu de données", "preparing": "Préparation du classeur...",
-            "students_title": "Gestion des apprenants", "students_sub": "Créez des comptes, examinez les inscriptions et recherchez les participants.", "accounts_title": "Comptes d’inscription", "accounts_sub": "Examinez les métadonnées d’inscription sans exposer les mots de passe.", "details_title": "Détails de l’apprenant", "details_sub": "Consultez les tests, la progression, les réflexions, les interactions et l’enquête.",
+            "students_title": "Gestion des apprenants", "students_sub": "Créez des comptes, examinez les inscriptions et recherchez les participants.", "accounts_title": "Comptes d’inscription", "accounts_sub": "Examinez les métadonnées d’inscription sans exposer les mots de passe.", "details_title": "Détails de l’apprenant", "details_sub": "Consultez les tests, la progression, les réflexions, les interactions et l’enquête.", "select_participant": "Sélectionner un participant", "participant_code": "Code participant", "academic_level_label": "Niveau académique", "active_label": "État du compte", "yes": "Actif", "no": "Inactif", "pending": "En attente", "learning_gain_label": "Gain d’apprentissage", "percentage_points": "points de pourcentage",
             "survey_title": "Résultats de l’enquête", "survey_sub": "Examinez les scores d’utilisabilité et les commentaires ouverts.",
         },
         "en": {
@@ -2760,7 +2765,7 @@ def evaluator_ui() -> Dict[str, Any]:
             "conceptual_accuracy": "Conceptual accuracy", "answer_relevance": "Answer relevance", "pedagogical_clarity": "Pedagogical clarity", "scaffolding_quality": "Scaffolding quality", "qiskit_alignment": "Qiskit alignment", "reflection_support": "Reflection support", "personalization": "Personalization",
             "analytics_title": "Learning & AI Analytics", "analytics_sub": "Analyze scores, progress, concepts, AI support modes, and study-group differences.", "participants_table": "Participant summary", "group_comparison": "Study-group comparison",
             "exports_title": "Research Data Exports", "exports_sub": "Prepare a safe anonymized dataset for analysis or a complete administrative backup.", "anon_title": "Anonymized research export", "anon_body": "Suitable for analysis, manuscript tables, and research-team sharing without direct identifiers.", "full_title": "Full administrative backup", "full_body": "Includes account data for secure administrative backup only.", "prepare_anon": "Prepare anonymized export", "prepare_full": "Prepare full backup", "download": "Download prepared workbook", "preview": "Dataset preview", "dataset": "Dataset", "preparing": "Preparing workbook...",
-            "students_title": "Learner Management", "students_sub": "Create participant accounts, review registration, and search the learner list.", "accounts_title": "Registration Accounts", "accounts_sub": "Review registration metadata and access readiness without exposing passwords.", "details_title": "Learner Details", "details_sub": "Inspect tests, progress, reflections, interactions, and survey data for one participant.",
+            "students_title": "Learner Management", "students_sub": "Create participant accounts, review registration, and search the learner list.", "accounts_title": "Registration Accounts", "accounts_sub": "Review registration metadata and access readiness without exposing passwords.", "details_title": "Learner Details", "details_sub": "Inspect tests, progress, reflections, interactions, and survey data for one participant.", "select_participant": "Select participant", "participant_code": "Participant code", "academic_level_label": "Academic level", "active_label": "Account status", "yes": "Active", "no": "Inactive", "pending": "Pending", "learning_gain_label": "Learning gain", "percentage_points": "percentage points",
             "survey_title": "Survey Results", "survey_sub": "Review usability ratings and open-ended feedback.",
         },
     }
@@ -2888,7 +2893,7 @@ def render_evaluator_app() -> None:
 
 def render_evaluator_login() -> None:
     u = evaluator_ui()
-    hero(u["login_title"], u["login_sub"])
+    hero(u["login_title"], u["login_sub"], localized=True)
     st.markdown(f"<div class='v45-login-note' dir='{u['dir']}'><b>3alimnIA Research</b><span>{escape(u['workspace_sub'])}</span></div>", unsafe_allow_html=True)
     if secret("ADMIN_PASSWORD", "admin123") == "admin123" and not secret("EVALUATOR_PASSWORD_HASH", ""):
         st.warning(i18n.tr("Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment."))
@@ -3007,7 +3012,7 @@ def render_study_protocol() -> None:
 
 def render_evaluator_dashboard() -> None:
     u = evaluator_ui()
-    hero(u["dashboard_title"], u["dashboard_sub"])
+    hero(u["dashboard_title"], u["dashboard_sub"], localized=True)
     df = evaluator_filtered_progress()
     all_progress = db.progress_summary_df(len(content.LESSONS))
     evaluations = db.llm_evaluations_df()
@@ -3181,7 +3186,7 @@ def render_evaluator_dashboard() -> None:
 
 def render_students_admin() -> None:
     u = evaluator_ui()
-    hero(u["students_title"], u["students_sub"])
+    hero(u["students_title"], u["students_sub"], localized=True)
     with st.expander(f"+ {i18n.tr('Create participant account as evaluator')}", expanded=False):
         with st.form("evaluator_create_student"):
             c1, c2 = st.columns(2)
@@ -3236,7 +3241,7 @@ def render_students_admin() -> None:
 
 def render_registration_accounts() -> None:
     u = evaluator_ui()
-    hero(u["accounts_title"], u["accounts_sub"])
+    hero(u["accounts_title"], u["accounts_sub"], localized=True)
     st.info(i18n.tr("This evaluator view shows registration metadata needed to support the pilot study. It never displays student passwords, password hashes, or password-reset tokens."))
     df = db.students_df()
     if df.empty:
@@ -3281,12 +3286,12 @@ def render_registration_accounts() -> None:
 
 def render_student_details() -> None:
     u = evaluator_ui()
-    hero(u["details_title"], u["details_sub"])
+    hero(u["details_title"], u["details_sub"], localized=True)
     df = db.students_df()
     if df.empty:
         st.info(u["no_data"])
         return
-    code = st.selectbox(i18n.tr("Select participant"), df["participant_code"].tolist(), format_func=lambda c: f"{c} · {df[df['participant_code']==c]['full_name'].iloc[0]}")
+    code = st.selectbox(u["select_participant"], df["participant_code"].tolist(), format_func=lambda c: f"{c} · {df[df['participant_code']==c]['full_name'].iloc[0]}")
     student = db.get_student_by_code(code)
     if not student:
         return
@@ -3294,12 +3299,25 @@ def render_student_details() -> None:
     post = db.get_test_attempt(student["id"], "post")
     progress = db.get_lesson_progress(student["id"])
     logs = db.ai_logs_df(limit=250, participant_code=student["participant_code"])
+    lang = i18n.current_lang(st)
+    academic_levels = {
+        "ar": {"Licence": "ليسانس", "Master": "ماستر", "PhD": "دكتوراه", "Other": "أخرى"},
+        "fr": {"Licence": "Licence", "Master": "Master", "PhD": "Doctorat", "Other": "Autre"},
+        "en": {"Licence": "Bachelor / Licence", "Master": "Master", "PhD": "PhD", "Other": "Other"},
+    }
+    raw_level = str(student.get("academic_level") or "—")
+    level_value = academic_levels.get(lang, {}).get(raw_level, raw_level)
+    active_value = u["yes"] if bool(student.get("is_active", 1)) else u["no"]
+    pre_value = f"{pre['score']:.1f}%" if pre else u["pending"]
+    post_value = f"{post['score']:.1f}%" if post else u["pending"]
+    gain_value = f"{post['score']-pre['score']:.1f} {u['percentage_points']}" if pre and post else "—"
     evaluator_metric_cards([
-        ("Code", str(student["participant_code"]), student.get("academic_level") or "—", "navy"),
-        (u["pre"], f"{pre['score']:.1f}%" if pre else "—", "", "blue"),
-        (u["post"], f"{post['score']:.1f}%" if post else "—", "", "cyan"),
-        (u["mean_gain"], f"{post['score']-pre['score']:.1f} pp" if pre and post else "—", "", "gold"),
-        (u["ai_logs"], str(len(logs)), "", "blue"),
+        (u["participant_code"], str(student["participant_code"]), "", "navy"),
+        (u["academic_level_label"], level_value, "", "blue"),
+        (u["active_label"], active_value, "", "cyan"),
+        (u["pre"], pre_value, "", "blue"),
+        (u["post"], post_value, "", "cyan"),
+        (u["learning_gain_label"], gain_value, "", "gold"),
     ])
     tab_summary, tab_learning, tab_ai, tab_timeline = st.tabs([u["overview"], u["learning"], u["ai_usage"], i18n.tr("Learning timeline")])
     with tab_summary:
@@ -3308,7 +3326,11 @@ def render_student_details() -> None:
             "institution": student.get("institution"), "academic_level": student.get("academic_level"), "preferred_language": student.get("preferred_language"),
             "study_group": student.get("study_group"), "last_login_at": student.get("last_login_at"), "is_active": student.get("is_active"),
         }])
-        st.dataframe(profile, use_container_width=True, hide_index=True)
+        profile.loc[0, "academic_level"] = level_value
+        profile.loc[0, "preferred_language"] = i18n.LANGUAGE_LABELS.get(str(student.get("preferred_language") or ""), str(student.get("preferred_language") or "—"))
+        profile.loc[0, "is_active"] = active_value
+        profile_display = i18n.localize_dataframe(profile, lang)
+        st.dataframe(profile_display, use_container_width=True, hide_index=True)
         render_completion_requirements(student)
     with tab_learning:
         if progress.empty:
@@ -3567,7 +3589,7 @@ def render_v125_research_dashboard() -> None:
 
 def render_learning_analytics() -> None:
     u = evaluator_ui()
-    hero(u["analytics_title"], u["analytics_sub"])
+    hero(u["analytics_title"], u["analytics_sub"], localized=True)
     df = evaluator_filtered_progress()
     if df.empty:
         st.info(u["no_data"])
@@ -3809,7 +3831,7 @@ def render_paper_ready_analysis() -> None:
 
 def render_llm_performance_evaluation() -> None:
     u = evaluator_ui()
-    hero(u["eval_title"], u["eval_sub"])
+    hero(u["eval_title"], u["eval_sub"], localized=True)
     saved = db.llm_evaluations_df()
     all_ai = db.ai_logs_df(limit=None)
     llm_total = int(all_ai["mode"].isin(["llm", "llm_error"]).sum()) if not all_ai.empty and "mode" in all_ai else len(all_ai)
@@ -3888,7 +3910,7 @@ def render_llm_performance_evaluation() -> None:
 
 def render_feedback_logs() -> None:
     u = evaluator_ui()
-    hero(u["logs_title"], u["logs_sub"])
+    hero(u["logs_title"], u["logs_sub"], localized=True)
     options = db.ai_filter_options()
     if not any(options.values()) and db.count_rows("ai_interactions") == 0:
         st.info(u["no_data"])
@@ -3939,7 +3961,7 @@ def render_feedback_logs() -> None:
 
 def render_survey_results() -> None:
     u = evaluator_ui()
-    hero(u["survey_title"], u["survey_sub"])
+    hero(u["survey_title"], u["survey_sub"], localized=True)
     survey = db.survey_df()
     if survey.empty:
         st.info(u["no_data"])
@@ -4023,7 +4045,7 @@ def render_system_readiness() -> None:
 
 def render_results_export() -> None:
     u = evaluator_ui()
-    hero(u["exports_title"], u["exports_sub"])
+    hero(u["exports_title"], u["exports_sub"], localized=True)
     st.markdown(f"<div class='v45-export-grid' dir='{u['dir']}'><article><span>01</span><h3>{escape(u['anon_title'])}</h3><p>{escape(u['anon_body'])}</p></article><article class='secure'><span>02</span><h3>{escape(u['full_title'])}</h3><p>{escape(u['full_body'])}</p></article></div>", unsafe_allow_html=True)
     col_a, col_b = st.columns(2)
     prepare_anon = col_a.button(u["prepare_anon"], type="primary", use_container_width=True)

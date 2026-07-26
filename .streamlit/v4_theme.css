@@ -793,3 +793,38 @@ html[dir="rtl"] .v4-hero-copy h1 {
 @media(max-width:1450px){.v45-metric-grid{grid-template-columns:repeat(3,1fr)}.v45-metric{min-height:116px}.v45-metric strong{font-size:1.45rem}}
 @media(max-width:1000px){.v45-metric-grid{grid-template-columns:repeat(2,1fr)}.v45-export-grid{grid-template-columns:1fr}.v45-ai-context{grid-template-columns:1fr}.v45-ai-context small{text-align:start}}
 @media(max-width:650px){.v45-metric-grid{grid-template-columns:1fr}.v45-metric{min-height:105px}.v45-transcript{min-height:140px}.v45-eval-profile{grid-template-columns:40px 1fr}.v45-eval-avatar{width:38px;height:38px}}
+
+/* V4.6 - evaluator localization and bidirectional typography */
+.v4-page-hero[dir="rtl"] { text-align: right !important; }
+.v4-page-hero[dir="rtl"] h1,
+.v4-page-hero[dir="rtl"] p,
+.v4-page-hero[dir="rtl"] .v4-page-hero-kicker {
+  direction: rtl !important;
+  unicode-bidi: plaintext !important;
+  text-align: right !important;
+  font-family: "Alexandria", "Tajawal", sans-serif !important;
+}
+.v4-page-hero[dir="ltr"] { text-align: left !important; }
+.v45-metric-grid[dir="rtl"] .v45-metric {
+  direction: rtl !important;
+  text-align: right !important;
+}
+.v45-metric-grid[dir="rtl"] .v45-metric span,
+.v45-metric-grid[dir="rtl"] .v45-metric strong,
+.v45-metric-grid[dir="rtl"] .v45-metric small {
+  font-family: "Alexandria", "Tajawal", sans-serif !important;
+}
+.v45-metric-grid[dir="rtl"] .v45-metric strong {
+  font-size: clamp(1.2rem, 2vw, 1.72rem) !important;
+  line-height: 1.35 !important;
+}
+.v45-export-grid[dir="rtl"] article {
+  direction: rtl !important;
+  text-align: right !important;
+}
+.v45-export-grid[dir="rtl"] h3,
+.v45-export-grid[dir="rtl"] p {
+  font-family: "Alexandria", "Tajawal", sans-serif !important;
+}
+[data-testid="stDataFrame"] { direction: inherit; }
+html[dir="rtl"] [data-testid="stDataFrame"] { direction: rtl; }
