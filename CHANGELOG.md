@@ -1,3 +1,12 @@
+# V6.2 — Evaluator Intelligence Dashboard
+
+- Rebuilt the evaluator home with Streamlit-native metrics and tabs.
+- Added real-data Plotly charts for pre/post outcomes, daily AI activity, progress distribution, coach modes, and LPQS dimensions.
+- Added a progress-enabled learner table using `st.column_config`.
+- Added direct anonymized CSV and Excel research exports.
+- Added Plotly 6 dependency and a coordinated chart palette.
+- Updated the application version to `v6.2-evaluator-intelligence-dashboard`.
+
 # V6.0.1 - Production header and compact hero
 
 - Replaced the visible native navigation dropdown with a professional Streamlit-native public header.

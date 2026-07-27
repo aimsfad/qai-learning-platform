@@ -1,9 +1,22 @@
-[theme]
-primaryColor = "#1F6BFF"
-backgroundColor = "#F4F7FC"
-secondaryBackgroundColor = "#FFFFFF"
-textColor = "#101B35"
-font = "sans serif"
+[client]
+toolbarMode = "minimal"
 
 [browser]
 gatherUsageStats = false
+
+[theme]
+base = "light"
+primaryColor = "#1967FF"
+backgroundColor = "#F5F8FC"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#111B35"
+font = "sans-serif"
+baseRadius = "0.9rem"
+buttonRadius = "0.8rem"
+showWidgetBorder = true
+showSidebarBorder = true
+borderColor = "#D9E4F1"
+dataframeBorderColor = "#D9E4F1"
+dataframeHeaderBackgroundColor = "#EDF4FF"
+chartCategoricalColors = ["#1967FF", "#12C5E8", "#F3B326", "#079A87", "#7C6CF2", "#E85D75"]
+chartSequentialColors = ["#EAF2FF", "#CFE1FF", "#A6C8FF", "#73A8FF", "#3D83F6", "#1967FF", "#0B2F78"]

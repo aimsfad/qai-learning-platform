@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -3556,116 +3557,308 @@ def render_evaluator_quick_actions(u: Dict[str, Any]) -> None:
                     set_evaluator_page(route)
 
 def render_evaluator_dashboard() -> None:
+    """Render the evaluator command centre with live study data.
+
+    V6.2 deliberately uses Streamlit-native metrics, tabs, tables, and download
+    controls. Plotly is limited to analytical figures and inherits the active
+    Streamlit theme, so light/dark mode stays coherent without server-time logic.
+    """
     u = evaluator_ui()
-    hero(u["dashboard_title"], u["dashboard_sub"], localized=True)
+    lang = i18n.current_lang(st)
+    copy = {
+        "ar": {
+            "title": "لوحة ذكاء التعلّم والتقييم",
+            "subtitle": "نظرة تنفيذية موحّدة على التقدم، نتائج الاختبارات، استخدام المدرّب التوليدي، وجودة الاستجابات وفق LPQS.",
+            "overview": "نظرة عامة",
+            "learners": "المتعلمون",
+            "ai_quality": "الذكاء الاصطناعي وLPQS",
+            "exports": "التصدير البحثي",
+            "registered": "المتعلمون المسجلون",
+            "completion": "متوسط إتمام المسار",
+            "gain": "متوسط التحسن",
+            "ai_interactions": "تفاعلات الذكاء الاصطناعي",
+            "complete_cases": "الحالات المكتملة",
+            "paired": "اختبارات قبلية/بعدية مكتملة",
+            "lpqs": "متوسط LPQS",
+            "pre_post": "الاختبار القبلي مقابل البعدي",
+            "activity": "نشاط المدرّب التوليدي عبر الزمن",
+            "completion_chart": "توزيع تقدم المتعلمين",
+            "student_table": "سجل تقدم المتعلمين",
+            "filter_level": "المستوى الأكاديمي",
+            "all": "الكل",
+            "participant": "رمز المشاركة",
+            "name": "المتعلم",
+            "level": "المستوى",
+            "language": "اللغة",
+            "progress": "نسبة الإتمام",
+            "pre": "الاختبار القبلي",
+            "post": "الاختبار البعدي",
+            "gain_col": "التحسن",
+            "ai_messages": "تفاعلات AI",
+            "case_status": "حالة الاكتمال",
+            "complete": "مكتملة",
+            "incomplete": "غير مكتملة",
+            "ai_modes": "أنماط استخدام المدرّب",
+            "ai_daily": "التفاعلات اليومية",
+            "quality_dimensions": "أبعاد الجودة التربوية",
+            "provider_health": "صحة خدمة الذكاء الاصطناعي",
+            "fallback": "نسبة الاستجابة الاحتياطية",
+            "latency": "متوسط زمن الاستجابة",
+            "usefulness": "فائدة الرد حسب المتعلم",
+            "download_title": "بيانات جاهزة للتحليل",
+            "download_body": "نزّل نسخة مجهولة الهوية للتحليل الإحصائي، أو انتقل إلى مركز التصدير الكامل لإعداد ملفات البحث والنسخ الإدارية.",
+            "download_csv": "تنزيل ملخص المشاركين CSV",
+            "download_xlsx": "تنزيل الحزمة البحثية Excel",
+            "open_export": "فتح مركز التصدير الكامل",
+            "privacy": "لا تتضمن الحزمة البحثية الأسماء أو البريد الإلكتروني أو المؤسسة أو معرّفات قاعدة البيانات الداخلية.",
+            "no_data": "لا توجد بيانات كافية ضمن المرشحات الحالية.",
+            "reference": "الخط المرجعي يعني عدم وجود تحسن.",
+            "date": "التاريخ",
+            "interactions": "التفاعلات",
+            "active_learners": "المتعلمون النشطون",
+        },
+        "fr": {
+            "title": "Tableau de pilotage de l’apprentissage et de l’évaluation",
+            "subtitle": "Vue unifiée de la progression, des résultats, de l’usage du coach génératif et de la qualité LPQS.",
+            "overview": "Vue d’ensemble",
+            "learners": "Apprenants",
+            "ai_quality": "IA et LPQS",
+            "exports": "Export recherche",
+            "registered": "Apprenants inscrits",
+            "completion": "Progression moyenne",
+            "gain": "Gain moyen",
+            "ai_interactions": "Interactions IA",
+            "complete_cases": "Cas complets",
+            "paired": "Pré/post-tests appariés",
+            "lpqs": "LPQS moyen",
+            "pre_post": "Pré-test versus post-test",
+            "activity": "Activité du coach génératif dans le temps",
+            "completion_chart": "Distribution de la progression",
+            "student_table": "Suivi détaillé des apprenants",
+            "filter_level": "Niveau académique",
+            "all": "Tous",
+            "participant": "Code participant",
+            "name": "Apprenant",
+            "level": "Niveau",
+            "language": "Langue",
+            "progress": "Progression",
+            "pre": "Pré-test",
+            "post": "Post-test",
+            "gain_col": "Gain",
+            "ai_messages": "Interactions IA",
+            "case_status": "Statut",
+            "complete": "Complet",
+            "incomplete": "Incomplet",
+            "ai_modes": "Modes d’utilisation du coach",
+            "ai_daily": "Interactions quotidiennes",
+            "quality_dimensions": "Dimensions de qualité pédagogique",
+            "provider_health": "Santé du service IA",
+            "fallback": "Taux de secours",
+            "latency": "Latence moyenne",
+            "usefulness": "Utilité perçue",
+            "download_title": "Données prêtes pour l’analyse",
+            "download_body": "Téléchargez une version anonymisée ou ouvrez le centre d’export complet pour les fichiers de recherche et les sauvegardes administratives.",
+            "download_csv": "Télécharger le résumé CSV",
+            "download_xlsx": "Télécharger le classeur de recherche",
+            "open_export": "Ouvrir le centre d’export",
+            "privacy": "L’export recherche exclut les noms, e-mails, établissements et identifiants internes de la base.",
+            "no_data": "Aucune donnée suffisante pour les filtres actuels.",
+            "reference": "La diagonale représente l’absence d’amélioration.",
+            "date": "Date",
+            "interactions": "Interactions",
+            "active_learners": "Apprenants actifs",
+        },
+        "en": {
+            "title": "Learning and Evaluation Intelligence Dashboard",
+            "subtitle": "A unified operational view of progress, assessment outcomes, generative-coach usage, and LPQS response quality.",
+            "overview": "Overview",
+            "learners": "Learners",
+            "ai_quality": "AI and LPQS",
+            "exports": "Research export",
+            "registered": "Registered learners",
+            "completion": "Average path completion",
+            "gain": "Average learning gain",
+            "ai_interactions": "AI interactions",
+            "complete_cases": "Complete cases",
+            "paired": "Paired pre/post tests",
+            "lpqs": "Average LPQS",
+            "pre_post": "Pre-test versus post-test",
+            "activity": "Generative-coach activity over time",
+            "completion_chart": "Learner progress distribution",
+            "student_table": "Learner progress register",
+            "filter_level": "Academic level",
+            "all": "All",
+            "participant": "Participant code",
+            "name": "Learner",
+            "level": "Level",
+            "language": "Language",
+            "progress": "Completion",
+            "pre": "Pre-test",
+            "post": "Post-test",
+            "gain_col": "Gain",
+            "ai_messages": "AI interactions",
+            "case_status": "Completion status",
+            "complete": "Complete",
+            "incomplete": "Incomplete",
+            "ai_modes": "Coach usage modes",
+            "ai_daily": "Daily interactions",
+            "quality_dimensions": "Pedagogical quality dimensions",
+            "provider_health": "AI service health",
+            "fallback": "Fallback rate",
+            "latency": "Average latency",
+            "usefulness": "Learner-rated usefulness",
+            "download_title": "Analysis-ready datasets",
+            "download_body": "Download an anonymized study extract or open the complete export centre for research workbooks and administrative backups.",
+            "download_csv": "Download participant summary CSV",
+            "download_xlsx": "Download research workbook",
+            "open_export": "Open full export centre",
+            "privacy": "The research export excludes names, email addresses, institutions, and internal database identifiers.",
+            "no_data": "There is not enough data for the current filters.",
+            "reference": "The diagonal reference line represents no improvement.",
+            "date": "Date",
+            "interactions": "Interactions",
+            "active_learners": "Active learners",
+        },
+    }[lang]
+
+    hero(copy["title"], copy["subtitle"], localized=True)
     render_evaluator_quick_actions(u)
     df = evaluator_filtered_progress()
-    all_progress = db.progress_summary_df(len(content.LESSONS))
     evaluations = db.llm_evaluations_df()
     allowed_codes = set(df["participant_code"].dropna().astype(str).tolist()) if not df.empty and "participant_code" in df else set()
     if allowed_codes and not evaluations.empty and "participant_code" in evaluations:
         evaluations = evaluations[evaluations["participant_code"].astype(str).isin(allowed_codes)].copy()
-    summary = pd.DataFrame()
-    if not evaluations.empty:
-        metric_cols = ["conceptual_accuracy", "answer_relevance", "pedagogical_clarity", "scaffolding_quality", "qiskit_alignment", "reflection_support", "personalization", "pedagogical_quality_score"]
-        summary = pd.DataFrame([{"metric": col, "mean_score": round(float(pd.to_numeric(evaluations[col], errors="coerce").mean()), 2), "n": int(evaluations[col].notna().sum())} for col in metric_cols if col in evaluations])
-    total_ai = int(pd.to_numeric(df.get("ai_interactions", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not df.empty else 0
-    paired = df[df.get("pre_done", False).astype(bool) & df.get("post_done", False).astype(bool)].copy() if not df.empty and "pre_done" in df and "post_done" in df else pd.DataFrame()
-    complete_cases = int(df["is_complete_case"].astype(bool).sum()) if not df.empty and "is_complete_case" in df else 0
+
+    logs = db.ai_logs_df(limit=None)
+    if allowed_codes and not logs.empty and "participant_code" in logs:
+        logs = logs[logs["participant_code"].astype(str).isin(allowed_codes)].copy()
+
+    paired = pd.DataFrame()
+    if not df.empty and {"pre_done", "post_done"}.issubset(df.columns):
+        paired = df[df["pre_done"].astype(bool) & df["post_done"].astype(bool)].copy()
     gain = pd.to_numeric(paired.get("learning_gain", pd.Series(dtype=float)), errors="coerce").dropna()
     mean_gain = float(gain.mean()) if not gain.empty else None
+    total_ai = int(pd.to_numeric(df.get("ai_interactions", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not df.empty else 0
+    complete_cases = int(df["is_complete_case"].astype(bool).sum()) if not df.empty and "is_complete_case" in df else 0
+    completion = pd.to_numeric(df.get("progress_percent", pd.Series(dtype=float)), errors="coerce").dropna()
+    mean_completion = float(completion.mean()) if not completion.empty else None
     lpqs_series = pd.to_numeric(evaluations.get("pedagogical_quality_score", pd.Series(dtype=float)), errors="coerce").dropna()
     mean_lpqs = float(lpqs_series.mean()) if not lpqs_series.empty else None
 
-    evaluator_metric_cards([
-        (u["students"], str(len(df)), u["registered_note"], "blue"),
-        (u["complete_cases"], str(complete_cases), u["complete_note"], "cyan"),
-        (u["paired_tests"], str(len(paired)), u["paired_note"], "navy"),
-        (u["mean_gain"], f"{mean_gain:.1f} pp" if mean_gain is not None else "—", u["gain_note"], "gold"),
-        (u["ai_logs"], str(total_ai), u["ai_note"], "blue"),
-        (u["lpqs"], f"{mean_lpqs:.2f}/5" if mean_lpqs is not None else "—", u["lpqs_note"], "cyan"),
+    st.markdown("<span class='v62-evaluator-marker'></span>", unsafe_allow_html=True)
+    k1, k2, k3, k4 = st.columns(4, gap="small")
+    k1.metric(copy["registered"], len(df), help=u["registered_note"])
+    k2.metric(copy["completion"], f"{mean_completion:.1f}%" if mean_completion is not None else "—")
+    k3.metric(copy["gain"], f"{mean_gain:+.1f} pp" if mean_gain is not None else "—", help=u["gain_note"])
+    k4.metric(copy["ai_interactions"], total_ai, help=u["ai_note"])
+
+    tab_overview, tab_learners, tab_ai, tab_exports = st.tabs([
+        copy["overview"], copy["learners"], copy["ai_quality"], copy["exports"]
     ])
 
-    tab_overview, tab_learning, tab_ai, tab_quality = st.tabs([u["overview"], u["learning"], u["ai_usage"], u["quality_system"]])
-
     with tab_overview:
-        evaluator_section(u["workflow"], u["workflow_sub"])
-        if df.empty:
-            st.info(u["no_data"])
-        else:
-            stages = [
-                (u["consent"], int((pd.to_numeric(df.get("consent_done", 0), errors="coerce").fillna(0) > 0).sum())),
-                (u["pre"], int(df.get("pre_done", False).astype(bool).sum())),
-                (u["lesson"], int((pd.to_numeric(df.get("completed_lessons", 0), errors="coerce").fillna(0) > 0).sum())),
-                (u["ai"], int((pd.to_numeric(df.get("ai_interactions", 0), errors="coerce").fillna(0) > 0).sum())),
-                (u["post"], int(df.get("post_done", False).astype(bool).sum())),
-                (u["survey"], int((pd.to_numeric(df.get("survey_done", 0), errors="coerce").fillna(0) > 0).sum())),
-            ]
-            funnel = pd.DataFrame([{u["stage"]: name, u["count"]: count, u["percent"]: round(count / max(len(df), 1) * 100, 1)} for name, count in stages])
-            c1, c2 = st.columns([1.15, .85])
-            with c1:
-                st.dataframe(funnel, use_container_width=True, hide_index=True)
-            with c2:
-                bars = funnel.rename(columns={u["stage"]: "stage", u["percent"]: "percent"})
-                render_progress_bars(bars, "stage", "percent")
+        s1, s2, s3 = st.columns(3, gap="small")
+        s1.metric(copy["complete_cases"], complete_cases)
+        s2.metric(copy["paired"], len(paired))
+        s3.metric(copy["lpqs"], f"{mean_lpqs:.2f}/5" if mean_lpqs is not None else "—")
 
+        chart_left, chart_right = st.columns(2, gap="large")
+        with chart_left:
             with st.container(border=True):
-                st.markdown("<span class='v49-data-card-marker'></span>", unsafe_allow_html=True)
-                evaluator_section(u["recent"], u["recent_sub"])
-                cols = ["participant_code", "full_name", "preferred_language", "study_group", "academic_level", "pre_score", "post_score", "learning_gain", "progress_percent", "ai_interactions", "is_complete_case"]
-                recent = df[[c for c in cols if c in df.columns]].head(20).copy()
-                recent = recent.rename(columns={
-                    "participant_code": u["participant_code"], "full_name": u["students"], "preferred_language": u["language"], "study_group": u["group"],
-                    "academic_level": u["level"], "pre_score": u["pre"], "post_score": u["post"], "learning_gain": u["mean_gain"],
-                    "progress_percent": u["percent"], "ai_interactions": u["ai_logs"], "is_complete_case": u["complete_cases"],
-                })
-                st.dataframe(recent, use_container_width=True, hide_index=True, height=352)
+                st.markdown(f"### {copy['pre_post']}")
+                if paired.empty:
+                    st.info(copy["no_data"])
+                else:
+                    plot_df = paired.copy()
+                    plot_df["pre_score"] = pd.to_numeric(plot_df["pre_score"], errors="coerce")
+                    plot_df["post_score"] = pd.to_numeric(plot_df["post_score"], errors="coerce")
+                    plot_df = plot_df.dropna(subset=["pre_score", "post_score"])
+                    color_col = "academic_level" if "academic_level" in plot_df else None
+                    fig = px.scatter(
+                        plot_df,
+                        x="pre_score",
+                        y="post_score",
+                        color=color_col,
+                        hover_name="participant_code" if "participant_code" in plot_df else None,
+                        labels={"pre_score": copy["pre"], "post_score": copy["post"], "academic_level": copy["level"]},
+                    )
+                    fig.add_shape(type="line", x0=0, y0=0, x1=100, y1=100, line=dict(color="#94A3B8", dash="dash", width=1.5))
+                    fig.update_xaxes(range=[0, 100], gridcolor="rgba(148,163,184,.18)")
+                    fig.update_yaxes(range=[0, 100], gridcolor="rgba(148,163,184,.18)")
+                    fig.update_layout(height=360, margin=dict(l=12, r=12, t=16, b=12), legend_title_text="", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_pre_post")
+                    st.caption(copy["reference"])
 
-    with tab_learning:
-        evaluator_section(u["score_summary"])
-        pre_values = pd.to_numeric(paired.get("pre_score", pd.Series(dtype=float)), errors="coerce").dropna()
-        post_values = pd.to_numeric(paired.get("post_score", pd.Series(dtype=float)), errors="coerce").dropna()
-        evaluator_metric_cards([
-            (u["mean_pre"], f"{pre_values.mean():.1f}%" if not pre_values.empty else "—", u["normalized"], "navy"),
-            (u["mean_post"], f"{post_values.mean():.1f}%" if not post_values.empty else "—", u["normalized"], "blue"),
-            (u["mean_gain"], f"{mean_gain:.1f} pp" if mean_gain is not None else "—", f"n = {len(paired)}", "gold"),
-        ])
-        if not paired.empty:
-            score_table = paired[[c for c in ["participant_code", "pre_score", "post_score", "learning_gain", "completed_lessons", "progress_percent"] if c in paired.columns]].copy()
-            st.dataframe(score_table, use_container_width=True, hide_index=True)
-        concept_df = db.concept_scores_df()
-        if not concept_df.empty and not df.empty and "student_id" in concept_df and "student_id" in df:
-            concept_df = concept_df[concept_df["student_id"].isin(df["student_id"].tolist())].copy()
-        if not concept_df.empty:
-            evaluator_section(u["concepts"])
-            concept_df = concept_df.copy()
-            concept_df["concept"] = concept_df["concept"].astype(str).map(lambda x: i18n.concept_label(x, i18n.current_lang(st)))
-            pivot = concept_df.pivot_table(index="concept", columns="attempt_type", values="percentage", aggfunc="mean").reset_index()
-            pivot.columns.name = None
-            for col in [c for c in pivot.columns if c != "concept"]:
-                pivot[col] = pd.to_numeric(pivot[col], errors="coerce").round(1)
-            st.dataframe(pivot, use_container_width=True, hide_index=True)
-            if "post" in pivot.columns:
-                render_progress_bars(pivot.rename(columns={"concept": "label", "post": "value"}), "label", "value")
+        with chart_right:
+            with st.container(border=True):
+                st.markdown(f"### {copy['activity']}")
+                if logs.empty or "created_at" not in logs:
+                    st.info(copy["no_data"])
+                else:
+                    activity = logs.copy()
+                    activity["created_at"] = pd.to_datetime(activity["created_at"], errors="coerce")
+                    activity = activity.dropna(subset=["created_at"])
+                    activity["date"] = activity["created_at"].dt.date
+                    daily = activity.groupby("date", as_index=False).agg(
+                        interactions=("interaction_id", "count"),
+                        active_learners=("participant_code", "nunique"),
+                    )
+                    daily_long = daily.melt(id_vars="date", value_vars=["interactions", "active_learners"], var_name="metric", value_name="value")
+                    daily_long["metric"] = daily_long["metric"].map({"interactions": copy["interactions"], "active_learners": copy["active_learners"]})
+                    fig = px.line(daily_long, x="date", y="value", color="metric", markers=True, labels={"date": copy["date"], "value": "", "metric": ""})
+                    fig.update_layout(height=360, margin=dict(l=12, r=12, t=16, b=12), legend_orientation="h", legend_y=-0.2, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    fig.update_xaxes(gridcolor="rgba(148,163,184,.12)")
+                    fig.update_yaxes(gridcolor="rgba(148,163,184,.18)")
+                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_activity")
+
+        with st.container(border=True):
+            st.markdown(f"### {copy['completion_chart']}")
+            if completion.empty:
+                st.info(copy["no_data"])
+            else:
+                hist_df = pd.DataFrame({"progress_percent": completion.clip(0, 100)})
+                fig = px.histogram(hist_df, x="progress_percent", nbins=10, labels={"progress_percent": copy["progress"]})
+                fig.update_layout(height=280, showlegend=False, margin=dict(l=12, r=12, t=12, b=12), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                fig.update_xaxes(range=[0, 100], gridcolor="rgba(148,163,184,.12)")
+                fig.update_yaxes(gridcolor="rgba(148,163,184,.18)")
+                st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_completion")
+
+    with tab_learners:
+        st.markdown(f"### {copy['student_table']}")
+        if df.empty:
+            st.info(copy["no_data"])
         else:
-            st.info(u["no_data"])
+            levels = sorted([x for x in df.get("academic_level", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if x])
+            selected_level = st.selectbox(copy["filter_level"], [copy["all"]] + levels, key="v62_level_filter")
+            table_df = df.copy()
+            if selected_level != copy["all"] and "academic_level" in table_df:
+                table_df = table_df[table_df["academic_level"].astype(str).eq(selected_level)]
+            table_df["case_status"] = table_df.get("is_complete_case", False).astype(bool).map({True: copy["complete"], False: copy["incomplete"]})
+            columns = ["participant_code", "full_name", "academic_level", "preferred_language", "progress_percent", "pre_score", "post_score", "learning_gain", "ai_interactions", "case_status"]
+            table_df = table_df[[c for c in columns if c in table_df.columns]].copy()
+            table_df = table_df.rename(columns={
+                "participant_code": copy["participant"], "full_name": copy["name"], "academic_level": copy["level"],
+                "preferred_language": copy["language"], "progress_percent": copy["progress"], "pre_score": copy["pre"],
+                "post_score": copy["post"], "learning_gain": copy["gain_col"], "ai_interactions": copy["ai_messages"],
+                "case_status": copy["case_status"],
+            })
+            st.dataframe(
+                table_df,
+                width="stretch",
+                height=440,
+                hide_index=True,
+                column_config={
+                    copy["progress"]: st.column_config.ProgressColumn(copy["progress"], min_value=0, max_value=100, format="%.0f%%"),
+                    copy["pre"]: st.column_config.NumberColumn(copy["pre"], format="%.1f%%"),
+                    copy["post"]: st.column_config.NumberColumn(copy["post"], format="%.1f%%"),
+                    copy["gain_col"]: st.column_config.NumberColumn(copy["gain_col"], format="%+.1f pp"),
+                    copy["ai_messages"]: st.column_config.NumberColumn(copy["ai_messages"], format="%d"),
+                },
+                key="v62_learner_table",
+            )
 
     with tab_ai:
-        logs = db.ai_logs_df(limit=None)
-        if allowed_codes and not logs.empty and "participant_code" in logs:
-            logs = logs[logs["participant_code"].astype(str).isin(allowed_codes)].copy()
-        usage = pd.DataFrame()
-        if not logs.empty:
-            usage = logs.groupby(["mode", "provider", "model"], dropna=False).size().reset_index(name="interactions").sort_values("interactions", ascending=False)
-        evaluator_section(u["usage_provider"])
-        if usage.empty:
-            st.info(u["no_data"])
-        else:
-            st.dataframe(usage, use_container_width=True, hide_index=True)
-            usage_bar = usage.copy()
-            usage_bar["provider_mode"] = usage_bar["provider"].astype(str) + " / " + usage_bar["mode"].astype(str)
-            render_progress_bars(usage_bar, "provider_mode", "interactions")
-
+        health_1, health_2, health_3 = st.columns(3, gap="small")
         fallback_rate = None
         mean_latency = None
         mean_usefulness = None
@@ -3676,50 +3869,57 @@ def render_evaluator_dashboard() -> None:
             mean_latency = float(latency.mean()) if not latency.empty else None
             usefulness = pd.to_numeric(logs.get("student_usefulness_rating", pd.Series(dtype=float)), errors="coerce").dropna()
             mean_usefulness = float(usefulness.mean()) if not usefulness.empty else None
-        evaluator_section(u["interaction_health"])
-        evaluator_metric_cards([
-            (u["fallback_rate"], f"{fallback_rate:.1f}%" if fallback_rate is not None else "—", "", "gold"),
-            (u["latency"], f"{mean_latency:.0f} ms" if mean_latency is not None else "—", "", "blue"),
-            (u["usefulness"], f"{mean_usefulness:.2f}/5" if mean_usefulness is not None else "—", "", "cyan"),
-        ])
-        task_df = pd.DataFrame()
-        if not logs.empty:
-            task_df = logs.groupby("task", dropna=False).size().reset_index(name="interactions")
-        if not task_df.empty:
-            evaluator_section(u["usage_task"])
-            task_summary = task_df.groupby("task", as_index=False)["interactions"].sum().sort_values("interactions", ascending=False)
-            st.dataframe(task_summary, use_container_width=True, hide_index=True)
-            render_progress_bars(task_summary, "task", "interactions")
+        health_1.metric(copy["fallback"], f"{fallback_rate:.1f}%" if fallback_rate is not None else "—")
+        health_2.metric(copy["latency"], f"{mean_latency:.0f} ms" if mean_latency is not None else "—")
+        health_3.metric(copy["usefulness"], f"{mean_usefulness:.2f}/5" if mean_usefulness is not None else "—")
 
-    with tab_quality:
-        evaluator_section(u["quality_summary"])
-        total_llm = db.count_rows("ai_interactions")
-        evaluated_n = int(len(evaluations))
-        evaluator_metric_cards([
-            (u["evaluated"], str(evaluated_n), "", "cyan"),
-            (u["unrated"], str(max(total_llm - evaluated_n, 0)), "", "gold"),
-            (u["lpqs"], f"{mean_lpqs:.2f}/5" if mean_lpqs is not None else "—", "", "blue"),
-        ])
-        if not summary.empty:
-            localized_summary = summary.copy()
-            localized_summary["metric"] = localized_summary["metric"].map(evaluator_label_metric)
-            st.dataframe(localized_summary, use_container_width=True, hide_index=True)
-            render_progress_bars(localized_summary, "metric", "mean_score")
+        ai_left, ai_right = st.columns(2, gap="large")
+        with ai_left:
+            with st.container(border=True):
+                st.markdown(f"### {copy['ai_modes']}")
+                if logs.empty or "mode" not in logs:
+                    st.info(copy["no_data"])
+                else:
+                    modes = logs.groupby("mode", dropna=False).size().reset_index(name="interactions").sort_values("interactions", ascending=False)
+                    fig = px.bar(modes, x="interactions", y="mode", orientation="h", labels={"interactions": copy["interactions"], "mode": ""})
+                    fig.update_layout(height=330, margin=dict(l=12, r=12, t=12, b=12), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    fig.update_xaxes(gridcolor="rgba(148,163,184,.18)")
+                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_ai_modes")
 
-        status = feedback_engine.provider_status()
-        readiness = db.system_readiness(len(content.LESSONS))
-        evaluator_section(u["system_status"])
-        provider_ok = u["available"] if status.get("available") else u["unavailable"]
-        db_ok = u["available"] if readiness.get("database_ok") else u["unavailable"]
-        system_df = pd.DataFrame([
-            {"item": u["provider_status"], "value": f"{status.get('provider','—')} · {provider_ok}"},
-            {"item": u["model"], "value": status.get("model", "—")},
-            {"item": u["database"], "value": f"{readiness.get('database_dialect','—')} · {db_ok}"},
-            {"item": u["app_version"], "value": readiness.get("app_version", "—")},
-        ])
-        st.dataframe(system_df, use_container_width=True, hide_index=True)
-        if readiness.get("database_error"):
-            st.error(str(readiness["database_error"]))
+        with ai_right:
+            with st.container(border=True):
+                st.markdown(f"### {copy['quality_dimensions']}")
+                metric_cols = ["conceptual_accuracy", "answer_relevance", "pedagogical_clarity", "scaffolding_quality", "qiskit_alignment", "reflection_support", "personalization"]
+                quality_rows = []
+                if not evaluations.empty:
+                    for col in metric_cols:
+                        if col in evaluations:
+                            values = pd.to_numeric(evaluations[col], errors="coerce").dropna()
+                            if not values.empty:
+                                quality_rows.append({"metric": evaluator_label_metric(col), "score": float(values.mean())})
+                if not quality_rows:
+                    st.info(copy["no_data"])
+                else:
+                    quality_df = pd.DataFrame(quality_rows).sort_values("score")
+                    fig = px.bar(quality_df, x="score", y="metric", orientation="h", range_x=[0, 5], labels={"score": "LPQS", "metric": ""})
+                    fig.update_layout(height=330, margin=dict(l=12, r=12, t=12, b=12), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    fig.update_xaxes(gridcolor="rgba(148,163,184,.18)")
+                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_lpqs")
+
+    with tab_exports:
+        with st.container(border=True):
+            st.markdown(f"### {copy['download_title']}")
+            st.write(copy["download_body"])
+            st.info(copy["privacy"])
+            anon_progress = db.anonymize_dataframe(df)
+            csv_data = anon_progress.to_csv(index=False).encode("utf-8-sig") if not anon_progress.empty else b""
+            research_tables = db.research_export_tables(len(content.LESSONS), anonymized=True)
+            workbook = to_excel_bytes(research_tables)
+            d1, d2, d3 = st.columns(3, gap="small")
+            d1.download_button(copy["download_csv"], data=csv_data, file_name="3alimnia_participant_summary_anonymized.csv", mime="text/csv", width="stretch", disabled=not bool(csv_data))
+            d2.download_button(copy["download_xlsx"], data=workbook, file_name="3alimnia_research_export_anonymized.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch")
+            if d3.button(copy["open_export"], width="stretch", key="v62_open_full_export"):
+                set_evaluator_page("Exports")
 
 def render_students_admin() -> None:
     u = evaluator_ui()
