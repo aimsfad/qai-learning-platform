@@ -2051,3 +2051,59 @@ html[dir="rtl"] .v66-stage-copy h1 { line-height: 1.42 !important; }
     font-size: .82rem !important;
   }
 }
+
+
+/* V6.7.1 — restore the full approved horizontal logo in the public header. */
+.v671-header-logo-marker{display:none!important}
+.st-key-v61_public_header [data-testid="stColumn"]:has(.v671-header-logo-marker){
+  min-width:214px!important;
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker){
+  overflow:visible!important;
+  width:100%!important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker) [data-testid="stImage"]{
+  width:100%!important;
+  min-width:200px!important;
+  max-width:222px!important;
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  padding:0!important;
+  margin:0!important;
+}
+html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker) [data-testid="stImage"]{
+  justify-content:flex-end!important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker) [data-testid="stImage"] img{
+  display:block!important;
+  width:214px!important;
+  min-width:214px!important;
+  max-width:214px!important;
+  height:auto!important;
+  max-height:60px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  border-radius:0!important;
+  clip-path:none!important;
+  filter:none!important;
+}
+@media (max-width:1180px) and (min-width:721px){
+  .st-key-v61_public_header [data-testid="stColumn"]:has(.v671-header-logo-marker){min-width:180px!important}
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker) [data-testid="stImage"] img{
+    width:184px!important;min-width:184px!important;max-width:184px!important;max-height:54px!important
+  }
+}
+@media (max-width:720px){
+  .st-key-v61_public_header [data-testid="stColumn"]:has(.v671-header-logo-marker){min-width:0!important}
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker) [data-testid="stImage"]{
+    justify-content:center!important;max-width:none!important;min-width:0!important
+  }
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v671-header-logo-marker) [data-testid="stImage"] img{
+    width:min(230px,74vw)!important;min-width:0!important;max-width:230px!important;max-height:62px!important
+  }
+}
