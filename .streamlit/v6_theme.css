@@ -2107,3 +2107,70 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
     width:min(230px,74vw)!important;min-width:0!important;max-width:230px!important;max-height:62px!important
   }
 }
+
+/* ========================================================================== 
+   3alimnIA V6.7.2 — restore the classic white header logo treatment.
+   Uses a dedicated flattened white-pill asset to avoid dark-theme or cache
+   contamination while preserving the approved horizontal brand lockup.
+   ========================================================================== */
+.v672-header-logo-marker{display:none!important}
+.st-key-v61_public_header [data-testid="stColumn"]:has(.v672-header-logo-marker){
+  min-width:224px!important;
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker){
+  width:100%!important;
+  overflow:visible!important;
+  background:transparent!important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"]{
+  width:100%!important;
+  min-width:212px!important;
+  max-width:232px!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"]{
+  justify-content:flex-end!important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img{
+  display:block!important;
+  width:224px!important;
+  min-width:224px!important;
+  max-width:224px!important;
+  height:auto!important;
+  max-height:58px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  border-radius:15px!important;
+  clip-path:none!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  background:#fff!important;
+  box-shadow:0 5px 14px rgba(16,48,98,.08)!important;
+}
+@media (max-width:1180px) and (min-width:721px){
+  .st-key-v61_public_header [data-testid="stColumn"]:has(.v672-header-logo-marker){min-width:188px!important}
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img{
+    width:192px!important;min-width:192px!important;max-width:192px!important;max-height:53px!important
+  }
+}
+@media (max-width:720px){
+  .st-key-v61_public_header [data-testid="stColumn"]:has(.v672-header-logo-marker){min-width:0!important}
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"]{
+    justify-content:center!important;min-width:0!important;max-width:none!important
+  }
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img{
+    width:min(238px,78vw)!important;min-width:0!important;max-width:238px!important;max-height:62px!important
+  }
+}

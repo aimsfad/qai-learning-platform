@@ -248,14 +248,18 @@ def _route_button(label: str, route: str, *, key: str, primary: bool = False, ic
         router.navigate(route)
 
 
-def _render_official_logo(width: int = 214) -> None:
-    """Render the approved horizontal 3alimnIA lockup without clipping.
+def _render_official_logo(width: int = 224) -> None:
+    """Render the classic white-pill 3alimnIA lockup used in the public header.
 
-    The marker gives the stylesheet a stable target so the full horizontal
-    logo remains visible in RTL and LTR layouts on Streamlit Cloud.
+    A dedicated asset filename prevents stale browser caching and guarantees
+    that the white background, rounded outline, and full horizontal wordmark
+    remain identical in RTL and LTR layouts on Streamlit Cloud.
     """
-    st.markdown("<span class='v671-header-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    if branding.OFFICIAL_LOGO_PATH.exists():
+    st.markdown("<span class='v672-header-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    header_logo = getattr(branding, "HEADER_WHITE_LOGO_PATH", branding.OFFICIAL_LOGO_PATH)
+    if header_logo.exists():
+        st.image(str(header_logo), width=width)
+    elif branding.OFFICIAL_LOGO_PATH.exists():
         st.image(str(branding.OFFICIAL_LOGO_PATH), width=width)
     else:
         st.markdown(branding.logo_lockup_html(compact=False, language=i18n.current_lang(st)), unsafe_allow_html=True)
@@ -286,7 +290,7 @@ def render_public_header(current_title: str = "") -> None:
             [2.05, 4.05, 1.0, 1.1, 1.05], gap="small", vertical_alignment="center"
         )
         with logo_col:
-            _render_official_logo(214)
+            _render_official_logo(224)
         with nav_col:
             home_col, programs_col, ai_col, institutions_col = st.columns([.84, .95, 1.05, 1.06], gap="small")
             nav_items = [

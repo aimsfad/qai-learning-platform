@@ -1,3 +1,10 @@
+# V6.7.2 — Classic White Header Logo
+
+- Restored the previous white rounded logo design in the right side of the Arabic public header.
+- Added a dedicated flattened white logo asset to prevent stale dark versions from browser cache.
+- Preserved the full official wordmark and responsive placement in Arabic, French, and English.
+- Updated the instrumented application version to `v6.7.2-white-header-logo`.
+
 # V6.7 — Home Brand Hero & Student Tools
 
 - Replaced the homepage's generated CSS illustration with the approved large 3alimnIA brand panel.
