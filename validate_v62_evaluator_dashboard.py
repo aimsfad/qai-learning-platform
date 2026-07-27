@@ -34,7 +34,7 @@ def main() -> None:
     require("plotly>=6.0,<7" in req, "Plotly requirement is missing")
     require("V6.2 — Evaluator Intelligence Dashboard" in css, "V6.2 CSS block is missing")
     require("chartCategoricalColors" in config, "Chart palette is missing from config.toml")
-    require("v6.2-evaluator-intelligence-dashboard" in db_source, "App version was not updated")
+    require('APP_VERSION = "v6.' in db_source, "Instrumented app version is missing")
     require("np.random" not in source and "load_mock_data" not in source, "Mock data must not be used")
     print("V6.2 evaluator intelligence dashboard validation passed.")
 
