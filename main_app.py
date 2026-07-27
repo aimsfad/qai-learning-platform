@@ -2650,8 +2650,262 @@ def render_learning_path_cards(student: Dict[str, Any], selected_id: str, recomm
                 if st.button(u["opened"] if selected else u["open"], key=f"open_lesson_{lesson['id']}", disabled=selected, use_container_width=True):
                     set_current_lesson(student["id"], lesson["id"]); st.rerun()
 
+def student_workspace_copy() -> Dict[str, str]:
+    lang = i18n.current_lang(st)
+    return {
+        "ar": {
+            "workspace": "بيئة تعلّم الطالب",
+            "subtitle": "مسار واضح يجمع الفهم البصري، التجربة، Qiskit، والمدرّب التوليدي بعد محاولة المتعلّم.",
+            "stage": "المرحلة الحالية",
+            "module": "الوحدة",
+            "of": "من",
+            "path_progress": "تقدم المسار",
+            "course_map": "خريطة الوحدات",
+            "course_map_help": "افتح الخريطة للانتقال بين الوحدات دون إطالة الصفحة.",
+            "learn_panel": "الدرس والتجربة",
+            "coach_panel": "المدرّب الذكي",
+            "coach_help": "اكتب محاولة قصيرة أولًا، ثم اختر نوع المساعدة المطلوب.",
+            "understand": "افهم",
+            "visual": "شاهد وجرّب",
+            "qiskit": "جسر Qiskit",
+            "check": "تحقق من فهمك",
+            "goal": "هدف الوحدة",
+            "big_idea": "الفكرة الكبرى",
+            "why": "لماذا يهم هذا المفهوم؟",
+            "can_do": "بعد هذه الوحدة ستتمكن من",
+            "misconception": "تصور خاطئ يجب تجنبه",
+            "code_focus": "كيف تقرأ الكود؟",
+            "attempt": "محاولتك قبل طلب المساعدة",
+            "attempt_ph": "اكتب توقعك، تفسيرك، أو ما فهمته من الكود في سطرين على الأقل…",
+            "quick_support": "مساعدة سريعة",
+            "hint": "تلميح واحد",
+            "simplify": "اشرح ببساطة",
+            "qiskit_example": "اربطه بـ Qiskit",
+            "quiz": "اختبر فهمي",
+            "send": "اطلب المساعدة",
+            "full_tutor": "فتح المحادثة الكاملة",
+            "ai_policy": "المدرّب يوجّه التفكير ولا يستبدل محاولة المتعلّم.",
+            "no_ai": "هذا المسار لا يعرض أدوات الذكاء الاصطناعي وفق تصميم مجموعة الدراسة.",
+            "reflection": "تأمل الوحدة وإكمالها",
+            "reflection_ph": "ما الذي أصبح واضحًا؟ وما الفكرة التي ما زالت تحتاج مراجعة؟",
+            "save_complete": "حفظ التأمل وإكمال الوحدة",
+            "previous": "الوحدة السابقة",
+            "next": "الوحدة التالية",
+            "review": "مراجعة المسار",
+            "completed": "مكتملة",
+            "recommended": "موصى بها",
+            "available": "متاحة",
+            "status": "حالة الوحدة",
+            "route_rule": "حاول ← شاهد وجرّب ← اطلب تلميحًا ← أثبت الفهم",
+            "response": "استجابة المدرّب",
+            "need_attempt": "اكتب محاولة قصيرة أولًا حتى تبقى المساعدة تكوينية.",
+            "saved": "تم حفظ التأمل وإكمال الوحدة.",
+            "min_reflection": "اكتب تأملًا قصيرًا من 20 حرفًا على الأقل.",
+        },
+        "fr": {
+            "workspace": "Espace d’apprentissage",
+            "subtitle": "Un parcours clair qui combine compréhension visuelle, expérimentation, Qiskit et coaching génératif après une première tentative.",
+            "stage": "Étape actuelle", "module": "Module", "of": "sur", "path_progress": "Progression du parcours",
+            "course_map": "Carte des modules", "course_map_help": "Ouvrez la carte pour changer de module sans allonger la page.",
+            "learn_panel": "Leçon et expérimentation", "coach_panel": "Coach intelligent", "coach_help": "Rédigez d’abord une courte tentative, puis choisissez le type d’aide.",
+            "understand": "Comprendre", "visual": "Voir et expérimenter", "qiskit": "Pont Qiskit", "check": "Vérifier la compréhension",
+            "goal": "Objectif", "big_idea": "Idée centrale", "why": "Pourquoi ce concept est important", "can_do": "À la fin, vous pourrez",
+            "misconception": "Erreur conceptuelle à éviter", "code_focus": "Comment lire le code", "attempt": "Votre tentative avant l’aide",
+            "attempt_ph": "Écrivez votre prédiction, votre explication ou votre lecture du code en au moins deux lignes…",
+            "quick_support": "Aide rapide", "hint": "Un indice", "simplify": "Expliquer simplement", "qiskit_example": "Relier à Qiskit", "quiz": "Tester ma compréhension",
+            "send": "Demander de l’aide", "full_tutor": "Ouvrir la conversation complète", "ai_policy": "Le coach guide le raisonnement sans remplacer la tentative de l’apprenant.",
+            "no_ai": "Les outils d’IA sont masqués pour ce parcours selon le protocole de l’étude.", "reflection": "Réflexion et validation du module",
+            "reflection_ph": "Qu’est-ce qui est devenu clair ? Quel point doit encore être revu ?", "save_complete": "Enregistrer et terminer le module",
+            "previous": "Module précédent", "next": "Module suivant", "review": "Revoir le parcours", "completed": "Terminé", "recommended": "Recommandé", "available": "Disponible",
+            "status": "État du module", "route_rule": "Essayer ← Observer et pratiquer ← Demander un indice ← Prouver sa compréhension",
+            "response": "Réponse du coach", "need_attempt": "Écrivez d’abord une courte tentative afin de préserver une aide formative.",
+            "saved": "Réflexion enregistrée et module terminé.", "min_reflection": "Rédigez une réflexion d’au moins 20 caractères.",
+        },
+        "en": {
+            "workspace": "Student learning workspace",
+            "subtitle": "A clear flow combining visual understanding, experimentation, Qiskit, and generative coaching after the learner's first attempt.",
+            "stage": "Current stage", "module": "Module", "of": "of", "path_progress": "Path progress",
+            "course_map": "Module map", "course_map_help": "Open the map to change modules without making the page unnecessarily long.",
+            "learn_panel": "Lesson and experiment", "coach_panel": "AI learning coach", "coach_help": "Write a short attempt first, then choose the kind of support you need.",
+            "understand": "Understand", "visual": "See and experiment", "qiskit": "Qiskit bridge", "check": "Check understanding",
+            "goal": "Module goal", "big_idea": "Big idea", "why": "Why this concept matters", "can_do": "By the end you can",
+            "misconception": "Misconception to avoid", "code_focus": "How to read the code", "attempt": "Your attempt before support",
+            "attempt_ph": "Write your prediction, explanation, or code reading in at least two lines…",
+            "quick_support": "Quick support", "hint": "One hint", "simplify": "Explain simply", "qiskit_example": "Connect to Qiskit", "quiz": "Test my understanding",
+            "send": "Ask for support", "full_tutor": "Open full conversation", "ai_policy": "The coach guides reasoning; it does not replace the learner's attempt.",
+            "no_ai": "AI tools are hidden for this pathway under the study design.", "reflection": "Reflect and complete the module",
+            "reflection_ph": "What became clear, and what still needs review?", "save_complete": "Save reflection and complete module",
+            "previous": "Previous module", "next": "Next module", "review": "Review path", "completed": "Completed", "recommended": "Recommended", "available": "Available",
+            "status": "Module status", "route_rule": "Attempt ← See and experiment ← Ask for a hint ← Prove understanding",
+            "response": "Coach response", "need_attempt": "Write a short attempt first so the support remains formative.",
+            "saved": "Reflection saved and module completed.", "min_reflection": "Write a reflection of at least 20 characters.",
+        },
+    }[lang]
+
+
+def render_v66_stage_header(student: Dict[str, Any], lesson: Dict[str, Any], completed: set) -> None:
+    copy = student_workspace_copy()
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    ids = [item["id"] for item in content.LESSONS]
+    index = ids.index(lesson["id"]) + 1
+    pct = int(round(100 * len(completed) / max(len(ids), 1)))
+    status = copy["completed"] if lesson["id"] in completed else copy["available"]
+    st.markdown(
+        f"""
+        <section class='v66-stage-header' dir='{direction}'>
+          <div class='v66-stage-copy'>
+            <span>{escape(copy['workspace'])}</span>
+            <h1>{escape(lesson.get('short_title', lesson['title']))}</h1>
+            <p>{escape(copy['subtitle'])}</p>
+          </div>
+          <div class='v66-stage-meta'>
+            <div><small>{escape(copy['stage'])}</small><strong>{escape(copy['module'])} {index} {escape(copy['of'])} {len(ids)}</strong></div>
+            <div><small>{escape(copy['status'])}</small><strong>{escape(status)}</strong></div>
+            <div class='v66-stage-progress'><small>{escape(copy['path_progress'])}</small><strong>{pct}%</strong><i><em style='width:{pct}%'></em></i></div>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
+    copy = student_workspace_copy()
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    st.markdown(
+        f"""
+        <div class='v66-panel-heading' dir='{direction}'>
+          <span>AI</span><div><h3>{escape(copy['coach_panel'])}</h3><p>{escape(copy['coach_help'])}</p></div>
+        </div>
+        <div class='v66-ai-policy' dir='{direction}'>{escape(copy['ai_policy'])}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if not ai_features_available(student):
+        st.info(copy["no_ai"])
+        return
+
+    attempt_key = f"v66_attempt_{lesson['id']}"
+    attempt = st.text_area(
+        copy["attempt"],
+        placeholder=copy["attempt_ph"],
+        height=138,
+        key=attempt_key,
+    )
+    st.markdown(f"<div class='v66-quick-label' dir='{direction}'>{escape(copy['quick_support'])}</div>", unsafe_allow_html=True)
+    modes = [
+        ("hint", copy["hint"], "Give one concise hint and one check question. Do not reveal a full answer."),
+        ("simplify", copy["simplify"], "Explain the current concept simply using one analogy, then ask one diagnostic question."),
+        ("qiskit", copy["qiskit_example"], "Connect the learner's attempt to the smallest relevant Qiskit code idea. Do not solve the whole task."),
+        ("quiz", copy["quiz"], "Create one short formative question about this module and wait for the learner's answer."),
+    ]
+    selected = st.session_state.get(f"v66_mode_{lesson['id']}", "hint")
+    button_cols = st.columns(2)
+    for idx, (mode_key, label, instruction) in enumerate(modes):
+        with button_cols[idx % 2]:
+            if st.button(label, key=f"v66_mode_btn_{lesson['id']}_{mode_key}", use_container_width=True, type="primary" if selected == mode_key else "secondary"):
+                st.session_state[f"v66_mode_{lesson['id']}"] = mode_key
+                selected = mode_key
+                st.rerun()
+
+    selected_mode = next(item for item in modes if item[0] == selected)
+    if st.button(copy["send"], key=f"v66_send_{lesson['id']}", type="primary", use_container_width=True):
+        if len((attempt or "").strip()) < 8:
+            st.warning(copy["need_attempt"])
+        else:
+            log_ai_request_timing(student["id"], lesson["id"], "v66_student_workspace", task=selected_mode[1], step="workspace")
+            with st.spinner("…"):
+                tutor = feedback_engine.generate_tutor_response(
+                    task=f"{selected_mode[1]}: {selected_mode[2]}",
+                    concept=", ".join(lesson.get("concepts", [])),
+                    student_input=attempt,
+                    student_profile=student_profile(student),
+                    lesson_context={
+                        **lesson,
+                        "response_language": {"ar": "Arabic", "fr": "French", "en": "English"}[lang],
+                        "pedagogical_mode": "student workspace compact coach",
+                        "ai_use_policy": "Support after learner attempt. Scaffold, diagnose, and ask questions. Avoid answer dumping.",
+                    },
+                )
+            interaction_id = log_tutor_interaction(
+                student["id"], "student_workspace", ", ".join(lesson.get("concepts", [])), selected_mode[1], attempt, tutor,
+                lesson_id=lesson["id"], activity_id="v66_compact_coach", selected_text=selected_mode[2],
+            )
+            st.session_state[f"v66_response_{lesson['id']}"] = {"text": tutor.response, "id": interaction_id}
+
+    response = st.session_state.get(f"v66_response_{lesson['id']}")
+    if response:
+        st.markdown(f"<div class='v66-response-title' dir='{direction}'>{escape(copy['response'])}</div>", unsafe_allow_html=True)
+        with st.chat_message("assistant"):
+            st.write(response["text"])
+            if response.get("id"):
+                render_ai_usefulness_feedback(response["id"], f"v66_{lesson['id']}_{response['id']}")
+
+    if st.button(copy["full_tutor"], key=f"v66_full_tutor_{lesson['id']}", use_container_width=True):
+        st.session_state.current_lesson_id = lesson["id"]
+        set_student_page("AI Tutor Lab")
+
+
+def render_v66_lesson_content(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
+    copy = student_workspace_copy()
+    direction = i18n.direction(i18n.current_lang(st))
+    understand_tab, visual_tab, code_tab, check_tab = st.tabs([
+        copy["understand"], copy["visual"], copy["qiskit"], copy["check"],
+    ])
+    with understand_tab:
+        st.markdown(
+            f"""
+            <div class='v66-concept-hero' dir='{direction}'>
+              <span>{escape(copy['goal'])}</span><h2>{escape(lesson.get('objective',''))}</h2>
+              <div><b>{escape(copy['big_idea'])}</b><p>{escape(lesson.get('big_idea', lesson.get('concept','')))}</p></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        col1, col2 = st.columns([1.08, .92], gap="large")
+        with col1:
+            st.markdown(f"#### {copy['understand']}")
+            st.write(lesson.get("concept", ""))
+            st.markdown(f"#### {copy['why']}")
+            st.write(lesson.get("why_it_matters", ""))
+        with col2:
+            if lesson.get("can_do"):
+                st.markdown(f"#### {copy['can_do']}")
+                st.markdown("<ul class='v66-outcomes'>" + "".join(f"<li>{escape(str(item))}</li>" for item in lesson.get("can_do", [])) + "</ul>", unsafe_allow_html=True)
+            st.markdown(f"#### {copy['misconception']}")
+            st.warning(lesson.get("misconception", ""))
+
+    with visual_tab:
+        st.markdown(f"<div class='v66-route-rule' dir='{direction}'>{escape(copy['route_rule'])}</div>", unsafe_allow_html=True)
+        render_lesson_media(lesson["id"], student)
+
+    with code_tab:
+        left, right = st.columns([1.08, .92], gap="large")
+        with left:
+            st.markdown("#### Qiskit")
+            st.code(lesson.get("qiskit_code", ""), language="python")
+        with right:
+            st.markdown(f"#### {copy['code_focus']}")
+            for point in lesson.get("code_focus", []):
+                st.markdown(f"- {point}")
+            if lesson.get("before_measurement") or lesson.get("after_measurement"):
+                st.markdown(
+                    f"<div class='v66-before-after'><div><b>Before</b><span>{escape(lesson.get('before_measurement',''))}</span></div><div><b>After</b><span>{escape(lesson.get('after_measurement',''))}</span></div></div>",
+                    unsafe_allow_html=True,
+                )
+
+    with check_tab:
+        st.markdown(f"<div class='v66-check-card' dir='{direction}'><b>{escape(copy['check'])}</b><p>{escape(lesson.get('mini_task',''))}</p></div>", unsafe_allow_html=True)
+        if lesson.get("check_question"):
+            st.info(lesson.get("check_question"))
+        st.markdown("#### Reflection prompt")
+        st.write(lesson.get("reflective_prompt", ""))
+
+
 def render_learning_module(student: Dict[str, Any]) -> None:
-    hero("Learning Path", "Professional micro-lessons: visual explanation, tiny Qiskit example, AI support, and reflection.")
+    copy = student_workspace_copy()
     if not test_is_done(student["id"], "pre"):
         st.warning("Please complete the pre-test before opening the learning path.")
         if st.button("Go to pre-test", type="primary"):
@@ -2663,165 +2917,74 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     progress = db.get_lesson_progress(student["id"])
     completed = set(progress[progress["completed"] == 1]["lesson_id"].tolist()) if not progress.empty else set()
     selected_id = current_or_resume_lesson_id(student["id"])
-    valid_ids = {l["id"] for l in content.LESSONS}
+    valid_ids = {item["id"] for item in content.LESSONS}
     if selected_id not in valid_ids:
         selected_id = first_incomplete_lesson_id(student["id"])
     lesson = content.lesson_by_id(selected_id, i18n.current_lang(st))
     record_lesson_entry(student["id"], selected_id)
     db.log_event(student["id"], "student", "open_module", selected_id)
 
-    st.markdown("<div class='qai-learning-shell'>", unsafe_allow_html=True)
-    st.progress(len(completed) / len(content.LESSONS), text=f"Learning path progress: {len(completed)}/{len(content.LESSONS)} modules completed")
-    render_learning_path_cards(student, selected_id, recommended_set, completed)
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_v66_stage_header(student, lesson, completed)
 
-    status_msg = "Completed" if lesson["id"] in completed else ("Recommended" if lesson["id"] in recommended_set else "Available")
-    concept_html = "".join([f"<span class='qai-concept-pill'>{c}</span>" for c in lesson.get("concepts", [])])
-    st.markdown(
-        f"""
-        <div class='qai-module-header'>
-          <div>
-            <div class='qai-module-kicker'>{status_msg} · {lesson.get('level','Module')} · {lesson.get('duration','')}</div>
-            <div class='qai-module-title'>{lesson['title']}</div>
-            <div class='qai-module-meta'>{lesson['objective']}</div>
-          </div>
-          <div>{concept_html}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if lesson["id"] in completed:
-        st.success("This module is completed. You may review it or continue to the next module.")
+    open_map = bool(st.session_state.pop("v66_open_map", False))
+    with st.expander(f"{copy['course_map']} · {copy['course_map_help']}", expanded=open_map):
+        render_learning_path_cards(student, selected_id, recommended_set, completed)
 
-    if ai_features_available(student):
-        concept_studio_tab, media_tab, overview, code_tab, ai_coach_tab, builder_tab, check_tab = st.tabs([
-            "1. Learning map",
-            "2. Visual system",
-            "3. Concept notes",
-            "4. Code bridge",
-            "5. AI coach",
-            "6. Concept Builder",
-            "7. Check",
-        ])
-    else:
-        concept_studio_tab, media_tab, overview, code_tab, check_tab = st.tabs([
-            "1. Learning map",
-            "2. Visual system",
-            "3. Concept notes",
-            "4. Code bridge",
-            "5. Check",
-        ])
-        ai_coach_tab = builder_tab = None
+    learning_col, coach_col = st.columns([1.58, .92], gap="large")
+    with learning_col:
+        st.markdown("<span class='v66-learning-marker'></span>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(
+                f"<div class='v66-panel-heading' dir='{i18n.direction(i18n.current_lang(st))}'><span>01</span><div><h3>{escape(copy['learn_panel'])}</h3><p>{escape(lesson.get('objective',''))}</p></div></div>",
+                unsafe_allow_html=True,
+            )
+            render_v66_lesson_content(student, lesson)
 
-    with overview:
-        st.markdown(f"<div class='qai-big-idea'><b>Big idea:</b> {lesson.get('big_idea', lesson['concept'])}</div>", unsafe_allow_html=True)
-        a, b = st.columns([1.1, 0.9])
-        with a:
-            st.markdown("#### Core explanation")
-            st.write(lesson["concept"])
-            st.markdown("#### Why this matters")
-            st.write(lesson["why_it_matters"])
-        with b:
-            if lesson.get("can_do"):
-                st.markdown("#### By the end of this module you can")
-                st.markdown("<ul class='qai-focus-list'>" + "".join([f"<li>{o}</li>" for o in lesson.get("can_do", [])]) + "</ul>", unsafe_allow_html=True)
-            st.markdown("#### Misconception to avoid")
-            st.warning(lesson["misconception"])
-        inline_ai_explain_button(student, lesson, "concept", lesson["concept"], f"concept_{lesson['id']}")
+    with coach_col:
+        st.markdown("<span class='v66-coach-marker'></span>", unsafe_allow_html=True)
+        with st.container(border=True):
+            render_v66_ai_coach(student, lesson)
 
-    with concept_studio_tab:
-        render_concept_learning_studio(student, lesson)
+    st.markdown("<span class='v66-reflection-marker'></span>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(f"### {copy['reflection']}")
+        st.info(lesson.get("reflective_prompt", ""))
+        reflection_default = ""
+        if not progress.empty:
+            row = progress[progress["lesson_id"] == lesson["id"]]
+            if not row.empty:
+                reflection_default = str(row["reflection_text"].iloc[0] or "")
+        with st.form(f"v66_reflection_{lesson['id']}"):
+            reflection = st.text_area(copy["reflection_ph"], value=reflection_default, height=120)
+            submitted = st.form_submit_button(copy["save_complete"], type="primary", use_container_width=True)
+        if submitted:
+            if len(reflection.strip()) < 20:
+                st.error(copy["min_reflection"])
+            else:
+                db.save_lesson_progress(student["id"], lesson["id"], reflection, completed=True)
+                db.log_event(student["id"], "student", "lesson_completed", lesson["id"])
+                ids = [item["id"] for item in content.LESSONS]
+                idx = ids.index(lesson["id"])
+                if idx + 1 < len(ids):
+                    st.session_state.current_lesson_id = ids[idx + 1]
+                st.success(copy["saved"])
+                st.rerun()
 
-    with code_tab:
-        c1, c2 = st.columns([1.05, 0.95])
-        with c1:
-            st.markdown("#### Tiny Qiskit example")
-            st.code(lesson["qiskit_code"], language="python")
-        with c2:
-            st.markdown("#### Code reading focus")
-            for point in lesson.get("code_focus", []):
-                st.markdown(f"- {point}")
-            inline_ai_explain_button(student, lesson, "qiskit", lesson["qiskit_code"], f"code_{lesson['id']}")
-
-    with media_tab:
-        render_lesson_media(lesson["id"], student)
-
-    if ai_features_available(student):
-        with ai_coach_tab:
-            render_genai_concept_coach(student, lesson)
-
-        with builder_tab:
-            render_concept_builder(student, lesson)
-    else:
-        st.info("Control group mode is active for this learner: AI Coach and Concept Builder are hidden by design.")
-
-    with check_tab:
-        st.markdown(f"<div class='qai-check-card'><b>Mini task before asking AI:</b> {lesson.get('mini_task','Predict the output or identify the key line in the Qiskit example.')}</div>", unsafe_allow_html=True)
-        if lesson.get("check_question"):
-            st.info("Check your understanding: " + lesson.get("check_question"))
-        st.markdown("#### Reflection prompt")
-        st.write(lesson["reflective_prompt"])
-
-    st.divider()
-    reminder_copy = {
-        "ar": ("تذكير باستخدام الذكاء الاصطناعي", "استخدم تبويب مدرّب المفهوم بعد كتابة محاولة قصيرة، حتى يبقى الذكاء التوليدي دعامةً تكوينية للتعلم لا طريقًا مختصرًا إلى الإجابة."),
-        "fr": ("Rappel d’usage de l’IA", "Utilisez l’onglet du coach de concept après une courte tentative afin que l’IA générative reste un étayage formatif, et non un raccourci vers la réponse."),
-        "en": ("AI-use reminder", "Use the AI concept coach after writing a short attempt. This keeps generative AI as a formative learning scaffold rather than a shortcut."),
-    }[i18n.current_lang(st)]
-    st.markdown(
-        f"<div class='qai-ai-reminder' dir='{i18n.direction(i18n.current_lang(st))}'><b>{escape(reminder_copy[0])}:</b> {escape(reminder_copy[1])}</div>",
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-    st.markdown("### Reflection and completion")
-    st.info(lesson["reflective_prompt"])
-    reflection_default = ""
-    if not progress.empty:
-        row = progress[progress["lesson_id"] == lesson["id"]]
-        if not row.empty:
-            reflection_default = str(row["reflection_text"].iloc[0] or "")
-    with st.form(f"reflection_{lesson['id']}"):
-        reflection = st.text_area("Write your reflection in your own words", value=reflection_default, height=130)
-        submitted = st.form_submit_button("Save reflection and mark module complete", type="primary")
-    if submitted:
-        if len(reflection.strip()) < 20:
-            st.error("Please write a short reflection before marking the module complete.")
-        else:
-            db.save_lesson_progress(student["id"], lesson["id"], reflection, completed=True)
-            db.log_event(student["id"], "student", "lesson_completed", lesson["id"])
-            completed.add(lesson["id"])
-            current_idx = [l["id"] for l in content.LESSONS].index(lesson["id"])
-            if current_idx + 1 < len(content.LESSONS):
-                st.session_state.current_lesson_id = content.LESSONS[current_idx + 1]["id"]
-            st.success("Reflection saved. Module completed.")
-            st.rerun()
-
-    st.divider()
-    nav1, nav2, nav3 = st.columns(3)
-    ids = [l["id"] for l in content.LESSONS]
+    ids = [item["id"] for item in content.LESSONS]
     idx = ids.index(lesson["id"])
-    if nav1.button("← Previous module", use_container_width=True, disabled=idx == 0):
-        set_current_lesson(student["id"], ids[idx - 1])
+    previous_col, map_col, next_col = st.columns(3)
+    if previous_col.button(f"← {copy['previous']}", use_container_width=True, disabled=idx == 0):
+        set_current_lesson(student["id"], ids[idx - 1]); st.rerun()
+    if map_col.button(copy["review"], use_container_width=True):
+        st.session_state["v66_open_map"] = True
         st.rerun()
-    if nav2.button("Ask AI about this module" if ai_features_available(student) else "AI hidden for control group", use_container_width=True, disabled=not ai_features_available(student)):
-        st.session_state.current_lesson_id = lesson["id"]
-        set_student_page("AI Tutor Lab")
-    if nav3.button("Next module →", type="primary", use_container_width=True, disabled=idx >= len(ids) - 1):
-        set_current_lesson(student["id"], ids[idx + 1])
-        st.rerun()
+    if next_col.button(f"{copy['next']} →", type="primary", use_container_width=True, disabled=idx >= len(ids) - 1):
+        set_current_lesson(student["id"], ids[idx + 1]); st.rerun()
 
     if learning_path_ready_for_posttest(student["id"]) and ai_requirement_met(student):
         st.success("Learning path requirements are complete. You may continue to the post-test when ready.")
         if st.button("Go to post-test", type="primary", use_container_width=True):
             set_student_page("Post-test")
-    else:
-        remaining = required_lesson_count_for_posttest() - lesson_completion_count(student["id"])
-        if remaining > 0:
-            st.info(f"Post-test is locked until the full learning path is complete. Remaining modules: {remaining}.")
-        elif not ai_requirement_met(student):
-            st.info("Post-test is locked until at least one AI Tutor interaction is recorded for the experimental group.")
-
 
 def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     if not ai_features_available(student):
