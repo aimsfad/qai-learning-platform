@@ -109,3 +109,13 @@ V6 does not intentionally modify database schemas, participant records, test dat
 ## V6.2 — Evaluator Intelligence Dashboard
 
 The evaluator home now uses live platform data in a modern dashboard: native KPI metrics, analytical tabs, Plotly charts, progress-enabled learner tables, LPQS quality views, and direct anonymized CSV/Excel exports. No mock learner data or server-time theme switching is used.
+
+## V6.3 — Responsive typography and mobile stacking
+
+The interface now uses Tajawal/Alexandria for Arabic and Inter for French/English across native Streamlit controls. On screens up to 720 px, all `st.columns` groups become vertical full-width sections, including the public header, hero actions, cards, filters, metrics, and evaluator layouts. Analytical tabs are also vertical on phones, while wide tables retain controlled horizontal scrolling.
+
+Validation:
+
+```bash
+python validate_v63_responsive_ui.py
+```
