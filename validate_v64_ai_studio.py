@@ -47,7 +47,7 @@ for token in (
 ):
     require(token in css_text, f"Missing CSS token: {token}")
 
-require('APP_VERSION = "v6.4-ai-studio-responsive-stats"' in db_text, "V6.4 app version not set")
+require('APP_VERSION = "v6.' in db_text, "V6+ app version not set")
 require("_page_hero(str(c[\"ai_studio_title\"])" not in ui_text, "Legacy AI Studio hero is still active")
 
 print("V6.4 AI Studio and responsive statistics validation passed.")

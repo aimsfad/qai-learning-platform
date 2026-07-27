@@ -121,7 +121,7 @@ python validate_v63_responsive_ui.py
 ```
 
 
-## V6.4 — AI Studio and responsive evidence cards
+## V6.5 — AI Studio and responsive evidence cards
 
 The Generative AI Studio now opens with a localized premium banner that explains the platform's content-generation, guided-coaching, and LPQS evaluation roles. The home and AI Studio evidence cards use a CSS auto-fit grid: four cards on wide screens, two on tablets, and one on phones.
 
@@ -130,3 +130,8 @@ Validation:
 ```bash
 python validate_v64_ai_studio.py
 ```
+
+
+## V6.5 — Program Catalog & Institutional Trust
+
+Responsive program cards with availability badges, audience and metadata blocks, modern capability grids, and a research-focused institutional banner.
