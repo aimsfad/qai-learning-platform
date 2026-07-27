@@ -136,3 +136,13 @@
 - Removed dependence on DOM-click JavaScript for opening navigation.
 - Added multilingual navigation sections and active-page styling.
 - Updated the application version to `v5-native-top-navigation`.
+
+## V6 — Global AI Academy
+
+- Rebuilt the public experience after benchmarking Edraak, Brilliant, IBM Quantum Learning, and DataCamp.
+- Added public Programs, Generative AI Studio, and Universities & Research pages.
+- Added modern program cards with level, duration, module count, and availability.
+- Added a four-step generative learning engine explanation.
+- Added a dedicated institutional/research value proposition.
+- Added `ui_v6.py` and `.streamlit/v6_theme.css`.
+- Preserved the existing learner, evaluator, database, LPQS, and research workflows.
