@@ -338,24 +338,35 @@ def render_home() -> None:
             with evaluator_col:
                 _route_button(str(c["evaluator"]), router.route_key("public", "evaluator"), key="v61_hero_eval")
         with visual_col:
-            st.markdown(
-                f"""
-                <section class='v61-learning-visual' dir='ltr'>
-                  <div class='v61-visual-grid'></div>
-                  <div class='v61-visual-label'>
-                    <b>3alimn<span>IA</span></b>
-                    <small>{escape(visual_subtitle)}</small>
-                  </div>
-                  <div class='v61-orbit orbit-a'></div><div class='v61-orbit orbit-b'></div>
-                  <div class='v61-ai-core'><strong>AI</strong><span>Learn</span></div>
-                  <div class='v61-float-card card-q'><b>Qiskit</b><small>Practice</small></div>
-                  <div class='v61-float-card card-c'><b>Coach</b><small>Guided hints</small></div>
-                  <div class='v61-float-card card-l'><b>LPQS</b><small>Quality evidence</small></div>
-                  <i class='v61-dot dot-a'></i><i class='v61-dot dot-b'></i><i class='v61-dot dot-c'></i>
-                </section>
-                """,
-                unsafe_allow_html=True,
-            )
+            hero_asset = branding.ASSET_DIR / "v67_home_brand_hero.png"
+            st.markdown("<span class='v67-home-brand-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            if hero_asset.exists():
+                st.image(
+                    str(hero_asset),
+                    use_container_width=True,
+                    caption=None,
+                )
+            else:
+                # Safe fallback: retain a functional branded visual even if an
+                # asset was omitted during deployment.
+                st.markdown(
+                    f"""
+                    <section class='v61-learning-visual' dir='ltr'>
+                      <div class='v61-visual-grid'></div>
+                      <div class='v61-visual-label'>
+                        <b>3alimn<span>IA</span></b>
+                        <small>{escape(visual_subtitle)}</small>
+                      </div>
+                      <div class='v61-orbit orbit-a'></div><div class='v61-orbit orbit-b'></div>
+                      <div class='v61-ai-core'><strong>AI</strong><span>Learn</span></div>
+                      <div class='v61-float-card card-q'><b>Qiskit</b><small>Practice</small></div>
+                      <div class='v61-float-card card-c'><b>Coach</b><small>Guided hints</small></div>
+                      <div class='v61-float-card card-l'><b>LPQS</b><small>Quality evidence</small></div>
+                      <i class='v61-dot dot-a'></i><i class='v61-dot dot-b'></i><i class='v61-dot dot-c'></i>
+                    </section>
+                    """,
+                    unsafe_allow_html=True,
+                )
     _render_stats_grid(direction, context="home")
     _section_heading(str(c["programs_kicker"]), str(c["programs_title"]), str(c["programs_body"]), direction)
     _program_cards(direction, compact=True)

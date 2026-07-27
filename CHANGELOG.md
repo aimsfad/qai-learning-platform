@@ -1,3 +1,11 @@
+# V6.7 — Home Brand Hero & Student Tools
+
+- Replaced the homepage's generated CSS illustration with the approved large 3alimnIA brand panel.
+- Added a persistent learner tool dock with native buttons for dashboard, modules/Qiskit, AI Coach, and adaptive plan.
+- Added a compact assessment/research section with visible locked destinations and localized guidance.
+- Preserved the native Streamlit router and learner permission rules.
+- Updated the instrumented application version to `v6.7-home-hero-student-tools`.
+
 # V6.6 — Student Learning Workspace
 
 - Rebuilt the learner module page into a two-column lesson-and-coach workspace.
