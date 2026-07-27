@@ -165,3 +165,13 @@
 - Added a dedicated institutional/research value proposition.
 - Added `ui_v6.py` and `.streamlit/v6_theme.css`.
 - Preserved the existing learner, evaluator, database, LPQS, and research workflows.
+
+## V6.3 — Responsive Typography & Vertical Mobile Layout
+
+- Extended Tajawal/Alexandria typography to native Streamlit controls while preserving Material Symbols icons.
+- Added tablet wrapping for dense column groups.
+- Converted all Streamlit horizontal column groups to full-width vertical stacks on phones.
+- Converted mobile tabs into vertical, finger-friendly selectors.
+- Improved mobile hero, navigation, cards, metrics, forms, buttons, and research tables.
+- Added touch-safe cards and disabled hover-only movement on touch devices.
+- Preserved the desktop academy layout and all existing learning, evaluator, AI, LPQS, and export logic.

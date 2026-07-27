@@ -595,3 +595,258 @@ html[dir="rtl"] .v61-section-head h2{line-height:1.42!important}
   [data-testid="stMetric"]{min-height:104px;padding:.8rem!important}
   [data-testid="stMetricValue"]{font-size:1.48rem!important}
 }
+
+/* ========================================================================== 
+   3alimnIA V6.3 — Responsive Typography & Vertical Mobile Layout
+   A mobile-first layer that preserves the wide desktop academy experience,
+   while stacking every Streamlit column group on small screens.
+   ========================================================================== */
+
+/* Make the selected type system reach native Streamlit widgets consistently. */
+.stApp,
+.stApp button,
+.stApp input,
+.stApp textarea,
+.stApp select,
+.stApp label,
+.stApp [data-baseweb="select"],
+.stApp [data-baseweb="input"],
+.stApp [data-testid="stMarkdownContainer"],
+.stApp [data-testid="stMetric"],
+.stApp [data-testid="stDataFrame"] {
+  font-family: "Inter", "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+html[dir="rtl"] .stApp,
+html[dir="rtl"] .stApp button,
+html[dir="rtl"] .stApp input,
+html[dir="rtl"] .stApp textarea,
+html[dir="rtl"] .stApp select,
+html[dir="rtl"] .stApp label,
+html[dir="rtl"] .stApp [data-baseweb="select"],
+html[dir="rtl"] .stApp [data-baseweb="input"],
+html[dir="rtl"] .stApp [data-testid="stMarkdownContainer"],
+html[dir="rtl"] .stApp [data-testid="stMetric"],
+html[dir="rtl"] .stApp [data-testid="stDataFrame"] {
+  font-family: "Tajawal", "Alexandria", system-ui, sans-serif !important;
+}
+html[dir="rtl"] .stApp h1,
+html[dir="rtl"] .stApp h2,
+html[dir="rtl"] .stApp h3,
+html[dir="rtl"] .stApp h4,
+html[dir="rtl"] .stApp h5,
+html[dir="rtl"] .stApp h6 {
+  font-family: "Alexandria", "Tajawal", system-ui, sans-serif !important;
+}
+/* Do not let the global font override icon glyphs. */
+.stApp .material-symbols-rounded {
+  font-family: "Material Symbols Rounded" !important;
+}
+
+/* Unified modern surfaces. */
+.custom-card,
+.v61-program-card,
+.v6-engine-grid article,
+.v6-pillar-grid article,
+.v6-studio-flow article,
+.v6-institution-grid article {
+  border: 1px solid rgba(207,221,239,.92) !important;
+  border-radius: 22px !important;
+  background: linear-gradient(155deg, rgba(255,255,255,.99), rgba(247,251,255,.98)) !important;
+  box-shadow: 0 12px 34px rgba(7,27,68,.065) !important;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease !important;
+}
+@media (hover:hover) and (pointer:fine) {
+  .custom-card:hover,
+  .v61-program-card:hover,
+  .v6-engine-grid article:hover,
+  .v6-pillar-grid article:hover,
+  .v6-studio-flow article:hover,
+  .v6-institution-grid article:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(76,133,224,.55) !important;
+    box-shadow: 0 20px 50px rgba(7,27,68,.11) !important;
+  }
+}
+.custom-card { padding: 1.45rem; margin-bottom: 1rem; }
+.custom-card h3 { margin: 0 0 .65rem !important; color: var(--v6-ink) !important; }
+.custom-card p { margin: 0 !important; color: var(--v6-body) !important; line-height: 1.75 !important; }
+
+/* Tablet: allow groups to wrap cleanly instead of compressing content. */
+@media (max-width: 1050px) and (min-width: 721px) {
+  [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+    gap: .85rem !important;
+  }
+  [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 calc(50% - .85rem) !important;
+    width: auto !important;
+    min-width: 290px !important;
+  }
+  .st-key-v61_public_header [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+  }
+  .st-key-v61_public_header [data-testid="stColumn"] {
+    min-width: 150px !important;
+  }
+}
+
+/* Mobile: all Streamlit horizontal layouts become vertical, full-width blocks. */
+@media (max-width: 720px) {
+  html, body, .stApp { overflow-x: hidden !important; }
+  .block-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: .55rem .72rem 4rem !important;
+  }
+
+  [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"],
+  .st-key-v61_public_header [data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+    gap: .72rem !important;
+    width: 100% !important;
+  }
+  [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+  .st-key-v61_public_header [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Public navigation turns into a compact vertical menu. */
+  .st-key-v61_public_header {
+    position: relative !important;
+    top: auto !important;
+    padding: .72rem !important;
+    border-radius: 18px !important;
+  }
+  .st-key-v61_public_header [data-testid="stImage"] {
+    display: flex !important;
+    justify-content: center !important;
+    padding: .15rem 0 .35rem !important;
+  }
+  .st-key-v61_public_header [data-testid="stImage"] img {
+    max-height: 54px !important;
+    max-width: 210px !important;
+  }
+  .st-key-v61_public_header .stButton > button,
+  .st-key-v61_public_header [data-baseweb="select"] > div {
+    width: 100% !important;
+    min-height: 46px !important;
+    border-radius: 13px !important;
+    font-size: .9rem !important;
+  }
+
+  /* Hero becomes an editorial vertical story. */
+  .st-key-v61_hero {
+    padding: 1rem !important;
+    border-radius: 22px !important;
+  }
+  .v61-hero-copy { max-width: none !important; text-align: start !important; }
+  .v61-hero-copy h1,
+  html[dir="rtl"] .v61-hero-copy h1 {
+    max-width: none !important;
+    font-size: clamp(2rem, 9.5vw, 2.65rem) !important;
+    line-height: 1.25 !important;
+    margin: .72rem 0 .62rem !important;
+  }
+  .v61-hero-copy p { font-size: .94rem !important; line-height: 1.75 !important; }
+  .v61-benefit-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: .48rem !important;
+  }
+  .v61-benefit-row span { width: 100% !important; text-align: center !important; }
+  .v61-learning-visual { min-height: 300px !important; border-radius: 20px !important; }
+  .v61-ai-core { width: 110px !important; height: 110px !important; border-radius: 32px !important; }
+  .v61-ai-core strong { font-size: 2.2rem !important; }
+  .v61-float-card { min-width: 76px !important; padding: .48rem .55rem !important; }
+
+  /* Cards, metrics, filters and CTAs use one vertical rhythm. */
+  .v61-proof-grid,
+  .v6-engine-grid,
+  .v6-pillar-grid,
+  .v6-studio-flow,
+  .v6-institution-grid,
+  .v6-stat-grid {
+    grid-template-columns: 1fr !important;
+    gap: .72rem !important;
+  }
+  .v61-program-card { min-height: auto !important; padding: 1rem !important; }
+  .v61-program-card p { min-height: auto !important; }
+  .v61-program-meta { grid-template-columns: 1fr !important; }
+  .v61-program-meta span { padding: .6rem .7rem !important; }
+  .custom-card { padding: 1rem !important; border-radius: 16px !important; }
+  .custom-card h3 { font-size: 1.05rem !important; }
+  .custom-card p { font-size: .9rem !important; line-height: 1.65 !important; }
+
+  [data-testid="stMetric"] {
+    min-height: 108px !important;
+    padding: .85rem .9rem !important;
+    border-radius: 16px !important;
+  }
+  [data-testid="stMetricValue"] { font-size: 1.65rem !important; }
+
+  /* Tabs are vertical on phones: no hidden items and no horizontal swiping. */
+  [data-testid="stTabs"] [data-baseweb="tab-list"] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    overflow: visible !important;
+    gap: .35rem !important;
+    padding: .4rem !important;
+  }
+  [data-testid="stTabs"] button[role="tab"] {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 42px !important;
+  }
+
+  /* Native inputs and buttons remain finger-friendly. */
+  .stButton > button,
+  [data-testid="stDownloadButton"] > button,
+  [data-testid="stFormSubmitButton"] > button {
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: .68rem .85rem !important;
+    font-size: .92rem !important;
+    border-radius: 13px !important;
+  }
+  [data-baseweb="input"] > div,
+  [data-baseweb="select"] > div,
+  textarea {
+    min-height: 46px !important;
+    border-radius: 13px !important;
+  }
+
+  /* Tables remain usable without breaking page width. */
+  [data-testid="stDataFrame"],
+  .v6-comparison-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .v6-comparison-wrap table { min-width: 680px !important; }
+
+  .v61-section-head { margin: 1.8rem auto 1rem !important; }
+  .v61-section-head h2 { font-size: 1.75rem !important; }
+  .v61-section-head p { font-size: .9rem !important; }
+  .v6-institution-strip { padding: 1.15rem !important; border-radius: 20px !important; }
+  .v6-footer { margin-top: 2rem !important; }
+}
+
+/* Very small phones. */
+@media (max-width: 420px) {
+  .block-container { padding-inline: .5rem !important; }
+  .v61-hero-copy h1,
+  html[dir="rtl"] .v61-hero-copy h1 { font-size: 1.9rem !important; }
+  .v61-learning-visual { min-height: 270px !important; }
+  .v61-float-card.card-q { right: 3% !important; }
+  .v61-float-card.card-c { left: 3% !important; }
+  .v61-float-card.card-l { right: 4% !important; }
+}
