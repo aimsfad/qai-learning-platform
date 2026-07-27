@@ -1,3 +1,7 @@
+# 3alimnIA V6.7.3 — Bidirectional Hero Gutters
+
+The homepage hero now keeps English/French copy away from the left edge and Arabic RTL copy away from the right edge, with responsive spacing on tablets and phones.
+
 # 3alimnIA V6.7.2 — Classic White Header Logo
 
 3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.

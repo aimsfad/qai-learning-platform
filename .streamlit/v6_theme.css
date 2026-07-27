@@ -2174,3 +2174,27 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
     width:min(238px,78vw)!important;min-width:0!important;max-width:238px!important;max-height:62px!important
   }
 }
+
+/* =====================================================================
+   V6.7.3 — Bidirectional hero text gutters
+   Keeps Latin copy away from the left edge and Arabic copy away from the
+   right edge without changing the visual column or responsive stacking.
+   ===================================================================== */
+.v61-hero-copy {
+  box-sizing: border-box !important;
+  padding-inline-start: clamp(.95rem, 2.15vw, 1.9rem) !important;
+  padding-inline-end: clamp(.25rem, .7vw, .65rem) !important;
+}
+
+@media (max-width: 980px) {
+  .v61-hero-copy {
+    padding-inline-start: clamp(.75rem, 1.8vw, 1.25rem) !important;
+    padding-inline-end: .35rem !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .v61-hero-copy {
+    padding-inline: .7rem !important;
+  }
+}

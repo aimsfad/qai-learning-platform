@@ -1,3 +1,10 @@
+# V6.7.3 — Bidirectional Hero Text Gutters
+
+- Added a clear left gutter for English and French homepage hero text.
+- Added the matching right gutter for Arabic RTL hero text.
+- Preserved desktop, tablet, and mobile responsive behavior.
+- Updated the application version to `v6.7.3-bidirectional-hero-gutters`.
+
 # V6.7.2 — Classic White Header Logo
 
 - Restored the previous white rounded logo design in the right side of the Arabic public header.
