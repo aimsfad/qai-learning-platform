@@ -50,7 +50,7 @@ def main() -> None:
     for token in required_css:
         require(token in css_text, f"Missing V6.6 CSS feature: {token}")
 
-    require('APP_VERSION = "v6.6-student-learning-workspace"' in db_text, "App version was not updated")
+    require(any(v in db_text for v in ('APP_VERSION = "v6.6-student-learning-workspace"', 'APP_VERSION = "v6.7-home-hero-student-tools"')), "App version is not compatible with the V6.6+ student workspace")
     require(ASSET.exists() and ASSET.stat().st_size > 100_000, "Student workspace cover is missing or empty")
 
     # The old seven-tab module shell must no longer be the active module implementation.

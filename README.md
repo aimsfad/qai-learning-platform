@@ -1,4 +1,4 @@
-# 3alimnIA V6.6 — Student Learning Workspace
+# 3alimnIA V6.7 — Home Brand Hero & Student Tools
 
 3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.
 
@@ -10,6 +10,15 @@ V6 redesigns the public experience after benchmarking Edraak, Brilliant, IBM Qua
 - a controlled Concept Builder for educational materials;
 - LPQS evaluation of AI responses;
 - learner analytics and anonymized research export.
+
+## V6.7 prominent home hero and persistent learner tools
+
+- The approved square 3alimnIA visual with the large wordmark is now the actual homepage hero asset.
+- A persistent native learner-tool dock restores direct access to the dashboard, modules/Qiskit, AI Coach, and adaptive plan.
+- Assessment and research destinations remain visible in a compact expandable section, including locked-state guidance.
+- Navigation continues to use the native Streamlit router; no HTML links or simulated clicks are used.
+- The layout remains responsive and supports Arabic RTL, French, and English.
+
 
 ## V6.6 student learning workspace
 

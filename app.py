@@ -171,6 +171,128 @@ def _render_toolbar(current_title: str) -> None:
 
 
 
+def _student_tool_copy() -> Dict[str, str]:
+    lang = i18n.current_lang(st)
+    values = {
+        "ar": {
+            "title": "أدوات التعلّم",
+            "dashboard": "لوحة المتعلّم",
+            "modules": "الوحدات وQiskit",
+            "coach": "المدرّب الذكي",
+            "plan": "الخطة التكيفية",
+            "more": "التقييم والبحث",
+            "pre": "الاختبار القبلي",
+            "post": "الاختبار البعدي",
+            "survey": "الاستبيان",
+            "research": "إشعار البحث",
+            "locked": "يُفتح بعد إكمال الخطوة السابقة",
+        },
+        "fr": {
+            "title": "Outils d’apprentissage",
+            "dashboard": "Tableau apprenant",
+            "modules": "Modules & Qiskit",
+            "coach": "Coach IA",
+            "plan": "Plan adaptatif",
+            "more": "Évaluation & recherche",
+            "pre": "Pré-test",
+            "post": "Post-test",
+            "survey": "Questionnaire",
+            "research": "Notice de recherche",
+            "locked": "Disponible après l’étape précédente",
+        },
+        "en": {
+            "title": "Learning tools",
+            "dashboard": "Learner dashboard",
+            "modules": "Modules & Qiskit",
+            "coach": "AI Coach",
+            "plan": "Adaptive plan",
+            "more": "Assessment & research",
+            "pre": "Pre-test",
+            "post": "Post-test",
+            "survey": "Survey",
+            "research": "Research notice",
+            "locked": "Available after the previous step",
+        },
+    }
+    return values.get(lang, values["en"])
+
+
+def _queue_student_tool(page: str) -> None:
+    st.session_state.role = "student"
+    st.session_state.student_page = page
+    router.queue(router.route_key("student", page))
+
+
+def _render_student_tool_dock() -> None:
+    """Keep the learner's core tools visible on every authenticated page.
+
+    The native router remains the source of truth; this dock only queues routes
+    that are registered for the current learner state. Locked destinations stay
+    visible so the learning sequence remains understandable.
+    """
+    student = main_app.current_student()
+    if not student:
+        return
+
+    copy = _student_tool_copy()
+    direction = i18n.direction(i18n.current_lang(st))
+    allowed = set(main_app.student_pages_allowed(student))
+    current = st.session_state.get("student_page", "Student Home")
+
+    primary_tools = [
+        ("Student Home", "⌂", copy["dashboard"]),
+        ("Learning Module", "▦", copy["modules"]),
+        ("AI Tutor Lab", "◈", copy["coach"]),
+        ("Adaptive Plan", "✦", copy["plan"]),
+    ]
+    secondary_tools = [
+        ("Pre-test", "01", copy["pre"]),
+        ("Post-test", "02", copy["post"]),
+        ("Satisfaction Survey", "✓", copy["survey"]),
+        ("Research Notice", "◎", copy["research"]),
+    ]
+
+    with st.container(border=True, key="v67_student_tool_dock"):
+        st.markdown(
+            f"<span class='v67-student-dock-marker' aria-hidden='true'></span>"
+            f"<div class='v67-student-dock-title' dir='{direction}'>"
+            f"<span class='material-symbols-rounded'>apps</span>"
+            f"<strong>{escape(copy['title'])}</strong></div>",
+            unsafe_allow_html=True,
+        )
+        cols = st.columns(4, gap="small")
+        for col, (page, icon, label) in zip(cols, primary_tools):
+            with col:
+                available = page in allowed
+                st.button(
+                    f"{icon} {label}",
+                    key=f"v67_student_tool_{page}",
+                    type="primary" if current == page else "secondary",
+                    use_container_width=True,
+                    disabled=not available,
+                    help=None if available else copy["locked"],
+                    on_click=_queue_student_tool if available else None,
+                    args=(page,) if available else (),
+                )
+
+        expanded = any(page == current for page, _, _ in secondary_tools)
+        with st.expander(copy["more"], expanded=expanded):
+            secondary_cols = st.columns(4, gap="small")
+            for col, (page, icon, label) in zip(secondary_cols, secondary_tools):
+                with col:
+                    available = page in allowed
+                    st.button(
+                        f"{icon} {label}",
+                        key=f"v67_student_secondary_{page}",
+                        type="primary" if current == page else "secondary",
+                        use_container_width=True,
+                        disabled=not available,
+                        help=None if available else copy["locked"],
+                        on_click=_queue_student_tool if available else None,
+                        args=(page,) if available else (),
+                    )
+
+
 def _nav_text() -> Dict[str, str]:
     lang = i18n.current_lang(st)
     values = {
@@ -298,6 +420,8 @@ def main() -> None:
         ui_v6.render_public_header(getattr(navigation, "title", APP_TITLE))
     else:
         _render_toolbar(getattr(navigation, "title", APP_TITLE))
+        if st.session_state.get("role") == "student":
+            _render_student_tool_dock()
     navigation.run()
 
 
