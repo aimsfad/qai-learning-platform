@@ -291,11 +291,11 @@ def _build_pages() -> tuple[dict, Dict[str, object]]:
 def main() -> None:
     _bootstrap()
     pages, registry = _build_pages()
-    navigation = st.navigation(pages, position="top", expanded=True)
+    navigation = st.navigation(pages, position="hidden")
     router.register_pages(registry)
     router.process_pending_route()
     if st.session_state.get("role") is None:
-        ui_v6.render_public_utility_bar()
+        ui_v6.render_public_header(getattr(navigation, "title", APP_TITLE))
     else:
         _render_toolbar(getattr(navigation, "title", APP_TITLE))
     navigation.run()

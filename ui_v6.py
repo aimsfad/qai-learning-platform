@@ -224,18 +224,63 @@ def _route_button(label: str, route: str, *, key: str, primary: bool = False, ic
         router.navigate(route)
 
 
-def render_public_utility_bar() -> None:
+def _render_official_logo(width: int = 188) -> None:
+    """Render the approved logo through Streamlit's media endpoint.
+
+    Using ``st.image`` avoids browser failures caused by very large data URIs
+    inside Markdown on Streamlit Community Cloud.
+    """
+    if branding.OFFICIAL_LOGO_PATH.exists():
+        st.image(str(branding.OFFICIAL_LOGO_PATH), width=width)
+    else:
+        st.markdown(branding.logo_lockup_html(compact=True, language=i18n.current_lang(st)), unsafe_allow_html=True)
+
+
+def _header_button(label: str, route: str, *, key: str, active: bool = False, cta: bool = False) -> None:
+    st.button(
+        label,
+        key=key,
+        type="primary" if active or cta else "secondary",
+        use_container_width=True,
+        on_click=router.queue,
+        args=(route,),
+    )
+
+
+def render_public_header(current_title: str = "") -> None:
+    """Production public header with working native Streamlit controls."""
     c = copy()
-    with st.container():
-        st.markdown("<span class='v6-public-bar-marker'></span>", unsafe_allow_html=True)
-        logo_col, language_col, access_col = st.columns([5.2, 1.25, 1.7], gap="small", vertical_alignment="center")
+    lang = i18n.current_lang(st)
+    header_labels = {
+        "ar": {"home": "الرئيسية", "programs": "البرامج", "ai": "مختبر AI", "institutions": "للجامعات", "evaluator": "دخول المقيّم", "start": "ابدأ"},
+        "fr": {"home": "Accueil", "programs": "Programmes", "ai": "Studio IA", "institutions": "Universités", "evaluator": "Évaluateur", "start": "Commencer"},
+        "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "evaluator": "Evaluator", "start": "Start learning"},
+    }[lang]
+    with st.container(border=True):
+        st.markdown("<span class='v601-header-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        logo_col, home_col, programs_col, ai_col, institutions_col, language_col, evaluator_col, start_col = st.columns(
+            [1.85, .72, .86, 1.15, 1.18, .94, 1.05, 1.02],
+            gap="small",
+            vertical_alignment="center",
+        )
         with logo_col:
-            st.markdown(f"<div class='v6-mini-brand'>{_logo_img()}</div>", unsafe_allow_html=True)
+            _render_official_logo(182)
+        nav_items = [
+            (home_col, header_labels["home"], router.route_key("public", "home"), "v601_nav_home", str(c["nav_home"])),
+            (programs_col, header_labels["programs"], router.route_key("public", "programs"), "v601_nav_programs", str(c["nav_programs"])),
+            (ai_col, header_labels["ai"], router.route_key("public", "ai_studio"), "v601_nav_ai", str(c["nav_ai"])),
+            (institutions_col, header_labels["institutions"], router.route_key("public", "institutions"), "v601_nav_institutions", str(c["nav_institutions"])),
+        ]
+        for col, label, route, key, page_title in nav_items:
+            with col:
+                _header_button(label, route, key=key, active=current_title == page_title)
         with language_col:
             import main_app
-            main_app.render_language_selector(st, key="v6_public_language", label_visibility="collapsed")
-        with access_col:
-            _route_button(str(c["start"]), router.route_key("public", "student"), key="v6_public_access", primary=True)
+            main_app.render_language_selector(st, key="v601_public_language", label_visibility="collapsed")
+        with evaluator_col:
+            _header_button(header_labels["evaluator"], router.route_key("public", "evaluator"), key="v601_public_evaluator")
+        with start_col:
+            _header_button(header_labels["start"], router.route_key("public", "student"), key="v601_public_start", cta=True)
 
 
 def render_home() -> None:
@@ -268,7 +313,7 @@ def render_home() -> None:
                 f"""
                 <section class='v6-hero-visual' dir='ltr'>
                   <div class='v6-orbital-bg'></div>
-                  <div class='v6-visual-logo'>{_logo_img()}</div>
+                  <div class='v601-engine-badge'><strong>3alimn<span>IA</span></strong><small>Generative Learning Engine</small></div>
                   <div class='v6-ai-core'><b>AI</b><span>Learn</span></div>
                   <span class='v6-node v6-node-q'>Qiskit</span>
                   <span class='v6-node v6-node-c'>Coach</span>
@@ -467,6 +512,6 @@ def _institution_strip(direction: str) -> None:
 def _footer(direction: str) -> None:
     c = copy()
     st.markdown(
-        f"<footer class='v6-footer' dir='{direction}'><div>{_logo_img()}</div><span>{escape(str(c['footer']))}</span></footer>",
+        f"<footer class='v6-footer' dir='{direction}'><strong class='v601-footer-brand'>3alimn<span>IA</span></strong><span>{escape(str(c['footer']))}</span></footer>",
         unsafe_allow_html=True,
     )

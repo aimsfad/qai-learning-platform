@@ -1,3 +1,13 @@
+# V6.0.1 - Production header and compact hero
+
+- Replaced the visible native navigation dropdown with a professional Streamlit-native public header.
+- Kept native page registration in hidden mode for reliable routing.
+- Rendered the official logo through `st.image` to prevent broken Cloud images.
+- Removed fragile logo data URIs from the hero and footer.
+- Reduced hero height, Arabic title scale, top spacing, and first-screen overflow.
+- Added direct public navigation to programs, AI Studio, institutions, learner access, and evaluator access.
+- Updated the instrumented app version without changing the database schema.
+
 # V5.0.1 - Branding startup hotfix
 
 - Fixed the startup `AttributeError` caused by an obsolete `branding.BRAND_NAME_LATIN` reference.
