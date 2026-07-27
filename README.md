@@ -1,6 +1,15 @@
-# 3alimnIA V6.7 — Home Brand Hero & Student Tools
+# 3alimnIA V6.7.2 — Classic White Header Logo
 
 3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.
+
+
+## V6.7.2 classic white header logo
+
+- Restored the earlier white rounded header logo treatment requested for the public navigation.
+- Added a dedicated `3alimnia_header_logo_white.png` asset so browser caching cannot reuse the dark treatment.
+- Preserved the official blue/cyan/gold horizontal wordmark, full RTL/LTR visibility, and responsive sizing.
+- No learning, database, assessment, AI Coach, LPQS, or export logic was changed.
+- Static validation: `python validate_v672_white_header_logo.py`.
 
 V6 redesigns the public experience after benchmarking Edraak, Brilliant, IBM Quantum Learning, and DataCamp, while preserving the platform's research and pedagogical differentiators:
 

@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.7-home-hero-student-tools"
+APP_VERSION = "v6.7.2-white-header-logo"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password

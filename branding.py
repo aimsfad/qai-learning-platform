@@ -18,6 +18,7 @@ DEFAULT_LOGO_VARIANT = "official"
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets" / "branding"
 OFFICIAL_LOGO_PATH = ASSET_DIR / "3alimnia_logo.png"
+HEADER_WHITE_LOGO_PATH = ASSET_DIR / "3alimnia_header_logo_white.png"
 
 LANGUAGES: Dict[str, str] = {
     "العربية": "ar",
