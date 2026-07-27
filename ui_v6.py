@@ -248,16 +248,17 @@ def _route_button(label: str, route: str, *, key: str, primary: bool = False, ic
         router.navigate(route)
 
 
-def _render_official_logo(width: int = 188) -> None:
-    """Render the approved logo through Streamlit's media endpoint.
+def _render_official_logo(width: int = 214) -> None:
+    """Render the approved horizontal 3alimnIA lockup without clipping.
 
-    Using ``st.image`` avoids browser failures caused by very large data URIs
-    inside Markdown on Streamlit Community Cloud.
+    The marker gives the stylesheet a stable target so the full horizontal
+    logo remains visible in RTL and LTR layouts on Streamlit Cloud.
     """
+    st.markdown("<span class='v671-header-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     if branding.OFFICIAL_LOGO_PATH.exists():
         st.image(str(branding.OFFICIAL_LOGO_PATH), width=width)
     else:
-        st.markdown(branding.logo_lockup_html(compact=True, language=i18n.current_lang(st)), unsafe_allow_html=True)
+        st.markdown(branding.logo_lockup_html(compact=False, language=i18n.current_lang(st)), unsafe_allow_html=True)
 
 
 def _header_button(label: str, route: str, *, key: str, active: bool = False, cta: bool = False) -> None:
@@ -282,10 +283,10 @@ def render_public_header(current_title: str = "") -> None:
     }[lang]
     with st.container(border=False, key="v61_public_header"):
         logo_col, nav_col, language_col, evaluator_col, start_col = st.columns(
-            [1.65, 4.35, 1.0, 1.1, 1.05], gap="small", vertical_alignment="center"
+            [2.05, 4.05, 1.0, 1.1, 1.05], gap="small", vertical_alignment="center"
         )
         with logo_col:
-            _render_official_logo(176)
+            _render_official_logo(214)
         with nav_col:
             home_col, programs_col, ai_col, institutions_col = st.columns([.84, .95, 1.05, 1.06], gap="small")
             nav_items = [
