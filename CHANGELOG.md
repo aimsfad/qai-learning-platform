@@ -175,3 +175,12 @@
 - Improved mobile hero, navigation, cards, metrics, forms, buttons, and research tables.
 - Added touch-safe cards and disabled hover-only movement on touch devices.
 - Preserved the desktop academy layout and all existing learning, evaluator, AI, LPQS, and export logic.
+
+
+## V6.4 — AI Studio Banner & Responsive Evidence Grid
+
+- Replaced the generic AI Studio page hero with a premium multilingual generative-learning banner.
+- Added localized AI Studio badges, capability tags, and a compact orbital visual.
+- Rebuilt platform evidence statistics as a CSS auto-fit grid shared by the home and AI Studio pages.
+- Added responsive 4/2/1-column behavior, touch-safe card interactions, and mobile typography.
+- Preserved learner, evaluator, AI, LPQS, database, and research-export logic.

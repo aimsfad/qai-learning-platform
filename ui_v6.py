@@ -26,7 +26,7 @@ COPY: Dict[str, Dict[str, object]] = {
         "evaluator": "فضاء المقيّم والباحث",
         "trust": ["العربية · Français · English", "تعلّم تطبيقي", "AI بعد محاولة المتعلم", "LPQS للتقييم التربوي"],
         "stats": [("6", "وحدات Qiskit"), ("3", "لغات واجهة ومحتوى"), ("7", "معايير LPQS"), ("24/7", "دعم تعلّم موجّه")],
-        "programs_kicker": "مسارات واضحة مثل أفضل المنصات العالمية",
+        "programs_kicker": "برامج مصممة للتدرّج والإتقان",
         "programs_title": "ابدأ بمسار، ثم انتقل من الأساسيات إلى الإتقان",
         "programs_body": "كل برنامج يوضح المستوى، المدة، الوحدات، المتطلبات، ومخرجات التعلّم قبل أن يبدأ الطالب.",
         "available": "متاح الآن",
@@ -61,6 +61,8 @@ COPY: Dict[str, Dict[str, object]] = {
         "catalog_body": "واجهة برامج واضحة تشبه منصات MOOC الحديثة، مع إضافة التعلّم التوليدي والتقييم العلمي.",
         "ai_studio_title": "مختبر الذكاء التوليدي للتعلّم",
         "ai_studio_body": "منظومة لإنتاج الموارد التعليمية ودعم المتعلم وتقييم الاستجابات ضمن ضوابط تربوية واضحة.",
+        "ai_studio_badge": "مختبر الذكاء التوليدي للتعلّم",
+        "ai_studio_visual_labels": ["توليد المحتوى", "مدرّب تعلّم", "تقييم LPQS"],
         "institution_page_title": "حلول الجامعات والباحثين",
         "institution_page_body": "تشغيل مجموعات تجريبية، تتبع التقدم، LPQS، التصدير البحثي، وإدارة المشاركين من لوحة واحدة.",
         "how_compares": "لماذا يختلف عن منصات الدورات التقليدية؟",
@@ -90,7 +92,7 @@ COPY: Dict[str, Dict[str, object]] = {
         "evaluator": "Espace évaluateur et recherche",
         "trust": ["العربية · Français · English", "Apprentissage pratique", "IA après la tentative", "Évaluation LPQS"],
         "stats": [("6", "modules Qiskit"), ("3", "langues"), ("7", "critères LPQS"), ("24/7", "aide guidée")],
-        "programs_kicker": "DES PARCOURS CLAIRS, COMME LES MEILLEURES PLATEFORMES",
+        "programs_kicker": "DES PARCOURS CONÇUS POUR PROGRESSER",
         "programs_title": "Partez des fondamentaux et progressez vers la maîtrise",
         "programs_body": "Chaque programme présente le niveau, la durée, les modules, les prérequis et les acquis attendus avant l’inscription.",
         "available": "Disponible",
@@ -125,6 +127,8 @@ COPY: Dict[str, Dict[str, object]] = {
         "catalog_body": "Une expérience de catalogue claire inspirée des MOOC modernes, enrichie par l’IA pédagogique et la mesure scientifique.",
         "ai_studio_title": "Studio d’apprentissage génératif",
         "ai_studio_body": "Produire des ressources, soutenir l’apprenant et évaluer les réponses générées avec des garde-fous pédagogiques.",
+        "ai_studio_badge": "Studio IA générative pour apprendre",
+        "ai_studio_visual_labels": ["Création de contenu", "Coach d’apprentissage", "Évaluation LPQS"],
         "institution_page_title": "Solutions pour universités et chercheurs",
         "institution_page_body": "Groupes d’étude, suivi, LPQS, export scientifique et gestion des participants dans un seul espace.",
         "how_compares": "En quoi 3alimnIA dépasse une plateforme de cours classique ?",
@@ -154,7 +158,7 @@ COPY: Dict[str, Dict[str, object]] = {
         "evaluator": "Evaluator & research workspace",
         "trust": ["العربية · Français · English", "Practice-based learning", "AI after learner attempt", "LPQS evaluation"],
         "stats": [("6", "Qiskit modules"), ("3", "languages"), ("7", "LPQS criteria"), ("24/7", "guided support")],
-        "programs_kicker": "CLEAR PATHS, INSPIRED BY WORLD-CLASS LEARNING PLATFORMS",
+        "programs_kicker": "PATHS DESIGNED FOR PROGRESS AND MASTERY",
         "programs_title": "Start with fundamentals and progress toward mastery",
         "programs_body": "Every program clearly presents level, duration, modules, prerequisites, and expected outcomes before enrollment.",
         "available": "Available now",
@@ -189,6 +193,8 @@ COPY: Dict[str, Dict[str, object]] = {
         "catalog_body": "A clear modern MOOC-style catalog, extended with pedagogical AI and scientific measurement.",
         "ai_studio_title": "Generative Learning Studio",
         "ai_studio_body": "Create resources, support learners, and evaluate generated responses within explicit pedagogical guardrails.",
+        "ai_studio_badge": "Generative AI studio for learning",
+        "ai_studio_visual_labels": ["Content generation", "Learning coach", "LPQS evaluation"],
         "institution_page_title": "Solutions for universities and researchers",
         "institution_page_body": "Study cohorts, progress monitoring, LPQS, research exports, and participant management in one place.",
         "how_compares": "How is 3alimnIA different from a traditional course platform?",
@@ -248,87 +254,82 @@ def _header_button(label: str, route: str, *, key: str, active: bool = False, ct
 
 
 def render_public_header(current_title: str = "") -> None:
-    """Production public header with working native Streamlit controls."""
+    """Render a compact, modern public header with native Streamlit controls."""
     c = copy()
     lang = i18n.current_lang(st)
     header_labels = {
-        "ar": {"home": "الرئيسية", "programs": "البرامج", "ai": "مختبر AI", "institutions": "للجامعات", "evaluator": "دخول المقيّم", "start": "ابدأ"},
+        "ar": {"home": "الرئيسية", "programs": "البرامج", "ai": "مختبر الذكاء", "institutions": "للجامعات", "evaluator": "دخول المقيّم", "start": "ابدأ الآن"},
         "fr": {"home": "Accueil", "programs": "Programmes", "ai": "Studio IA", "institutions": "Universités", "evaluator": "Évaluateur", "start": "Commencer"},
-        "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "evaluator": "Evaluator", "start": "Start learning"},
+        "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "evaluator": "Evaluator", "start": "Start now"},
     }[lang]
-    with st.container(border=True):
-        st.markdown("<span class='v601-header-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-        logo_col, home_col, programs_col, ai_col, institutions_col, language_col, evaluator_col, start_col = st.columns(
-            [1.85, .72, .86, 1.15, 1.18, .94, 1.05, 1.02],
-            gap="small",
-            vertical_alignment="center",
+    with st.container(border=False, key="v61_public_header"):
+        logo_col, nav_col, language_col, evaluator_col, start_col = st.columns(
+            [1.65, 4.35, 1.0, 1.1, 1.05], gap="small", vertical_alignment="center"
         )
         with logo_col:
-            _render_official_logo(182)
-        nav_items = [
-            (home_col, header_labels["home"], router.route_key("public", "home"), "v601_nav_home", str(c["nav_home"])),
-            (programs_col, header_labels["programs"], router.route_key("public", "programs"), "v601_nav_programs", str(c["nav_programs"])),
-            (ai_col, header_labels["ai"], router.route_key("public", "ai_studio"), "v601_nav_ai", str(c["nav_ai"])),
-            (institutions_col, header_labels["institutions"], router.route_key("public", "institutions"), "v601_nav_institutions", str(c["nav_institutions"])),
-        ]
-        for col, label, route, key, page_title in nav_items:
-            with col:
-                _header_button(label, route, key=key, active=current_title == page_title)
+            _render_official_logo(176)
+        with nav_col:
+            home_col, programs_col, ai_col, institutions_col = st.columns([.84, .95, 1.05, 1.06], gap="small")
+            nav_items = [
+                (home_col, header_labels["home"], router.route_key("public", "home"), "v61_nav_home", str(c["nav_home"])),
+                (programs_col, header_labels["programs"], router.route_key("public", "programs"), "v61_nav_programs", str(c["nav_programs"])),
+                (ai_col, header_labels["ai"], router.route_key("public", "ai_studio"), "v61_nav_ai", str(c["nav_ai"])),
+                (institutions_col, header_labels["institutions"], router.route_key("public", "institutions"), "v61_nav_institutions", str(c["nav_institutions"])),
+            ]
+            for col, label, route, key, page_title in nav_items:
+                with col:
+                    _header_button(label, route, key=key, active=current_title == page_title)
         with language_col:
             import main_app
-            main_app.render_language_selector(st, key="v601_public_language", label_visibility="collapsed")
+            main_app.render_language_selector(st, key="v61_public_language", label_visibility="collapsed")
         with evaluator_col:
-            _header_button(header_labels["evaluator"], router.route_key("public", "evaluator"), key="v601_public_evaluator")
+            _header_button(header_labels["evaluator"], router.route_key("public", "evaluator"), key="v61_public_evaluator")
         with start_col:
-            _header_button(header_labels["start"], router.route_key("public", "student"), key="v601_public_start", cta=True)
+            _header_button(header_labels["start"], router.route_key("public", "student"), key="v61_public_start", cta=True)
 
 
 def render_home() -> None:
     c = copy()
     direction = str(c["dir"])
-    st.markdown("<span class='v6-home-marker'></span>", unsafe_allow_html=True)
-    with st.container(border=False):
-        left, right = st.columns([1.08, .92], gap="large", vertical_alignment="center")
-        with left:
+    st.markdown("<span class='v61-home-marker'></span>", unsafe_allow_html=True)
+    with st.container(border=False, key="v61_hero"):
+        copy_col, visual_col = st.columns([1.13, .87], gap="large", vertical_alignment="center")
+        with copy_col:
             st.markdown(
                 f"""
-                <section class='v6-hero-copy' dir='{direction}'>
-                  <div class='v6-kicker'>{escape(str(c['hero_kicker']))}</div>
+                <section class='v61-hero-copy' dir='{direction}'>
+                  <div class='v61-eyebrow'><span></span>{escape(str(c['hero_kicker']))}</div>
                   <h1>{escape(str(c['hero_title']))}</h1>
                   <p>{escape(str(c['hero_body']))}</p>
-                  <div class='v6-trust-row'>{''.join(f'<span>{escape(str(x))}</span>' for x in c['trust'])}</div>
+                  <div class='v61-benefit-row'>{''.join(f'<span>{escape(str(x))}</span>' for x in c['trust'])}</div>
                 </section>
                 """,
                 unsafe_allow_html=True,
             )
-            a, b, d = st.columns([1.05, 1.05, 1.15], gap="small")
-            with a:
-                _route_button(str(c["start"]), router.route_key("public", "student"), key="v6_hero_start", primary=True, icon="▶")
-            with b:
-                _route_button(str(c["explore"]), router.route_key("public", "programs"), key="v6_hero_programs", icon="▦")
-            with d:
-                _route_button(str(c["evaluator"]), router.route_key("public", "evaluator"), key="v6_hero_eval", icon="◈")
-        with right:
+            start_col, programs_col, evaluator_col = st.columns([1.05, 1.05, 1.18], gap="small")
+            with start_col:
+                _route_button(str(c["start"]), router.route_key("public", "student"), key="v61_hero_start", primary=True)
+            with programs_col:
+                _route_button(str(c["explore"]), router.route_key("public", "programs"), key="v61_hero_programs")
+            with evaluator_col:
+                _route_button(str(c["evaluator"]), router.route_key("public", "evaluator"), key="v61_hero_eval")
+        with visual_col:
             st.markdown(
-                f"""
-                <section class='v6-hero-visual' dir='ltr'>
-                  <div class='v6-orbital-bg'></div>
-                  <div class='v601-engine-badge'><strong>3alimn<span>IA</span></strong><small>Generative Learning Engine</small></div>
-                  <div class='v6-ai-core'><b>AI</b><span>Learn</span></div>
-                  <span class='v6-node v6-node-q'>Qiskit</span>
-                  <span class='v6-node v6-node-c'>Coach</span>
-                  <span class='v6-node v6-node-e'>LPQS</span>
-                  <div class='v6-pulse p1'></div><div class='v6-pulse p2'></div><div class='v6-pulse p3'></div>
+                """
+                <section class='v61-learning-visual' dir='ltr'>
+                  <div class='v61-visual-grid'></div>
+                  <div class='v61-visual-label'><b>3alimn<span>IA</span></b><small>Generative Learning OS</small></div>
+                  <div class='v61-orbit orbit-a'></div><div class='v61-orbit orbit-b'></div>
+                  <div class='v61-ai-core'><strong>AI</strong><span>Learn</span></div>
+                  <div class='v61-float-card card-q'><b>Qiskit</b><small>Practice</small></div>
+                  <div class='v61-float-card card-c'><b>Coach</b><small>Guided hints</small></div>
+                  <div class='v61-float-card card-l'><b>LPQS</b><small>Quality evidence</small></div>
+                  <i class='v61-dot dot-a'></i><i class='v61-dot dot-b'></i><i class='v61-dot dot-c'></i>
                 </section>
                 """,
                 unsafe_allow_html=True,
             )
-    st.markdown(
-        "<section class='v6-stat-grid'>" + "".join(
-            f"<article><strong>{escape(str(value))}</strong><span>{escape(str(label))}</span></article>" for value, label in c["stats"]
-        ) + "</section>",
-        unsafe_allow_html=True,
-    )
+    _render_stats_grid(direction, context="home")
     _section_heading(str(c["programs_kicker"]), str(c["programs_title"]), str(c["programs_body"]), direction)
     _program_cards(direction, compact=True)
     _section_heading(str(c["engine_kicker"]), str(c["engine_title"]), str(c["engine_body"]), direction)
@@ -352,41 +353,119 @@ def render_home() -> None:
 
 def _section_heading(kicker: str, title: str, body: str, direction: str) -> None:
     st.markdown(
-        f"<header class='v6-section-head' dir='{direction}'><span>{escape(kicker)}</span><h2>{escape(title)}</h2><p>{escape(body)}</p></header>",
+        f"""
+        <header class='v61-section-head' dir='{direction}'>
+          <span class='v61-section-kicker'>{escape(kicker)}</span>
+          <h2>{escape(title)}</h2>
+          <p>{escape(body)}</p>
+        </header>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+STAT_ICONS = ("account_tree", "translate", "fact_check", "support_agent")
+
+
+def _render_stats_grid(direction: str, *, context: str = "home") -> None:
+    """Render responsive evidence cards without relying on Streamlit columns."""
+    c = copy()
+    cards = []
+    for icon, (value, label) in zip(STAT_ICONS, c["stats"]):
+        cards.append(
+            "<article class='v64-stat-card'>"
+            f"<div class='v64-stat-icon material-symbols-rounded'>{escape(icon)}</div>"
+            "<div class='v64-stat-copy'>"
+            f"<strong>{escape(str(value))}</strong>"
+            f"<span>{escape(str(label))}</span>"
+            "</div></article>"
+        )
+    st.markdown(
+        f"<section class='v64-stats-grid v64-stats-{escape(context)}' dir='{direction}'>"
+        + "".join(cards)
+        + "</section>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_ai_studio_banner(c: Dict[str, object], direction: str) -> None:
+    """Render a localized, responsive AI Studio hero with a compact visual system."""
+    labels = list(c["ai_studio_visual_labels"])
+    tag_titles = [str(item[1]) for item in c["pillars"][:3]]
+    lang = i18n.current_lang(st)
+    brand_line = "3alimnIA · علّمنيا" if lang == "ar" else "3alimnIA"
+    st.markdown(
+        f"""
+        <section class='v64-ai-banner' dir='{direction}'>
+          <div class='v64-ai-glow glow-one'></div>
+          <div class='v64-ai-glow glow-two'></div>
+          <div class='v64-ai-banner-copy'>
+            <span class='v64-ai-brand'>{escape(brand_line)}</span>
+            <div class='v64-ai-badge'>
+              <span class='material-symbols-rounded'>auto_awesome</span>
+              <b>{escape(str(c['ai_studio_badge']))}</b>
+            </div>
+            <h1>{escape(str(c['ai_studio_title']))}</h1>
+            <p>{escape(str(c['ai_studio_body']))}</p>
+            <div class='v64-ai-banner-tags'>
+              {''.join(f'<span>{escape(title)}</span>' for title in tag_titles)}
+            </div>
+          </div>
+          <div class='v64-ai-banner-visual' aria-hidden='true'>
+            <div class='v64-ai-ring ring-one'></div>
+            <div class='v64-ai-ring ring-two'></div>
+            <div class='v64-ai-core'><strong>AI</strong><small>Studio</small></div>
+            <div class='v64-ai-chip chip-one'>{escape(str(labels[0]))}</div>
+            <div class='v64-ai-chip chip-two'>{escape(str(labels[1]))}</div>
+            <div class='v64-ai-chip chip-three'>{escape(str(labels[2]))}</div>
+            <i class='v64-ai-point point-one'></i>
+            <i class='v64-ai-point point-two'></i>
+            <i class='v64-ai-point point-three'></i>
+          </div>
+        </section>
+        """,
         unsafe_allow_html=True,
     )
 
 
 def _program_cards(direction: str, compact: bool = False, track_ids: List[str] | None = None) -> None:
     c = copy()
+    lang = i18n.current_lang(st)
     track_order = track_ids or ["quantum", "ml", "ai"]
     cols = st.columns(len(track_order), gap="large")
-    for col, track_id in zip(cols, track_order):
+    path_labels = {"ar": "مسار تعلّم", "fr": "Parcours", "en": "Learning path"}
+    for index, (col, track_id) in enumerate(zip(cols, track_order), start=1):
         track = branding.TRACKS[track_id]
         status = c["available"] if track_id == "quantum" else c["coming"]
+        modules_value = len(content.LESSONS) if track_id == "quantum" else "—"
+        feature_class = " featured" if track_id == "quantum" else ""
         with col:
             st.markdown(
                 f"""
-                <article class='v6-program-card {track_id}' dir='{direction}'>
-                  <div class='v6-program-top'><span class='v6-program-icon'>{escape(str(track['icon']))}</span><em>{escape(str(status))}</em></div>
-                  <h3>{escape(str(track['name'][i18n.current_lang(st)]))}</h3>
-                  <p>{escape(str(track['description'][i18n.current_lang(st)]))}</p>
-                  <div class='v6-program-meta'>
-                    <span><b>{escape(str(c['level']))}</b>{escape(str(c['beginner']))}</span>
-                    <span><b>{escape(str(c['duration']))}</b>{escape(str(c['hours']))}</span>
-                    <span><b>{escape(str(c['modules']))}</b>{len(content.LESSONS) if track_id == 'quantum' else '—'}</span>
+                <article class='v61-program-card {track_id}{feature_class}' dir='{direction}'>
+                  <div class='v61-program-head'>
+                    <div class='v61-program-icon'>{escape(str(track['icon']))}</div>
+                    <div class='v61-program-status'>{escape(str(status))}</div>
+                  </div>
+                  <span class='v61-path-label'>{escape(path_labels[lang])} {index:02d}</span>
+                  <h3>{escape(str(track['name'][lang]))}</h3>
+                  <p>{escape(str(track['description'][lang]))}</p>
+                  <div class='v61-program-meta'>
+                    <span><small>{escape(str(c['level']))}</small><b>{escape(str(c['beginner']))}</b></span>
+                    <span><small>{escape(str(c['duration']))}</small><b>{escape(str(c['hours']))}</b></span>
+                    <span><small>{escape(str(c['modules']))}</small><b>{modules_value}</b></span>
                   </div>
                 </article>
                 """,
                 unsafe_allow_html=True,
             )
             label = c["start_program"] if track_id == "quantum" else c["view_program"]
-            if st.button(str(label), key=f"v6_program_{track_id}_{'compact' if compact else 'full'}", type="primary" if track_id == "quantum" else "secondary", use_container_width=True):
+            if st.button(str(label), key=f"v61_program_{track_id}_{'compact' if compact else 'full'}", type="primary" if track_id == "quantum" else "secondary", use_container_width=True):
                 if track_id == "quantum":
                     router.navigate(router.route_key("public", "student"))
                 else:
                     st.session_state["v6_preview_track"] = track_id
-                    st.info(track["audience"][i18n.current_lang(st)])
+                    st.info(track["audience"][lang])
 
 
 def render_programs() -> None:
@@ -421,7 +500,13 @@ def render_programs() -> None:
 def render_ai_studio() -> None:
     c = copy(); direction = str(c["dir"])
     st.markdown("<span class='v6-ai-studio-marker'></span>", unsafe_allow_html=True)
-    _page_hero(str(c["ai_studio_title"]), str(c["ai_studio_body"]), direction, "auto_awesome")
+    _render_ai_studio_banner(c, direction)
+    action_a, action_b = st.columns(2, gap="small")
+    with action_a:
+        _route_button(str(c["start"]), router.route_key("public", "student"), key="v64_studio_start", primary=True)
+    with action_b:
+        _route_button(str(c["evaluator"]), router.route_key("public", "evaluator"), key="v64_studio_eval")
+    _render_stats_grid(direction, context="studio")
     st.markdown(
         f"<section class='v6-studio-flow' dir='{direction}'>" + "".join(
             f"<article><div class='material-symbols-rounded'>{escape(str(icon))}</div><h3>{escape(str(title))}</h3><p>{escape(str(body))}</p></article>"
@@ -438,11 +523,6 @@ def render_ai_studio() -> None:
         f"<div class='v6-comparison-wrap' dir='{direction}'><table><thead><tr><th></th><th>{escape(str(c['traditional']))}</th><th>{escape(str(c['ours']))}</th></tr></thead><tbody>{table_rows}</tbody></table></div>",
         unsafe_allow_html=True,
     )
-    a, b = st.columns(2, gap="small")
-    with a:
-        _route_button(str(c["start"]), router.route_key("public", "student"), key="v6_studio_start", primary=True)
-    with b:
-        _route_button(str(c["evaluator"]), router.route_key("public", "evaluator"), key="v6_studio_eval")
     _footer(direction)
 
 
