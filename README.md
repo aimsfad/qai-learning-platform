@@ -1,70 +1,55 @@
-# 3alimnIA V4.8 - Premium Multilingual Learning & Research Platform
+# 3alimnIA V6 — Global AI Academy
 
-## الجديد في V4.8
+3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.
 
-- استبدال التخطيط القائم على أعمدة الصفحة بقائمة Streamlit الأصلية.
-- القائمة أصبحت مثبتة على مستوى نافذة المتصفح، ولها تمرير رأسي مستقل.
-- العربية: القائمة على اليمين؛ الفرنسية والإنجليزية: القائمة على اليسار.
-- طول قائمة المتعلم أو المقيّم لم يعد يزيد طول الصفحة الرئيسية.
-- المحتوى الرئيسي يتمدد داخل المساحة المتبقية ولا يختفي خلف القائمة.
-- على الهاتف تتحول القائمة إلى درج Streamlit الطبيعي دون تمرير متداخل.
-- أزيل الاعتماد على حيل CSS الخاصة بأعمدة `st.columns` كهيكل عام للمنصة.
+V6 redesigns the public experience after benchmarking Edraak, Brilliant, IBM Quantum Learning, and DataCamp, while preserving the platform's research and pedagogical differentiators:
 
+- learner-first attempts before AI assistance;
+- visual and practice-based learning;
+- a constrained AI Coach;
+- a controlled Concept Builder for educational materials;
+- LPQS evaluation of AI responses;
+- learner analytics and anonymized research export.
 
-> واجهة احترافية متعددة اللغات مع مسار Qiskit، دعم توليدي موجّه، ولوحة مقيّم وباحث متقدمة.
+## Main experiences
 
-# 3alimnIA | علّمنيا - Multilingual Generative-AI Learning Platform
+### Public platform
 
-## الجديد في V4.7
+- Home
+- Programs and learning paths
+- Generative AI Studio
+- Universities and research
+- Learner access
+- Evaluator access
 
-- لوحة موحدة للمقيّم والباحث مع مؤشرات التقدم والنتائج وLPQS.
-- مرشحات حسب المجموعة والمستوى واللغة وحالة الاكتمال.
-- مراجعة منظمة لسجلات AI وفحص المطالبة والاستجابة والتشخيص.
-- واجهة تقييم LPQS ذات سبعة معايير.
-- تحليلات تعلم وذكاء اصطناعي ومقارنة مجموعات.
-- تصدير مجهول الهوية ونسخة إدارية كاملة في مسارين منفصلين.
-- دعم بصري كامل للعربية والفرنسية والإنجليزية داخل فضاء المقيّم.
+### Learner workspace
 
+- Research notice and consent
+- Pre-test and adaptive plan
+- Six Qiskit learning modules
+- AI Tutor Lab and Concept Builder
+- Post-test and satisfaction survey
+- Progress and completion evidence
 
-منصة تعليمية متعددة المسارات لتبسيط المفاهيم الصعبة بالشرح البصري والمحاكاة والمحاولة الأولى من المتعلم ومدرّب ذكاء توليدي مقيّد تربويًا.
+### Evaluator and research workspace
 
-- شريط تنقل ثابت ومدمج في فضاء المتعلم والمقيّم.
-- تمرير مستقل للقائمة الجانبية على شاشات الحاسوب المحمول.
-- مجموعات تنقل قابلة للطي مع فتح القسم النشط تلقائيًا.
-- رؤوس صفحات المقيّم أكثر اختصارًا لعرض الأدوات مباشرة.
+- Study protocol
+- Participant and registration management
+- Learner details
+- AI interaction logs
+- LPQS response evaluation
+- Learning analytics
+- Anonymized and administrative exports
 
-## الإصدار V3 متعدد اللغات
+## Languages
 
-يطبق هذا الإصدار اختيار اللغة على المنصة كاملة، وليس على الصفحة العامة فقط:
+- العربية — full RTL interface and localized learning content
+- Français
+- English
 
-- العربية مع اتجاه RTL كامل.
-- Français avec une interface LTR complète.
-- English with a complete LTR interface.
-- حفظ لغة المتعلم في قاعدة البيانات واستعادتها بعد تسجيل الدخول.
-- ترجمة صفحات التسجيل والدخول والموافقة البحثية والمسار التعليمي وفضاء المقيّم.
-- ترجمة الوحدات التعليمية الست وشروحاتها وخطواتها وأسئلة التحقق والتأمل.
-- ترجمة الاختبارات القبلية والبعدية: 18 سؤالًا قبليًا و18 سؤالًا بعديًا في كل لغة.
-- ترجمة الاستبيان والأسئلة المفتوحة والوسائط التعليمية والتوجيهات.
-- ربط اللغة المختارة تلقائيًا بردود AI Coach وAI Tutor وConcept Builder.
-- دعم Concept Builder بالعربية والفرنسية والإنجليزية.
-- إبقاء كود Qiskit والمصطلحات التقنية الضرورية دون ترجمة تفسد معناها.
-- الحفاظ على مفاتيح البيانات الداخلية بالإنجليزية لضمان ثبات التحليلات والمقارنات البحثية بين اللغات.
+Qiskit code, Python syntax, and necessary technical identifiers remain in English.
 
-## المسارات
-
-- **Quantum Computing:** المسار التشغيلي الكامل حاليًا.
-- **Machine Learning:** معاينة منتج قيد التطوير.
-- **AI Foundations:** معاينة منتج قيد التطوير.
-
-## تشغيل المنصة
-
-### Windows
-
-```text
-INSTALL_AND_RUN_WINDOWS.bat
-```
-
-أو يدويًا:
+## Run locally
 
 ```bash
 python -m venv .venv
@@ -73,7 +58,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Linux / macOS
+On macOS or Linux:
 
 ```bash
 python -m venv .venv
@@ -82,48 +67,33 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## الإعدادات والنشر
+## Streamlit Cloud
 
-1. انسخ `.streamlit/secrets_example.toml` إلى `.streamlit/secrets.toml`.
-2. غيّر كلمات المرور ومفاتيح API.
-3. لا ترفع ملف `secrets.toml` إلى GitHub.
-4. استخدم PostgreSQL/Neon عند جمع بيانات حقيقية متعددة المستخدمين.
-5. اختر `app.py` ملف التشغيل في Streamlit Cloud.
+- Main file: `app.py`
+- Python dependencies: `requirements.txt`
+- Copy `.streamlit/secrets_example.toml` into Streamlit Cloud Secrets and replace placeholder values.
+- Do not commit `.streamlit/secrets.toml`, `.env`, or local database files.
 
-## الملفات الأساسية
+## Validation
 
-- `app.py`: نقطة تشغيل Streamlit.
-- `main_app.py`: سير العمل التعليمي والبحثي.
-- `i18n.py`: ترجمة الواجهة وتطبيق RTL/LTR واختيار اللغة.
-- `content.py`: المحتوى الأساسي ووظائف استرجاع النسخ المحلية.
-- `content_locales.py`: الترجمات العربية والفرنسية للدروس والاختبارات والاستبيانات.
-- `branding.py`: الهوية والصفحة الرئيسية متعددة اللغات.
-- `feedback_engine.py`: AI Tutor ودعم اكتشاف العربية والفرنسية والإنجليزية.
-- `db.py`: قاعدة البيانات، بما فيها `preferred_language`.
-- `validate_multilingual.py`: فحص اتساق المحتوى متعدد اللغات دون تشغيل الواجهة.
+```bash
+python validate_v6_global_academy.py
+python -m py_compile app.py ui_v6.py config.py main_app.py router.py
+```
 
-## ملاحظة بحثية
+Expected result:
 
-تبقى معرفات الأسئلة والمفاهيم والوحدات ثابتة في قاعدة البيانات مهما تغيرت لغة العرض. وبذلك يمكن تحليل نتائج جميع المشاركين في مجموعة واحدة دون تقسيم البيانات بسبب اللغة.
+```text
+V6 global AI academy validation passed.
+```
 
-## إصلاح V4.7.1
+## V6 design files
 
-- إصلاح انهيار صفحة بروتوكول الدراسة في فضاء المقيّم.
-- توطين الصفحة كاملة للغات الثلاث.
-- لا يتطلب الإصلاح أي ترحيل لقاعدة البيانات.
+- `ui_v6.py` — public pages and reusable V6 components
+- `.streamlit/v6_theme.css` — V6 visual system and responsive rules
+- `V6_GLOBAL_BENCHMARK_AND_REDESIGN_AR.md` — benchmark and design rationale
+- `assets/branding/v6_global_academy_preview.html` — static design preview
 
+## Data safety
 
-## V4.8.1 persistent navigation hotfix
-The native sidebar can always be reopened after collapse. Evaluator tools such as research exports remain grouped under Data & exports and are never removed.
-
-### V4.10 interface refinement
-The main content begins closer to the browser top, and horizontal analysis tabs now show an explicit high-contrast selected state.
-
-## V4.11 navigation safety
-Every authenticated workspace now includes an always-visible top navigation bar. It provides page switching, Back, Home, Change account, Sidebar open, and Exit controls even if the native Streamlit sidebar is collapsed.
-
-## V5 native navigation
-
-V5 uses Streamlit's supported multipage router instead of custom in-page navigation buttons. The entrypoint is still `app.py`, but pages are now registered dynamically with `st.Page` and `st.navigation(position="top")` according to the active role, login state, and learner progress.
-
-The common account toolbar provides reliable access to Home, Change account, Switch workspace, and Sign out on every internal page. See `V5_NATIVE_ROUTER_AR.md` for the migration details.
+V6 does not intentionally modify database schemas, participant records, test data, LPQS ratings, AI interaction logs, or research exports. Back up the current database before deployment.

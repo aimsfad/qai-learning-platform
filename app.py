@@ -10,6 +10,7 @@ import db
 import i18n
 import main_app
 import router
+import ui_v6
 from config import APP_ICON, APP_TITLE, load_css
 
 
@@ -43,12 +44,31 @@ def _route_renderer(role: str, internal_page: str, renderer: Callable[[], None])
     return _page
 
 
-def _public_home() -> None:
+def _ensure_public(route_name: str) -> None:
     if st.session_state.get("role") is not None:
         st.session_state.role = None
-        router.queue(router.route_key("public", "home"))
+        router.queue(router.route_key("public", route_name))
         st.rerun()
-    main_app.render_role_selection()
+
+
+def _public_home() -> None:
+    _ensure_public("home")
+    ui_v6.render_home()
+
+
+def _public_programs() -> None:
+    _ensure_public("programs")
+    ui_v6.render_programs()
+
+
+def _public_ai_studio() -> None:
+    _ensure_public("ai_studio")
+    ui_v6.render_ai_studio()
+
+
+def _public_institutions() -> None:
+    _ensure_public("institutions")
+    ui_v6.render_institutions()
 
 
 def _student_access() -> None:
@@ -156,18 +176,21 @@ def _nav_text() -> Dict[str, str]:
     values = {
         "ar": {
             "public_section": "المنصة", "home": "الرئيسية", "learner": "فضاء المتعلم", "evaluator": "فضاء المقيّم",
+            "programs": "البرامج", "ai_studio": "مختبر الذكاء التوليدي", "institutions": "للجامعات والباحثين",
             "overview": "نظرة عامة", "learning": "التعلّم", "assessment": "التقييم", "research": "البحث والموافقة",
             "account": "الحساب", "platform_home": "العودة إلى واجهة المنصة", "learners": "المتعلمون",
             "ai_quality": "الذكاء الاصطناعي والجودة", "data": "البيانات والتصدير", "evaluator_login": "دخول المقيّم",
         },
         "fr": {
             "public_section": "Plateforme", "home": "Accueil", "learner": "Espace apprenant", "evaluator": "Espace évaluateur",
+            "programs": "Programmes", "ai_studio": "Studio IA générative", "institutions": "Universités & recherche",
             "overview": "Vue d’ensemble", "learning": "Apprentissage", "assessment": "Évaluation", "research": "Recherche et consentement",
             "account": "Compte", "platform_home": "Retour à l’accueil de la plateforme", "learners": "Apprenants",
             "ai_quality": "IA et qualité", "data": "Données et export", "evaluator_login": "Connexion évaluateur",
         },
         "en": {
             "public_section": "Platform", "home": "Home", "learner": "Learner workspace", "evaluator": "Evaluator workspace",
+            "programs": "Programs", "ai_studio": "Generative AI Studio", "institutions": "Universities & research",
             "overview": "Overview", "learning": "Learning", "assessment": "Assessment", "research": "Research & consent",
             "account": "Account", "platform_home": "Back to platform home", "learners": "Learners",
             "ai_quality": "AI & quality", "data": "Data & exports", "evaluator_login": "Evaluator sign in",
@@ -195,6 +218,9 @@ def _build_pages() -> tuple[dict, Dict[str, object]]:
 
     if role is None:
         add(pages, nav["public_section"], nav["home"], ":material/home:", router.route_key("public", "home"), _public_home, True)
+        add(pages, nav["public_section"], nav["programs"], ":material/library_books:", router.route_key("public", "programs"), _public_programs)
+        add(pages, nav["public_section"], nav["ai_studio"], ":material/auto_awesome:", router.route_key("public", "ai_studio"), _public_ai_studio)
+        add(pages, nav["public_section"], nav["institutions"], ":material/account_balance:", router.route_key("public", "institutions"), _public_institutions)
         add(pages, nav["public_section"], nav["learner"], ":material/school:", router.route_key("public", "student"), _student_access)
         add(pages, nav["public_section"], nav["evaluator"], ":material/analytics:", router.route_key("public", "evaluator"), _evaluator_access)
         return pages, registry
@@ -268,7 +294,10 @@ def main() -> None:
     navigation = st.navigation(pages, position="top", expanded=True)
     router.register_pages(registry)
     router.process_pending_route()
-    _render_toolbar(getattr(navigation, "title", APP_TITLE))
+    if st.session_state.get("role") is None:
+        ui_v6.render_public_utility_bar()
+    else:
+        _render_toolbar(getattr(navigation, "title", APP_TITLE))
     navigation.run()
 
 
