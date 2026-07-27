@@ -28,7 +28,7 @@ for route in ["programs", "ai_studio", "institutions", "student", "evaluator"]:
     assert f'router.route_key("public", "{route}")' in app, f"Public route not registered: {route}"
 
 assert "ui_v6.render_home()" in app
-assert "ui_v6.render_public_utility_bar()" in app
+assert "ui_v6.render_public_header" in app
 assert "V6_STYLE_PATH" in config and "v6_theme.css" in config
 
 for lang in ["ar", "fr", "en"]:

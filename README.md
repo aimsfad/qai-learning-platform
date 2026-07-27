@@ -1,4 +1,4 @@
-# 3alimnIA V6 — Global AI Academy
+# 3alimnIA V6.0.1 — Global AI Academy
 
 3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.
 
@@ -10,6 +10,14 @@ V6 redesigns the public experience after benchmarking Edraak, Brilliant, IBM Qua
 - a controlled Concept Builder for educational materials;
 - LPQS evaluation of AI responses;
 - learner analytics and anonymized research export.
+
+## V6.0.1 production UI hotfix
+
+- Professional public header with working native Streamlit callbacks.
+- Hidden native navigation registration instead of the visible collapsed menu.
+- Cloud-safe official logo rendering through `st.image`.
+- Compact hero optimized for 1366×768 and multilingual typography.
+- Static validation: `python validate_v601_production_ui.py`.
 
 ## Main experiences
 
