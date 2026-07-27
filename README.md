@@ -105,3 +105,7 @@ V6 global AI academy validation passed.
 ## Data safety
 
 V6 does not intentionally modify database schemas, participant records, test data, LPQS ratings, AI interaction logs, or research exports. Back up the current database before deployment.
+
+## V6.2 — Evaluator Intelligence Dashboard
+
+The evaluator home now uses live platform data in a modern dashboard: native KPI metrics, analytical tabs, Plotly charts, progress-enabled learner tables, LPQS quality views, and direct anonymized CSV/Excel exports. No mock learner data or server-time theme switching is used.

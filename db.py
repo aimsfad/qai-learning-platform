@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.0.1-production-header-hero"
+APP_VERSION = "v6.2-evaluator-intelligence-dashboard"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
