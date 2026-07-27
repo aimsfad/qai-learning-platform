@@ -1,11 +1,3 @@
-# V6.5 — Program Catalog & Institutional Trust
-
-- Rebuilt learning-program cards with responsive metadata, status badges, audience guidance, and native working CTAs.
-- Added tablet two-column and mobile single-column program layouts.
-- Refined the eight learning and platform capability cards with auto-fit CSS Grid.
-- Replaced the old institutional strip with a premium academic trust banner and LPQS evidence panel.
-- Preserved database schema, learning content, evaluation logic, and native navigation.
-
 # V6.2 — Evaluator Intelligence Dashboard
 
 - Rebuilt the evaluator home with Streamlit-native metrics and tabs.
@@ -192,3 +184,9 @@
 - Rebuilt platform evidence statistics as a CSS auto-fit grid shared by the home and AI Studio pages.
 - Added responsive 4/2/1-column behavior, touch-safe card interactions, and mobile typography.
 - Preserved learner, evaluator, AI, LPQS, database, and research-export logic.
+
+## V6.5.1 — Prominent Brand Panel
+- Enlarged and centered the 3alimnIA wordmark inside the main generative-learning visual.
+- Added a localized subtitle in Arabic, French, and English.
+- Rebalanced the AI core, orbits, and Qiskit card to preserve visual hierarchy.
+- Added responsive sizing for tablet and mobile screens.

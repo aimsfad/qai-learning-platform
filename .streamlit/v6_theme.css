@@ -1575,3 +1575,79 @@ html[dir="rtl"] .v65-institution-copy h2 { line-height: 1.5 !important; }
   .v65-program-meta span { align-items: flex-start; text-align: start; padding: .48rem 0; }
   .v65-program-meta span + span { border-inline-start: 0; border-top: 1px solid #e5edf6; }
 }
+
+/* ================================================================
+   3alimnIA V6.5.1 — Prominent brand inside the learning visual
+   ================================================================ */
+.v61-learning-visual .v61-visual-label {
+  top: 6% !important;
+  left: 50% !important;
+  right: auto !important;
+  width: min(88%, 430px) !important;
+  transform: translateX(-50%) !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: .42rem .75rem .52rem !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, rgba(5, 25, 66, .26), rgba(5, 25, 66, .06)) !important;
+  border: 1px solid rgba(177, 225, 255, .12) !important;
+  backdrop-filter: blur(3px);
+}
+.v61-learning-visual .v61-visual-label b {
+  display: block !important;
+  font: 900 clamp(2.15rem, 4.1vw, 3.35rem)/.95 "Inter", "Tajawal", sans-serif !important;
+  letter-spacing: -.07em !important;
+  color: #ffffff !important;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, .28) !important;
+}
+.v61-learning-visual .v61-visual-label b span {
+  color: #ffc431 !important;
+  text-shadow: 0 6px 20px rgba(255, 196, 49, .2) !important;
+}
+.v61-learning-visual .v61-visual-label small {
+  display: block !important;
+  margin-top: .42rem !important;
+  color: #9fe9ff !important;
+  font-size: clamp(.58rem, 1vw, .72rem) !important;
+  font-weight: 850 !important;
+  letter-spacing: .12em !important;
+  line-height: 1.35 !important;
+  text-transform: uppercase !important;
+}
+.v61-learning-visual .v61-ai-core {
+  top: 58% !important;
+}
+.v61-learning-visual .v61-orbit {
+  top: 58% !important;
+}
+.v61-learning-visual .v61-float-card.card-q {
+  top: 29% !important;
+}
+
+@media (max-width: 850px) {
+  .v61-learning-visual .v61-visual-label {
+    top: 5.5% !important;
+    width: 86% !important;
+  }
+  .v61-learning-visual .v61-visual-label b {
+    font-size: clamp(1.9rem, 8vw, 2.65rem) !important;
+  }
+  .v61-learning-visual .v61-ai-core,
+  .v61-learning-visual .v61-orbit {
+    top: 59% !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .v61-learning-visual .v61-visual-label {
+    padding: .35rem .55rem .42rem !important;
+    border-radius: 14px !important;
+  }
+  .v61-learning-visual .v61-visual-label b {
+    font-size: clamp(1.72rem, 10vw, 2.25rem) !important;
+  }
+  .v61-learning-visual .v61-visual-label small {
+    font-size: .52rem !important;
+    letter-spacing: .08em !important;
+  }
+}

@@ -309,6 +309,12 @@ def render_public_header(current_title: str = "") -> None:
 def render_home() -> None:
     c = copy()
     direction = str(c["dir"])
+    lang = i18n.current_lang(st)
+    visual_subtitle = {
+        "ar": "منظومة التعلّم التوليدي",
+        "fr": "SYSTÈME D’APPRENTISSAGE GÉNÉRATIF",
+        "en": "GENERATIVE LEARNING OS",
+    }.get(lang, "GENERATIVE LEARNING OS")
     st.markdown("<span class='v61-home-marker'></span>", unsafe_allow_html=True)
     with st.container(border=False, key="v61_hero"):
         copy_col, visual_col = st.columns([1.13, .87], gap="large", vertical_alignment="center")
@@ -333,10 +339,13 @@ def render_home() -> None:
                 _route_button(str(c["evaluator"]), router.route_key("public", "evaluator"), key="v61_hero_eval")
         with visual_col:
             st.markdown(
-                """
+                f"""
                 <section class='v61-learning-visual' dir='ltr'>
                   <div class='v61-visual-grid'></div>
-                  <div class='v61-visual-label'><b>3alimn<span>IA</span></b><small>Generative Learning OS</small></div>
+                  <div class='v61-visual-label'>
+                    <b>3alimn<span>IA</span></b>
+                    <small>{escape(visual_subtitle)}</small>
+                  </div>
                   <div class='v61-orbit orbit-a'></div><div class='v61-orbit orbit-b'></div>
                   <div class='v61-ai-core'><strong>AI</strong><span>Learn</span></div>
                   <div class='v61-float-card card-q'><b>Qiskit</b><small>Practice</small></div>
