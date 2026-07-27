@@ -1,3 +1,11 @@
+# V6.5 — Program Catalog & Institutional Trust
+
+- Rebuilt learning-program cards with responsive metadata, status badges, audience guidance, and native working CTAs.
+- Added tablet two-column and mobile single-column program layouts.
+- Refined the eight learning and platform capability cards with auto-fit CSS Grid.
+- Replaced the old institutional strip with a premium academic trust banner and LPQS evidence panel.
+- Preserved database schema, learning content, evaluation logic, and native navigation.
+
 # V6.2 — Evaluator Intelligence Dashboard
 
 - Rebuilt the evaluator home with Streamlit-native metrics and tabs.

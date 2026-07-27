@@ -29,6 +29,12 @@ COPY: Dict[str, Dict[str, object]] = {
         "programs_kicker": "برامج مصممة للتدرّج والإتقان",
         "programs_title": "ابدأ بمسار، ثم انتقل من الأساسيات إلى الإتقان",
         "programs_body": "كل برنامج يوضح المستوى، المدة، الوحدات، المتطلبات، ومخرجات التعلّم قبل أن يبدأ الطالب.",
+        "program_audience": "الفئة المستهدفة",
+        "capabilities_kicker": "من التعلّم إلى الدليل",
+        "capabilities_title": "قدرات تربوية وبحثية تتجاوز منصة الدورات التقليدية",
+        "capabilities_body": "يجمع النظام بين الدعم التوليدي، إنتاج المواد، قياس جودة الاستجابات، وتحليلات التعلّم في تجربة واحدة.",
+        "institution_bullets": ["إدارة المجموعات", "تحليلات التعلّم", "تقييم LPQS", "تصدير بحثي مجهول"],
+        "lpqs_label": "7 معايير جودة",
         "available": "متاح الآن",
         "coming": "قريبًا",
         "level": "المستوى",
@@ -95,6 +101,12 @@ COPY: Dict[str, Dict[str, object]] = {
         "programs_kicker": "DES PARCOURS CONÇUS POUR PROGRESSER",
         "programs_title": "Partez des fondamentaux et progressez vers la maîtrise",
         "programs_body": "Chaque programme présente le niveau, la durée, les modules, les prérequis et les acquis attendus avant l’inscription.",
+        "program_audience": "Public visé",
+        "capabilities_kicker": "DE L’APPRENTISSAGE À LA PREUVE",
+        "capabilities_title": "Des capacités pédagogiques et scientifiques au-delà d’un catalogue de cours",
+        "capabilities_body": "Le système réunit accompagnement génératif, production de ressources, évaluation des réponses et analytics dans une même expérience.",
+        "institution_bullets": ["Gestion des cohortes", "Learning analytics", "Évaluation LPQS", "Export anonymisé"],
+        "lpqs_label": "7 critères qualité",
         "available": "Disponible",
         "coming": "Bientôt",
         "level": "Niveau",
@@ -161,6 +173,12 @@ COPY: Dict[str, Dict[str, object]] = {
         "programs_kicker": "PATHS DESIGNED FOR PROGRESS AND MASTERY",
         "programs_title": "Start with fundamentals and progress toward mastery",
         "programs_body": "Every program clearly presents level, duration, modules, prerequisites, and expected outcomes before enrollment.",
+        "program_audience": "Best for",
+        "capabilities_kicker": "FROM LEARNING TO EVIDENCE",
+        "capabilities_title": "Pedagogical and research capabilities beyond a traditional course catalog",
+        "capabilities_body": "The system unifies generative support, learning-content production, response evaluation, and learning analytics in one experience.",
+        "institution_bullets": ["Cohort management", "Learning analytics", "LPQS evaluation", "Anonymized export"],
+        "lpqs_label": "7 quality criteria",
         "available": "Available now",
         "coming": "Coming soon",
         "level": "Level",
@@ -340,8 +358,9 @@ def render_home() -> None:
         ) + "</section>",
         unsafe_allow_html=True,
     )
+    _section_heading(str(c["capabilities_kicker"]), str(c["capabilities_title"]), str(c["capabilities_body"]), direction)
     st.markdown(
-        f"<section class='v6-pillar-grid' dir='{direction}'>" + "".join(
+        f"<section class='v6-pillar-grid v65-capabilities-grid' dir='{direction}'>" + "".join(
             f"<article><div class='material-symbols-rounded'>{escape(str(icon))}</div><h3>{escape(str(title))}</h3><p>{escape(str(body))}</p></article>"
             for icon, title, body in c["pillars"]
         ) + "</section>",
@@ -436,21 +455,28 @@ def _program_cards(direction: str, compact: bool = False, track_ids: List[str] |
     path_labels = {"ar": "مسار تعلّم", "fr": "Parcours", "en": "Learning path"}
     for index, (col, track_id) in enumerate(zip(cols, track_order), start=1):
         track = branding.TRACKS[track_id]
-        status = c["available"] if track_id == "quantum" else c["coming"]
-        modules_value = len(content.LESSONS) if track_id == "quantum" else "—"
-        feature_class = " featured" if track_id == "quantum" else ""
+        is_available = track_id == "quantum"
+        status = c["available"] if is_available else c["coming"]
+        status_class = "available" if is_available else "coming"
+        modules_value = len(content.LESSONS) if is_available else "—"
+        feature_class = " featured" if is_available else ""
         with col:
             st.markdown(
                 f"""
-                <article class='v61-program-card {track_id}{feature_class}' dir='{direction}'>
-                  <div class='v61-program-head'>
-                    <div class='v61-program-icon'>{escape(str(track['icon']))}</div>
-                    <div class='v61-program-status'>{escape(str(status))}</div>
+                <article class='v65-program-card {track_id}{feature_class}' dir='{direction}'>
+                  <div class='v65-program-head'>
+                    <div class='v65-program-icon'>{escape(str(track['icon']))}</div>
+                    <div class='v65-program-status {status_class}'>{escape(str(status))}</div>
                   </div>
-                  <span class='v61-path-label'>{escape(path_labels[lang])} {index:02d}</span>
+                  <span class='v65-path-label'>{escape(path_labels[lang])} {index:02d}</span>
                   <h3>{escape(str(track['name'][lang]))}</h3>
-                  <p>{escape(str(track['description'][lang]))}</p>
-                  <div class='v61-program-meta'>
+                  <p class='v65-program-desc'>{escape(str(track['description'][lang]))}</p>
+                  <div class='v65-program-audience'>
+                    <span class='material-symbols-rounded'>group</span>
+                    <small>{escape(str(c['program_audience']))}</small>
+                    <b>{escape(str(track['audience'][lang]))}</b>
+                  </div>
+                  <div class='v65-program-meta'>
                     <span><small>{escape(str(c['level']))}</small><b>{escape(str(c['beginner']))}</b></span>
                     <span><small>{escape(str(c['duration']))}</small><b>{escape(str(c['hours']))}</b></span>
                     <span><small>{escape(str(c['modules']))}</small><b>{modules_value}</b></span>
@@ -459,9 +485,14 @@ def _program_cards(direction: str, compact: bool = False, track_ids: List[str] |
                 """,
                 unsafe_allow_html=True,
             )
-            label = c["start_program"] if track_id == "quantum" else c["view_program"]
-            if st.button(str(label), key=f"v61_program_{track_id}_{'compact' if compact else 'full'}", type="primary" if track_id == "quantum" else "secondary", use_container_width=True):
-                if track_id == "quantum":
+            label = c["start_program"] if is_available else c["view_program"]
+            if st.button(
+                str(label),
+                key=f"v65_program_{track_id}_{'compact' if compact else 'full'}",
+                type="primary" if is_available else "secondary",
+                use_container_width=True,
+            ):
+                if is_available:
                     router.navigate(router.route_key("public", "student"))
                 else:
                     st.session_state["v6_preview_track"] = track_id
@@ -576,16 +607,35 @@ def _page_hero(title: str, body: str, direction: str, icon: str) -> None:
 
 def _institution_strip(direction: str) -> None:
     c = copy()
+    bullets = "".join(
+        f"<span><i class='material-symbols-rounded'>check_circle</i>{escape(str(item))}</span>"
+        for item in c["institution_bullets"]
+    )
     st.markdown(
         f"""
-        <section class='v6-institution-strip' dir='{direction}'>
-          <div><span>{escape(str(c['institution_kicker']))}</span><h2>{escape(str(c['institution_title']))}</h2><p>{escape(str(c['institution_body']))}</p></div>
-          <div class='v6-lpqs-badge'><b>LPQS</b><small>7 criteria</small></div>
+        <section class='v65-institution-banner' dir='{direction}'>
+          <div class='v65-institution-copy'>
+            <span class='v65-institution-kicker'>{escape(str(c['institution_kicker']))}</span>
+            <h2>{escape(str(c['institution_title']))}</h2>
+            <p>{escape(str(c['institution_body']))}</p>
+            <div class='v65-institution-trust'>{bullets}</div>
+          </div>
+          <div class='v65-institution-evidence'>
+            <div class='v65-evidence-orbit'></div>
+            <strong>LPQS</strong>
+            <span>{escape(str(c['lpqs_label']))}</span>
+          </div>
         </section>
+        <span class='v65-institution-cta-marker'></span>
         """,
         unsafe_allow_html=True,
     )
-    if st.button(str(c["institution_cta"]), key="v6_institution_cta", use_container_width=False):
+    if st.button(
+        str(c["institution_cta"]),
+        key="v65_institution_cta",
+        type="primary",
+        use_container_width=False,
+    ):
         router.navigate(router.route_key("public", "evaluator"))
 
 
