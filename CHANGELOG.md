@@ -1,3 +1,12 @@
+# V6.6 — Student Learning Workspace
+
+- Rebuilt the learner module page into a two-column lesson-and-coach workspace.
+- Added a compact stage header and collapsible module map to reduce vertical page length.
+- Added four learner-facing stages: understand, visual experiment, Qiskit bridge, and understanding check.
+- Added a compact AI coach that requires a learner attempt before support.
+- Added responsive mobile stacking, RTL-aware layout, dark-mode surfaces, and clearer completion controls.
+- Updated the instrumented application version to `v6.6-student-learning-workspace`.
+
 # V6.2 — Evaluator Intelligence Dashboard
 
 - Rebuilt the evaluator home with Streamlit-native metrics and tabs.

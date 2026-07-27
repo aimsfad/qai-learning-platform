@@ -20,7 +20,7 @@ for token in required_ui:
     assert token in ui, token
 for token in required_css:
     assert token in css, token
-assert "v6.5-program-catalog-institutional-trust" in db
+assert 'APP_VERSION = "v6.' in db
 assert ui.count('\"capabilities_title\"') >= 3
 assert ui.count('"institution_bullets"') >= 3
 print("V6.5 program catalog and institutional trust validation passed.")

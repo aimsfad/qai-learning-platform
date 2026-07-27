@@ -1,4 +1,4 @@
-# 3alimnIA V6.0.1 — Global AI Academy
+# 3alimnIA V6.6 — Student Learning Workspace
 
 3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.
 
@@ -10,6 +10,14 @@ V6 redesigns the public experience after benchmarking Edraak, Brilliant, IBM Qua
 - a controlled Concept Builder for educational materials;
 - LPQS evaluation of AI responses;
 - learner analytics and anonymized research export.
+
+## V6.6 student learning workspace
+
+- Rebuilt the module page as a focused two-column learning workspace.
+- Added a compact stage header, collapsible module map, four-step lesson flow, and embedded formative AI coach.
+- Preserved research logging, study groups, assessments, LPQS, and database schema.
+- Added responsive stacking, RTL support, and dark-mode-compatible surfaces.
+- Static validation: `python validate_v66_student_workspace.py`.
 
 ## V6.0.1 production UI hotfix
 
@@ -121,7 +129,7 @@ python validate_v63_responsive_ui.py
 ```
 
 
-## V6.5 — AI Studio and responsive evidence cards
+## V6.4 — AI Studio and responsive evidence cards
 
 The Generative AI Studio now opens with a localized premium banner that explains the platform's content-generation, guided-coaching, and LPQS evaluation roles. The home and AI Studio evidence cards use a CSS auto-fit grid: four cards on wide screens, two on tablets, and one on phones.
 
@@ -130,8 +138,3 @@ Validation:
 ```bash
 python validate_v64_ai_studio.py
 ```
-
-
-## V6.5 — Program Catalog & Institutional Trust
-
-Responsive program cards with availability badges, audience and metadata blocks, modern capability grids, and a research-focused institutional banner.

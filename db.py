@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.5-program-catalog-institutional-trust"
+APP_VERSION = "v6.6-student-learning-workspace"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
