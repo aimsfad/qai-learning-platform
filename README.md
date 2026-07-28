@@ -160,3 +160,7 @@ Validation:
 ```bash
 python validate_v64_ai_studio.py
 ```
+
+## V6.8 Student Command Workspace
+
+The learner module now uses a 60/40 lesson-and-coach split on desktop, a sticky internally scrollable AI coach, contextual quick-support controls, and the official white 3alimnIA logo across authenticated workspaces. Mobile remains vertically stacked.

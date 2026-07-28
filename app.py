@@ -136,29 +136,46 @@ def _queue_home() -> None:
 
 
 def _render_toolbar(current_title: str) -> None:
+    """Render a stable workspace toolbar with the official logo on every page.
+
+    The layout is mirrored for RTL so the white logo stays on the visual right in
+    Arabic and on the visual left in French/English. All controls remain native
+    Streamlit widgets to preserve reliable routing and callbacks.
+    """
     role = st.session_state.get("role")
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
     copy = _toolbar_copy()
     workspace = copy.get(role) or getattr(branding, "BRAND_NAME_LATIN", branding.BRAND_NAME)
 
-    with st.container(border=True):
-        st.markdown("<span class='v5-toolbar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    with st.container(border=True, key="v68_workspace_toolbar"):
+        st.markdown("<span class='v5-toolbar-marker v68-toolbar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+
         if role in {"student", "evaluator"}:
-            identity_col, language_col, home_col, account_col, workspace_col, logout_col = st.columns(
-                [3.2, 1.35, .9, 1.35, 1.25, 1.05], gap="small", vertical_alignment="center"
-            )
-        else:
-            identity_col, language_col = st.columns([5, 1.35], gap="small", vertical_alignment="center")
-        with identity_col:
-            st.markdown(
-                f"<div class='v5-toolbar-identity' dir='{direction}'>"
-                f"<span>{escape(workspace)}</span><strong>{escape(current_title)}</strong></div>",
-                unsafe_allow_html=True,
-            )
-        with language_col:
-            main_app.render_language_selector(st, key="v5_global_language", label_visibility="collapsed")
-        if role in {"student", "evaluator"}:
+            if lang == "ar":
+                logout_col, workspace_col, account_col, home_col, language_col, identity_col, logo_col = st.columns(
+                    [1.02, 1.18, 1.28, .88, 1.25, 2.28, 1.48], gap="small", vertical_alignment="center"
+                )
+            else:
+                logo_col, identity_col, language_col, home_col, account_col, workspace_col, logout_col = st.columns(
+                    [1.48, 2.28, 1.25, .88, 1.28, 1.18, 1.02], gap="small", vertical_alignment="center"
+                )
+
+            with logo_col:
+                st.markdown("<span class='v68-internal-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+                if branding.HEADER_WHITE_LOGO_PATH.exists():
+                    st.image(str(branding.HEADER_WHITE_LOGO_PATH), use_container_width=True)
+                elif branding.OFFICIAL_LOGO_PATH.exists():
+                    st.image(str(branding.OFFICIAL_LOGO_PATH), use_container_width=True)
+
+            with identity_col:
+                st.markdown(
+                    f"<div class='v5-toolbar-identity v68-toolbar-identity' dir='{direction}'>"
+                    f"<span>{escape(workspace)}</span><strong>{escape(current_title)}</strong></div>",
+                    unsafe_allow_html=True,
+                )
+            with language_col:
+                main_app.render_language_selector(st, key="v5_global_language", label_visibility="collapsed")
             with home_col:
                 st.button(copy["home"], key="v5_home", use_container_width=True, on_click=_queue_home)
             with account_col:
@@ -167,7 +184,20 @@ def _render_toolbar(current_title: str) -> None:
                 st.button(copy["workspace"], key="v5_workspace", use_container_width=True, on_click=main_app.switch_workspace_callback)
             with logout_col:
                 st.button(copy["logout"], key="v5_logout", type="primary", use_container_width=True, on_click=main_app.logout_callback)
-
+        else:
+            logo_col, identity_col, language_col = st.columns([1.5, 4.7, 1.35], gap="small", vertical_alignment="center")
+            with logo_col:
+                st.markdown("<span class='v68-internal-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+                if branding.HEADER_WHITE_LOGO_PATH.exists():
+                    st.image(str(branding.HEADER_WHITE_LOGO_PATH), use_container_width=True)
+            with identity_col:
+                st.markdown(
+                    f"<div class='v5-toolbar-identity v68-toolbar-identity' dir='{direction}'>"
+                    f"<span>{escape(workspace)}</span><strong>{escape(current_title)}</strong></div>",
+                    unsafe_allow_html=True,
+                )
+            with language_col:
+                main_app.render_language_selector(st, key="v5_global_language", label_visibility="collapsed")
 
 
 
