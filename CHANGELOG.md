@@ -231,3 +231,9 @@
 - Added a localized subtitle in Arabic, French, and English.
 - Rebalanced the AI core, orbits, and Qiskit card to preserve visual hierarchy.
 - Added responsive sizing for tablet and mobile screens.
+
+## V6.8.1 — Student UX Hotfix
+- Fixed learner dashboard current-module contrast.
+- Rebuilt the study roadmap as a native grouped container.
+- Replaced the viewport-pinned root chat input with an inline AI Coach composer.
+- Compact learner tool dock and responsive dark/light styling.

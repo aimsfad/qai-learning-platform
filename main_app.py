@@ -885,27 +885,33 @@ def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
 def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
     items = completion_items(student)
     done_count = sum(1 for _, ok, _ in items if ok)
-    st.markdown("<div class='qai-roadmap'><div class='qai-roadmap-title'>Study roadmap</div>", unsafe_allow_html=True)
-    st.progress(done_count / len(items), text=f"Required workflow progress: {done_count}/{len(items)}")
-    st.markdown(f"<div class='qai-next-action'><b>{next_action_text(student)}</b></div>", unsafe_allow_html=True)
-    if compact:
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-    cols = st.columns(3)
-    for idx, (label, ok, detail) in enumerate(items):
-        klass = "qai-step-done" if ok else "qai-step-pending"
-        value = "Done" if ok else detail
-        icon = "✅" if ok else "⬜"
-        with cols[idx % 3]:
-            st.markdown(
-                f"<div class='qai-step {klass}'><div class='qai-step-title'>{icon} {label}</div><div class='qai-step-value'>{value}</div></div>",
-                unsafe_allow_html=True,
-            )
-    st.markdown("</div>", unsafe_allow_html=True)
-    if done_count == len(items):
-        st.success("This participation is complete for analysis.")
-    else:
-        st.caption("Tip: use the Continue button on the Student Home page whenever you are unsure what to do next.")
+
+    # Use a native container so the progress bar, next action, and workflow
+    # cards are structurally grouped. Opening an HTML <div> before Streamlit
+    # widgets does not wrap later widgets and previously produced a visually
+    # fragmented roadmap.
+    with st.container(border=True, key="v681_roadmap"):
+        st.markdown("<div class='qai-roadmap-title'>Study roadmap</div>", unsafe_allow_html=True)
+        st.progress(done_count / len(items), text=f"Required workflow progress: {done_count}/{len(items)}")
+        st.markdown(f"<div class='qai-next-action'><b>{next_action_text(student)}</b></div>", unsafe_allow_html=True)
+        if compact:
+            return
+
+        cols = st.columns(3)
+        for idx, (label, ok, detail) in enumerate(items):
+            klass = "qai-step-done" if ok else "qai-step-pending"
+            value = "Done" if ok else detail
+            icon = "✅" if ok else "⬜"
+            with cols[idx % 3]:
+                st.markdown(
+                    f"<div class='qai-step {klass}'><div class='qai-step-title'>{icon} {label}</div><div class='qai-step-value'>{value}</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+        if done_count == len(items):
+            st.success("This participation is complete for analysis.")
+        else:
+            st.caption("Tip: use the Continue button on the Student Home page whenever you are unsure what to do next.")
 
 
 def render_status_badge(target=st) -> None:
@@ -3089,10 +3095,30 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
             if msg.get("interaction_id") and msg["role"] == "assistant":
                 render_ai_usefulness_feedback(msg["interaction_id"], f"chat_{msg['interaction_id']}")
 
-    prompt = st.chat_input("Ask about the current module, a concept, or a Qiskit code snippet...")
+    # Keep the composer inline with the conversation. A root-level st.chat_input
+    # is pinned to the viewport by Streamlit and can cover the page hero or tools
+    # while the learner scrolls. The bordered form below is stable on desktop,
+    # tablet, and mobile, and preserves a clear send action.
+    manual_prompt = ""
+    send_manual = False
+    with st.container(border=True, key="v681_chat_composer"):
+        st.markdown("#### Ask the AI Coach")
+        st.caption("Write your own attempt, question, or small Qiskit snippet. The coach will guide your reasoning rather than replace it.")
+        with st.form("v681_chat_composer_form", clear_on_submit=True):
+            manual_prompt = st.text_area(
+                "Message to the AI Coach",
+                placeholder="Ask about the current module, a concept, or a Qiskit code snippet...",
+                height=112,
+                label_visibility="collapsed",
+            )
+            send_manual = st.form_submit_button("Send to AI Coach", type="primary", use_container_width=True)
+
+    prompt = None
     if send_draft:
         prompt = st.session_state.get("pending_chat_prompt", "")
         st.session_state.pending_chat_prompt = ""
+    elif send_manual:
+        prompt = manual_prompt
 
     if prompt:
         if len(prompt.strip()) < 10:
