@@ -1,0 +1,21 @@
+{
+  "project_name": "",
+  "domain": "",
+  "program_name": "",
+  "unit_title": "",
+  "target_concept": "",
+  "target_learners": "",
+  "learner_level": "Beginner",
+  "prerequisites": "",
+  "target_languages": ["Arabic", "French", "English"],
+  "primary_language": "Arabic",
+  "expected_duration": "25 minutes",
+  "technical_environment": "Streamlit",
+  "platform_components": ["AI Coach", "Assessment", "Learning analytics"],
+  "source_material": "",
+  "teaching_preferences": "",
+  "assessment_preferences": "",
+  "additional_notes": "",
+  "requested_outputs": ["Interactive lesson", "Illustrations", "Video", "Assessment bank", "AI Coach prompts"],
+  "phase_number": 1
+}

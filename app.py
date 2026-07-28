@@ -10,6 +10,7 @@ import db
 import i18n
 import main_app
 import router
+import teacher_studio
 import ui_v6
 from config import APP_ICON, APP_TITLE, load_css
 
@@ -38,6 +39,8 @@ def _route_renderer(role: str, internal_page: str, renderer: Callable[[], None])
             st.session_state.student_page = internal_page
         elif role == "evaluator":
             st.session_state.evaluator_page = internal_page
+        elif role == "teacher":
+            st.session_state.teacher_page = internal_page
         renderer()
 
     _page.__name__ = f"render_{role}_{internal_page.lower().replace(' ', '_').replace('-', '_')}"
@@ -89,12 +92,23 @@ def _evaluator_access() -> None:
     main_app.render_evaluator_app()
 
 
+def _teacher_access() -> None:
+    teacher_studio.init_teacher_state()
+    if st.session_state.get("role") != "teacher":
+        st.session_state.role = "teacher"
+        st.session_state.teacher_page = "Content Studio"
+        router.queue(router.route_key("teacher", "Content Studio"))
+        st.rerun()
+    teacher_studio.render_teacher_app()
+
+
 def _toolbar_copy() -> Dict[str, str]:
     lang = i18n.current_lang(st)
     values = {
         "ar": {
             "student": "فضاء المتعلم",
             "evaluator": "فضاء المقيّم والباحث",
+            "teacher": "فضاء الأستاذ",
             "home": "الرئيسية",
             "account": "تغيير الحساب",
             "workspace": "تغيير الفضاء",
@@ -104,6 +118,7 @@ def _toolbar_copy() -> Dict[str, str]:
         "fr": {
             "student": "Espace apprenant",
             "evaluator": "Espace évaluateur et recherche",
+            "teacher": "Espace enseignant",
             "home": "Accueil",
             "account": "Changer de compte",
             "workspace": "Changer d’espace",
@@ -113,6 +128,7 @@ def _toolbar_copy() -> Dict[str, str]:
         "en": {
             "student": "Learner workspace",
             "evaluator": "Evaluator & research workspace",
+            "teacher": "Teacher workspace",
             "home": "Home",
             "account": "Change account",
             "workspace": "Switch workspace",
@@ -131,6 +147,9 @@ def _queue_home() -> None:
     elif role == "evaluator":
         st.session_state.evaluator_page = "Evaluator Dashboard"
         router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
+    elif role == "teacher":
+        st.session_state.teacher_page = "Content Studio"
+        router.queue(router.route_key("teacher", "Content Studio"))
     else:
         router.queue(router.route_key("public", "home"))
 
@@ -151,7 +170,7 @@ def _render_toolbar(current_title: str) -> None:
     with st.container(border=True, key="v68_workspace_toolbar"):
         st.markdown("<span class='v5-toolbar-marker v68-toolbar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
 
-        if role in {"student", "evaluator"}:
+        if role in {"student", "evaluator", "teacher"}:
             if lang == "ar":
                 logout_col, workspace_col, account_col, home_col, language_col, identity_col, logo_col = st.columns(
                     [1.02, 1.18, 1.28, .88, 1.25, 2.28, 1.48], gap="small", vertical_alignment="center"
@@ -327,25 +346,25 @@ def _nav_text() -> Dict[str, str]:
     lang = i18n.current_lang(st)
     values = {
         "ar": {
-            "public_section": "المنصة", "home": "الرئيسية", "learner": "فضاء المتعلم", "evaluator": "فضاء المقيّم",
+            "public_section": "المنصة", "home": "الرئيسية", "learner": "فضاء المتعلم", "evaluator": "فضاء المقيّم", "teacher": "فضاء الأستاذ",
             "programs": "البرامج", "ai_studio": "مختبر الذكاء التوليدي", "institutions": "للجامعات والباحثين",
             "overview": "نظرة عامة", "learning": "التعلّم", "assessment": "التقييم", "research": "البحث والموافقة",
             "account": "الحساب", "platform_home": "العودة إلى واجهة المنصة", "learners": "المتعلمون",
-            "ai_quality": "الذكاء الاصطناعي والجودة", "data": "البيانات والتصدير", "evaluator_login": "دخول المقيّم",
+            "ai_quality": "الذكاء الاصطناعي والجودة", "data": "البيانات والتصدير", "evaluator_login": "دخول المقيّم", "teacher_studio": "استوديو إنتاج المحتوى",
         },
         "fr": {
-            "public_section": "Plateforme", "home": "Accueil", "learner": "Espace apprenant", "evaluator": "Espace évaluateur",
+            "public_section": "Plateforme", "home": "Accueil", "learner": "Espace apprenant", "evaluator": "Espace évaluateur", "teacher": "Espace enseignant",
             "programs": "Programmes", "ai_studio": "Studio IA générative", "institutions": "Universités & recherche",
             "overview": "Vue d’ensemble", "learning": "Apprentissage", "assessment": "Évaluation", "research": "Recherche et consentement",
             "account": "Compte", "platform_home": "Retour à l’accueil de la plateforme", "learners": "Apprenants",
-            "ai_quality": "IA et qualité", "data": "Données et export", "evaluator_login": "Connexion évaluateur",
+            "ai_quality": "IA et qualité", "data": "Données et export", "evaluator_login": "Connexion évaluateur", "teacher_studio": "Studio de contenu",
         },
         "en": {
-            "public_section": "Platform", "home": "Home", "learner": "Learner workspace", "evaluator": "Evaluator workspace",
+            "public_section": "Platform", "home": "Home", "learner": "Learner workspace", "evaluator": "Evaluator workspace", "teacher": "Teacher workspace",
             "programs": "Programs", "ai_studio": "Generative AI Studio", "institutions": "Universities & research",
             "overview": "Overview", "learning": "Learning", "assessment": "Assessment", "research": "Research & consent",
             "account": "Account", "platform_home": "Back to platform home", "learners": "Learners",
-            "ai_quality": "AI & quality", "data": "Data & exports", "evaluator_login": "Evaluator sign in",
+            "ai_quality": "AI & quality", "data": "Data & exports", "evaluator_login": "Evaluator sign in", "teacher_studio": "Content Studio",
         },
     }
     return values.get(lang, values["en"])
@@ -375,6 +394,7 @@ def _build_pages() -> tuple[dict, Dict[str, object]]:
         add(pages, nav["public_section"], nav["institutions"], ":material/account_balance:", router.route_key("public", "institutions"), _public_institutions)
         add(pages, nav["public_section"], nav["learner"], ":material/school:", router.route_key("public", "student"), _student_access)
         add(pages, nav["public_section"], nav["evaluator"], ":material/analytics:", router.route_key("public", "evaluator"), _evaluator_access)
+        add(pages, nav["public_section"], nav["teacher"], ":material/cast_for_education:", router.route_key("public", "teacher"), _teacher_access)
         return pages, registry
 
     if role == "student":
@@ -406,6 +426,20 @@ def _build_pages() -> tuple[dict, Dict[str, object]]:
                 default=default,
             )
         # Keep public home registered and visible as an explicit escape route.
+        add(pages, nav["account"], nav["platform_home"], ":material/apps:", router.route_key("public", "home"), _public_home)
+        return pages, registry
+
+    if role == "teacher":
+        teacher_studio.init_teacher_state()
+        add(
+            pages,
+            nav["teacher"],
+            nav["teacher_studio"],
+            ":material/auto_stories:",
+            router.route_key("teacher", "Content Studio"),
+            _route_renderer("teacher", "Content Studio", teacher_studio.render_teacher_app),
+            True,
+        )
         add(pages, nav["account"], nav["platform_home"], ":material/apps:", router.route_key("public", "home"), _public_home)
         return pages, registry
 

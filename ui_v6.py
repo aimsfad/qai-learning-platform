@@ -24,6 +24,7 @@ COPY: Dict[str, Dict[str, object]] = {
         "start": "ابدأ التعلّم",
         "explore": "استكشف البرامج",
         "evaluator": "فضاء المقيّم والباحث",
+        "teacher": "فضاء الأستاذ",
         "trust": ["العربية · Français · English", "تعلّم تطبيقي", "AI بعد محاولة المتعلم", "LPQS للتقييم التربوي"],
         "stats": [("6", "وحدات Qiskit"), ("3", "لغات واجهة ومحتوى"), ("7", "معايير LPQS"), ("24/7", "دعم تعلّم موجّه")],
         "programs_kicker": "برامج مصممة للتدرّج والإتقان",
@@ -96,6 +97,7 @@ COPY: Dict[str, Dict[str, object]] = {
         "start": "Commencer à apprendre",
         "explore": "Explorer les programmes",
         "evaluator": "Espace évaluateur et recherche",
+        "teacher": "Espace enseignant",
         "trust": ["العربية · Français · English", "Apprentissage pratique", "IA après la tentative", "Évaluation LPQS"],
         "stats": [("6", "modules Qiskit"), ("3", "langues"), ("7", "critères LPQS"), ("24/7", "aide guidée")],
         "programs_kicker": "DES PARCOURS CONÇUS POUR PROGRESSER",
@@ -168,6 +170,7 @@ COPY: Dict[str, Dict[str, object]] = {
         "start": "Start learning",
         "explore": "Explore programs",
         "evaluator": "Evaluator & research workspace",
+        "teacher": "Teacher workspace",
         "trust": ["العربية · Français · English", "Practice-based learning", "AI after learner attempt", "LPQS evaluation"],
         "stats": [("6", "Qiskit modules"), ("3", "languages"), ("7", "LPQS criteria"), ("24/7", "guided support")],
         "programs_kicker": "PATHS DESIGNED FOR PROGRESS AND MASTERY",
@@ -281,13 +284,13 @@ def render_public_header(current_title: str = "") -> None:
     c = copy()
     lang = i18n.current_lang(st)
     header_labels = {
-        "ar": {"home": "الرئيسية", "programs": "البرامج", "ai": "مختبر الذكاء", "institutions": "للجامعات", "evaluator": "دخول المقيّم", "start": "ابدأ الآن"},
-        "fr": {"home": "Accueil", "programs": "Programmes", "ai": "Studio IA", "institutions": "Universités", "evaluator": "Évaluateur", "start": "Commencer"},
-        "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "evaluator": "Evaluator", "start": "Start now"},
+        "ar": {"home": "الرئيسية", "programs": "البرامج", "ai": "مختبر الذكاء", "institutions": "للجامعات", "teacher": "دخول الأستاذ", "evaluator": "دخول المقيّم", "start": "ابدأ الآن"},
+        "fr": {"home": "Accueil", "programs": "Programmes", "ai": "Studio IA", "institutions": "Universités", "teacher": "Enseignant", "evaluator": "Évaluateur", "start": "Commencer"},
+        "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "teacher": "Teacher", "evaluator": "Evaluator", "start": "Start now"},
     }[lang]
     with st.container(border=False, key="v61_public_header"):
-        logo_col, nav_col, language_col, evaluator_col, start_col = st.columns(
-            [2.05, 4.05, 1.0, 1.1, 1.05], gap="small", vertical_alignment="center"
+        logo_col, nav_col, language_col, teacher_col, evaluator_col, start_col = st.columns(
+            [1.85, 3.55, .95, .95, .95, 1.0], gap="small", vertical_alignment="center"
         )
         with logo_col:
             _render_official_logo(224)
@@ -305,6 +308,8 @@ def render_public_header(current_title: str = "") -> None:
         with language_col:
             import main_app
             main_app.render_language_selector(st, key="v61_public_language", label_visibility="collapsed")
+        with teacher_col:
+            _header_button(header_labels["teacher"], router.route_key("public", "teacher"), key="v69_public_teacher")
         with evaluator_col:
             _header_button(header_labels["evaluator"], router.route_key("public", "evaluator"), key="v61_public_evaluator")
         with start_col:

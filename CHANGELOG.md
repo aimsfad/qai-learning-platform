@@ -248,3 +248,13 @@
 - Rebuilt the study roadmap as a native grouped container.
 - Replaced the viewport-pinned root chat input with an inline AI Coach composer.
 - Compact learner tool dock and responsive dark/light styling.
+
+## V6.9 — Teacher Content Studio
+
+- Added a dedicated teacher workspace and secure teacher sign-in.
+- Stored the phase-gated educational-production master prompt under `prompts/`.
+- Added structured project briefs for subject content, pedagogy, assessment, references, languages, and requested assets.
+- Added PDF, DOCX, and text-source extraction with bounded context limits.
+- Added prompt compilation, JSON/Markdown downloads, phase-specific AI generation, and generation history.
+- Added `teacher_projects` and `teacher_generation_runs` database tables.
+- Added a teacher entry point to the public header and native router.

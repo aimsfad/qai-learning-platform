@@ -2569,3 +2569,39 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
     border-radius: 17px !important;
   }
 }
+
+/* ========================================================================== */
+/* V6.9 Teacher Content Studio                                                */
+/* ========================================================================== */
+[data-testid="stForm"] {
+  border-radius: 1.25rem;
+}
+
+.v69-teacher-studio-note {
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(239, 246, 255, .96), rgba(255, 255, 255, .98));
+  padding: 1rem 1.1rem;
+  box-shadow: 0 12px 28px rgba(15, 45, 90, .06);
+}
+
+[data-testid="stRadio"] [role="radiogroup"] {
+  gap: .55rem;
+}
+
+[data-testid="stRadio"] [role="radiogroup"] > label {
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: .85rem;
+  padding: .48rem .8rem;
+  background: var(--secondary-background-color, #fff);
+}
+
+@media (max-width: 768px) {
+  [data-testid="stRadio"] [role="radiogroup"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  [data-testid="stRadio"] [role="radiogroup"] > label {
+    width: 100%;
+  }
+}
