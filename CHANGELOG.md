@@ -1,3 +1,24 @@
+# V6.9.2 — Teacher project workspaces and publishing
+
+- Replaced the saved-project selector with responsive project cards and production progress.
+- Added a dedicated workspace for each teacher-authored project.
+- Added project overview, editing, phase outputs, learner preview, and lifecycle controls.
+- Added draft, review, published, and archived states.
+- Required a completed Phase 3 output before publication.
+- Added a read-only learner catalogue for published teacher projects.
+- Added published-course previews for lesson, activity, assessment, AI Coach, and references.
+- Preserved teacher ownership and hid drafts from learners.
+
+# V6.9.1 — Teacher accounts
+
+- Added database-backed teacher self-registration.
+- Added sign-in with username or email.
+- Added secure PBKDF2-SHA256 password hashing.
+- Added optional registration invitation code and registration toggle.
+- Removed reliance on an implicit default teacher password.
+- Preserved optional legacy secret-based administrator access.
+- Added multilingual registration UI and per-teacher project ownership.
+
 # Changelog
 
 ## V6.8.2 — Attempt-First Gate
