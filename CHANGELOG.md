@@ -1,3 +1,13 @@
+
+## V6.8 — Student Command Workspace
+
+- Rebalanced the learning page into a 60/40 lesson and AI-coach workspace.
+- Added a sticky, internally scrollable coach panel on desktop.
+- Restyled quick-support actions as a compact contextual grid.
+- Preserved attempt-first pedagogy and research logging.
+- Added the official white brand logo to authenticated learner and evaluator toolbars.
+- Preserved vertical mobile stacking and all previous V6.7 tools.
+
 # V6.7.3 — Bidirectional Hero Text Gutters
 
 - Added a clear left gutter for English and French homepage hero text.

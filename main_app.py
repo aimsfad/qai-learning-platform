@@ -2753,13 +2753,13 @@ def render_v66_stage_header(student: Dict[str, Any], lesson: Dict[str, Any], com
     status = copy["completed"] if lesson["id"] in completed else copy["available"]
     st.markdown(
         f"""
-        <section class='v66-stage-header' dir='{direction}'>
-          <div class='v66-stage-copy'>
+        <section class='v66-stage-header v68-stage-header' dir='{direction}'>
+          <div class='v66-stage-copy v68-stage-copy'>
             <span>{escape(copy['workspace'])}</span>
             <h1>{escape(lesson.get('short_title', lesson['title']))}</h1>
             <p>{escape(copy['subtitle'])}</p>
           </div>
-          <div class='v66-stage-meta'>
+          <div class='v66-stage-meta v68-stage-meta'>
             <div><small>{escape(copy['stage'])}</small><strong>{escape(copy['module'])} {index} {escape(copy['of'])} {len(ids)}</strong></div>
             <div><small>{escape(copy['status'])}</small><strong>{escape(status)}</strong></div>
             <div class='v66-stage-progress'><small>{escape(copy['path_progress'])}</small><strong>{pct}%</strong><i><em style='width:{pct}%'></em></i></div>
@@ -2802,13 +2802,20 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
         ("quiz", copy["quiz"], "Create one short formative question about this module and wait for the learner's answer."),
     ]
     selected = st.session_state.get(f"v66_mode_{lesson['id']}", "hint")
-    button_cols = st.columns(2)
-    for idx, (mode_key, label, instruction) in enumerate(modes):
-        with button_cols[idx % 2]:
-            if st.button(label, key=f"v66_mode_btn_{lesson['id']}_{mode_key}", use_container_width=True, type="primary" if selected == mode_key else "secondary"):
-                st.session_state[f"v66_mode_{lesson['id']}"] = mode_key
-                selected = mode_key
-                st.rerun()
+    with st.container(key=f"v68_quick_support_{lesson['id']}"):
+        st.markdown("<span class='v68-quick-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        button_cols = st.columns(2, gap="small")
+        for idx, (mode_key, label, instruction) in enumerate(modes):
+            with button_cols[idx % 2]:
+                if st.button(
+                    label,
+                    key=f"v66_mode_btn_{lesson['id']}_{mode_key}",
+                    use_container_width=True,
+                    type="primary" if selected == mode_key else "secondary",
+                ):
+                    st.session_state[f"v66_mode_{lesson['id']}"] = mode_key
+                    selected = mode_key
+                    st.rerun()
 
     selected_mode = next(item for item in modes if item[0] == selected)
     if st.button(copy["send"], key=f"v66_send_{lesson['id']}", type="primary", use_container_width=True):
@@ -2930,9 +2937,9 @@ def render_learning_module(student: Dict[str, Any]) -> None:
     with st.expander(f"{copy['course_map']} · {copy['course_map_help']}", expanded=open_map):
         render_learning_path_cards(student, selected_id, recommended_set, completed)
 
-    learning_col, coach_col = st.columns([1.58, .92], gap="large")
+    learning_col, coach_col = st.columns([3, 2], gap="large")
     with learning_col:
-        st.markdown("<span class='v66-learning-marker'></span>", unsafe_allow_html=True)
+        st.markdown("<span class='v66-learning-marker v68-learning-marker'></span>", unsafe_allow_html=True)
         with st.container(border=True):
             st.markdown(
                 f"<div class='v66-panel-heading' dir='{i18n.direction(i18n.current_lang(st))}'><span>01</span><div><h3>{escape(copy['learn_panel'])}</h3><p>{escape(lesson.get('objective',''))}</p></div></div>",
@@ -2941,11 +2948,11 @@ def render_learning_module(student: Dict[str, Any]) -> None:
             render_v66_lesson_content(student, lesson)
 
     with coach_col:
-        st.markdown("<span class='v66-coach-marker'></span>", unsafe_allow_html=True)
+        st.markdown("<span class='v66-coach-marker v68-coach-marker'></span>", unsafe_allow_html=True)
         with st.container(border=True):
             render_v66_ai_coach(student, lesson)
 
-    st.markdown("<span class='v66-reflection-marker'></span>", unsafe_allow_html=True)
+    st.markdown("<span class='v66-reflection-marker v68-reflection-marker'></span>", unsafe_allow_html=True)
     with st.container(border=True):
         st.markdown(f"### {copy['reflection']}")
         st.info(lesson.get("reflective_prompt", ""))

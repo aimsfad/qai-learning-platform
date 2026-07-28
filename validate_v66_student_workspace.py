@@ -31,12 +31,17 @@ def main() -> None:
         "v66_attempt_",
         "v66_compact_coach",
         "with st.expander(",
-        "learning_col, coach_col = st.columns([1.58, .92]",
         "render_ai_usefulness_feedback",
         "db.save_lesson_progress",
     ]
     for token in required_python:
         require(token in main_text, f"Missing V6.6 Python feature: {token}")
+
+    require(
+        "learning_col, coach_col = st.columns([1.58, .92]" in main_text
+        or "learning_col, coach_col = st.columns([3, 2]" in main_text,
+        "Missing V6.6+ learner/coach split",
+    )
 
     required_css = [
         ".v66-stage-header",
@@ -50,7 +55,7 @@ def main() -> None:
     for token in required_css:
         require(token in css_text, f"Missing V6.6 CSS feature: {token}")
 
-    require(any(v in db_text for v in ('APP_VERSION = "v6.6-student-learning-workspace"', 'APP_VERSION = "v6.7-home-hero-student-tools"')), "App version is not compatible with the V6.6+ student workspace")
+    require(any(v in db_text for v in ('APP_VERSION = "v6.6-student-learning-workspace"', 'APP_VERSION = "v6.7-home-hero-student-tools"', 'APP_VERSION = "v6.8-student-command-workspace"')), "App version is not compatible with the V6.6+ student workspace")
     require(ASSET.exists() and ASSET.stat().st_size > 100_000, "Student workspace cover is missing or empty")
 
     # The old seven-tab module shell must no longer be the active module implementation.
