@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.8-student-command-workspace"
+APP_VERSION = "v6.8.2-attempt-first-gate"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -125,6 +125,22 @@ def init_db() -> None:
             lesson_id TEXT NOT NULL,
             completed INTEGER DEFAULT 0,
             reflection_text TEXT,
+            updated_at {created_default},
+            UNIQUE(student_id, lesson_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS learner_attempts (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            lesson_id TEXT NOT NULL,
+            attempt_text TEXT NOT NULL,
+            support_mode TEXT,
+            char_count INTEGER DEFAULT 0,
+            word_count INTEGER DEFAULT 0,
+            unique_word_count INTEGER DEFAULT 0,
+            validation_status TEXT,
+            created_at {created_default},
             updated_at {created_default},
             UNIQUE(student_id, lesson_id)
         )
@@ -644,6 +660,68 @@ def save_lesson_progress(student_id: int, lesson_id: str, reflection_text: str, 
     exec_sql(sql, payload)
 
 
+
+def save_learner_attempt(
+    student_id: int,
+    lesson_id: str,
+    attempt_text: str,
+    support_mode: str = "",
+    validation_status: str = "valid_draft",
+    char_count: int = 0,
+    word_count: int = 0,
+    unique_word_count: int = 0,
+) -> None:
+    existing = get_learner_attempt(student_id, lesson_id)
+    now = utc_now()
+    payload = {
+        "student_id": int(student_id),
+        "lesson_id": str(lesson_id),
+        "attempt_text": (attempt_text or "").strip(),
+        "support_mode": support_mode or "",
+        "char_count": int(char_count),
+        "word_count": int(word_count),
+        "unique_word_count": int(unique_word_count),
+        "validation_status": validation_status or "",
+        "created_at": str(existing.get("created_at") or now) if existing else now,
+        "updated_at": now,
+    }
+    if dialect() == "sqlite":
+        sql = """
+        INSERT OR REPLACE INTO learner_attempts
+        (student_id, lesson_id, attempt_text, support_mode, char_count, word_count,
+         unique_word_count, validation_status, created_at, updated_at)
+        VALUES (:student_id, :lesson_id, :attempt_text, :support_mode, :char_count, :word_count,
+                :unique_word_count, :validation_status, :created_at, :updated_at)
+        """
+    else:
+        sql = """
+        INSERT INTO learner_attempts
+        (student_id, lesson_id, attempt_text, support_mode, char_count, word_count,
+         unique_word_count, validation_status, created_at, updated_at)
+        VALUES (:student_id, :lesson_id, :attempt_text, :support_mode, :char_count, :word_count,
+                :unique_word_count, :validation_status, :created_at, :updated_at)
+        ON CONFLICT (student_id, lesson_id) DO UPDATE SET
+        attempt_text=EXCLUDED.attempt_text,
+        support_mode=EXCLUDED.support_mode,
+        char_count=EXCLUDED.char_count,
+        word_count=EXCLUDED.word_count,
+        unique_word_count=EXCLUDED.unique_word_count,
+        validation_status=EXCLUDED.validation_status,
+        updated_at=EXCLUDED.updated_at
+        """
+    exec_sql(sql, payload)
+
+
+def get_learner_attempt(student_id: int, lesson_id: str) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM learner_attempts WHERE student_id=:sid AND lesson_id=:lesson_id",
+        {"sid": int(student_id), "lesson_id": str(lesson_id)},
+    )
+
+
+def learner_attempts_df() -> pd.DataFrame:
+    return query_df("SELECT * FROM learner_attempts ORDER BY updated_at DESC, id DESC")
+
 def get_lesson_progress(student_id: int) -> pd.DataFrame:
     return query_df("SELECT * FROM lesson_progress WHERE student_id=:sid", {"sid": student_id})
 
@@ -1035,7 +1113,7 @@ def students_df(limit: Optional[int] = None) -> pd.DataFrame:
 
 
 def count_rows(table: str) -> int:
-    allowed = {"students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress"}
+    allowed = {"students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress", "learner_attempts"}
     if table not in allowed:
         raise ValueError(f"Unsupported table for count_rows: {table}")
     row = query_one(f"SELECT COUNT(*) AS n FROM {table}")
@@ -1262,6 +1340,7 @@ def research_export_tables(total_lessons: int, anonymized: bool = True) -> Dict[
         "question_responses": question_responses_df(),
         "concept_scores": concept_scores_df(),
         "lesson_reflections": query_df("SELECT * FROM lesson_progress"),
+        "learner_attempts": learner_attempts_df(),
         "ai_interactions": ai_logs_df(),
         "llm_evaluations": llm_evaluations_df(),
         "llm_evaluation_summary": llm_evaluation_summary_df(),
@@ -1271,6 +1350,13 @@ def research_export_tables(total_lessons: int, anonymized: bool = True) -> Dict[
     }
     if anonymized:
         tables = {name: anonymize_dataframe(df) for name, df in tables.items()}
+        # Free-text attempts can contain names or other self-disclosed identifiers.
+        # Keep research-safe quantitative metadata in anonymized exports and reserve
+        # the raw attempt text for the protected administrative workbook.
+        if "learner_attempts" in tables and not tables["learner_attempts"].empty:
+            tables["learner_attempts"] = tables["learner_attempts"].drop(
+                columns=["attempt_text"], errors="ignore"
+            )
     return tables
 
 
@@ -1288,7 +1374,7 @@ def system_readiness(total_lessons: int) -> Dict[str, Any]:
         status["database_ok"] = bool(row and int(row.get("ok", 0)) == 1)
     except Exception as exc:
         status["database_error"] = str(exc)
-    for table in ["students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress"]:
+    for table in ["students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress", "learner_attempts"]:
         try:
             status[f"n_{table}"] = count_rows(table)
         except Exception:

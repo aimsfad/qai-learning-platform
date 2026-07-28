@@ -164,3 +164,11 @@ python validate_v64_ai_studio.py
 ## V6.8 Student Command Workspace
 
 The learner module now uses a 60/40 lesson-and-coach split on desktop, a sticky internally scrollable AI coach, contextual quick-support controls, and the official white 3alimnIA logo across authenticated workspaces. Mobile remains vertically stacked.
+
+### V6.8.1 learner UX hotfix
+V6.8.1 keeps the AI Coach composer inline with the conversation, restores readable contrast in the current-module card, and groups the study roadmap into a professional native Streamlit panel.
+
+
+## V6.8.2 Attempt-First Gate
+
+The learner workspace now requires a meaningful first attempt before hint, simplification, Qiskit bridge, understanding-check, guided support, or full AI conversation controls are enabled. Validation is multilingual and attempts are stored per learner and module for continuity and research export.

@@ -1,3 +1,14 @@
+# Changelog
+
+## V6.8.2 — Attempt-First Gate
+
+- Enforced a genuine learner attempt before any quick-support mode or full AI conversation becomes available.
+- Added multilingual validation for minimum detail, word count, lexical diversity, and common low-effort answers.
+- Stored the latest valid attempt per learner and lesson before an AI request is submitted.
+- Logged the requested support mode and attempt statistics for research analysis.
+- Added research-safe attempt metadata to anonymized exports and full attempt text only to protected administrative exports.
+- Kept all existing learner, evaluator, assessment, LPQS, and navigation behavior intact.
+
 
 ## V6.8 — Student Command Workspace
 
@@ -231,3 +242,9 @@
 - Added a localized subtitle in Arabic, French, and English.
 - Rebalanced the AI core, orbits, and Qiskit card to preserve visual hierarchy.
 - Added responsive sizing for tablet and mobile screens.
+
+## V6.8.1 — Student UX Hotfix
+- Fixed learner dashboard current-module contrast.
+- Rebuilt the study roadmap as a native grouped container.
+- Replaced the viewport-pinned root chat input with an inline AI Coach composer.
+- Compact learner tool dock and responsive dark/light styling.
