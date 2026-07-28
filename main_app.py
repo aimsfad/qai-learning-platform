@@ -19,6 +19,7 @@ import streamlit.components.v1 as components
 import content
 import db
 import feedback_engine
+import attempt_gate
 import branding
 import i18n
 import router
@@ -2704,7 +2705,14 @@ def student_workspace_copy() -> Dict[str, str]:
             "status": "حالة الوحدة",
             "route_rule": "حاول ← شاهد وجرّب ← اطلب تلميحًا ← أثبت الفهم",
             "response": "استجابة المدرّب",
-            "need_attempt": "اكتب محاولة قصيرة أولًا حتى تبقى المساعدة تكوينية.",
+            "need_attempt": "اكتب محاولة جادة أولًا حتى تبقى المساعدة تكوينية.",
+            "attempt_empty": "اكتب محاولتك أولًا قبل طلب المساعدة.",
+            "attempt_low_effort": "اكتب توقعًا أو تفسيرًا حقيقيًا بدل الاكتفاء بعبارة قصيرة مثل «لا أعرف».",
+            "attempt_chars": "أضف بعض التفاصيل؛ المطلوب {minimum} حرفًا على الأقل.",
+            "attempt_words": "حاول صياغة تفسير من {minimum} كلمات على الأقل.",
+            "attempt_diversity": "المحاولة تتضمن تكرارًا كبيرًا؛ وضّح فكرتك بكلمات أكثر تنوعًا.",
+            "attempt_ready": "محاولة كافية. أصبحت أدوات الدعم متاحة.",
+            "attempt_counter": "{chars}/{min_chars} حرفًا — {words}/{min_words} كلمات",
             "saved": "تم حفظ التأمل وإكمال الوحدة.",
             "min_reflection": "اكتب تأملًا قصيرًا من 20 حرفًا على الأقل.",
         },
@@ -2724,7 +2732,14 @@ def student_workspace_copy() -> Dict[str, str]:
             "reflection_ph": "Qu’est-ce qui est devenu clair ? Quel point doit encore être revu ?", "save_complete": "Enregistrer et terminer le module",
             "previous": "Module précédent", "next": "Module suivant", "review": "Revoir le parcours", "completed": "Terminé", "recommended": "Recommandé", "available": "Disponible",
             "status": "État du module", "route_rule": "Essayer ← Observer et pratiquer ← Demander un indice ← Prouver sa compréhension",
-            "response": "Réponse du coach", "need_attempt": "Écrivez d’abord une courte tentative afin de préserver une aide formative.",
+            "response": "Réponse du coach", "need_attempt": "Rédigez d’abord une tentative réelle afin de préserver une aide formative.",
+            "attempt_empty": "Rédigez votre tentative avant de demander de l’aide.",
+            "attempt_low_effort": "Formulez une véritable prédiction ou explication au lieu d’une réponse comme « je ne sais pas ».",
+            "attempt_chars": "Ajoutez des détails : au moins {minimum} caractères sont requis.",
+            "attempt_words": "Formulez une explication d’au moins {minimum} mots.",
+            "attempt_diversity": "La tentative est trop répétitive ; précisez votre idée avec des mots plus variés.",
+            "attempt_ready": "Tentative suffisante. Les outils d’aide sont maintenant disponibles.",
+            "attempt_counter": "{chars}/{min_chars} caractères — {words}/{min_words} mots",
             "saved": "Réflexion enregistrée et module terminé.", "min_reflection": "Rédigez une réflexion d’au moins 20 caractères.",
         },
         "en": {
@@ -2743,7 +2758,14 @@ def student_workspace_copy() -> Dict[str, str]:
             "reflection_ph": "What became clear, and what still needs review?", "save_complete": "Save reflection and complete module",
             "previous": "Previous module", "next": "Next module", "review": "Review path", "completed": "Completed", "recommended": "Recommended", "available": "Available",
             "status": "Module status", "route_rule": "Attempt ← See and experiment ← Ask for a hint ← Prove understanding",
-            "response": "Coach response", "need_attempt": "Write a short attempt first so the support remains formative.",
+            "response": "Coach response", "need_attempt": "Write a genuine attempt first so the support remains formative.",
+            "attempt_empty": "Write your own attempt before requesting support.",
+            "attempt_low_effort": "Write a genuine prediction or explanation instead of a phrase such as “I don’t know.”",
+            "attempt_chars": "Add more detail; at least {minimum} characters are required.",
+            "attempt_words": "Write an explanation of at least {minimum} words.",
+            "attempt_diversity": "The attempt is too repetitive; explain your idea using more varied words.",
+            "attempt_ready": "Attempt accepted. The support tools are now available.",
+            "attempt_counter": "{chars}/{min_chars} characters — {words}/{min_words} words",
             "saved": "Reflection saved and module completed.", "min_reflection": "Write a reflection of at least 20 characters.",
         },
     }[lang]
@@ -2776,6 +2798,41 @@ def render_v66_stage_header(student: Dict[str, Any], lesson: Dict[str, Any], com
     )
 
 
+def _v682_validation_message(copy: Dict[str, str], result: attempt_gate.AttemptValidation) -> str:
+    if result.reason == "empty":
+        return copy["attempt_empty"]
+    if result.reason == "low_effort":
+        return copy["attempt_low_effort"]
+    if result.reason == "min_chars":
+        return copy["attempt_chars"].format(minimum=attempt_gate.MIN_ATTEMPT_CHARS)
+    if result.reason == "min_words":
+        return copy["attempt_words"].format(minimum=attempt_gate.MIN_ATTEMPT_WORDS)
+    if result.reason == "low_diversity":
+        return copy["attempt_diversity"]
+    return copy["attempt_ready"]
+
+
+def _refresh_v682_attempt_validation(
+    attempt_key: str,
+    language: str,
+    student_id: int,
+    lesson_id: str,
+) -> None:
+    result = attempt_gate.validate_attempt_text(st.session_state.get(attempt_key, ""), language)
+    st.session_state[f"{attempt_key}_validation"] = result
+    if result.is_valid:
+        db.save_learner_attempt(
+            student_id=student_id,
+            lesson_id=lesson_id,
+            attempt_text=result.normalized_text,
+            support_mode="",
+            validation_status="valid_draft",
+            char_count=result.char_count,
+            word_count=result.word_count,
+            unique_word_count=result.unique_word_count,
+        )
+
+
 def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
     copy = student_workspace_copy()
     lang = i18n.current_lang(st)
@@ -2793,13 +2850,41 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
         st.info(copy["no_ai"])
         return
 
-    attempt_key = f"v66_attempt_{lesson['id']}"
-    attempt = st.text_area(
+    attempt_key = attempt_gate.build_attempt_key(student["id"], lesson["id"])
+    validation_key = f"{attempt_key}_validation"
+    if attempt_key not in st.session_state:
+        saved_attempt = db.get_learner_attempt(student["id"], lesson["id"])
+        st.session_state[attempt_key] = str(saved_attempt.get("attempt_text") or "") if saved_attempt else ""
+    if validation_key not in st.session_state:
+        _refresh_v682_attempt_validation(attempt_key, lang, student["id"], lesson["id"])
+
+    st.text_area(
         copy["attempt"],
         placeholder=copy["attempt_ph"],
         height=138,
         key=attempt_key,
+        on_change=_refresh_v682_attempt_validation,
+        args=(attempt_key, lang, student["id"], lesson["id"]),
     )
+    # Revalidate on every rerun as a server-side safeguard.
+    result = attempt_gate.validate_attempt_text(st.session_state.get(attempt_key, ""), lang)
+    st.session_state[validation_key] = result
+    progress_text = copy["attempt_counter"].format(
+        chars=result.char_count,
+        min_chars=attempt_gate.MIN_ATTEMPT_CHARS,
+        words=result.word_count,
+        min_words=attempt_gate.MIN_ATTEMPT_WORDS,
+    )
+    st.progress(result.readiness, text=progress_text)
+    validation_message = _v682_validation_message(copy, result)
+    if result.is_valid:
+        st.success(validation_message, icon="✅")
+    elif result.char_count:
+        st.warning(validation_message, icon="✍️")
+    else:
+        st.info(validation_message, icon="💡")
+
+    disable_support = not result.is_valid
     st.markdown(f"<div class='v66-quick-label' dir='{direction}'>{escape(copy['quick_support'])}</div>", unsafe_allow_html=True)
     modes = [
         ("hint", copy["hint"], "Give one concise hint and one check question. Do not reveal a full answer."),
@@ -2818,22 +2903,53 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
                     key=f"v66_mode_btn_{lesson['id']}_{mode_key}",
                     use_container_width=True,
                     type="primary" if selected == mode_key else "secondary",
+                    disabled=disable_support,
                 ):
                     st.session_state[f"v66_mode_{lesson['id']}"] = mode_key
                     selected = mode_key
                     st.rerun()
 
     selected_mode = next(item for item in modes if item[0] == selected)
-    if st.button(copy["send"], key=f"v66_send_{lesson['id']}", type="primary", use_container_width=True):
-        if len((attempt or "").strip()) < 8:
-            st.warning(copy["need_attempt"])
+    if st.button(
+        copy["send"],
+        key=f"v66_send_{lesson['id']}",
+        type="primary",
+        use_container_width=True,
+        disabled=disable_support,
+    ):
+        # Never trust only the disabled UI state: validate again before any AI request.
+        result = attempt_gate.validate_attempt_text(st.session_state.get(attempt_key, ""), lang)
+        if not result.is_valid:
+            st.warning(_v682_validation_message(copy, result))
         else:
+            db.save_learner_attempt(
+                student_id=student["id"],
+                lesson_id=lesson["id"],
+                attempt_text=result.normalized_text,
+                support_mode=selected_mode[0],
+                validation_status="submitted_for_support",
+                char_count=result.char_count,
+                word_count=result.word_count,
+                unique_word_count=result.unique_word_count,
+            )
+            db.log_event(
+                student["id"],
+                "student",
+                "attempt_first_support_request",
+                json.dumps({
+                    "lesson_id": lesson["id"],
+                    "support_mode": selected_mode[0],
+                    "char_count": result.char_count,
+                    "word_count": result.word_count,
+                    "unique_word_count": result.unique_word_count,
+                }, ensure_ascii=False),
+            )
             log_ai_request_timing(student["id"], lesson["id"], "v66_student_workspace", task=selected_mode[1], step="workspace")
             with st.spinner("…"):
                 tutor = feedback_engine.generate_tutor_response(
                     task=f"{selected_mode[1]}: {selected_mode[2]}",
                     concept=", ".join(lesson.get("concepts", [])),
-                    student_input=attempt,
+                    student_input=result.normalized_text,
                     student_profile=student_profile(student),
                     lesson_context={
                         **lesson,
@@ -2843,7 +2959,7 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
                     },
                 )
             interaction_id = log_tutor_interaction(
-                student["id"], "student_workspace", ", ".join(lesson.get("concepts", [])), selected_mode[1], attempt, tutor,
+                student["id"], "student_workspace", ", ".join(lesson.get("concepts", [])), selected_mode[1], result.normalized_text, tutor,
                 lesson_id=lesson["id"], activity_id="v66_compact_coach", selected_text=selected_mode[2],
             )
             st.session_state[f"v66_response_{lesson['id']}"] = {"text": tutor.response, "id": interaction_id}
@@ -2856,9 +2972,26 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
             if response.get("id"):
                 render_ai_usefulness_feedback(response["id"], f"v66_{lesson['id']}_{response['id']}")
 
-    if st.button(copy["full_tutor"], key=f"v66_full_tutor_{lesson['id']}", use_container_width=True):
-        st.session_state.current_lesson_id = lesson["id"]
-        set_student_page("AI Tutor Lab")
+    if st.button(
+        copy["full_tutor"],
+        key=f"v66_full_tutor_{lesson['id']}",
+        use_container_width=True,
+        disabled=disable_support,
+    ):
+        result = attempt_gate.validate_attempt_text(st.session_state.get(attempt_key, ""), lang)
+        if result.is_valid:
+            db.save_learner_attempt(
+                student_id=student["id"],
+                lesson_id=lesson["id"],
+                attempt_text=result.normalized_text,
+                support_mode="full_tutor",
+                validation_status="opened_full_tutor",
+                char_count=result.char_count,
+                word_count=result.word_count,
+                unique_word_count=result.unique_word_count,
+            )
+            st.session_state.current_lesson_id = lesson["id"]
+            set_student_page("AI Tutor Lab")
 
 
 def render_v66_lesson_content(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
