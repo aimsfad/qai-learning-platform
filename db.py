@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.8.2-attempt-first-gate"
+APP_VERSION = "v6.9-teacher-content-studio"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -222,6 +222,49 @@ def init_db() -> None:
             actor_role TEXT NOT NULL,
             event_type TEXT NOT NULL,
             event_detail TEXT,
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_projects (
+            id {id_col},
+            teacher_username TEXT NOT NULL,
+            project_name TEXT NOT NULL,
+            domain TEXT NOT NULL,
+            program_name TEXT,
+            unit_title TEXT NOT NULL,
+            target_concept TEXT NOT NULL,
+            target_learners TEXT NOT NULL,
+            learner_level TEXT,
+            prerequisites TEXT,
+            target_languages_json TEXT,
+            primary_language TEXT,
+            primary_language_code TEXT,
+            expected_duration TEXT,
+            technical_environment TEXT,
+            platform_components_json TEXT,
+            source_material TEXT,
+            teaching_preferences TEXT,
+            assessment_preferences TEXT,
+            additional_notes TEXT,
+            requested_outputs_json TEXT,
+            current_phase INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'draft',
+            created_at {created_default},
+            updated_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_generation_runs (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            phase_number INTEGER NOT NULL,
+            prompt_text TEXT NOT NULL,
+            response_text TEXT,
+            provider TEXT,
+            model TEXT,
+            status TEXT,
+            diagnostic TEXT,
             created_at {created_default}
         )
         """,
@@ -1416,4 +1459,109 @@ def paper_summary() -> Dict[str, Any]:
     else:
         out.update({"mean_pre": None, "mean_post": None, "mean_gain": None, "median_gain": None})
     return out
+
+# -----------------------------------------------------------------------------
+# Teacher Content Studio persistence
+# -----------------------------------------------------------------------------
+
+def save_teacher_project(data: Dict[str, Any]) -> int:
+    """Create or update a teacher-authored educational production brief."""
+    payload = {
+        "teacher_username": str(data.get("teacher_username") or "teacher").strip(),
+        "project_name": str(data.get("project_name") or "").strip(),
+        "domain": str(data.get("domain") or "").strip(),
+        "program_name": str(data.get("program_name") or "").strip(),
+        "unit_title": str(data.get("unit_title") or "").strip(),
+        "target_concept": str(data.get("target_concept") or "").strip(),
+        "target_learners": str(data.get("target_learners") or "").strip(),
+        "learner_level": str(data.get("learner_level") or "").strip(),
+        "prerequisites": str(data.get("prerequisites") or "").strip(),
+        "target_languages_json": json.dumps(data.get("target_languages") or [], ensure_ascii=False),
+        "primary_language": str(data.get("primary_language") or "English").strip(),
+        "primary_language_code": str(data.get("primary_language_code") or "en").strip(),
+        "expected_duration": str(data.get("expected_duration") or "").strip(),
+        "technical_environment": str(data.get("technical_environment") or "").strip(),
+        "platform_components_json": json.dumps(data.get("platform_components") or [], ensure_ascii=False),
+        "source_material": str(data.get("source_material") or "").strip(),
+        "teaching_preferences": str(data.get("teaching_preferences") or "").strip(),
+        "assessment_preferences": str(data.get("assessment_preferences") or "").strip(),
+        "additional_notes": str(data.get("additional_notes") or "").strip(),
+        "requested_outputs_json": json.dumps(data.get("requested_outputs") or [], ensure_ascii=False),
+        "current_phase": int(data.get("current_phase") or 1),
+        "status": str(data.get("status") or "draft"),
+        "updated_at": utc_now(),
+    }
+    project_id = data.get("id")
+    if project_id:
+        payload["id"] = int(project_id)
+        exec_sql(
+            """
+            UPDATE teacher_projects SET
+                teacher_username=:teacher_username, project_name=:project_name, domain=:domain, program_name=:program_name,
+                unit_title=:unit_title, target_concept=:target_concept, target_learners=:target_learners, learner_level=:learner_level,
+                prerequisites=:prerequisites, target_languages_json=:target_languages_json, primary_language=:primary_language,
+                primary_language_code=:primary_language_code, expected_duration=:expected_duration,
+                technical_environment=:technical_environment, platform_components_json=:platform_components_json,
+                source_material=:source_material, teaching_preferences=:teaching_preferences, assessment_preferences=:assessment_preferences,
+                additional_notes=:additional_notes, requested_outputs_json=:requested_outputs_json, current_phase=:current_phase,
+                status=:status, updated_at=:updated_at
+            WHERE id=:id
+            """,
+            payload,
+        )
+        return int(project_id)
+    payload["created_at"] = payload["updated_at"]
+    return execute_returning_id(
+        """
+        INSERT INTO teacher_projects
+        (teacher_username, project_name, domain, program_name, unit_title, target_concept, target_learners, learner_level,
+         prerequisites, target_languages_json, primary_language, primary_language_code, expected_duration, technical_environment,
+         platform_components_json, source_material, teaching_preferences, assessment_preferences, additional_notes,
+         requested_outputs_json, current_phase, status, created_at, updated_at)
+        VALUES
+        (:teacher_username, :project_name, :domain, :program_name, :unit_title, :target_concept, :target_learners, :learner_level,
+         :prerequisites, :target_languages_json, :primary_language, :primary_language_code, :expected_duration, :technical_environment,
+         :platform_components_json, :source_material, :teaching_preferences, :assessment_preferences, :additional_notes,
+         :requested_outputs_json, :current_phase, :status, :created_at, :updated_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        payload,
+    )
+
+
+def teacher_projects_df(teacher_username: str) -> pd.DataFrame:
+    return query_df(
+        "SELECT * FROM teacher_projects WHERE teacher_username=:username ORDER BY updated_at DESC, id DESC",
+        {"username": str(teacher_username)},
+    )
+
+
+def get_teacher_project(project_id: int, teacher_username: str) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM teacher_projects WHERE id=:id AND teacher_username=:username",
+        {"id": int(project_id), "username": str(teacher_username)},
+    )
+
+
+def save_teacher_generation(
+    project_id: int, phase_number: int, prompt_text: str, response_text: str, provider: str, model: str, status: str, diagnostic: str = ""
+) -> int:
+    return execute_returning_id(
+        """
+        INSERT INTO teacher_generation_runs
+        (project_id, phase_number, prompt_text, response_text, provider, model, status, diagnostic, created_at)
+        VALUES (:project_id, :phase_number, :prompt_text, :response_text, :provider, :model, :status, :diagnostic, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id), "phase_number": int(phase_number), "prompt_text": str(prompt_text),
+            "response_text": str(response_text), "provider": str(provider), "model": str(model),
+            "status": str(status), "diagnostic": str(diagnostic or ""), "created_at": utc_now(),
+        },
+    )
+
+
+def teacher_generation_runs_df(project_id: int) -> pd.DataFrame:
+    return query_df(
+        "SELECT * FROM teacher_generation_runs WHERE project_id=:project_id ORDER BY id DESC",
+        {"project_id": int(project_id)},
+    )
 

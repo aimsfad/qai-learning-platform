@@ -172,3 +172,16 @@ V6.8.1 keeps the AI Coach composer inline with the conversation, restores readab
 ## V6.8.2 Attempt-First Gate
 
 The learner workspace now requires a meaningful first attempt before hint, simplification, Qiskit bridge, understanding-check, guided support, or full AI conversation controls are enabled. Validation is multilingual and attempts are stored per learner and module for continuity and research export.
+
+## Teacher Content Studio (V6.9)
+
+The platform now includes a dedicated teacher workspace for producing educational units from a structured brief. Teachers can define the subject, target learners, preferred pedagogy, assessment approach, source material, languages, media requirements, and additional constraints. The platform compiles these inputs with the phase-gated master prompt in `prompts/educational_content_production_master.md`, then generates and stores one approved production phase at a time.
+
+Configure teacher access in `.streamlit/secrets.toml`:
+
+```toml
+TEACHER_USERNAME = "teacher"
+TEACHER_PASSWORD = "replace-with-a-strong-password"
+```
+
+For production, prefer `TEACHER_PASSWORD_HASH`. The studio can reuse the existing LLM provider or use an optional `CONTENT_LLM_PROVIDER` override.

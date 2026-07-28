@@ -245,6 +245,9 @@ def init_state() -> None:
         "student_access_page": "Sign in",
         "evaluator_logged_in": False,
         "evaluator_page": "Evaluator Dashboard",
+        "teacher_logged_in": False,
+        "teacher_page": "Content Studio",
+        "teacher_username": None,
         "last_tutor_result": None,
         "new_participant_code": None,
         "current_lesson_id": None,
@@ -329,12 +332,15 @@ def switch_role(role: Optional[str] = None) -> None:
     st.session_state.student_page = "Student Home"
     st.session_state.student_access_page = "Sign in"
     st.session_state.evaluator_page = "Evaluator Dashboard"
+    st.session_state.teacher_page = "Content Studio"
     st.session_state["_v411_history"] = []
     st.session_state["_v411_current_route"] = None
     if role == "student":
         router.queue(router.route_key("student", "Student Home"))
     elif role == "evaluator":
         router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
+    elif role == "teacher":
+        router.queue(router.route_key("teacher", "Content Studio"))
     else:
         router.queue(router.route_key("public", "home"))
     st.rerun()
@@ -369,6 +375,11 @@ def change_account_callback() -> None:
         st.session_state.evaluator_logged_in = False
         st.session_state.evaluator_page = "Evaluator Dashboard"
         router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
+    elif role == "teacher":
+        st.session_state.teacher_logged_in = False
+        st.session_state.teacher_username = None
+        st.session_state.teacher_page = "Content Studio"
+        router.queue(router.route_key("teacher", "Content Studio"))
     request_scroll_top()
 
 
@@ -377,6 +388,7 @@ def switch_workspace_callback() -> None:
     st.session_state.role = None
     st.session_state.student_page = "Student Home"
     st.session_state.evaluator_page = "Evaluator Dashboard"
+    st.session_state.teacher_page = "Content Studio"
     router.queue(router.route_key("public", "home"))
     request_scroll_top()
 
@@ -394,9 +406,13 @@ def logout_callback() -> None:
         st.session_state.student_id = None
     elif role == "evaluator":
         st.session_state.evaluator_logged_in = False
+    elif role == "teacher":
+        st.session_state.teacher_logged_in = False
+        st.session_state.teacher_username = None
     st.session_state.role = None
     st.session_state.student_page = "Student Home"
     st.session_state.evaluator_page = "Evaluator Dashboard"
+    st.session_state.teacher_page = "Content Studio"
     router.queue(router.route_key("public", "home"))
     request_scroll_top()
 
