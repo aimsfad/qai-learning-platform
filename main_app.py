@@ -23,6 +23,7 @@ import attempt_gate
 import branding
 import i18n
 import router
+import teacher_studio
 from content_locales import MEDIA_TRANSLATIONS
 from security import hash_password, verify_password
 from media_utils import render_image, render_video, render_simulator, render_micro_animation
@@ -247,7 +248,9 @@ def init_state() -> None:
         "evaluator_page": "Evaluator Dashboard",
         "teacher_logged_in": False,
         "teacher_page": "Content Studio",
+        "teacher_account_id": None,
         "teacher_username": None,
+        "teacher_display_name": None,
         "last_tutor_result": None,
         "new_participant_code": None,
         "current_lesson_id": None,
@@ -377,7 +380,9 @@ def change_account_callback() -> None:
         router.queue(router.route_key("evaluator", "Evaluator Dashboard"))
     elif role == "teacher":
         st.session_state.teacher_logged_in = False
+        st.session_state.teacher_account_id = None
         st.session_state.teacher_username = None
+        st.session_state.teacher_display_name = None
         st.session_state.teacher_page = "Content Studio"
         router.queue(router.route_key("teacher", "Content Studio"))
     request_scroll_top()
@@ -408,7 +413,9 @@ def logout_callback() -> None:
         st.session_state.evaluator_logged_in = False
     elif role == "teacher":
         st.session_state.teacher_logged_in = False
+        st.session_state.teacher_account_id = None
         st.session_state.teacher_username = None
+        st.session_state.teacher_display_name = None
     st.session_state.role = None
     st.session_state.student_page = "Student Home"
     st.session_state.evaluator_page = "Evaluator Dashboard"
@@ -1216,7 +1223,7 @@ def render_sidebar(target=st) -> None:
         else:
             groups = [
                 (u["overview"], [("Student Home", "⌂", u["home"])]),
-                (u["learning"], [("Adaptive Plan", "✦", u["plan"]), ("Learning Module", "▦", u["modules"]), ("AI Tutor Lab", "◈", u["tutor"])]),
+                (u["learning"], [("Adaptive Plan", "✦", u["plan"]), ("Learning Module", "▦", u["modules"]), ("Published Courses", "▤", i18n.page_label("Published Courses", lang)), ("AI Tutor Lab", "◈", u["tutor"])]),
                 (u["assessment"], [("Pre-test", "01", u["pre"]), ("Post-test", "02", u["post"]), ("Satisfaction Survey", "✓", u["survey"])]),
                 (u["research"], [("Research Notice", "◎", u["notice"])])
             ]
@@ -1286,7 +1293,7 @@ def render_sidebar(target=st) -> None:
 def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     if not student:
         return ["Student Home", "Sign in", "Create account"]
-    pages = ["Student Home"]
+    pages = ["Student Home", "Published Courses"]
     if not has_research_consent(student["id"]):
         pages.append("Research Notice")
         return pages
@@ -1383,6 +1390,8 @@ def render_student_app() -> None:
         require_student(render_adaptive_plan)
     elif page == "Learning Module":
         require_student(render_learning_module)
+    elif page == "Published Courses":
+        require_student(teacher_studio.render_published_course_catalog)
     elif page == "AI Tutor Lab":
         require_student(render_ai_tutor_lab)
     elif page == "Post-test":
@@ -1457,6 +1466,18 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         if st.button(u["open_tutor"], use_container_width=True, disabled=(not test_is_done(student["id"], "pre") or not ai_features_available(student))):
             set_student_page("AI Tutor Lab")
     render_completion_requirements(student)
+    published_courses = db.published_teacher_projects_df()
+    if not published_courses.empty:
+        course_copy = teacher_studio.project_workspace_ui()
+        with st.container(border=True):
+            st.markdown("<span class='v692-home-catalog-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            cc1, cc2 = st.columns([4.5, 1.2], vertical_alignment="center")
+            with cc1:
+                st.markdown(f"### {course_copy['public_catalog']}")
+                st.caption(f"{len(published_courses)} · {course_copy['educator_content']}")
+            with cc2:
+                if st.button(course_copy["start_course"], type="primary", use_container_width=True, key="student_home_open_teacher_catalog"):
+                    set_student_page("Published Courses")
 
 def next_student_page(student: Dict[str, Any]) -> str:
     sid = student["id"]

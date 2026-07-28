@@ -185,3 +185,25 @@ TEACHER_PASSWORD = "replace-with-a-strong-password"
 ```
 
 For production, prefer `TEACHER_PASSWORD_HASH`. The studio can reuse the existing LLM provider or use an optional `CONTENT_LLM_PROVIDER` override.
+
+
+## V6.9.1 — Teacher self-registration
+
+Teachers can now create individual database-backed accounts from the Teacher workspace and sign in with a username or email. Passwords are hashed with PBKDF2-SHA256. Registration is enabled by default and can be controlled with `TEACHER_ALLOW_REGISTRATION`; an optional invitation code can be required with `TEACHER_REGISTRATION_CODE`. Legacy secret-based teacher credentials remain optional and no implicit default teacher password is accepted.
+
+Validation:
+
+```bash
+python validate_v691_teacher_accounts.py
+```
+
+
+## V6.9.2 — Project workspaces and learner publication
+
+Every saved teacher project now appears as an independent card in **My educational projects**. Opening a card launches a dedicated project workspace with overview, production, outputs, learner preview, and publication controls. Projects follow a draft → review → published lifecycle, and Phase 3 core educational content is required before publication. Published projects appear in the learner navigation under **Teacher Courses**; drafts and archived projects remain private to their owner.
+
+Validation:
+
+```bash
+python validate_v692_project_workspaces.py
+```

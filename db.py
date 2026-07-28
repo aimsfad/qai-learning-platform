@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.9-teacher-content-studio"
+APP_VERSION = "v6.9.2-project-workspaces-publishing"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -226,6 +226,21 @@ def init_db() -> None:
         )
         """,
         f"""
+        CREATE TABLE IF NOT EXISTS teacher_accounts (
+            id {id_col},
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            full_name TEXT NOT NULL,
+            institution TEXT,
+            specialization TEXT,
+            preferred_language TEXT DEFAULT 'ar',
+            password_hash TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at {created_default},
+            last_login_at {created_default}
+        )
+        """,
+        f"""
         CREATE TABLE IF NOT EXISTS teacher_projects (
             id {id_col},
             teacher_username TEXT NOT NULL,
@@ -293,6 +308,8 @@ def init_db() -> None:
     ensure_column("ai_interactions", "latency_ms", "INTEGER")
     ensure_column("ai_interactions", "response_word_count", "INTEGER")
     ensure_column("ai_interactions", "student_input_language", "TEXT")
+    ensure_column("teacher_projects", "published_at", "TEXT")
+    ensure_column("teacher_projects", "reviewed_at", "TEXT")
     ensure_column("ai_interactions", "response_language", "TEXT")
     ensure_column("ai_interactions", "error_type", "TEXT")
     ensure_column("ai_interactions", "is_fallback_used", "INTEGER DEFAULT 0")
@@ -1464,6 +1481,113 @@ def paper_summary() -> Dict[str, Any]:
 # Teacher Content Studio persistence
 # -----------------------------------------------------------------------------
 
+def get_teacher_account(identifier: str) -> Optional[Dict[str, Any]]:
+    """Return an active teacher account by username or email."""
+    ident = str(identifier or "").strip().lower()
+    if not ident:
+        return None
+    return query_one(
+        """
+        SELECT * FROM teacher_accounts
+        WHERE is_active=1 AND (LOWER(username)=:ident OR LOWER(email)=:ident)
+        ORDER BY id DESC
+        """,
+        {"ident": ident},
+    )
+
+
+def get_teacher_account_by_id(account_id: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM teacher_accounts WHERE id=:id AND is_active=1",
+        {"id": int(account_id)},
+    )
+
+
+def create_teacher_account(
+    full_name: str,
+    username: str,
+    email: str,
+    institution: str,
+    specialization: str,
+    password: str,
+    preferred_language: str = "ar",
+) -> Dict[str, Any]:
+    """Create a password-protected teacher account.
+
+    User-facing validation is performed in the teacher UI; uniqueness and
+    password hashing are enforced again here at the persistence boundary.
+    """
+    clean_name = str(full_name or "").strip()
+    clean_username = str(username or "").strip().lower()
+    clean_email = str(email or "").strip().lower()
+    clean_language = str(preferred_language or "ar").strip().lower()
+    if not clean_name:
+        raise ValueError("Full name is required.")
+    if not clean_username:
+        raise ValueError("Username is required.")
+    if not clean_email or "@" not in clean_email:
+        raise ValueError("A valid email address is required.")
+    if get_teacher_account(clean_username):
+        raise ValueError("This username or email is already registered.")
+    existing_email = query_one(
+        "SELECT id FROM teacher_accounts WHERE LOWER(email)=:email",
+        {"email": clean_email},
+    )
+    if existing_email:
+        raise ValueError("This email address is already registered.")
+    if clean_language not in {"ar", "fr", "en"}:
+        clean_language = "ar"
+    password_hash = hash_password(password)
+    account_id = execute_returning_id(
+        """
+        INSERT INTO teacher_accounts
+        (username, email, full_name, institution, specialization, preferred_language, password_hash,
+         is_active, created_at, last_login_at)
+        VALUES
+        (:username, :email, :full_name, :institution, :specialization, :preferred_language, :password_hash,
+         1, :created_at, NULL)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "username": clean_username,
+            "email": clean_email,
+            "full_name": clean_name,
+            "institution": str(institution or "").strip(),
+            "specialization": str(specialization or "").strip(),
+            "preferred_language": clean_language,
+            "password_hash": password_hash,
+            "created_at": utc_now(),
+        },
+    )
+    return get_teacher_account_by_id(account_id) or {"id": account_id, "username": clean_username}
+
+
+def authenticate_teacher(identifier: str, password: str) -> Optional[Dict[str, Any]]:
+    """Authenticate a database-backed teacher account."""
+    account = get_teacher_account(identifier)
+    if account and verify_password(password, account.get("password_hash")):
+        exec_sql(
+            "UPDATE teacher_accounts SET last_login_at=:ts WHERE id=:id",
+            {"ts": utc_now(), "id": int(account["id"])},
+        )
+        return get_teacher_account_by_id(int(account["id"]))
+    return None
+
+
+def set_teacher_preferred_language(account_id: int, language: str) -> None:
+    clean = str(language or "ar").strip().lower()
+    if clean not in {"ar", "fr", "en"}:
+        raise ValueError("language must be ar, fr, or en")
+    exec_sql(
+        "UPDATE teacher_accounts SET preferred_language=:lang WHERE id=:id",
+        {"lang": clean, "id": int(account_id)},
+    )
+
+
+def teacher_account_count() -> int:
+    row = query_one("SELECT COUNT(*) AS n FROM teacher_accounts WHERE is_active=1")
+    return int((row or {}).get("n") or 0)
+
+
 def save_teacher_project(data: Dict[str, Any]) -> int:
     """Create or update a teacher-authored educational production brief."""
     payload = {
@@ -1565,3 +1689,94 @@ def teacher_generation_runs_df(project_id: int) -> pd.DataFrame:
         {"project_id": int(project_id)},
     )
 
+
+
+def set_teacher_project_status(project_id: int, teacher_username: str, status: str) -> None:
+    """Update the lifecycle state of a teacher project with ownership checks."""
+    clean_status = str(status or "draft").strip().lower()
+    if clean_status not in {"draft", "review", "published", "archived"}:
+        raise ValueError("Unsupported teacher project status")
+    project = get_teacher_project(int(project_id), str(teacher_username))
+    if not project:
+        raise ValueError("Teacher project not found or access denied")
+    if clean_status == "published":
+        core = query_one(
+            """
+            SELECT id FROM teacher_generation_runs
+            WHERE project_id=:project_id AND phase_number=3 AND status='completed'
+            ORDER BY id DESC LIMIT 1
+            """,
+            {"project_id": int(project_id)},
+        )
+        if not core:
+            raise ValueError("Phase 3 core educational content must be completed before publication")
+    now = utc_now()
+    published_at = now if clean_status == "published" else project.get("published_at")
+    reviewed_at = now if clean_status in {"review", "published"} else project.get("reviewed_at")
+    exec_sql(
+        """
+        UPDATE teacher_projects
+        SET status=:status, published_at=:published_at, reviewed_at=:reviewed_at, updated_at=:updated_at
+        WHERE id=:id AND teacher_username=:username
+        """,
+        {
+            "status": clean_status,
+            "published_at": published_at,
+            "reviewed_at": reviewed_at,
+            "updated_at": now,
+            "id": int(project_id),
+            "username": str(teacher_username),
+        },
+    )
+
+
+def teacher_projects_with_progress_df(teacher_username: str) -> pd.DataFrame:
+    """Return a teacher's projects with distinct completed production phases."""
+    return query_df(
+        """
+        SELECT p.*,
+               COUNT(DISTINCT CASE WHEN r.status='completed' THEN r.phase_number END) AS completed_phases,
+               COUNT(r.id) AS generation_runs
+        FROM teacher_projects p
+        LEFT JOIN teacher_generation_runs r ON r.project_id=p.id
+        WHERE p.teacher_username=:username
+        GROUP BY p.id
+        ORDER BY p.updated_at DESC, p.id DESC
+        """,
+        {"username": str(teacher_username)},
+    )
+
+
+def teacher_project_phase_outputs(project_id: int) -> Dict[int, Dict[str, Any]]:
+    """Return the newest generation run for each phase of a project."""
+    frame = teacher_generation_runs_df(int(project_id))
+    outputs: Dict[int, Dict[str, Any]] = {}
+    if frame.empty:
+        return outputs
+    for _, row in frame.iterrows():
+        phase = int(row.get("phase_number") or 0)
+        if phase and phase not in outputs:
+            outputs[phase] = row.to_dict()
+    return outputs
+
+
+def published_teacher_projects_df() -> pd.DataFrame:
+    """List public teacher-authored projects for the learner catalogue."""
+    return query_df(
+        """
+        SELECT p.*,
+               COUNT(DISTINCT CASE WHEN r.status='completed' THEN r.phase_number END) AS completed_phases
+        FROM teacher_projects p
+        LEFT JOIN teacher_generation_runs r ON r.project_id=p.id
+        WHERE p.status='published'
+        GROUP BY p.id
+        ORDER BY COALESCE(p.published_at, p.updated_at) DESC, p.id DESC
+        """
+    )
+
+
+def get_published_teacher_project(project_id: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM teacher_projects WHERE id=:id AND status='published'",
+        {"id": int(project_id)},
+    )

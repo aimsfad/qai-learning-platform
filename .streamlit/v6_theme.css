@@ -2605,3 +2605,140 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
     width: 100%;
   }
 }
+
+/* --------------------------------------------------------------------------
+   V6.9.2 — Teacher project workspaces, lifecycle, preview, and publication
+   -------------------------------------------------------------------------- */
+.v692-project-card-marker,
+.v692-project-workspace-marker,
+.v692-public-course-marker,
+.v692-home-catalog-marker { display: none; }
+
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v692-project-card-marker) {
+  min-height: 430px;
+  border: 1px solid rgba(47, 111, 237, .16) !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(42, 211, 229, .13), transparent 32%),
+    linear-gradient(160deg, rgba(255,255,255,.98), rgba(246,250,255,.96)) !important;
+  box-shadow: 0 18px 45px rgba(15, 35, 70, .08) !important;
+  padding: 1.15rem !important;
+}
+
+.v692-project-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .35rem;
+}
+.v692-project-card-head span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: .24rem .72rem;
+  border-radius: 999px;
+  background: rgba(47, 111, 237, .09);
+  color: #1451b8;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.v692-project-card-head small {
+  color: #718096;
+  font-weight: 800;
+}
+
+[data-testid="stVerticalBlock"]:has(.v692-project-workspace-marker) h1 {
+  margin-top: .1rem !important;
+  margin-bottom: .2rem !important;
+}
+
+.v692-course-preview-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  padding: clamp(1.55rem, 4vw, 3.2rem);
+  margin: .4rem 0 1rem;
+  color: #fff;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(42,211,229,.32), transparent 25%),
+    radial-gradient(circle at 10% 100%, rgba(246,183,45,.16), transparent 28%),
+    linear-gradient(135deg, #071d3c 0%, #0b3475 52%, #135cc4 100%);
+  box-shadow: 0 24px 56px rgba(3, 25, 60, .22);
+}
+.v692-course-preview-hero::after {
+  content: "3alimnIA";
+  position: absolute;
+  inset-inline-end: 2rem;
+  bottom: -.45rem;
+  color: rgba(255,255,255,.065);
+  font-size: clamp(3.2rem, 8vw, 7.8rem);
+  font-weight: 900;
+  letter-spacing: -.06em;
+  pointer-events: none;
+}
+.v692-course-preview-hero > span {
+  display: inline-flex;
+  padding: .3rem .78rem;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 999px;
+  background: rgba(255,255,255,.09);
+  font-size: .78rem;
+  font-weight: 800;
+}
+.v692-course-preview-hero h1 {
+  max-width: 850px;
+  color: #fff !important;
+  font-size: clamp(2rem, 4.5vw, 4rem) !important;
+  line-height: 1.05 !important;
+  margin: .9rem 0 .65rem !important;
+}
+.v692-course-preview-hero p {
+  max-width: 830px;
+  color: rgba(255,255,255,.88) !important;
+  font-size: clamp(1rem, 1.6vw, 1.22rem);
+  line-height: 1.75;
+}
+.v692-course-preview-hero > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  margin-top: 1.2rem;
+}
+.v692-course-preview-hero b,
+.v692-course-preview-hero i {
+  display: inline-flex;
+  padding: .34rem .7rem;
+  border-radius: 10px;
+  background: rgba(255,255,255,.11);
+  color: #fff;
+  font-style: normal;
+  font-size: .82rem;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v692-public-course-marker),
+[data-testid="stVerticalBlockBorderWrapper"]:has(.v692-home-catalog-marker) {
+  border: 1px solid rgba(42, 118, 226, .15) !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(42,211,229,.12), transparent 34%),
+    #fff !important;
+  box-shadow: 0 14px 38px rgba(15, 35, 70, .07) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v692-project-card-marker),
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v692-public-course-marker),
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v692-home-catalog-marker) {
+    background:
+      radial-gradient(circle at 95% 0%, rgba(42,211,229,.10), transparent 34%),
+      linear-gradient(160deg, rgba(12,28,52,.98), rgba(8,22,44,.97)) !important;
+    border-color: rgba(105,169,255,.18) !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .v692-course-preview-hero { border-radius: 20px; padding: 1.35rem; }
+  .v692-course-preview-hero::after { font-size: 3.8rem; inset-inline-end: .7rem; }
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v692-project-card-marker) { min-height: auto; }
+}
