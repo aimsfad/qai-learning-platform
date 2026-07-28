@@ -178,6 +178,10 @@ def teacher_ui() -> Dict[str, str]:
             "save": "حفظ المشروع وتجهيز البرومبت",
             "generate": "توليد هذه المرحلة بالذكاء الاصطناعي",
             "prompt": "البرومبت المركب",
+            "prompt_ready": "تم تجهيز البرومبت من النسخة المحفوظة للمشروع، ويمكن الآن معاينته أو تنزيله أو تشغيل المرحلة.",
+            "rebuild_prompt": "إعادة تجهيز البرومبت",
+            "save_error": "تعذر حفظ المشروع أو تجهيز البرومبت.",
+            "saving": "جارٍ حفظ المشروع وتجهيز البرومبت...",
             "download_prompt": "تنزيل البرومبت",
             "download_project": "تنزيل بيانات المشروع",
             "saved": "تم حفظ المشروع وتجهيز البرومبت.",
@@ -215,7 +219,11 @@ def teacher_ui() -> Dict[str, str]:
             "files": "Importer des références ou contenus (PDF, DOCX, TXT, MD, CSV, JSON)",
             "teaching": "Préférences pédagogiques", "assessment": "Modalités d’évaluation", "notes": "Notes complémentaires",
             "requested": "Livrables demandés", "phase": "Phase actuelle", "save": "Enregistrer et compiler le prompt",
-            "generate": "Générer cette phase avec l’IA", "prompt": "Prompt compilé", "download_prompt": "Télécharger le prompt",
+            "generate": "Générer cette phase avec l’IA", "prompt": "Prompt compilé",
+            "prompt_ready": "Le prompt a été recompilé à partir de la version enregistrée du projet. Vous pouvez le prévisualiser, le télécharger ou lancer la phase.",
+            "rebuild_prompt": "Recompiler le prompt",
+            "save_error": "Impossible d’enregistrer le projet ou de compiler le prompt.",
+            "saving": "Enregistrement du projet et compilation du prompt...", "download_prompt": "Télécharger le prompt",
             "download_project": "Télécharger le projet", "saved": "Projet enregistré et prompt compilé.",
             "generated": "La production a été générée et enregistrée.", "required": "Renseignez au minimum le projet, la discipline, l’unité, le concept et le public.",
             "select_project": "Choisir un projet enregistré", "no_projects": "Aucun projet enregistré.",
@@ -248,7 +256,11 @@ def teacher_ui() -> Dict[str, str]:
             "files": "Upload references or content (PDF, DOCX, TXT, MD, CSV, JSON)",
             "teaching": "Preferred teaching approach", "assessment": "Preferred assessment approach", "notes": "Additional notes",
             "requested": "Requested outputs", "phase": "Current production phase", "save": "Save project and compile prompt",
-            "generate": "Generate this phase with AI", "prompt": "Compiled prompt", "download_prompt": "Download prompt",
+            "generate": "Generate this phase with AI", "prompt": "Compiled prompt",
+            "prompt_ready": "The prompt was rebuilt from the saved project. You can now preview, download, or run the selected phase.",
+            "rebuild_prompt": "Rebuild prompt",
+            "save_error": "The project could not be saved or the prompt could not be compiled.",
+            "saving": "Saving the project and compiling the prompt...", "download_prompt": "Download prompt",
             "download_project": "Download project data", "saved": "Project saved and prompt compiled.",
             "generated": "The phase output was generated and saved.", "required": "Complete at least project, subject, unit, concept, and target learners.",
             "select_project": "Select a saved project", "no_projects": "No saved projects yet.",
@@ -453,13 +465,30 @@ def extract_uploaded_sources(uploaded_files: Any) -> str:
             chunks.append(f"\n[Could not extract {name}: {exc}]\n")
     return "".join(chunks).strip()
 
+def save_project_and_prepare_prompt(data: Dict[str, Any], phase_number: int) -> tuple[int, str]:
+    """Persist the project first, then compile the prompt from the saved record.
+
+    Keeping this operation in one function makes the button action atomic from
+    the UI perspective and gives validation scripts a testable code path.
+    """
+    project_id = db.save_teacher_project(data)
+    saved = db.get_teacher_project(int(project_id), str(data.get("teacher_username") or ""))
+    canonical = _project_defaults(saved or {**data, "id": project_id})
+    canonical["id"] = int(project_id)
+    prompt = compile_project_prompt(canonical, int(phase_number))
+    if not prompt.strip():
+        raise RuntimeError("The compiled prompt is empty.")
+    return int(project_id), prompt
+
+
 def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
     u = teacher_ui()
     username = _current_teacher_username()
     p = _project_defaults(existing)
     lang_code = i18n.current_lang(st)
 
-    with st.form("teacher_content_project_form"):
+    form_scope = f"project_{int(p['id'])}" if p.get("id") else "new"
+    with st.form(f"teacher_content_project_form_{form_scope}", clear_on_submit=False):
         c1, c2 = st.columns(2, gap="large")
         with c1:
             project_name = st.text_input(u["project_name"], value=str(p.get("project_name") or ""))
@@ -500,7 +529,8 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
     if not all([project_name.strip(), domain.strip(), unit_title.strip(), target_concept.strip(), target_learners.strip()]):
         st.error(u["required"])
         return
-    extracted_sources = extract_uploaded_sources(uploaded_sources)
+    with st.spinner(u["saving"]):
+        extracted_sources = extract_uploaded_sources(uploaded_sources)
     combined_sources = source_material.strip()
     if extracted_sources:
         combined_sources = (combined_sources + "\n\n" + extracted_sources).strip()
@@ -516,16 +546,21 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
         "additional_notes": additional_notes.strip(), "requested_outputs": requested_outputs, "current_phase": int(phase_number),
         "status": str(p.get("status") or "draft"),
     }
-    project_id = db.save_teacher_project(data)
-    data["id"] = project_id
-    prompt = compile_project_prompt(data, int(phase_number))
-    st.session_state.teacher_active_project_id = project_id
+    try:
+        with st.spinner(u["saving"]):
+            project_id, prompt = save_project_and_prepare_prompt(data, int(phase_number))
+    except Exception as exc:
+        st.error(f"{u['save_error']} {exc}")
+        return
+
+    st.session_state.teacher_active_project_id = int(project_id)
     st.session_state.teacher_last_prompt = prompt
-    was_workspace = st.session_state.get("teacher_studio_view") == "workspace"
     st.session_state.teacher_studio_view = "workspace"
-    if not was_workspace:
-        st.session_state.teacher_workspace_section = "overview"
-    st.success(u["saved"])
+    # Open the production section immediately so the teacher can see that the
+    # prompt was actually prepared instead of being redirected to Overview.
+    st.session_state.teacher_workspace_section = "production"
+    st.session_state.teacher_expand_prompt = True
+    st.session_state.teacher_flash_success = u["saved"]
     st.rerun()
 
 
@@ -535,11 +570,20 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
     phase_number = int(p.get("current_phase") or 1)
     prompt = compile_project_prompt(p, phase_number)
     st.session_state.teacher_last_prompt = prompt
+    expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
+    st.success(u["prompt_ready"])
     status = content_generation_engine.provider_status()
     st.info(f"{u['provider']}: {status['provider']} / {status['model']} — {'ready' if status['available'] else 'prompt export only'}")
     st.caption(u["phase_only"])
-    with st.expander(u["prompt"], expanded=False):
+    if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{p['id']}_{phase_number}"):
+        st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
+        st.session_state.teacher_expand_prompt = True
+        st.session_state.teacher_flash_success = u["prompt_ready"]
+        st.rerun()
+    with st.expander(u["prompt"], expanded=expand_prompt):
         st.code(prompt, language="markdown")
+    if expand_prompt:
+        st.session_state.teacher_expand_prompt = False
     safe_name = "_".join(str(p.get("project_name") or "project").split())
     st.download_button(u["download_prompt"], prompt.encode("utf-8"), file_name=f"{safe_name}_phase_{phase_number}_prompt.md", mime="text/markdown", use_container_width=True)
     project_json = json.dumps(p, ensure_ascii=False, indent=2, default=str)
@@ -932,6 +976,12 @@ def render_teacher_app() -> None:
     display_name = str(st.session_state.get("teacher_display_name") or _current_teacher_username()).strip()
     st.markdown(f"# {u['workspace']}")
     st.caption(f"{u['welcome']}، {display_name} — {u['subtitle']}" if i18n.current_lang(st) == "ar" else f"{u['welcome']}, {display_name} — {u['subtitle']}")
+    flash_success = st.session_state.pop("teacher_flash_success", None)
+    if flash_success:
+        st.success(str(flash_success))
+    flash_error = st.session_state.pop("teacher_flash_error", None)
+    if flash_error:
+        st.error(str(flash_error))
     views = ["projects", "new", "workspace", "outputs"]
     if st.session_state.get("teacher_studio_view") not in views:
         st.session_state.teacher_studio_view = "projects"

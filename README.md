@@ -207,3 +207,6 @@ Validation:
 ```bash
 python validate_v692_project_workspaces.py
 ```
+
+### V6.9.3 teacher save/prompt reliability
+The Teacher Content Studio now saves the project, reloads the canonical database record, compiles the selected phase prompt, and opens the prompt preview immediately. A dedicated **Rebuild prompt** action and persistent success/error feedback are included.

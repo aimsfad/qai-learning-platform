@@ -279,3 +279,10 @@
 - Added prompt compilation, JSON/Markdown downloads, phase-specific AI generation, and generation history.
 - Added `teacher_projects` and `teacher_generation_runs` database tables.
 - Added a teacher entry point to the public header and native router.
+
+## V6.9.3 — Save & Prompt Hotfix
+- Fixed the teacher project save action appearing inactive after Streamlit reruns.
+- Compiles prompts from the canonical project record reloaded from the database.
+- Opens the Production section and expands the compiled prompt immediately after saving.
+- Added persistent flash feedback, explicit error reporting, and a Rebuild prompt action.
+- Scoped form keys per project to prevent stale widget values across projects.
