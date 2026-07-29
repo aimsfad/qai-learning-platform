@@ -556,9 +556,11 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.teacher_active_project_id = int(project_id)
     st.session_state.teacher_last_prompt = prompt
     st.session_state.teacher_studio_view = "workspace"
-    # Open the production section immediately so the teacher can see that the
-    # prompt was actually prepared instead of being redirected to Overview.
-    st.session_state.teacher_workspace_section = "production"
+    # Queue the destination instead of mutating the radio widget key after the
+    # widget has already been instantiated in the current Streamlit run.
+    # Directly assigning teacher_workspace_section here raises
+    # StreamlitAPIException when an existing project is saved from Production.
+    st.session_state.teacher_workspace_section_pending = "production"
     st.session_state.teacher_expand_prompt = True
     st.session_state.teacher_flash_success = u["saved"]
     st.rerun()
@@ -899,6 +901,12 @@ def render_project_workspace() -> None:
     copy = project_workspace_ui()
     sections = ["overview", "production", "assets", "publish"]
     labels = {"overview": copy["overview"], "production": copy["production"], "assets": copy["assets"], "publish": copy["publish"]}
+    # Apply queued navigation before the radio is created. Streamlit permits
+    # state initialization here, but not after the widget with the same key has
+    # been instantiated.
+    pending_section = st.session_state.pop("teacher_workspace_section_pending", None)
+    if pending_section in sections:
+        st.session_state.teacher_workspace_section = pending_section
     if st.session_state.get("teacher_workspace_section") not in sections:
         st.session_state.teacher_workspace_section = "overview"
     section = st.radio(

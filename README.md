@@ -210,3 +210,8 @@ python validate_v692_project_workspaces.py
 
 ### V6.9.3 teacher save/prompt reliability
 The Teacher Content Studio now saves the project, reloads the canonical database record, compiles the selected phase prompt, and opens the prompt preview immediately. A dedicated **Rebuild prompt** action and persistent success/error feedback are included.
+
+
+### V6.9.4 branding and teacher prompt stability
+
+The platform now uses `assets/branding/3alimnia_logo_premium.png` as the canonical frameless logo on all major pages. The teacher project save flow also uses a queued workspace-section state, preventing Streamlit from modifying a widget-bound session-state key after instantiation.

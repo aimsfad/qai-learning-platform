@@ -14,11 +14,16 @@ BRAND_NAME_AR = "علّمنيا"
 BRAND_TAGLINE_EN = "Difficult concepts, guided by generative AI."
 BRAND_TAGLINE_AR = "نفهم المفاهيم الصعبة خطوة بخطوة بالذكاء التوليدي."
 BRAND_TAGLINE_FR = "Comprendre les concepts difficiles, pas à pas, avec l'IA générative."
-DEFAULT_LOGO_VARIANT = "official"
+DEFAULT_LOGO_VARIANT = "premium-flat"
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets" / "branding"
-OFFICIAL_LOGO_PATH = ASSET_DIR / "3alimnia_logo.png"
-HEADER_WHITE_LOGO_PATH = ASSET_DIR / "3alimnia_header_logo_white.png"
+LEGACY_OFFICIAL_LOGO_PATH = ASSET_DIR / "3alimnia_logo.png"
+PREMIUM_LOGO_PATH = ASSET_DIR / "3alimnia_logo_premium.png"
+# V6.9.4 adopts the approved frameless quiet-luxury logo throughout the app.
+# The legacy constants remain available as aliases so older UI components and
+# validators continue to resolve a single, consistent brand asset.
+OFFICIAL_LOGO_PATH = PREMIUM_LOGO_PATH
+HEADER_WHITE_LOGO_PATH = PREMIUM_LOGO_PATH
 
 LANGUAGES: Dict[str, str] = {
     "العربية": "ar",

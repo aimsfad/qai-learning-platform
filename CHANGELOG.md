@@ -286,3 +286,10 @@
 - Opens the Production section and expands the compiled prompt immediately after saving.
 - Added persistent flash feedback, explicit error reporting, and a Rebuild prompt action.
 - Scoped form keys per project to prevent stale widget values across projects.
+
+
+## V6.9.4 — Premium Logo & Prompt State Hotfix
+- Adopted the approved frameless quiet-luxury 3alimnIA logo across public and authenticated workspaces.
+- Replaced pill/badge styling with transparent negative space and restrained midnight-blue / champagne-gold branding.
+- Fixed `StreamlitAPIException` triggered when saving an existing project from the Production section.
+- Queued workspace navigation and applies it before the section radio widget is instantiated.
