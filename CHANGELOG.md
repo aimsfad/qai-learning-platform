@@ -304,3 +304,9 @@
 - Expanded teacher uploads to include PNG, JPG, WEBP, MP3, WAV, M4A, MP4, and MOV.
 - Added sanitized detection for OpenRouter, Cohere, and Cloudflare configuration without exposing secrets.
 
+
+## V6.10.1 — AI Tutor State Hotfix
+- Fixed `StreamlitAPIException` when sending a selected quick-support draft.
+- Separated stored draft state from the text-area widget state.
+- Deferred draft cleanup until the next rerun, before widget instantiation.
+- Scoped AI Tutor draft keys per learner and added a safe cancel action.

@@ -247,3 +247,6 @@ Validation:
 ```bash
 python validate_v610_gemini_router.py
 ```
+
+### V6.10.1 AI Tutor state safety
+Quick-support drafts now use learner-scoped storage and editor keys. Draft cleanup is deferred to the next Streamlit rerun, preventing widget-state mutation exceptions while preserving chat logging and research analytics.

@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.10-gemini-file-analyzer-router"
+APP_VERSION = "v6.10.1-ai-tutor-state-hotfix"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
