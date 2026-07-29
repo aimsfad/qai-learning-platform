@@ -19,7 +19,7 @@ checks = {
     "sticky coach": "max-height:calc(100vh - 1.4rem)" in css and "position:sticky" in css,
     "desktop ratio": "calc(60% - .6rem)" in css and "calc(40% - .6rem)" in css,
     "mobile stack": "@media (max-width:820px)" in css and "flex-direction:column" in css,
-    "version": ('APP_VERSION = "v6.8-student-command-workspace"' in db or 'APP_VERSION = "v6.8.1-student-ux-hotfix"' in db or 'APP_VERSION = "v6.8.2-attempt-first-gate"' in db),
+    "version": ('APP_VERSION = "v6.8-student-command-workspace"' in db or 'APP_VERSION = "v6.8.1-student-ux-hotfix"' in db or 'APP_VERSION = "v6.8.2-attempt-first-gate"' in db or 'APP_VERSION = "v6.10-gemini-file-analyzer-router"' in db),
 }
 failed = [name for name, ok in checks.items() if not ok]
 if failed:

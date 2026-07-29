@@ -34,6 +34,6 @@ assert "attempt_first_support_request" in main
 assert "CREATE TABLE IF NOT EXISTS learner_attempts" in db
 assert '"learner_attempts": learner_attempts_df()' in db
 assert 'columns=["attempt_text"]' in db
-assert 'APP_VERSION = "v6.8.2-attempt-first-gate"' in db
+assert any(v in db for v in ('APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"'))
 
 print("V6.8.2 attempt-first gate validation passed.")

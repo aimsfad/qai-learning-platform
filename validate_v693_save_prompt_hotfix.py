@@ -84,7 +84,7 @@ def validate_ui_contract() -> None:
     assert_contains(ROOT / "teacher_studio.py", [
         "def save_project_and_prepare_prompt",
         "saved = db.get_teacher_project",
-        'st.session_state.teacher_workspace_section = "production"',
+        'st.session_state.teacher_workspace_section_pending = "production"',
         "st.session_state.teacher_expand_prompt = True",
         "teacher_flash_success",
         'u["rebuild_prompt"]',
@@ -92,7 +92,8 @@ def validate_ui_contract() -> None:
         "teacher_content_project_form_{form_scope}",
         "save_error",
     ])
-    assert_contains(ROOT / "db.py", ['APP_VERSION = "v6.9.3-save-prompt-hotfix"'])
+    db_text = (ROOT / "db.py").read_text(encoding="utf-8")
+    assert any(v in db_text for v in ('APP_VERSION = "v6.9.3-save-prompt-hotfix"', 'APP_VERSION = "v6.9.4-premium-logo-prompt-state"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"'))
 
 
 def main() -> None:
