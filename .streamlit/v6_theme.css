@@ -2742,3 +2742,86 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
   .v692-course-preview-hero::after { font-size: 3.8rem; inset-inline-end: .7rem; }
   [data-testid="stVerticalBlockBorderWrapper"]:has(.v692-project-card-marker) { min-height: auto; }
 }
+
+
+/* =====================================================================
+   V6.9.4 — Frameless quiet-luxury logo system
+   Adopts the approved midnight-blue / champagne-gold lockup throughout
+   public, learner, evaluator, and teacher workspaces without a pill frame.
+   ===================================================================== */
+.v694-premium-logo-marker { display:none !important; }
+
+/* Public navigation logo: transparent, crisp, and free from badge styling. */
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"],
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img {
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  clip-path:none !important;
+  filter:none !important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img {
+  width:230px !important;
+  min-width:230px !important;
+  max-width:230px !important;
+  max-height:60px !important;
+  object-fit:contain !important;
+}
+
+/* Internal role toolbar: keep the logo visible without putting it in a card. */
+.st-key-v68_workspace_toolbar [data-testid="stVerticalBlock"]:has(.v68-internal-logo-marker) [data-testid="stImage"] {
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.st-key-v68_workspace_toolbar [data-testid="stVerticalBlock"]:has(.v68-internal-logo-marker) [data-testid="stImage"] img {
+  height:auto !important;
+  max-height:48px !important;
+  object-fit:contain !important;
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+
+/* HTML lockups used by landing/auth components. */
+.brand-approved-lockup,
+.brand-approved-lockup .brand-official-logo,
+.brand-approved-logo-img {
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+.brand-approved-logo-img {
+  object-fit:contain !important;
+  filter:none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img,
+  .st-key-v68_workspace_toolbar [data-testid="stVerticalBlock"]:has(.v68-internal-logo-marker) [data-testid="stImage"] img,
+  .brand-approved-logo-img {
+    filter:brightness(1.22) saturate(1.04) drop-shadow(0 1px 0 rgba(255,255,255,.18)) !important;
+  }
+}
+
+@media (max-width:1180px) and (min-width:721px) {
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img {
+    width:198px !important;
+    min-width:198px !important;
+    max-width:198px !important;
+    max-height:54px !important;
+  }
+}
+@media (max-width:720px) {
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] img {
+    width:min(244px,80vw) !important;
+    min-width:0 !important;
+    max-width:244px !important;
+    max-height:64px !important;
+  }
+}

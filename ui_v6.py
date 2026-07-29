@@ -258,7 +258,7 @@ def _render_official_logo(width: int = 224) -> None:
     that the white background, rounded outline, and full horizontal wordmark
     remain identical in RTL and LTR layouts on Streamlit Cloud.
     """
-    st.markdown("<span class='v672-header-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    st.markdown("<span class='v672-header-logo-marker v694-premium-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     header_logo = getattr(branding, "HEADER_WHITE_LOGO_PATH", branding.OFFICIAL_LOGO_PATH)
     if header_logo.exists():
         st.image(str(header_logo), width=width)
