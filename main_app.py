@@ -3229,7 +3229,19 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     if st.button("Return to current learning module", use_container_width=True):
         set_student_page("Learning Module")
 
-    chat_key = f"ai_chat_history_{student['id']}"
+    student_state_id = str(student["id"])
+    chat_key = f"ai_chat_history_{student_state_id}"
+    pending_key = f"pending_chat_prompt_{student_state_id}"
+    editor_key = f"pending_chat_prompt_editor_{student_state_id}"
+    clear_key = f"pending_chat_prompt_clear_{student_state_id}"
+
+    # Streamlit forbids changing a widget-backed session-state key after the
+    # widget has been instantiated in the same run. Clear draft state only at
+    # the beginning of the following rerun, before the editor widget exists.
+    if st.session_state.pop(clear_key, False):
+        st.session_state.pop(pending_key, None)
+        st.session_state.pop(editor_key, None)
+
     if chat_key not in st.session_state:
         st.session_state[chat_key] = []
 
@@ -3244,17 +3256,47 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     qcols = st.columns(4)
     for i, (label, example) in enumerate(quick_prompts.items()):
         with qcols[i]:
-            if st.button(label, key=f"chat_quick_{i}", use_container_width=True):
-                st.session_state.pending_chat_prompt = example
+            if st.button(
+                label,
+                key=f"chat_quick_{student_state_id}_{i}",
+                use_container_width=True,
+            ):
+                # Use a storage key and a separate widget key. This prevents
+                # StreamlitAPIException when the draft is sent or cancelled.
+                st.session_state[pending_key] = example
+                st.session_state[editor_key] = example
                 st.rerun()
 
-    pending = st.session_state.get("pending_chat_prompt", "")
+    pending = st.session_state.get(pending_key, "")
+    send_draft = False
+    cancel_draft = False
     if pending:
+        if editor_key not in st.session_state:
+            st.session_state[editor_key] = pending
         st.markdown("<div class='qai-chat-draft'><b>Draft prompt selected:</b></div>", unsafe_allow_html=True)
-        st.text_area("Edit the selected prompt before sending", key="pending_chat_prompt", height=120)
-        send_draft = st.button("Send selected prompt", type="primary", use_container_width=True)
-    else:
-        send_draft = False
+        st.text_area(
+            "Edit the selected prompt before sending",
+            key=editor_key,
+            height=120,
+        )
+        draft_send_col, draft_cancel_col = st.columns([2, 1], gap="small")
+        with draft_send_col:
+            send_draft = st.button(
+                "Send selected prompt",
+                key=f"send_draft_{student_state_id}",
+                type="primary",
+                use_container_width=True,
+            )
+        with draft_cancel_col:
+            cancel_draft = st.button(
+                "Cancel draft",
+                key=f"cancel_draft_{student_state_id}",
+                use_container_width=True,
+            )
+
+    if cancel_draft:
+        st.session_state[clear_key] = True
+        st.rerun()
 
     st.markdown("### Conversation")
     if not st.session_state[chat_key]:
@@ -3284,9 +3326,10 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
             send_manual = st.form_submit_button("Send to AI Coach", type="primary", use_container_width=True)
 
     prompt = None
+    prompt_from_draft = False
     if send_draft:
-        prompt = st.session_state.get("pending_chat_prompt", "")
-        st.session_state.pending_chat_prompt = ""
+        prompt = st.session_state.get(editor_key, "")
+        prompt_from_draft = True
     elif send_manual:
         prompt = manual_prompt
 
@@ -3294,6 +3337,12 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
         if len(prompt.strip()) < 10:
             st.warning("Please write at least a short attempt or question before asking the AI tutor.")
             return
+
+        # Defer draft cleanup until the next rerun. Directly assigning to the
+        # editor key here would modify widget state after instantiation and
+        # raise streamlit.errors.StreamlitAPIException.
+        if prompt_from_draft:
+            st.session_state[clear_key] = True
 
         st.session_state[chat_key].append({"role": "user", "content": prompt})
         with st.spinner("AI tutor is thinking..."):
