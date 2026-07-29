@@ -33,6 +33,16 @@ def _secret(name: str, default: str = "") -> str:
         return default
 
 
+def _normalize_active_model(provider: str, model: str) -> str:
+    migrations = {
+        ("groq", "llama-3.1-8b-instant"): "openai/gpt-oss-20b",
+        ("groq", "llama-3.3-70b-versatile"): "openai/gpt-oss-120b",
+        ("gemini", "gemini-2.0-flash"): "gemini-3.6-flash",
+    }
+    clean = str(model or "").strip()
+    return migrations.get((str(provider or "").strip().lower(), clean), clean)
+
+
 def provider_status() -> Dict[str, Any]:
     configured_provider = _secret("LLM_PROVIDER", "").lower().strip()
     gemini_key = bool(_secret("GEMINI_API_KEY", "").strip())
@@ -59,19 +69,21 @@ def provider_status() -> Dict[str, Any]:
 
     if provider == "gemini":
         available = gemini_key
-        model = _secret("GEMINI_MODEL", "gemini-2.0-flash")
+        model = _secret("GEMINI_MODEL", "gemini-3.6-flash")
     elif provider == "openai":
         available = openai_key
         model = _secret("OPENAI_MODEL", "gpt-4o-mini")
     elif provider == "groq":
         available = groq_key
-        model = _secret("GROQ_MODEL", "llama-3.1-8b-instant")
+        model = _secret("GROQ_MODEL", "openai/gpt-oss-20b")
     elif provider == "anthropic":
         available = anthropic_key
         model = _secret("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
     else:
         available = False
         model = "local-fallback"
+
+    model = _normalize_active_model(provider, model)
 
     return {
         "provider": provider,
@@ -298,7 +310,7 @@ def local_fallback(task: str, concept: str, student_input: str = "", response_la
 
 def call_gemini(prompt: str, response_language: str = "English") -> Tuple[str, str, str]:
     api_key = _secret("GEMINI_API_KEY", "").strip()
-    model = _secret("GEMINI_MODEL", "gemini-2.0-flash").strip()
+    model = _normalize_active_model("gemini", _secret("GEMINI_MODEL", "gemini-3.6-flash").strip())
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = {
         "contents": [
@@ -352,7 +364,7 @@ def call_groq(prompt: str, response_language: str = "English") -> Tuple[str, str
     """Call Groq through its OpenAI-compatible Chat Completions endpoint."""
     api_key = _secret("GROQ_API_KEY", "").strip()
     base_url = _secret("GROQ_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
-    model = _secret("GROQ_MODEL", "llama-3.1-8b-instant").strip()
+    model = _normalize_active_model("groq", _secret("GROQ_MODEL", "openai/gpt-oss-20b").strip())
     url = f"{base_url}/chat/completions"
     payload = {
         "model": model,

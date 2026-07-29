@@ -293,3 +293,14 @@
 - Replaced pill/badge styling with transparent negative space and restrained midnight-blue / champagne-gold branding.
 - Fixed `StreamlitAPIException` triggered when saving an existing project from the Production section.
 - Queued workspace navigation and applies it before the section radio widget is instantiated.
+
+## V6.10 — Gemini File Analyzer & Model Router
+- Added task-aware routing for teacher content generation.
+- Added automatic fallback across configured Groq, Gemini, OpenRouter, OpenAI, and Anthropic providers.
+- Added Gemini multimodal analysis for PDF, image, audio, and video teacher sources.
+- Preserved local PDF/DOCX/text extraction when Gemini is unavailable or fails.
+- Added source provenance markers to the project prompt context.
+- Updated active model defaults and migrated deprecated model IDs safely in code.
+- Expanded teacher uploads to include PNG, JPG, WEBP, MP3, WAV, M4A, MP4, and MOV.
+- Added sanitized detection for OpenRouter, Cohere, and Cloudflare configuration without exposing secrets.
+

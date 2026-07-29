@@ -13,6 +13,7 @@ import pandas as pd
 import streamlit as st
 
 import content_generation_engine
+import gemini_file_analyzer
 import db
 import i18n
 import router
@@ -426,44 +427,18 @@ def _load_selected_project(username: str, u: Dict[str, str]) -> Optional[Dict[st
     return db.get_teacher_project(selected_id, username)
 
 
-def extract_uploaded_sources(uploaded_files: Any) -> str:
-    """Extract a bounded amount of teacher-supplied source text."""
-    if not uploaded_files:
-        return ""
-    chunks: List[str] = []
-    total_chars = 0
-    max_total = 80000
-    for uploaded in list(uploaded_files)[:6]:
-        name = str(getattr(uploaded, "name", "source")).strip()
-        suffix = Path(name).suffix.lower()
-        try:
-            raw = uploaded.getvalue()
-            if len(raw) > 10 * 1024 * 1024:
-                chunks.append(f"\n[Skipped {name}: file exceeds 10 MB]\n")
-                continue
-            if suffix in {".txt", ".md", ".csv", ".json"}:
-                text_value = raw.decode("utf-8", errors="replace")
-            elif suffix == ".pdf":
-                from pypdf import PdfReader
-                reader = PdfReader(io.BytesIO(raw))
-                text_value = "\n".join((page.extract_text() or "") for page in reader.pages[:80])
-            elif suffix == ".docx":
-                from docx import Document
-                document = Document(io.BytesIO(raw))
-                text_value = "\n".join(paragraph.text for paragraph in document.paragraphs)
-            else:
-                chunks.append(f"\n[Unsupported file type: {name}]\n")
-                continue
-            text_value = text_value.strip()[:30000]
-            available = max_total - total_chars
-            if available <= 0:
-                break
-            text_value = text_value[:available]
-            chunks.append(f"\n\n--- Uploaded source: {name} ---\n{text_value}")
-            total_chars += len(text_value)
-        except Exception as exc:
-            chunks.append(f"\n[Could not extract {name}: {exc}]\n")
-    return "".join(chunks).strip()
+def extract_uploaded_sources(
+    uploaded_files: Any,
+    *,
+    project_context: Optional[Dict[str, Any]] = None,
+    language: str = "English",
+) -> str:
+    """Analyze teacher sources through Gemini with bounded local fallbacks."""
+    return gemini_file_analyzer.extract_uploaded_sources(
+        uploaded_files,
+        project_context=project_context or {},
+        language=language,
+    )
 
 def save_project_and_prepare_prompt(data: Dict[str, Any], phase_number: int) -> tuple[int, str]:
     """Persist the project first, then compile the prompt from the saved record.
@@ -513,9 +488,25 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
 
         source_material = st.text_area(u["source"], value=str(p.get("source_material") or ""), height=180)
         uploaded_sources = st.file_uploader(
-            u["files"], type=["pdf", "docx", "txt", "md", "csv", "json"], accept_multiple_files=True,
-            key="teacher_source_uploads",
+            u["files"],
+            type=["pdf", "docx", "txt", "md", "csv", "json", "png", "jpg", "jpeg", "webp", "mp3", "wav", "m4a", "mp4", "mov"],
+            accept_multiple_files=True,
+            key=f"teacher_source_uploads_{form_scope}",
         )
+        file_status = gemini_file_analyzer.provider_status()
+        if file_status["mode"] == "multimodal":
+            status_copy = {
+                "ar": "تحليل Gemini متعدد الوسائط جاهز للملفات والصور والجداول والصوت والفيديو.",
+                "fr": "L’analyse multimodale Gemini est prête pour les fichiers, images, tableaux, audio et vidéo.",
+                "en": "Gemini multimodal analysis is ready for files, images, tables, audio, and video.",
+            }
+        else:
+            status_copy = {
+                "ar": "سيُستخدم الاستخراج المحلي للملفات النصية؛ تحليل الصور والوسائط يحتاج مفتاح Gemini صالحًا.",
+                "fr": "L’extraction locale sera utilisée; l’analyse des images et médias nécessite une clé Gemini valide.",
+                "en": "Local extraction will be used; image and media analysis requires a valid Gemini key.",
+            }
+        st.caption(status_copy.get(lang_code, status_copy["en"]))
         c3, c4 = st.columns(2, gap="large")
         with c3:
             teaching_preferences = st.text_area(u["teaching"], value=str(p.get("teaching_preferences") or ""), height=150)
@@ -529,8 +520,22 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
     if not all([project_name.strip(), domain.strip(), unit_title.strip(), target_concept.strip(), target_learners.strip()]):
         st.error(u["required"])
         return
+    source_analysis_context = {
+        "domain": domain.strip(),
+        "program_name": program_name.strip(),
+        "unit_title": unit_title.strip(),
+        "target_concept": target_concept.strip(),
+        "target_learners": target_learners.strip(),
+        "learner_level": learner_level,
+        "teaching_preferences": teaching_preferences.strip(),
+        "assessment_preferences": assessment_preferences.strip(),
+    }
     with st.spinner(u["saving"]):
-        extracted_sources = extract_uploaded_sources(uploaded_sources)
+        extracted_sources = extract_uploaded_sources(
+            uploaded_sources,
+            project_context=source_analysis_context,
+            language=primary_language,
+        )
     combined_sources = source_material.strip()
     if extracted_sources:
         combined_sources = (combined_sources + "\n\n" + extracted_sources).strip()
@@ -575,7 +580,13 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
     expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
     st.success(u["prompt_ready"])
     status = content_generation_engine.provider_status()
-    st.info(f"{u['provider']}: {status['provider']} / {status['model']} — {'ready' if status['available'] else 'prompt export only'}")
+    fallback_text = ""
+    if status.get("ready_fallbacks"):
+        fallback_text = " | fallback: " + ", ".join(status["ready_fallbacks"])
+    st.info(
+        f"{u['provider']}: {status['provider']} / {status['model']} — "
+        f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
+    )
     st.caption(u["phase_only"])
     if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{p['id']}_{phase_number}"):
         st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)

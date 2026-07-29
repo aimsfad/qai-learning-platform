@@ -1,4 +1,4 @@
-# 3alimnIA V6.7.3 — Bidirectional Hero Gutters
+# 3alimnIA V6.10 — Gemini File Analyzer & Model Router
 
 The homepage hero now keeps English/French copy away from the left edge and Arabic RTL copy away from the right edge, with responsive spacing on tablets and phones.
 
@@ -215,3 +215,35 @@ The Teacher Content Studio now saves the project, reloads the canonical database
 ### V6.9.4 branding and teacher prompt stability
 
 The platform now uses `assets/branding/3alimnia_logo_premium.png` as the canonical frameless logo on all major pages. The teacher project save flow also uses a queued workspace-section state, preventing Streamlit from modifying a widget-bound session-state key after instantiation.
+
+
+## V6.10 — Gemini File Analyzer & Model Router
+
+- Added `model_router.py` for task-aware provider selection and automatic fallback.
+- Teacher content generation uses the configured content provider, then can fall back to Gemini, OpenRouter, OpenAI, or Anthropic when their keys are present.
+- Added `gemini_file_analyzer.py` for multimodal analysis of PDF, images, audio, and video.
+- DOCX, TXT, Markdown, CSV, JSON, and text-readable PDFs retain deterministic local extraction as a fallback.
+- Uploaded-source analyses are stored in the project source context with provider/model provenance.
+- Updated active defaults to `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, and `gemini-3.6-flash`.
+- Deprecated Groq/Gemini model IDs are migrated in code when they remain in an older Secrets configuration.
+- Added optional OpenRouter fallback detection; Cohere and Cloudflare credentials are detected for later RAG/serverless modules but are not required for V6.10 file analysis.
+
+Recommended Secrets:
+
+```toml
+LLM_PROVIDER = "groq"
+GROQ_MODEL = "openai/gpt-oss-20b"
+CONTENT_LLM_PROVIDER = "groq"
+CONTENT_GROQ_MODEL = "openai/gpt-oss-120b"
+
+FILE_ANALYSIS_PROVIDER = "gemini"
+GEMINI_MODEL = "gemini-3.6-flash"
+FILE_ANALYSIS_GEMINI_MODEL = "gemini-3.6-flash"
+ENABLE_MODEL_FALLBACK = "true"
+```
+
+Validation:
+
+```bash
+python validate_v610_gemini_router.py
+```
