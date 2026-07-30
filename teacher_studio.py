@@ -895,7 +895,7 @@ def _render_phase_map(project: Dict[str, Any]) -> None:
                 with st.container(border=True):
                     st.caption(f"{phase:02d}")
                     st.markdown(f"**{PHASES[phase]}**")
-                    st.success(copy["ready"], icon="✓") if ready else st.caption(copy["not_ready"])
+                    st.success(copy["ready"]) if ready else st.caption(copy["not_ready"])
 
 
 def render_project_overview(project: Dict[str, Any]) -> None:
