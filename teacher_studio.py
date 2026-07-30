@@ -6,13 +6,13 @@ import io
 import json
 import re
 from html import escape
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
 
 import content_generation_engine
+import educational_builder
 import gemini_file_analyzer
 import db
 import i18n
@@ -20,24 +20,8 @@ import router
 from security import verify_password
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-MASTER_PROMPT_PATH = ROOT_DIR / "prompts" / "educational_content_production_master.md"
-
-PHASES = {
-    1: "Evidence and concept audit",
-    2: "Learning design blueprint",
-    3: "Core educational content",
-    4: "Visual asset production plan",
-    5: "Video script and storyboard",
-    6: "Interactive and practical activity",
-    7: "AI Coach design",
-    8: "Assessment package",
-    9: "Multilingual localization",
-    10: "Technical export package",
-    11: "Quality assurance",
-}
-
-LANGUAGE_NAMES = {"ar": "Arabic", "fr": "French", "en": "English"}
+PHASES = educational_builder.PHASES
+LANGUAGE_NAMES = educational_builder.LANGUAGE_NAMES
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -186,12 +170,17 @@ def teacher_ui() -> Dict[str, str]:
             "download_prompt": "تنزيل البرومبت",
             "download_project": "تنزيل بيانات المشروع",
             "saved": "تم حفظ المشروع وتجهيز البرومبت.",
-            "generated": "تم توليد مخرجات المرحلة وحفظها.",
+            "generated": "تم توليد مخرجات المرحلة وحفظها، وانتقل المشروع إلى المرحلة التالية.",
             "required": "املأ اسم المشروع والمادة والوحدة والمفهوم والفئة المستهدفة على الأقل.",
             "select_project": "اختر مشروعًا محفوظًا",
             "no_projects": "لا توجد مشاريع محفوظة بعد.",
             "provider": "حالة محرك التوليد",
-            "phase_only": "ينفذ النظام المرحلة المختارة فقط ولا ينتقل تلقائيًا إلى المرحلة التالية.",
+            "phase_only": "ينفذ النظام مرحلة واحدة في كل مرة، ثم ينتقل تلقائيًا إلى المرحلة التالية بعد اجتياز التحقق البنيوي.",
+            "latest_output": "أحدث مخرجات التوليد", "needs_review": "تم حفظ الناتج لكنه يحتاج مراجعة أو إعادة توليد.",
+            "research_on": "البحث الويبّي الموثّق مفعّل للمراحل الحساسة للأدلة.", "research_off": "البحث الويبّي غير مفعّل؛ سيعتمد النموذج على المراجع المرفوعة ويصرّح بفجوات الأدلة.",
+            "latency": "زمن التوليد", "generation_failed": "تعذر إكمال التوليد.",
+            "preview_output": "معاينة", "edit_output": "مراجعة وتحرير", "save_revision": "حفظ مراجعة الأستاذ واعتماد المرحلة",
+            "revision_saved": "تم حفظ مراجعة الأستاذ واعتماد المرحلة.", "download_output": "تنزيل مخرجات المرحلة",
         },
         "fr": {
             "workspace": "Espace enseignant",
@@ -226,9 +215,14 @@ def teacher_ui() -> Dict[str, str]:
             "save_error": "Impossible d’enregistrer le projet ou de compiler le prompt.",
             "saving": "Enregistrement du projet et compilation du prompt...", "download_prompt": "Télécharger le prompt",
             "download_project": "Télécharger le projet", "saved": "Projet enregistré et prompt compilé.",
-            "generated": "La production a été générée et enregistrée.", "required": "Renseignez au minimum le projet, la discipline, l’unité, le concept et le public.",
+            "generated": "La production a été générée, enregistrée et le projet est passé à la phase suivante.", "required": "Renseignez au minimum le projet, la discipline, l’unité, le concept et le public.",
             "select_project": "Choisir un projet enregistré", "no_projects": "Aucun projet enregistré.",
-            "provider": "État du moteur de génération", "phase_only": "Le système exécute uniquement la phase sélectionnée.",
+            "provider": "État du moteur de génération", "phase_only": "Le système exécute une phase à la fois puis avance automatiquement après validation structurelle.",
+            "latest_output": "Dernière production", "needs_review": "La production a été enregistrée mais doit être révisée ou régénérée.",
+            "research_on": "La recherche Web documentée est activée pour les phases sensibles aux preuves.", "research_off": "La recherche Web est désactivée; le modèle s’appuie sur les sources importées et signale les lacunes.",
+            "latency": "Temps de génération", "generation_failed": "La génération n’a pas pu être terminée.",
+            "preview_output": "Aperçu", "edit_output": "Réviser et modifier", "save_revision": "Enregistrer la révision et approuver la phase",
+            "revision_saved": "La révision de l’enseignant a été enregistrée et la phase approuvée.", "download_output": "Télécharger la production",
         },
         "en": {
             "workspace": "Teacher workspace",
@@ -263,9 +257,14 @@ def teacher_ui() -> Dict[str, str]:
             "save_error": "The project could not be saved or the prompt could not be compiled.",
             "saving": "Saving the project and compiling the prompt...", "download_prompt": "Download prompt",
             "download_project": "Download project data", "saved": "Project saved and prompt compiled.",
-            "generated": "The phase output was generated and saved.", "required": "Complete at least project, subject, unit, concept, and target learners.",
+            "generated": "The phase output was generated, saved, and the project advanced to the next phase.", "required": "Complete at least project, subject, unit, concept, and target learners.",
             "select_project": "Select a saved project", "no_projects": "No saved projects yet.",
-            "provider": "Generation engine status", "phase_only": "The engine executes only the selected phase.",
+            "provider": "Generation engine status", "phase_only": "The engine executes one phase at a time and advances automatically after structural validation.",
+            "latest_output": "Latest generated output", "needs_review": "The output was saved but requires review or regeneration.",
+            "research_on": "Documented web research is enabled for evidence-sensitive phases.", "research_off": "Web research is disabled; the model will rely on uploaded sources and mark evidence gaps.",
+            "latency": "Generation time", "generation_failed": "Generation could not be completed.",
+            "preview_output": "Preview", "edit_output": "Review and edit", "save_revision": "Save teacher revision and approve phase",
+            "revision_saved": "The teacher revision was saved and the phase approved.", "download_output": "Download phase output",
         },
     }
     return values.get(lang, values["en"])
@@ -367,34 +366,13 @@ def render_teacher_login() -> None:
 
 
 def _teacher_brief(data: Dict[str, Any]) -> str:
-    labels = {
-        "project_name": "Project name", "domain": "Educational domain", "program_name": "Program/course",
-        "unit_title": "Unit title", "target_concept": "Target concept", "target_learners": "Target learners",
-        "learner_level": "Learner level", "prerequisites": "Prerequisites", "target_languages": "Target languages",
-        "primary_language": "Primary production language", "expected_duration": "Expected duration",
-        "technical_environment": "Technical environment", "platform_components": "Platform components",
-        "source_material": "Available subject content and references", "teaching_preferences": "Teacher's preferred teaching approach",
-        "assessment_preferences": "Teacher's preferred assessment approach", "additional_notes": "Additional notes",
-        "requested_outputs": "Requested outputs",
-    }
-    lines: List[str] = []
-    for key, label in labels.items():
-        value = data.get(key, "")
-        if isinstance(value, list):
-            value = ", ".join(value)
-        lines.append(f"- {label}: {value or '[Not specified]'}")
-    return "\n".join(lines)
+    """Compatibility wrapper for the V6.11 bounded teacher brief."""
+    return educational_builder.teacher_brief(data)
 
 
 def compile_project_prompt(data: Dict[str, Any], phase_number: int) -> str:
-    template = MASTER_PROMPT_PATH.read_text(encoding="utf-8")
-    output_language = LANGUAGE_NAMES.get(str(data.get("primary_language_code") or "en"), str(data.get("primary_language") or "English"))
-    return (
-        template.replace("{{TEACHER_PROJECT_BRIEF}}", _teacher_brief(data))
-        .replace("{{PHASE_NUMBER}}", str(phase_number))
-        .replace("{{PHASE_NAME}}", PHASES[int(phase_number)])
-        .replace("{{OUTPUT_LANGUAGE}}", output_language)
-    )
+    """Compile the selected phase and accepted prior outputs only."""
+    return educational_builder.compile_project_prompt(data, int(phase_number))
 
 
 def _project_defaults(project: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -571,6 +549,64 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
     st.rerun()
 
 
+def _render_latest_generation(project_id: int, u: Dict[str, str]) -> None:
+    latest = db.latest_teacher_generation(int(project_id))
+    if not latest:
+        return
+    phase = int(latest.get("phase_number") or 0)
+    status = str(latest.get("status") or "")
+    provider = str(latest.get("provider") or "")
+    model = str(latest.get("model") or "")
+    latency_ms = int(latest.get("latency_ms") or 0)
+    response_text = str(latest.get("response_text") or "").strip()
+    title = f"{u['latest_output']} — {phase}. {PHASES.get(phase, '')}"
+    with st.expander(title, expanded=status in {"completed", "needs_review"}):
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Status", status or "—")
+        m2.metric("Model", f"{provider} / {model}" if provider or model else "—")
+        m3.metric(u["latency"], f"{latency_ms / 1000:.1f} s" if latency_ms else "—")
+        if latest.get("diagnostic"):
+            st.caption(str(latest.get("diagnostic")))
+        preview_tab, edit_tab = st.tabs([u["preview_output"], u["edit_output"]])
+        with preview_tab:
+            if response_text:
+                st.markdown(response_text)
+                st.download_button(
+                    u["download_output"],
+                    response_text.encode("utf-8"),
+                    file_name=f"project_{int(project_id)}_phase_{phase}_output.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                    key=f"download_latest_teacher_output_{int(latest['id'])}",
+                )
+        with edit_tab:
+            revision = st.text_area(
+                u["edit_output"],
+                value=response_text,
+                height=440,
+                key=f"teacher_revision_editor_{int(latest['id'])}",
+                label_visibility="collapsed",
+            )
+            if st.button(
+                u["save_revision"],
+                type="primary",
+                use_container_width=True,
+                key=f"save_teacher_revision_{int(latest['id'])}",
+            ):
+                try:
+                    db.save_teacher_manual_revision(
+                        int(project_id),
+                        _current_teacher_username(),
+                        phase,
+                        revision,
+                        source_run_id=int(latest["id"]),
+                    )
+                    st.session_state.teacher_flash_success = u["revision_saved"]
+                except Exception as exc:
+                    st.session_state.teacher_flash_error = str(exc)
+                st.rerun()
+
+
 def render_prompt_and_generation(project: Dict[str, Any]) -> None:
     u = teacher_ui()
     p = _project_defaults(project)
@@ -587,6 +623,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         f"{u['provider']}: {status['provider']} / {status['model']} — "
         f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
     )
+    st.caption(u["research_on"] if status.get("web_research_enabled") else u["research_off"])
     st.caption(u["phase_only"])
     if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{p['id']}_{phase_number}"):
         st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
@@ -598,23 +635,47 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
     if expand_prompt:
         st.session_state.teacher_expand_prompt = False
     safe_name = "_".join(str(p.get("project_name") or "project").split())
-    st.download_button(u["download_prompt"], prompt.encode("utf-8"), file_name=f"{safe_name}_phase_{phase_number}_prompt.md", mime="text/markdown", use_container_width=True)
+    st.download_button(
+        u["download_prompt"],
+        prompt.encode("utf-8"),
+        file_name=f"{safe_name}_phase_{phase_number}_prompt.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
     project_json = json.dumps(p, ensure_ascii=False, indent=2, default=str)
-    st.download_button(u["download_project"], project_json.encode("utf-8"), file_name=f"{safe_name}_project.json", mime="application/json", use_container_width=True)
-    if st.button(u["generate"], type="primary", use_container_width=True, key=f"generate_teacher_phase_{p['id']}_{phase_number}"):
-        with st.spinner("3alimnIA is generating the selected phase..."):
-            result = content_generation_engine.generate_content(prompt, str(p.get("primary_language") or "English"))
-            db.save_teacher_generation(
-                project_id=int(p["id"]), phase_number=phase_number, prompt_text=prompt, response_text=result.response,
-                provider=result.provider, model=result.model, status=result.status, diagnostic=result.diagnostic,
-            )
-            st.session_state.teacher_last_response = result.response
-        if result.status == "completed":
-            st.success(u["generated"])
-        elif result.status == "not_configured":
-            st.warning(result.diagnostic)
-        else:
-            st.error(result.diagnostic or result.response)
+    st.download_button(
+        u["download_project"],
+        project_json.encode("utf-8"),
+        file_name=f"{safe_name}_project.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+    _render_latest_generation(int(p["id"]), u)
+
+    generate_key = f"generate_teacher_phase_{p['id']}_{phase_number}"
+    if st.button(u["generate"], type="primary", use_container_width=True, key=generate_key):
+        try:
+            with st.spinner(f"3alimnIA is generating phase {phase_number}: {PHASES[phase_number]}..."):
+                outcome = educational_builder.generate_project_phase(
+                    p,
+                    _current_teacher_username(),
+                    phase_number=phase_number,
+                )
+            st.session_state.teacher_last_response = outcome.response
+            if outcome.status == "completed":
+                st.session_state.teacher_flash_success = (
+                    f"{u['generated']} {phase_number}/{len(PHASES)} — "
+                    f"{outcome.provider}/{outcome.model}."
+                )
+            elif outcome.status == "needs_review":
+                st.session_state.teacher_flash_warning = f"{u['needs_review']} {outcome.diagnostic}"
+            elif outcome.status == "not_configured":
+                st.session_state.teacher_flash_warning = outcome.diagnostic
+            else:
+                st.session_state.teacher_flash_error = outcome.diagnostic or u["generation_failed"]
+        except Exception as exc:
+            st.session_state.teacher_flash_error = f"{u['generation_failed']} {exc}"
         st.rerun()
 
 
@@ -998,6 +1059,9 @@ def render_teacher_app() -> None:
     flash_success = st.session_state.pop("teacher_flash_success", None)
     if flash_success:
         st.success(str(flash_success))
+    flash_warning = st.session_state.pop("teacher_flash_warning", None)
+    if flash_warning:
+        st.warning(str(flash_warning))
     flash_error = st.session_state.pop("teacher_flash_error", None)
     if flash_error:
         st.error(str(flash_error))
