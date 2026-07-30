@@ -1,3 +1,7 @@
+# 3alimnIA V6.11 — Educational Content Builder
+
+The Teacher Content Studio now generates, validates, stores, reviews, and chains educational content across 11 production phases. See `V6_11_EDUCATIONAL_CONTENT_BUILDER_AR.md` for deployment and configuration details.
+
 # 3alimnIA V6.10 — Gemini File Analyzer & Model Router
 
 The homepage hero now keeps English/French copy away from the left edge and Arabic RTL copy away from the right edge, with responsive spacing on tablets and phones.

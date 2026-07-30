@@ -1,3 +1,14 @@
+# V6.11 — Educational Content Builder
+
+- Added a phase-specific educational content builder that generates one production phase at a time.
+- Chained accepted outputs from previous phases into later prompts.
+- Fixed project progress regression after a failed regeneration attempt.
+- Added structural output validation, `needs_review`, latency logging, and fallback metadata.
+- Advanced projects automatically after a validated generation.
+- Added teacher editing and approval of generated phase outputs.
+- Added bounded retries and optional Groq GPT-OSS browser research for evidence-sensitive phases.
+- Added `validate_v611_content_builder.py`.
+
 # V6.9.2 — Teacher project workspaces and publishing
 
 - Replaced the saved-project selector with responsive project cards and production progress.

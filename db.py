@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.10.1-ai-tutor-state-hotfix"
+APP_VERSION = "v6.11-educational-content-builder"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -280,6 +280,9 @@ def init_db() -> None:
             model TEXT,
             status TEXT,
             diagnostic TEXT,
+            latency_ms INTEGER,
+            validation_status TEXT,
+            is_fallback_used INTEGER DEFAULT 0,
             created_at {created_default}
         )
         """,
@@ -310,6 +313,9 @@ def init_db() -> None:
     ensure_column("ai_interactions", "student_input_language", "TEXT")
     ensure_column("teacher_projects", "published_at", "TEXT")
     ensure_column("teacher_projects", "reviewed_at", "TEXT")
+    ensure_column("teacher_generation_runs", "latency_ms", "INTEGER")
+    ensure_column("teacher_generation_runs", "validation_status", "TEXT")
+    ensure_column("teacher_generation_runs", "is_fallback_used", "INTEGER DEFAULT 0")
     ensure_column("ai_interactions", "response_language", "TEXT")
     ensure_column("ai_interactions", "error_type", "TEXT")
     ensure_column("ai_interactions", "is_fallback_used", "INTEGER DEFAULT 0")
@@ -1667,21 +1673,123 @@ def get_teacher_project(project_id: int, teacher_username: str) -> Optional[Dict
 
 
 def save_teacher_generation(
-    project_id: int, phase_number: int, prompt_text: str, response_text: str, provider: str, model: str, status: str, diagnostic: str = ""
+    project_id: int,
+    phase_number: int,
+    prompt_text: str,
+    response_text: str,
+    provider: str,
+    model: str,
+    status: str,
+    diagnostic: str = "",
+    *,
+    latency_ms: int = 0,
+    validation_status: str = "",
+    is_fallback_used: bool = False,
 ) -> int:
     return execute_returning_id(
         """
         INSERT INTO teacher_generation_runs
-        (project_id, phase_number, prompt_text, response_text, provider, model, status, diagnostic, created_at)
-        VALUES (:project_id, :phase_number, :prompt_text, :response_text, :provider, :model, :status, :diagnostic, :created_at)
+        (project_id, phase_number, prompt_text, response_text, provider, model, status, diagnostic,
+         latency_ms, validation_status, is_fallback_used, created_at)
+        VALUES (:project_id, :phase_number, :prompt_text, :response_text, :provider, :model, :status, :diagnostic,
+                :latency_ms, :validation_status, :is_fallback_used, :created_at)
         """ + (" RETURNING id" if dialect() != "sqlite" else ""),
         {
-            "project_id": int(project_id), "phase_number": int(phase_number), "prompt_text": str(prompt_text),
-            "response_text": str(response_text), "provider": str(provider), "model": str(model),
-            "status": str(status), "diagnostic": str(diagnostic or ""), "created_at": utc_now(),
+            "project_id": int(project_id),
+            "phase_number": int(phase_number),
+            "prompt_text": str(prompt_text),
+            "response_text": str(response_text),
+            "provider": str(provider),
+            "model": str(model),
+            "status": str(status),
+            "diagnostic": str(diagnostic or ""),
+            "latency_ms": int(latency_ms or 0),
+            "validation_status": str(validation_status or ""),
+            "is_fallback_used": 1 if is_fallback_used else 0,
+            "created_at": utc_now(),
         },
     )
 
+
+def set_teacher_project_phase(project_id: int, teacher_username: str, phase_number: int) -> None:
+    """Advance or reposition a project phase with an ownership check."""
+    phase = int(phase_number)
+    if phase < 1 or phase > 11:
+        raise ValueError("phase_number must be between 1 and 11")
+    project = get_teacher_project(int(project_id), str(teacher_username))
+    if not project:
+        raise ValueError("Teacher project not found or access denied")
+    exec_sql(
+        """
+        UPDATE teacher_projects
+        SET current_phase=:phase, updated_at=:updated_at
+        WHERE id=:id AND teacher_username=:username
+        """,
+        {
+            "phase": phase,
+            "updated_at": utc_now(),
+            "id": int(project_id),
+            "username": str(teacher_username),
+        },
+    )
+
+
+def latest_teacher_generation(project_id: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM teacher_generation_runs WHERE project_id=:project_id ORDER BY id DESC LIMIT 1",
+        {"project_id": int(project_id)},
+    )
+
+def save_teacher_manual_revision(
+    project_id: int,
+    teacher_username: str,
+    phase_number: int,
+    response_text: str,
+    *,
+    source_run_id: Optional[int] = None,
+) -> int:
+    """Save a teacher-edited output as the accepted result for a phase."""
+    project = get_teacher_project(int(project_id), str(teacher_username))
+    if not project:
+        raise ValueError("Teacher project not found or access denied")
+    phase = int(phase_number)
+    if phase < 1 or phase > 11:
+        raise ValueError("phase_number must be between 1 and 11")
+    clean = str(response_text or "").strip()
+    if len(clean) < 100:
+        raise ValueError("The reviewed output is too short to approve")
+
+    params: Dict[str, Any] = {"project_id": int(project_id), "phase": phase}
+    sql = (
+        "SELECT * FROM teacher_generation_runs "
+        "WHERE project_id=:project_id AND phase_number=:phase "
+    )
+    if source_run_id is not None:
+        sql += "AND id=:run_id "
+        params["run_id"] = int(source_run_id)
+    sql += "ORDER BY id DESC LIMIT 1"
+    source = query_one(sql, params) or {}
+    run_id = save_teacher_generation(
+        project_id=int(project_id),
+        phase_number=phase,
+        prompt_text=str(source.get("prompt_text") or "Teacher-authored revision"),
+        response_text=clean,
+        provider="teacher",
+        model="manual-review",
+        status="completed",
+        diagnostic=f"Teacher-reviewed revision based on run #{int(source.get('id') or 0)}.",
+        validation_status="teacher_approved",
+        is_fallback_used=False,
+    )
+    current_phase = int(project.get("current_phase") or 1)
+    if current_phase <= phase:
+        set_teacher_project_phase(int(project_id), str(teacher_username), min(phase + 1, 11))
+    else:
+        exec_sql(
+            "UPDATE teacher_projects SET updated_at=:updated_at WHERE id=:id AND teacher_username=:username",
+            {"updated_at": utc_now(), "id": int(project_id), "username": str(teacher_username)},
+        )
+    return int(run_id)
 
 def teacher_generation_runs_df(project_id: int) -> pd.DataFrame:
     return query_df(
@@ -1747,18 +1855,37 @@ def teacher_projects_with_progress_df(teacher_username: str) -> pd.DataFrame:
     )
 
 
-def teacher_project_phase_outputs(project_id: int) -> Dict[int, Dict[str, Any]]:
-    """Return the newest generation run for each phase of a project."""
+def teacher_project_phase_outputs(
+    project_id: int,
+    *,
+    prefer_completed: bool = True,
+) -> Dict[int, Dict[str, Any]]:
+    """Return one representative generation run for every project phase.
+
+    Progress and learner previews must not regress when a later regeneration
+    attempt fails. Therefore a completed run is preferred over a newer failed
+    run for the same phase. Set ``prefer_completed=False`` to obtain the latest
+    run regardless of status.
+    """
     frame = teacher_generation_runs_df(int(project_id))
     outputs: Dict[int, Dict[str, Any]] = {}
     if frame.empty:
         return outputs
-    for _, row in frame.iterrows():
+    rows = [row.to_dict() for _, row in frame.iterrows()]
+    for row in rows:
         phase = int(row.get("phase_number") or 0)
-        if phase and phase not in outputs:
-            outputs[phase] = row.to_dict()
+        if not phase:
+            continue
+        current = outputs.get(phase)
+        if current is None:
+            outputs[phase] = row
+            continue
+        if prefer_completed:
+            current_completed = str(current.get("status") or "") == "completed"
+            row_completed = str(row.get("status") or "") == "completed"
+            if row_completed and not current_completed:
+                outputs[phase] = row
     return outputs
-
 
 def published_teacher_projects_df() -> pd.DataFrame:
     """List public teacher-authored projects for the learner catalogue."""

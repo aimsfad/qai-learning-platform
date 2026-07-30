@@ -69,7 +69,7 @@ def validate_routing_and_ui() -> None:
         "def compile_project_prompt",
         "def render_teacher_app",
         "def extract_uploaded_sources",
-        "save_teacher_generation",
+        "educational_builder.generate_project_phase",
     ])
 
 

@@ -27,7 +27,7 @@ for forbidden in [
     if forbidden in text:
         raise AssertionError(f"Unsafe legacy state mutation still present: {forbidden}")
 
-if 'APP_VERSION = "v6.10.1-ai-tutor-state-hotfix"' not in db_text:
+if not any(v in db_text for v in ('APP_VERSION = "v6.10.1-ai-tutor-state-hotfix"', 'APP_VERSION = "v6.11-educational-content-builder"')):
     raise AssertionError("Version marker was not updated")
 
 py_compile.compile(str(MAIN), doraise=True)
