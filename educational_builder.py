@@ -33,23 +33,53 @@ PHASES: Dict[int, str] = {
     11: "Quality assurance",
 }
 
+PHASES_LOCALIZED: Dict[str, Dict[int, str]] = {
+    "ar": {
+        1: "تدقيق الأدلة والمفهوم",
+        2: "مخطط التصميم التعليمي",
+        3: "المحتوى التعليمي الأساسي",
+        4: "خطة إنتاج الأصول البصرية",
+        5: "السيناريو التعليمي ولوحة المشاهد",
+        6: "النشاط التفاعلي والتطبيقي",
+        7: "تصميم المدرّب الذكي",
+        8: "حزمة التقييم",
+        9: "التوطين متعدد اللغات",
+        10: "حزمة التصدير التقني",
+        11: "ضمان الجودة",
+    },
+    "fr": {
+        1: "Audit des preuves et du concept",
+        2: "Plan de conception pédagogique",
+        3: "Contenu pédagogique principal",
+        4: "Plan de production des ressources visuelles",
+        5: "Script vidéo et storyboard",
+        6: "Activité interactive et pratique",
+        7: "Conception du coach IA",
+        8: "Dossier d’évaluation",
+        9: "Localisation multilingue",
+        10: "Dossier d’export technique",
+        11: "Assurance qualité",
+    },
+    "en": dict(PHASES),
+}
+
 LANGUAGE_NAMES = {"ar": "Arabic", "fr": "French", "en": "English"}
 
 # Deliberately conservative output budgets. They can be overridden globally by
 # CONTENT_MAX_TOKENS in Streamlit secrets, while remaining below common hosted
 # model completion limits.
 PHASE_MAX_TOKENS: Dict[int, int] = {
-    1: 6200,
-    2: 5200,
-    3: 7600,
-    4: 6200,
-    5: 7000,
-    6: 6200,
-    7: 5400,
-    8: 6800,
-    9: 7000,
-    10: 7600,
-    11: 5200,
+    1: 3600,
+    2: 3400,
+    3: 4800,
+    4: 3800,
+    5: 4400,
+    6: 3800,
+    7: 3400,
+    8: 4200,
+    9: 4200,
+    10: 4600,
+    11: 3400,
 }
 
 PHASE_MIN_CHARS: Dict[int, int] = {
@@ -109,24 +139,24 @@ def _bounded_text(value: Any, limit: int) -> str:
 def teacher_brief(data: Mapping[str, Any]) -> str:
     """Create a bounded, injection-aware teacher brief for the model."""
     fields: Iterable[Tuple[str, str, int]] = (
-        ("project_name", "Project name", 1200),
-        ("domain", "Educational domain", 1200),
-        ("program_name", "Program/course", 1200),
-        ("unit_title", "Unit title", 1200),
-        ("target_concept", "Target concept", 5000),
-        ("target_learners", "Target learners", 3000),
-        ("learner_level", "Learner level", 500),
-        ("prerequisites", "Prerequisites", 5000),
-        ("target_languages", "Target languages", 1200),
-        ("primary_language", "Primary production language", 500),
-        ("expected_duration", "Expected duration", 500),
-        ("technical_environment", "Technical environment", 1500),
-        ("platform_components", "Platform components", 3000),
-        ("source_material", "Available subject content and references", 36000),
-        ("teaching_preferences", "Teacher's preferred teaching approach", 7000),
-        ("assessment_preferences", "Teacher's preferred assessment approach", 7000),
-        ("additional_notes", "Additional notes", 5000),
-        ("requested_outputs", "Requested outputs", 3000),
+        ("project_name", "Project name", 500),
+        ("domain", "Educational domain", 500),
+        ("program_name", "Program/course", 500),
+        ("unit_title", "Unit title", 500),
+        ("target_concept", "Target concept", 2500),
+        ("target_learners", "Target learners", 1400),
+        ("learner_level", "Learner level", 300),
+        ("prerequisites", "Prerequisites", 1800),
+        ("target_languages", "Target languages", 500),
+        ("primary_language", "Primary production language", 300),
+        ("expected_duration", "Expected duration", 300),
+        ("technical_environment", "Technical environment", 900),
+        ("platform_components", "Platform components", 1500),
+        ("source_material", "Available subject content and references", 14000),
+        ("teaching_preferences", "Teacher's preferred teaching approach", 2600),
+        ("assessment_preferences", "Teacher's preferred assessment approach", 2400),
+        ("additional_notes", "Additional notes", 1800),
+        ("requested_outputs", "Requested outputs", 1400),
     )
     lines: List[str] = [
         "<teacher_project_brief>",
@@ -169,10 +199,10 @@ def _global_prompt_rules(template: str) -> str:
 def _compact_previous_output(text: str, *, immediate: bool) -> str:
     clean = str(text or "").strip()
     if immediate:
-        return _bounded_text(clean, 18000)
+        return _bounded_text(clean, 7000)
     headings = [line.strip() for line in clean.splitlines() if line.lstrip().startswith("#")]
     heading_text = "\n".join(headings[:40])
-    body = _bounded_text(clean, 3500)
+    body = _bounded_text(clean, 1400)
     return f"Headings:\n{heading_text or '[No Markdown headings]'}\n\nExcerpt:\n{body}"
 
 
@@ -181,7 +211,7 @@ def previous_phase_context(project_id: int, phase_number: int) -> str:
         return ""
     outputs = db.teacher_project_phase_outputs(int(project_id), prefer_completed=True)
     blocks: List[str] = []
-    budget = 30000
+    budget = 11000
     for phase in range(1, int(phase_number)):
         row = outputs.get(phase)
         if not row or str(row.get("status") or "") != "completed":
@@ -247,13 +277,28 @@ def compile_project_prompt(
             "Never invent URLs, DOIs, dates, quotations, or bibliographic records."
         )
 
+    language_code = str(data.get("primary_language_code") or "en").strip().lower()
+    localized_phase_name = PHASES_LOCALIZED.get(language_code, PHASES_LOCALIZED["en"])[phase_number]
+    checks_title = {"ar": "فحوص التوليد", "fr": "Contrôles de génération", "en": "Generation checks"}.get(
+        language_code, "Generation checks"
+    )
+    typography_rules = {
+        "ar": (
+            "- Use Arabic-only Markdown headings. Do not mix Arabic and English inside the same heading.\n"
+            "- When an English technical term is necessary, place it on a separate line in backticks after the Arabic heading.\n"
+            "- Use RTL-friendly punctuation, short paragraphs, and compact tables. Keep code, API names, and identifiers LTR.\n"
+        ),
+        "fr": "- Use French headings and place unavoidable English API names in backticks.\n",
+        "en": "- Use English headings and consistent technical terminology.\n",
+    }.get(language_code, "")
     response_contract = (
         "\n\n# Response contract\n"
-        f"- Execute Phase {phase_number} only: {PHASES[phase_number]}.\n"
+        f"- Execute Phase {phase_number} only: {localized_phase_name}.\n"
         f"- Write in {output_language}.\n"
-        "- Use clear Markdown headings, compact tables where useful, and implementation-ready sections.\n"
+        + typography_rules
+        + "- Use clear Markdown headings, compact tables where useful, and implementation-ready sections.\n"
         "- Do not describe your hidden reasoning process. Return the educational production artifact only.\n"
-        "- End with a section titled `Generation checks` stating: evidence gaps, assumptions, and items requiring teacher approval."
+        f"- End with a section titled `{checks_title}` stating: evidence gaps, assumptions, and items requiring teacher approval."
     )
     parts = [global_rules, phase_spec]
     if prior_context:
@@ -261,6 +306,47 @@ def compile_project_prompt(
     parts.append(evidence_contract.strip())
     parts.append(response_contract.strip())
     return "\n\n".join(part for part in parts if part).strip()
+
+
+def normalize_phase_output(text: str, phase_number: int, language_code: str) -> str:
+    """Normalize generated Markdown for stable multilingual rendering."""
+    clean = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    language_code = str(language_code or "en").strip().lower()
+    if not clean:
+        return clean
+
+    lines = clean.splitlines()
+    if language_code == "ar":
+        canonical = PHASES_LOCALIZED["ar"].get(int(phase_number), PHASES.get(int(phase_number), ""))
+        canonical_h1 = f"# المرحلة {int(phase_number)}: {canonical}"
+        first_heading = next((i for i, line in enumerate(lines) if line.lstrip().startswith("#")), None)
+        if first_heading is None:
+            lines.insert(0, canonical_h1)
+            lines.insert(1, "")
+        else:
+            lines[first_heading] = canonical_h1
+
+        normalized: List[str] = []
+        parenthetical_english = re.compile(r"\s*\(([A-Za-z][A-Za-z0-9 &/+_.:-]{2,})\)\s*$")
+        for line in lines:
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                match = parenthetical_english.search(line)
+                if match:
+                    term = match.group(1).strip()
+                    heading = parenthetical_english.sub("", line).rstrip()
+                    normalized.extend([heading, "", f"**المصطلح الإنجليزي:** `{term}`"])
+                    continue
+                if "Generation checks" in line:
+                    line = line.replace("Generation checks", "فحوص التوليد")
+            normalized.append(line)
+        clean = "\n".join(normalized)
+    elif language_code == "fr":
+        clean = re.sub(r"(?mi)^(#{1,6})\s*Generation checks\s*$", r"\1 Contrôles de génération", clean)
+
+    # Prevent pathological vertical whitespace produced by some models.
+    clean = re.sub(r"\n{4,}", "\n\n\n", clean)
+    return clean.strip()
 
 
 def validate_phase_output(text: str, phase_number: int) -> Tuple[bool, str]:
@@ -315,10 +401,15 @@ def generate_project_phase(
         phase_number=phase,
     )
 
+    normalized_response = normalize_phase_output(
+        result.response,
+        phase,
+        str(saved.get("primary_language_code") or "en"),
+    )
     final_status = result.status
     diagnostic_parts: List[str] = [part for part in [result.diagnostic] if part]
     if result.status == "completed":
-        valid, validation_message = validate_phase_output(result.response, phase)
+        valid, validation_message = validate_phase_output(normalized_response, phase)
         diagnostic_parts.append(validation_message)
         if not valid:
             final_status = "needs_review"
@@ -327,7 +418,7 @@ def generate_project_phase(
         project_id=project_id,
         phase_number=phase,
         prompt_text=prompt,
-        response_text=result.response,
+        response_text=normalized_response,
         provider=result.provider,
         model=result.model,
         status=final_status,
@@ -346,7 +437,7 @@ def generate_project_phase(
         project_id=project_id,
         phase_number=phase,
         prompt=prompt,
-        response=result.response,
+        response=normalized_response,
         provider=result.provider,
         model=result.model,
         status=final_status,

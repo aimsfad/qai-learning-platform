@@ -1,3 +1,7 @@
+# 3alimnIA V6.11.1 — Prompt Budget and RTL Hotfix
+
+The Teacher Content Studio now compacts oversized Groq requests within a configurable token budget, retries HTTP 413 once with a stricter plan, sanitizes provider diagnostics, and normalizes Arabic generated Markdown for stable RTL display. See `V6_11_1_PROMPT_BUDGET_RTL_HOTFIX_AR.md`.
+
 # 3alimnIA V6.11 — Educational Content Builder
 
 The Teacher Content Studio now generates, validates, stores, reviews, and chains educational content across 11 production phases. See `V6_11_EDUCATIONAL_CONTENT_BUILDER_AR.md` for deployment and configuration details.

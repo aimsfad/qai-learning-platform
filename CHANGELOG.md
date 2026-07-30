@@ -1,3 +1,14 @@
+# V6.11.1 — Prompt Budget and RTL Hotfix
+
+- Added provider-aware runtime prompt budgeting for constrained Groq tiers.
+- Preserved the full downloadable prompt while compacting only the provider runtime request.
+- Added one strict Groq retry for HTTP 413/token-allowance failures before fallback.
+- Sanitized provider diagnostics to remove URLs and organization identifiers.
+- Added prompt-budget visibility to the Teacher Content Studio.
+- Normalized Arabic phase headings and separated English technical terms from RTL headings.
+- Added scoped RTL/LTR output styles for headings, tables, and code blocks.
+- Added `validate_v6111_prompt_budget_rtl.py`.
+
 # V6.11 — Educational Content Builder
 
 - Added a phase-specific educational content builder that generates one production phase at a time.

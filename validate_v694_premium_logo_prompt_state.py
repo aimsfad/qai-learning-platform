@@ -40,7 +40,7 @@ def main() -> None:
     require('teacher_workspace_section_pending = "production"' in teacher, "Prompt navigation is not queued")
     require('pop("teacher_workspace_section_pending", None)' in teacher, "Queued section is not applied before widget creation")
     require('st.session_state.teacher_workspace_section = "production"' not in teacher, "Unsafe direct widget-state mutation still exists")
-    require(any(v in db for v in ('APP_VERSION = "v6.9.4-premium-logo-prompt-state"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"', 'APP_VERSION = "v6.11-educational-content-builder"')), "Application version is not V6.9.4+")
+    require(any(v in db for v in ('APP_VERSION = "v6.9.4-premium-logo-prompt-state"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"', 'APP_VERSION = "v6.11-educational-content-builder"', 'APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"')), "Application version is not V6.9.4+")
 
     print("V6.9.4 premium logo and prompt-state validation passed.")
 

@@ -176,6 +176,8 @@ def teacher_ui() -> Dict[str, str]:
             "no_projects": "لا توجد مشاريع محفوظة بعد.",
             "provider": "حالة محرك التوليد",
             "phase_only": "ينفذ النظام مرحلة واحدة في كل مرة، ثم ينتقل تلقائيًا إلى المرحلة التالية بعد اجتياز التحقق البنيوي.",
+            "prompt_budget": "ميزانية الطلب: نحو {runtime} رمز إدخال من أصل {original}، وحد أقصى {output} رمزًا للإجابة{compacted}.",
+            "prompt_compacted": " بعد ضغط السياق تلقائيًا",
             "latest_output": "أحدث مخرجات التوليد", "needs_review": "تم حفظ الناتج لكنه يحتاج مراجعة أو إعادة توليد.",
             "research_on": "البحث الويبّي الموثّق مفعّل للمراحل الحساسة للأدلة.", "research_off": "البحث الويبّي غير مفعّل؛ سيعتمد النموذج على المراجع المرفوعة ويصرّح بفجوات الأدلة.",
             "latency": "زمن التوليد", "generation_failed": "تعذر إكمال التوليد.",
@@ -218,6 +220,8 @@ def teacher_ui() -> Dict[str, str]:
             "generated": "La production a été générée, enregistrée et le projet est passé à la phase suivante.", "required": "Renseignez au minimum le projet, la discipline, l’unité, le concept et le public.",
             "select_project": "Choisir un projet enregistré", "no_projects": "Aucun projet enregistré.",
             "provider": "État du moteur de génération", "phase_only": "Le système exécute une phase à la fois puis avance automatiquement après validation structurelle.",
+            "prompt_budget": "Budget de requête : environ {runtime} jetons d’entrée sur {original}, avec {output} jetons de sortie maximum{compacted}.",
+            "prompt_compacted": " après compression automatique du contexte",
             "latest_output": "Dernière production", "needs_review": "La production a été enregistrée mais doit être révisée ou régénérée.",
             "research_on": "La recherche Web documentée est activée pour les phases sensibles aux preuves.", "research_off": "La recherche Web est désactivée; le modèle s’appuie sur les sources importées et signale les lacunes.",
             "latency": "Temps de génération", "generation_failed": "La génération n’a pas pu être terminée.",
@@ -260,6 +264,8 @@ def teacher_ui() -> Dict[str, str]:
             "generated": "The phase output was generated, saved, and the project advanced to the next phase.", "required": "Complete at least project, subject, unit, concept, and target learners.",
             "select_project": "Select a saved project", "no_projects": "No saved projects yet.",
             "provider": "Generation engine status", "phase_only": "The engine executes one phase at a time and advances automatically after structural validation.",
+            "prompt_budget": "Request budget: about {runtime} input tokens from {original}, with an output cap of {output}{compacted}.",
+            "prompt_compacted": " after automatic context compaction",
             "latest_output": "Latest generated output", "needs_review": "The output was saved but requires review or regeneration.",
             "research_on": "Documented web research is enabled for evidence-sensitive phases.", "research_off": "Web research is disabled; the model will rely on uploaded sources and mark evidence gaps.",
             "latency": "Generation time", "generation_failed": "Generation could not be completed.",
@@ -549,7 +555,15 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
     st.rerun()
 
 
-def _render_latest_generation(project_id: int, u: Dict[str, str]) -> None:
+def _render_generation_markdown(text: str, language_code: str) -> None:
+    """Render generated Markdown inside a scoped bidirectional container."""
+    marker_class = "v6111-generation-output-rtl" if str(language_code).lower() == "ar" else "v6111-generation-output-ltr"
+    with st.container():
+        st.markdown(f"<span class='{marker_class}' aria-hidden='true'></span>", unsafe_allow_html=True)
+        st.markdown(str(text or ""))
+
+
+def _render_latest_generation(project_id: int, u: Dict[str, str], language_code: str = "en") -> None:
     latest = db.latest_teacher_generation(int(project_id))
     if not latest:
         return
@@ -570,7 +584,7 @@ def _render_latest_generation(project_id: int, u: Dict[str, str]) -> None:
         preview_tab, edit_tab = st.tabs([u["preview_output"], u["edit_output"]])
         with preview_tab:
             if response_text:
-                st.markdown(response_text)
+                _render_generation_markdown(response_text, language_code)
                 st.download_button(
                     u["download_output"],
                     response_text.encode("utf-8"),
@@ -624,6 +638,19 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
     )
     st.caption(u["research_on"] if status.get("web_research_enabled") else u["research_off"])
+    budget = content_generation_engine.prompt_budget_info(
+        prompt,
+        educational_builder.PHASE_MAX_TOKENS.get(phase_number, 3600),
+    )
+    compacted_label = u["prompt_compacted"] if budget.get("compacted") else ""
+    st.caption(
+        u["prompt_budget"].format(
+            runtime=budget.get("estimated_runtime_tokens", 0),
+            original=budget.get("estimated_original_tokens", 0),
+            output=budget.get("max_output_tokens", 0),
+            compacted=compacted_label,
+        )
+    )
     st.caption(u["phase_only"])
     if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{p['id']}_{phase_number}"):
         st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
@@ -651,7 +678,11 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         use_container_width=True,
     )
 
-    _render_latest_generation(int(p["id"]), u)
+    _render_latest_generation(
+        int(p["id"]),
+        u,
+        str(p.get("primary_language_code") or "en"),
+    )
 
     generate_key = f"generate_teacher_phase_{p['id']}_{phase_number}"
     if st.button(u["generate"], type="primary", use_container_width=True, key=generate_key):
@@ -694,7 +725,10 @@ def render_outputs(project: Optional[Dict[str, Any]]) -> None:
         with st.expander(title, expanded=False):
             if row.get("diagnostic"):
                 st.caption(str(row["diagnostic"]))
-            st.markdown(str(row.get("response_text") or ""))
+            _render_generation_markdown(
+                str(row.get("response_text") or ""),
+                str(project.get("primary_language_code") or "en"),
+            )
             filename = f"project_{int(project['id'])}_phase_{phase}_output.md"
             st.download_button("Download output", str(row.get("response_text") or "").encode("utf-8"), file_name=filename, mime="text/markdown", key=f"download_teacher_run_{int(row['id'])}")
 
