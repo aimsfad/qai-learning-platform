@@ -13,10 +13,12 @@ import streamlit as st
 
 import content_generation_engine
 import educational_builder
+import evidence_synthesis_engine
 import gemini_file_analyzer
 import db
 import i18n
 import router
+import web_research_engine
 from security import verify_password
 
 
@@ -273,6 +275,164 @@ def teacher_ui() -> Dict[str, str]:
             "revision_saved": "The teacher revision was saved and the phase approved.", "download_output": "Download phase output",
         },
     }
+    research_copy = {
+        "ar": {
+            "research_panel": "البحث الويبّي الموجّه",
+            "research_intro": "تبحث المنصة أولًا عن الأدلة والمراجع والموارد المناسبة للمرحلة، ثم تُدخل حزمة بحث موثّقة في برومبت التوليد.",
+            "research_mode": "عمق البحث",
+            "research_mode_off": "دون بحث ويب",
+            "research_mode_quick": "سريع",
+            "research_mode_balanced": "متوازن",
+            "research_mode_deep": "موسّع",
+            "research_sources": "الحد الأقصى للمصادر",
+            "preferred_domains": "نطاقات مفضلة، مفصولة بفواصل",
+            "excluded_domains": "نطاقات مستبعدة، مفصولة بفواصل",
+            "research_now": "تشغيل البحث لهذه المرحلة",
+            "research_refresh": "إعادة البحث وتحديث الأدلة",
+            "research_ready": "تم حفظ حزمة البحث وستُستخدم تلقائيًا في التوليد.",
+            "research_missing": "لا توجد حزمة بحث محفوظة لهذه المرحلة؛ سيشغّلها النظام تلقائيًا عند التوليد ما دام البحث غير معطل.",
+            "research_failed": "تعذر إكمال البحث الويبّي.",
+            "research_latest": "أحدث حزمة بحث",
+            "research_queries": "عبارات البحث",
+            "research_report": "ملخص الأدلة والموارد",
+            "research_registry": "سجل المصادر",
+            "research_download": "تنزيل حزمة البحث",
+            "research_cost": "قد ينفذ المزوّد أكثر من استعلام بحث واحد. الوضع المتوازن مناسب غالبًا، والموسّع مخصص للمراحل التي تحتاج تدقيقًا أعمق.",
+            "authority": "الموثوقية",
+        },
+        "fr": {
+            "research_panel": "Recherche Web guidée",
+            "research_intro": "La plateforme recherche d’abord les preuves, références et ressources utiles à la phase, puis injecte un dossier sourcé dans le prompt de génération.",
+            "research_mode": "Profondeur de recherche",
+            "research_mode_off": "Sans recherche Web",
+            "research_mode_quick": "Rapide",
+            "research_mode_balanced": "Équilibrée",
+            "research_mode_deep": "Approfondie",
+            "research_sources": "Nombre maximal de sources",
+            "preferred_domains": "Domaines préférés, séparés par des virgules",
+            "excluded_domains": "Domaines exclus, séparés par des virgules",
+            "research_now": "Lancer la recherche pour cette phase",
+            "research_refresh": "Relancer et actualiser la recherche",
+            "research_ready": "Le dossier de recherche est enregistré et sera utilisé automatiquement.",
+            "research_missing": "Aucun dossier n’est enregistré; la recherche sera lancée automatiquement lors de la génération sauf si elle est désactivée.",
+            "research_failed": "La recherche Web n’a pas pu être terminée.",
+            "research_latest": "Dernier dossier de recherche",
+            "research_queries": "Requêtes de recherche",
+            "research_report": "Synthèse des preuves et ressources",
+            "research_registry": "Registre des sources",
+            "research_download": "Télécharger le dossier de recherche",
+            "research_cost": "Le fournisseur peut exécuter plusieurs requêtes. Le mode équilibré convient généralement; le mode approfondi est réservé aux audits plus exigeants.",
+            "authority": "Autorité",
+        },
+        "en": {
+            "research_panel": "Guided web research",
+            "research_intro": "The platform first retrieves evidence, references, and phase-specific learning resources, then injects a sourced research packet into the generation prompt.",
+            "research_mode": "Research depth",
+            "research_mode_off": "No web research",
+            "research_mode_quick": "Quick",
+            "research_mode_balanced": "Balanced",
+            "research_mode_deep": "Deep",
+            "research_sources": "Maximum sources",
+            "preferred_domains": "Preferred domains, comma-separated",
+            "excluded_domains": "Excluded domains, comma-separated",
+            "research_now": "Run research for this phase",
+            "research_refresh": "Refresh web research",
+            "research_ready": "The research packet is stored and will be used automatically during generation.",
+            "research_missing": "No research packet is stored; generation will run research automatically unless web research is disabled.",
+            "research_failed": "Web research could not be completed.",
+            "research_latest": "Latest research packet",
+            "research_queries": "Search queries",
+            "research_report": "Evidence and resource synthesis",
+            "research_registry": "Source registry",
+            "research_download": "Download research packet",
+            "research_cost": "The provider may execute multiple searches. Balanced mode is suitable for most phases; deep mode is intended for more demanding evidence audits.",
+            "authority": "Authority",
+        },
+    }
+    for code, additions in research_copy.items():
+        values[code].update(additions)
+    evidence_copy = {
+        "ar": {
+            "evidence_panel": "تركيب الأدلة",
+            "evidence_intro": "تحول المنصة حزمة البحث إلى مصادر مقيمة، وبطاقات أدلة مرتبطة بمراجع محددة، ومفاهيم أولية قبل إنشاء الدرس.",
+            "evidence_run": "إنشاء حزمة الأدلة من أحدث بحث",
+            "evidence_refresh": "إعادة تركيب الأدلة",
+            "evidence_missing_research": "شغّل البحث الويبّي لهذه المرحلة أولًا، ثم عد إلى تركيب الأدلة.",
+            "evidence_missing": "لم تُنشأ حزمة أدلة لهذه المرحلة بعد.",
+            "evidence_latest": "أحدث حزمة أدلة",
+            "evidence_sources_tab": "تقييم المصادر",
+            "evidence_cards_tab": "بطاقات الأدلة",
+            "evidence_concepts_tab": "المفاهيم والمتطلبات السابقة",
+            "evidence_quality_tab": "بوابة الجودة",
+            "evidence_approve": "اعتماد حزمة الأدلة للتوليد",
+            "evidence_approved": "اعتمد الأستاذ حزمة الأدلة، وستستخدم في برومبت التوليد.",
+            "evidence_saved": "تم إنشاء حزمة الأدلة وحفظها للمراجعة.",
+            "evidence_download": "تنزيل حزمة الأدلة",
+            "evidence_readiness": "درجة الجاهزية",
+            "evidence_cards": "بطاقات الأدلة",
+            "evidence_concepts": "المفاهيم",
+            "evidence_approved_sources": "المصادر المعتمدة آليًا",
+            "evidence_source_score": "الدرجة المركبة",
+            "evidence_status": "الحالة",
+            "evidence_warnings": "تحذيرات الجودة",
+            "evidence_phase": "مرحلة الأدلة",
+            "evidence_strict_gate": "عند تفعيل بوابة الموافقة الصارمة، لن يبدأ التوليد قبل اعتماد الأستاذ لهذه الحزمة.",
+        },
+        "fr": {
+            "evidence_panel": "Synthèse des preuves",
+            "evidence_intro": "La plateforme transforme le dossier de recherche en sources évaluées, cartes de preuve traçables et concepts préalables avant la génération de la leçon.",
+            "evidence_run": "Construire les preuves à partir de la dernière recherche",
+            "evidence_refresh": "Reconstruire les preuves",
+            "evidence_missing_research": "Lancez d’abord la recherche Web pour cette phase.",
+            "evidence_missing": "Aucun dossier de preuves n’a encore été créé.",
+            "evidence_latest": "Dernier dossier de preuves",
+            "evidence_sources_tab": "Évaluation des sources",
+            "evidence_cards_tab": "Cartes de preuve",
+            "evidence_concepts_tab": "Concepts et prérequis",
+            "evidence_quality_tab": "Contrôle qualité",
+            "evidence_approve": "Approuver le dossier pour la génération",
+            "evidence_approved": "Le dossier est approuvé et sera utilisé dans le prompt.",
+            "evidence_saved": "Le dossier de preuves a été enregistré pour révision.",
+            "evidence_download": "Télécharger le dossier de preuves",
+            "evidence_readiness": "Score de préparation",
+            "evidence_cards": "Cartes de preuve",
+            "evidence_concepts": "Concepts",
+            "evidence_approved_sources": "Sources approuvées automatiquement",
+            "evidence_source_score": "Score composite",
+            "evidence_status": "Statut",
+            "evidence_warnings": "Alertes qualité",
+            "evidence_phase": "Phase de preuves",
+            "evidence_strict_gate": "Lorsque le contrôle strict est activé, la génération attend l’approbation de l’enseignant.",
+        },
+        "en": {
+            "evidence_panel": "Evidence synthesis",
+            "evidence_intro": "The platform converts the research dossier into scored sources, traceable evidence cards, and prerequisite concepts before lesson generation.",
+            "evidence_run": "Build evidence from latest research",
+            "evidence_refresh": "Rebuild evidence synthesis",
+            "evidence_missing_research": "Run web research for this phase before synthesizing evidence.",
+            "evidence_missing": "No evidence bundle has been created for this phase.",
+            "evidence_latest": "Latest evidence bundle",
+            "evidence_sources_tab": "Source assessment",
+            "evidence_cards_tab": "Evidence cards",
+            "evidence_concepts_tab": "Concepts and prerequisites",
+            "evidence_quality_tab": "Quality gate",
+            "evidence_approve": "Approve evidence bundle for generation",
+            "evidence_approved": "The teacher approved this evidence bundle; it will be used in the generation prompt.",
+            "evidence_saved": "The evidence bundle was created and stored for review.",
+            "evidence_download": "Download evidence bundle",
+            "evidence_readiness": "Readiness score",
+            "evidence_cards": "Evidence cards",
+            "evidence_concepts": "Concepts",
+            "evidence_approved_sources": "Automatically approved sources",
+            "evidence_source_score": "Composite score",
+            "evidence_status": "Status",
+            "evidence_warnings": "Quality warnings",
+            "evidence_phase": "Evidence phase",
+            "evidence_strict_gate": "When the strict approval gate is enabled, generation waits for teacher approval.",
+        },
+    }
+    for code, additions in evidence_copy.items():
+        values[code].update(additions)
     return values.get(lang, values["en"])
 
 
@@ -621,10 +781,180 @@ def _render_latest_generation(project_id: int, u: Dict[str, str], language_code:
                 st.rerun()
 
 
+def _split_domain_input(value: str) -> List[str]:
+    items = re.split(r"[,;\n]+", str(value or ""))
+    return [item.strip() for item in items if item.strip()]
+
+
+def _render_latest_research(project_id: int, phase_number: int, u: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    latest = db.latest_teacher_research(int(project_id), int(phase_number))
+    if not latest:
+        st.caption(u["research_missing"])
+        return None
+    sources = web_research_engine.sources_from_json(latest.get("sources_json") or "[]")
+    status = str(latest.get("status") or "")
+    with st.expander(
+        f"{u['research_latest']} — {phase_number}. {PHASES.get(int(phase_number), '')}",
+        expanded=status in {"completed", "needs_review"},
+    ):
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Status", status or "—")
+        c2.metric("Provider", f"{latest.get('provider') or '—'} / {latest.get('model') or '—'}")
+        c3.metric(u["research_sources"], int(latest.get("source_count") or len(sources)))
+        latency_ms = int(latest.get("latency_ms") or 0)
+        c4.metric(u["latency"], f"{latency_ms / 1000:.1f} s" if latency_ms else "—")
+        if latest.get("diagnostic"):
+            st.caption(str(latest.get("diagnostic")))
+        tabs = st.tabs([u["research_report"], u["research_registry"], u["research_queries"]])
+        with tabs[0]:
+            report = str(latest.get("report_text") or "").strip()
+            if report:
+                _render_generation_markdown(report, "ar" if i18n.current_lang(st) == "ar" else "en")
+        with tabs[1]:
+            if not sources:
+                st.info(u["research_missing"])
+            for source in sources:
+                with st.container(border=True):
+                    if source.url:
+                        st.markdown(f"**[{source.source_id}] [{source.title}]({source.url})**")
+                    else:
+                        st.markdown(f"**[{source.source_id}] {source.title}**")
+                    st.caption(
+                        f"{source.domain} · {source.source_type} · {u['authority']}: {source.authority_level}/5"
+                    )
+                    if source.snippet:
+                        st.write(source.snippet)
+        with tabs[2]:
+            try:
+                queries = json.loads(latest.get("query_plan_json") or "[]")
+            except Exception:
+                queries = []
+            for query in queries:
+                st.markdown(f"- {query}")
+        payload = {
+            "project_id": int(project_id),
+            "phase_number": int(phase_number),
+            "research_mode": latest.get("research_mode"),
+            "provider": latest.get("provider"),
+            "model": latest.get("model"),
+            "status": latest.get("status"),
+            "queries": queries,
+            "sources": [source.__dict__ for source in sources],
+            "report": latest.get("report_text"),
+            "diagnostic": latest.get("diagnostic"),
+        }
+        st.download_button(
+            u["research_download"],
+            json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
+            file_name=f"project_{int(project_id)}_phase_{int(phase_number)}_research.json",
+            mime="application/json",
+            use_container_width=True,
+            key=f"download_research_{int(latest.get('id') or 0)}",
+        )
+    return latest
+
+
 def render_prompt_and_generation(project: Dict[str, Any]) -> None:
     u = teacher_ui()
     p = _project_defaults(project)
     phase_number = int(p.get("current_phase") or 1)
+    project_id = int(p["id"])
+
+    research_status = web_research_engine.research_status()
+    default_mode = str(research_status.get("default_mode") or "balanced").lower()
+    if default_mode not in {"off", "quick", "balanced", "deep"}:
+        default_mode = "balanced"
+    if not research_status.get("enabled"):
+        default_mode = "off"
+    modes = ["off", "quick", "balanced", "deep"]
+    mode_labels = {
+        "off": u["research_mode_off"],
+        "quick": u["research_mode_quick"],
+        "balanced": u["research_mode_balanced"],
+        "deep": u["research_mode_deep"],
+    }
+
+    with st.container(border=True):
+        st.markdown(f"### {u['research_panel']}")
+        st.write(u["research_intro"])
+        r1, r2 = st.columns([2, 1])
+        with r1:
+            research_mode = st.selectbox(
+                u["research_mode"],
+                modes,
+                index=modes.index(default_mode),
+                format_func=lambda value: mode_labels.get(value, value),
+                key=f"teacher_research_mode_{project_id}_{phase_number}",
+            )
+        with r2:
+            max_sources = st.slider(
+                u["research_sources"],
+                min_value=3,
+                max_value=15,
+                value=8,
+                step=1,
+                key=f"teacher_research_sources_{project_id}_{phase_number}",
+                disabled=research_mode == "off",
+            )
+        with st.expander("Source policy / سياسة المصادر", expanded=False):
+            preferred_domains_raw = st.text_input(
+                u["preferred_domains"],
+                value="",
+                key=f"teacher_preferred_domains_{project_id}_{phase_number}",
+                disabled=research_mode == "off",
+            )
+            excluded_domains_raw = st.text_input(
+                u["excluded_domains"],
+                value="wikipedia.org, pinterest.com, facebook.com, instagram.com, tiktok.com",
+                key=f"teacher_excluded_domains_{project_id}_{phase_number}",
+                disabled=research_mode == "off",
+            )
+        st.caption(u["research_cost"])
+        latest_research = db.latest_teacher_research(project_id, phase_number)
+        research_button_label = u["research_refresh"] if latest_research else u["research_now"]
+        if st.button(
+            research_button_label,
+            use_container_width=True,
+            key=f"run_teacher_research_{project_id}_{phase_number}",
+            disabled=research_mode == "off" or not research_status.get("available"),
+        ):
+            try:
+                with st.spinner(f"3alimnIA is researching phase {phase_number}: {PHASES[phase_number]}..."):
+                    research_run = educational_builder.run_project_research(
+                        p,
+                        _current_teacher_username(),
+                        phase_number=phase_number,
+                        research_mode=research_mode,
+                        max_sources=max_sources,
+                        preferred_domains=_split_domain_input(preferred_domains_raw),
+                        excluded_domains=_split_domain_input(excluded_domains_raw),
+                    )
+                if str(research_run.get("status") or "") in {"completed", "needs_review"}:
+                    st.session_state.teacher_flash_success = u["research_ready"]
+                else:
+                    st.session_state.teacher_flash_error = (
+                        str(research_run.get("diagnostic") or u["research_failed"])
+                    )
+            except Exception as exc:
+                st.session_state.teacher_flash_error = f"{u['research_failed']} {exc}"
+            st.rerun()
+        _render_latest_research(project_id, phase_number, u)
+
+    evidence_cfg = evidence_synthesis_engine.evidence_status()
+    if evidence_cfg.get("enabled") and research_mode != "off":
+        evidence_bundle = db.latest_teacher_evidence(project_id, phase_number, approved_only=False)
+        if evidence_bundle and bool(int(evidence_bundle.get("approved_by_teacher") or 0)):
+            st.success(u["evidence_approved"])
+        else:
+            st.warning(u["evidence_missing"] if not evidence_bundle else u["needs_review"])
+            if st.button(
+                u["evidence_panel"],
+                use_container_width=True,
+                key=f"open_evidence_workspace_{project_id}_{phase_number}",
+            ):
+                st.session_state.teacher_workspace_section_pending = "evidence"
+                st.rerun()
+
     prompt = compile_project_prompt(p, phase_number)
     st.session_state.teacher_last_prompt = prompt
     expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
@@ -637,7 +967,6 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         f"{u['provider']}: {status['provider']} / {status['model']} — "
         f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
     )
-    st.caption(u["research_on"] if status.get("web_research_enabled") else u["research_off"])
     budget = content_generation_engine.prompt_budget_info(
         prompt,
         educational_builder.PHASE_MAX_TOKENS.get(phase_number, 3600),
@@ -652,7 +981,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         )
     )
     st.caption(u["phase_only"])
-    if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{p['id']}_{phase_number}"):
+    if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{project_id}_{phase_number}"):
         st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
         st.session_state.teacher_expand_prompt = True
         st.session_state.teacher_flash_success = u["prompt_ready"]
@@ -679,12 +1008,12 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
     )
 
     _render_latest_generation(
-        int(p["id"]),
+        project_id,
         u,
         str(p.get("primary_language_code") or "en"),
     )
 
-    generate_key = f"generate_teacher_phase_{p['id']}_{phase_number}"
+    generate_key = f"generate_teacher_phase_{project_id}_{phase_number}"
     if st.button(u["generate"], type="primary", use_container_width=True, key=generate_key):
         try:
             with st.spinner(f"3alimnIA is generating phase {phase_number}: {PHASES[phase_number]}..."):
@@ -692,12 +1021,28 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                     p,
                     _current_teacher_username(),
                     phase_number=phase_number,
+                    research_mode=research_mode,
+                    max_research_sources=max_sources,
+                    preferred_domains=_split_domain_input(preferred_domains_raw),
+                    excluded_domains=_split_domain_input(excluded_domains_raw),
+                    force_research=False,
                 )
             st.session_state.teacher_last_response = outcome.response
+            research_note = ""
+            if outcome.research_source_count:
+                research_note = (
+                    f" Research: {outcome.research_provider}/{outcome.research_model}, "
+                    f"{outcome.research_source_count} source(s)."
+                )
+            if outcome.evidence_card_count:
+                research_note += (
+                    f" Evidence: {outcome.evidence_card_count} card(s), "
+                    f"approved={outcome.evidence_approved}."
+                )
             if outcome.status == "completed":
                 st.session_state.teacher_flash_success = (
                     f"{u['generated']} {phase_number}/{len(PHASES)} — "
-                    f"{outcome.provider}/{outcome.model}."
+                    f"{outcome.provider}/{outcome.model}.{research_note}"
                 )
             elif outcome.status == "needs_review":
                 st.session_state.teacher_flash_warning = f"{u['needs_review']} {outcome.diagnostic}"
@@ -708,6 +1053,194 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         except Exception as exc:
             st.session_state.teacher_flash_error = f"{u['generation_failed']} {exc}"
         st.rerun()
+
+def render_evidence_synthesis(project: Dict[str, Any]) -> None:
+    """Render the V6.13 source-scoring and evidence-card review workspace."""
+    u = teacher_ui()
+    project_id = int(project["id"])
+    current_phase = int(project.get("current_phase") or 1)
+    cfg = evidence_synthesis_engine.evidence_status()
+
+    st.markdown(f"## {u['evidence_panel']}")
+    st.write(u["evidence_intro"])
+    if cfg.get("require_teacher_approval"):
+        st.info(u["evidence_strict_gate"])
+
+    phase_number = st.selectbox(
+        u["evidence_phase"],
+        list(PHASES.keys()),
+        index=max(0, min(10, current_phase - 1)),
+        format_func=lambda number: f"{number}. {PHASES[number]}",
+        key=f"teacher_evidence_phase_{project_id}",
+    )
+    latest_research = db.latest_teacher_research(project_id, int(phase_number))
+    col1, col2 = st.columns(2)
+    with col1:
+        max_cards = st.slider(
+            u["evidence_cards"],
+            min_value=4,
+            max_value=24,
+            value=int(cfg.get("max_cards") or 12),
+            key=f"teacher_evidence_max_cards_{project_id}_{phase_number}",
+        )
+    with col2:
+        max_concepts = st.slider(
+            u["evidence_concepts"],
+            min_value=3,
+            max_value=20,
+            value=int(cfg.get("max_concepts") or 10),
+            key=f"teacher_evidence_max_concepts_{project_id}_{phase_number}",
+        )
+
+    latest_bundle = db.latest_teacher_evidence(project_id, int(phase_number), approved_only=False)
+    button_label = u["evidence_refresh"] if latest_bundle else u["evidence_run"]
+    if st.button(
+        button_label,
+        type="primary",
+        use_container_width=True,
+        disabled=not bool(latest_research) or not bool(cfg.get("enabled")),
+        key=f"teacher_run_evidence_{project_id}_{phase_number}",
+    ):
+        try:
+            with st.spinner(f"3alimnIA is synthesizing evidence for phase {phase_number}..."):
+                evidence_synthesis_engine.synthesize_and_persist(
+                    project,
+                    _current_teacher_username(),
+                    phase_number=int(phase_number),
+                    research_run=latest_research,
+                    max_cards=int(max_cards),
+                    max_concepts=int(max_concepts),
+                )
+            st.session_state.teacher_flash_success = u["evidence_saved"]
+        except Exception as exc:
+            st.session_state.teacher_flash_error = str(exc)
+        st.rerun()
+
+    if not latest_research:
+        st.warning(u["evidence_missing_research"])
+    if not cfg.get("enabled"):
+        st.warning("ENABLE_EVIDENCE_SYNTHESIS is disabled in Streamlit secrets.")
+
+    bundle = db.latest_teacher_evidence(project_id, int(phase_number), approved_only=False)
+    if not bundle:
+        st.info(u["evidence_missing"])
+        return
+
+    quality = bundle.get("quality") or {}
+    sources = bundle.get("sources") or []
+    cards = bundle.get("evidence_cards") or []
+    concepts = bundle.get("concepts") or []
+    approved = bool(int(bundle.get("approved_by_teacher") or 0))
+
+    st.markdown(f"### {u['evidence_latest']} — {phase_number}. {PHASES[int(phase_number)]}")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric(u["evidence_readiness"], f"{float(quality.get('readiness_score') or 0):.0%}")
+    m2.metric(u["evidence_approved_sources"], int(quality.get("approved_source_count") or 0))
+    m3.metric(u["evidence_cards"], len(cards))
+    m4.metric(u["evidence_concepts"], len(concepts))
+    status_text = str(bundle.get("status") or "unknown")
+    st.caption(
+        f"{u['evidence_status']}: {status_text} · "
+        f"{bundle.get('provider') or 'unknown'} / {bundle.get('model') or 'unknown'} · "
+        f"{int(bundle.get('latency_ms') or 0) / 1000:.1f}s"
+    )
+    if approved:
+        st.success(u["evidence_approved"])
+    elif status_text == "needs_review":
+        st.warning(u["needs_review"])
+
+    tabs = st.tabs(
+        [
+            u["evidence_sources_tab"],
+            u["evidence_cards_tab"],
+            u["evidence_concepts_tab"],
+            u["evidence_quality_tab"],
+        ]
+    )
+    with tabs[0]:
+        source_rows = []
+        for item in sources:
+            source_rows.append(
+                {
+                    "ID": item.get("source_id"),
+                    "Title": item.get("title"),
+                    "Domain": item.get("domain"),
+                    u["evidence_source_score"]: round(float(item.get("composite_score") or 0), 3),
+                    "Authority": round(float(item.get("authority_score") or 0), 3),
+                    "Relevance": round(float(item.get("relevance_score") or 0), 3),
+                    "Pedagogy": round(float(item.get("pedagogical_score") or 0), 3),
+                    "Licence": round(float(item.get("license_score") or 0), 3),
+                    u["evidence_status"]: item.get("status"),
+                    "URL": item.get("url"),
+                }
+            )
+        if source_rows:
+            st.dataframe(pd.DataFrame(source_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info(u["evidence_missing"])
+    with tabs[1]:
+        for card in cards:
+            title = f"{card.get('evidence_id')} · {card.get('confidence', 'moderate')} · {', '.join(card.get('source_ids') or [])}"
+            with st.expander(title, expanded=False):
+                st.markdown(f"**{card.get('claim') or card.get('claim_text') or ''}**")
+                if card.get("evidence_excerpt"):
+                    st.write(card.get("evidence_excerpt"))
+                st.caption(" · ".join(card.get("intended_use") or []))
+    with tabs[2]:
+        for concept in concepts:
+            with st.container(border=True):
+                st.markdown(f"**{concept.get('concept_id')} · {concept.get('name') or concept.get('concept_name')}**")
+                st.write(concept.get("description") or "")
+                prerequisites = concept.get("prerequisites") or []
+                st.caption(
+                    f"Prerequisites: {', '.join(prerequisites) if prerequisites else '—'} · "
+                    f"Sources: {', '.join(concept.get('source_ids') or [])} · "
+                    f"Difficulty: {concept.get('difficulty') or 'introductory'}"
+                )
+    with tabs[3]:
+        warnings = quality.get("warnings") or []
+        if warnings:
+            st.markdown(f"**{u['evidence_warnings']}**")
+            for warning in warnings:
+                st.markdown(f"- {warning}")
+        else:
+            st.success("Quality gate passed without automatic warnings.")
+        if bundle.get("diagnostic"):
+            st.caption(str(bundle.get("diagnostic")))
+        st.json(quality)
+
+    payload = {
+        "run": {key: value for key, value in bundle.items() if key not in {"sources", "evidence_cards", "concepts"}},
+        "sources": sources,
+        "evidence_cards": cards,
+        "concepts": concepts,
+        "quality": quality,
+    }
+    st.download_button(
+        u["evidence_download"],
+        json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"),
+        file_name=f"project_{project_id}_phase_{int(phase_number)}_evidence.json",
+        mime="application/json",
+        use_container_width=True,
+        key=f"download_evidence_{int(bundle.get('id') or 0)}",
+    )
+    if not approved and status_text != "error":
+        if st.button(
+            u["evidence_approve"],
+            type="primary",
+            use_container_width=True,
+            key=f"approve_evidence_{int(bundle.get('id') or 0)}",
+        ):
+            try:
+                db.approve_teacher_evidence_run(
+                    int(bundle["id"]),
+                    project_id,
+                    _current_teacher_username(),
+                )
+                st.session_state.teacher_flash_success = u["evidence_approved"]
+            except Exception as exc:
+                st.session_state.teacher_flash_error = str(exc)
+            st.rerun()
 
 
 def render_outputs(project: Optional[Dict[str, Any]]) -> None:
@@ -740,7 +1273,7 @@ def project_workspace_ui() -> Dict[str, str]:
         "ar": {
             "new": "مشروع جديد", "projects": "مشاريعي التعليمية", "workspace": "واجهة المشروع", "outputs": "كل المخرجات",
             "open": "فتح المشروع", "continue": "متابعة الإنتاج", "preview": "معاينة كمتعلم", "back": "العودة إلى المشاريع",
-            "overview": "نظرة عامة", "production": "الإنتاج والتحرير", "assets": "المحتوى والمخرجات", "publish": "المعاينة والنشر",
+            "overview": "نظرة عامة", "production": "الإنتاج والتحرير", "evidence": "تركيب الأدلة", "assets": "المحتوى والمخرجات", "publish": "المعاينة والنشر",
             "draft": "مسودة", "review": "قيد المراجعة", "published": "منشور", "archived": "مؤرشف",
             "progress": "تقدم الإنتاج", "phases": "المراحل المنجزة", "runs": "عمليات التوليد", "updated": "آخر تحديث",
             "empty_title": "ابدأ أول مشروع تعليمي", "empty_body": "أنشئ مشروعًا، أضف محتوى المادة وطريقة التدريس والتقييم، ثم أنتج موارده على مراحل.",
@@ -759,7 +1292,7 @@ def project_workspace_ui() -> Dict[str, str]:
         "fr": {
             "new": "Nouveau projet", "projects": "Mes projets pédagogiques", "workspace": "Espace projet", "outputs": "Toutes les productions",
             "open": "Ouvrir le projet", "continue": "Continuer la production", "preview": "Aperçu apprenant", "back": "Retour aux projets",
-            "overview": "Vue d’ensemble", "production": "Production et édition", "assets": "Contenus et productions", "publish": "Aperçu et publication",
+            "overview": "Vue d’ensemble", "production": "Production et édition", "evidence": "Synthèse des preuves", "assets": "Contenus et productions", "publish": "Aperçu et publication",
             "draft": "Brouillon", "review": "En révision", "published": "Publié", "archived": "Archivé",
             "progress": "Progression de production", "phases": "Phases terminées", "runs": "Générations", "updated": "Dernière mise à jour",
             "empty_title": "Commencez votre premier projet", "empty_body": "Définissez le contenu, la pédagogie et l’évaluation, puis produisez les ressources par étapes.",
@@ -778,7 +1311,7 @@ def project_workspace_ui() -> Dict[str, str]:
         "en": {
             "new": "New project", "projects": "My educational projects", "workspace": "Project workspace", "outputs": "All outputs",
             "open": "Open project", "continue": "Continue production", "preview": "Preview as learner", "back": "Back to projects",
-            "overview": "Overview", "production": "Production and editing", "assets": "Content and outputs", "publish": "Preview and publish",
+            "overview": "Overview", "production": "Production and editing", "evidence": "Evidence synthesis", "assets": "Content and outputs", "publish": "Preview and publish",
             "draft": "Draft", "review": "In review", "published": "Published", "archived": "Archived",
             "progress": "Production progress", "phases": "Completed phases", "runs": "Generation runs", "updated": "Last updated",
             "empty_title": "Start your first educational project", "empty_body": "Define the subject, pedagogy, and assessment, then produce the assets phase by phase.",
@@ -1005,8 +1538,14 @@ def render_project_workspace() -> None:
         return
     _project_header(project)
     copy = project_workspace_ui()
-    sections = ["overview", "production", "assets", "publish"]
-    labels = {"overview": copy["overview"], "production": copy["production"], "assets": copy["assets"], "publish": copy["publish"]}
+    sections = ["overview", "production", "evidence", "assets", "publish"]
+    labels = {
+        "overview": copy["overview"],
+        "production": copy["production"],
+        "evidence": copy["evidence"],
+        "assets": copy["assets"],
+        "publish": copy["publish"],
+    }
     # Apply queued navigation before the radio is created. Streamlit permits
     # state initialization here, but not after the widget with the same key has
     # been instantiated.
@@ -1027,6 +1566,8 @@ def render_project_workspace() -> None:
         refreshed = db.get_teacher_project(int(project_id), _current_teacher_username()) or project
         st.divider()
         render_prompt_and_generation(refreshed)
+    elif section == "evidence":
+        render_evidence_synthesis(project)
     elif section == "assets":
         render_outputs(project)
     else:

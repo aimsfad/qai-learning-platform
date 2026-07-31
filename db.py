@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"
+APP_VERSION = "v6.13-evidence-synthesis-foundation"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -287,6 +287,103 @@ def init_db() -> None:
         )
         """,
         f"""
+        CREATE TABLE IF NOT EXISTS teacher_research_runs (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            phase_number INTEGER NOT NULL,
+            research_mode TEXT,
+            query_plan_json TEXT,
+            report_text TEXT,
+            sources_json TEXT,
+            provider TEXT,
+            model TEXT,
+            status TEXT,
+            diagnostic TEXT,
+            source_count INTEGER DEFAULT 0,
+            latency_ms INTEGER DEFAULT 0,
+            is_fallback_used INTEGER DEFAULT 0,
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_evidence_runs (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            phase_number INTEGER NOT NULL,
+            research_run_id INTEGER,
+            prompt_text TEXT,
+            response_text TEXT,
+            provider TEXT,
+            model TEXT,
+            status TEXT,
+            diagnostic TEXT,
+            quality_json TEXT,
+            source_count INTEGER DEFAULT 0,
+            evidence_card_count INTEGER DEFAULT 0,
+            concept_count INTEGER DEFAULT 0,
+            latency_ms INTEGER DEFAULT 0,
+            is_fallback_used INTEGER DEFAULT 0,
+            approved_by_teacher INTEGER DEFAULT 0,
+            approved_at {created_default},
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_evidence_sources (
+            id {id_col},
+            evidence_run_id INTEGER NOT NULL,
+            source_id TEXT NOT NULL,
+            title TEXT,
+            url TEXT,
+            canonical_url TEXT,
+            domain TEXT,
+            source_type TEXT,
+            language TEXT,
+            publication_date TEXT,
+            access_date TEXT,
+            snippet TEXT,
+            authority_score REAL DEFAULT 0,
+            relevance_score REAL DEFAULT 0,
+            freshness_score REAL DEFAULT 0,
+            pedagogical_score REAL DEFAULT 0,
+            accessibility_score REAL DEFAULT 0,
+            license_score REAL DEFAULT 0,
+            composite_score REAL DEFAULT 0,
+            status TEXT,
+            rationale TEXT,
+            fingerprint TEXT,
+            UNIQUE(evidence_run_id, source_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_evidence_cards (
+            id {id_col},
+            evidence_run_id INTEGER NOT NULL,
+            evidence_id TEXT NOT NULL,
+            claim_text TEXT NOT NULL,
+            source_ids_json TEXT NOT NULL,
+            evidence_excerpt TEXT,
+            confidence TEXT,
+            intended_use_json TEXT,
+            review_status TEXT DEFAULT 'pending',
+            UNIQUE(evidence_run_id, evidence_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_evidence_concepts (
+            id {id_col},
+            evidence_run_id INTEGER NOT NULL,
+            concept_id TEXT NOT NULL,
+            concept_name TEXT NOT NULL,
+            description TEXT,
+            prerequisites_json TEXT,
+            source_ids_json TEXT,
+            difficulty TEXT,
+            review_status TEXT DEFAULT 'pending',
+            UNIQUE(evidence_run_id, concept_id)
+        )
+        """,
+        f"""
         CREATE TABLE IF NOT EXISTS adaptive_recommendations (
             id {id_col},
             student_id INTEGER UNIQUE NOT NULL,
@@ -335,6 +432,9 @@ def init_db() -> None:
     ensure_column("ai_interactions", "selected_text", "TEXT")
     ensure_column("ai_interactions", "student_usefulness_rating", "INTEGER")
     ensure_column("ai_interactions", "student_ai_feedback", "TEXT")
+    ensure_column("teacher_evidence_runs", "approved_by_teacher", "INTEGER DEFAULT 0")
+    ensure_column("teacher_evidence_runs", "approved_at", "TEXT")
+    ensure_column("teacher_evidence_runs", "quality_json", "TEXT")
 
 
 def ensure_column(table: str, column: str, col_type: str) -> None:
@@ -1708,6 +1808,311 @@ def save_teacher_generation(
             "is_fallback_used": 1 if is_fallback_used else 0,
             "created_at": utc_now(),
         },
+    )
+
+
+def save_teacher_research_run(
+    project_id: int,
+    phase_number: int,
+    research_mode: str,
+    query_plan_json: str,
+    report_text: str,
+    sources_json: str,
+    provider: str,
+    model: str,
+    status: str,
+    diagnostic: str = "",
+    *,
+    source_count: int = 0,
+    latency_ms: int = 0,
+    is_fallback_used: bool = False,
+) -> int:
+    """Persist a reusable web-research dossier for one production phase."""
+    return execute_returning_id(
+        """
+        INSERT INTO teacher_research_runs
+        (project_id, phase_number, research_mode, query_plan_json, report_text, sources_json,
+         provider, model, status, diagnostic, source_count, latency_ms, is_fallback_used, created_at)
+        VALUES (:project_id, :phase_number, :research_mode, :query_plan_json, :report_text, :sources_json,
+                :provider, :model, :status, :diagnostic, :source_count, :latency_ms, :is_fallback_used, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id),
+            "phase_number": int(phase_number),
+            "research_mode": str(research_mode or "balanced"),
+            "query_plan_json": str(query_plan_json or "[]"),
+            "report_text": str(report_text or ""),
+            "sources_json": str(sources_json or "[]"),
+            "provider": str(provider or ""),
+            "model": str(model or ""),
+            "status": str(status or ""),
+            "diagnostic": str(diagnostic or ""),
+            "source_count": int(source_count or 0),
+            "latency_ms": int(latency_ms or 0),
+            "is_fallback_used": 1 if is_fallback_used else 0,
+            "created_at": utc_now(),
+        },
+    )
+
+
+def latest_teacher_research(project_id: int, phase_number: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        """
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+        ORDER BY id DESC LIMIT 1
+        """,
+        {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def teacher_research_runs_df(project_id: int, phase_number: Optional[int] = None) -> pd.DataFrame:
+    if phase_number is None:
+        return query_df(
+            "SELECT * FROM teacher_research_runs WHERE project_id=:project_id ORDER BY id DESC",
+            {"project_id": int(project_id)},
+        )
+    return query_df(
+        """
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+        ORDER BY id DESC
+        """,
+        {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def save_teacher_evidence_bundle(
+    project_id: int,
+    phase_number: int,
+    research_run_id: Optional[int],
+    prompt_text: str,
+    response_text: str,
+    sources: Sequence[Dict[str, Any]],
+    evidence_cards: Sequence[Dict[str, Any]],
+    concepts: Sequence[Dict[str, Any]],
+    quality: Dict[str, Any],
+    provider: str,
+    model: str,
+    status: str,
+    diagnostic: str = "",
+    *,
+    latency_ms: int = 0,
+    is_fallback_used: bool = False,
+) -> int:
+    """Persist one normalized evidence-synthesis run and its child records."""
+    run_id = execute_returning_id(
+        """
+        INSERT INTO teacher_evidence_runs
+        (project_id, phase_number, research_run_id, prompt_text, response_text, provider, model, status,
+         diagnostic, quality_json, source_count, evidence_card_count, concept_count, latency_ms,
+         is_fallback_used, approved_by_teacher, approved_at, created_at)
+        VALUES
+        (:project_id, :phase_number, :research_run_id, :prompt_text, :response_text, :provider, :model, :status,
+         :diagnostic, :quality_json, :source_count, :evidence_card_count, :concept_count, :latency_ms,
+         :is_fallback_used, 0, NULL, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id),
+            "phase_number": int(phase_number),
+            "research_run_id": int(research_run_id) if research_run_id else None,
+            "prompt_text": str(prompt_text or ""),
+            "response_text": str(response_text or ""),
+            "provider": str(provider or ""),
+            "model": str(model or ""),
+            "status": str(status or "needs_review"),
+            "diagnostic": str(diagnostic or ""),
+            "quality_json": json.dumps(quality or {}, ensure_ascii=False),
+            "source_count": len(sources or []),
+            "evidence_card_count": len(evidence_cards or []),
+            "concept_count": len(concepts or []),
+            "latency_ms": int(latency_ms or 0),
+            "is_fallback_used": 1 if is_fallback_used else 0,
+            "created_at": utc_now(),
+        },
+    )
+    for source in sources or []:
+        exec_sql(
+            """
+            INSERT INTO teacher_evidence_sources
+            (evidence_run_id, source_id, title, url, canonical_url, domain, source_type, language,
+             publication_date, access_date, snippet, authority_score, relevance_score, freshness_score,
+             pedagogical_score, accessibility_score, license_score, composite_score, status, rationale, fingerprint)
+            VALUES
+            (:evidence_run_id, :source_id, :title, :url, :canonical_url, :domain, :source_type, :language,
+             :publication_date, :access_date, :snippet, :authority_score, :relevance_score, :freshness_score,
+             :pedagogical_score, :accessibility_score, :license_score, :composite_score, :status, :rationale, :fingerprint)
+            """,
+            {
+                "evidence_run_id": int(run_id),
+                "source_id": str(source.get("source_id") or ""),
+                "title": str(source.get("title") or ""),
+                "url": str(source.get("url") or ""),
+                "canonical_url": str(source.get("canonical_url") or ""),
+                "domain": str(source.get("domain") or ""),
+                "source_type": str(source.get("source_type") or ""),
+                "language": str(source.get("language") or "unknown"),
+                "publication_date": str(source.get("publication_date") or "unknown"),
+                "access_date": str(source.get("access_date") or ""),
+                "snippet": str(source.get("snippet") or ""),
+                "authority_score": float(source.get("authority_score") or 0),
+                "relevance_score": float(source.get("relevance_score") or 0),
+                "freshness_score": float(source.get("freshness_score") or 0),
+                "pedagogical_score": float(source.get("pedagogical_score") or 0),
+                "accessibility_score": float(source.get("accessibility_score") or 0),
+                "license_score": float(source.get("license_score") or 0),
+                "composite_score": float(source.get("composite_score") or 0),
+                "status": str(source.get("status") or "review"),
+                "rationale": str(source.get("rationale") or ""),
+                "fingerprint": str(source.get("fingerprint") or ""),
+            },
+        )
+    for card in evidence_cards or []:
+        exec_sql(
+            """
+            INSERT INTO teacher_evidence_cards
+            (evidence_run_id, evidence_id, claim_text, source_ids_json, evidence_excerpt,
+             confidence, intended_use_json, review_status)
+            VALUES (:evidence_run_id, :evidence_id, :claim_text, :source_ids_json, :evidence_excerpt,
+                    :confidence, :intended_use_json, :review_status)
+            """,
+            {
+                "evidence_run_id": int(run_id),
+                "evidence_id": str(card.get("evidence_id") or ""),
+                "claim_text": str(card.get("claim") or card.get("claim_text") or ""),
+                "source_ids_json": json.dumps(card.get("source_ids") or [], ensure_ascii=False),
+                "evidence_excerpt": str(card.get("evidence_excerpt") or ""),
+                "confidence": str(card.get("confidence") or "moderate"),
+                "intended_use_json": json.dumps(card.get("intended_use") or [], ensure_ascii=False),
+                "review_status": str(card.get("review_status") or "pending"),
+            },
+        )
+    for concept in concepts or []:
+        exec_sql(
+            """
+            INSERT INTO teacher_evidence_concepts
+            (evidence_run_id, concept_id, concept_name, description, prerequisites_json,
+             source_ids_json, difficulty, review_status)
+            VALUES (:evidence_run_id, :concept_id, :concept_name, :description, :prerequisites_json,
+                    :source_ids_json, :difficulty, :review_status)
+            """,
+            {
+                "evidence_run_id": int(run_id),
+                "concept_id": str(concept.get("concept_id") or ""),
+                "concept_name": str(concept.get("name") or concept.get("concept_name") or ""),
+                "description": str(concept.get("description") or ""),
+                "prerequisites_json": json.dumps(concept.get("prerequisites") or [], ensure_ascii=False),
+                "source_ids_json": json.dumps(concept.get("source_ids") or [], ensure_ascii=False),
+                "difficulty": str(concept.get("difficulty") or "introductory"),
+                "review_status": str(concept.get("review_status") or "pending"),
+            },
+        )
+    return int(run_id)
+
+
+def teacher_evidence_bundle(run_id: int) -> Optional[Dict[str, Any]]:
+    run = query_one("SELECT * FROM teacher_evidence_runs WHERE id=:id", {"id": int(run_id)})
+    if not run:
+        return None
+    sources = query_df(
+        "SELECT * FROM teacher_evidence_sources WHERE evidence_run_id=:id ORDER BY composite_score DESC, id ASC",
+        {"id": int(run_id)},
+    ).to_dict("records")
+    cards = query_df(
+        "SELECT * FROM teacher_evidence_cards WHERE evidence_run_id=:id ORDER BY id ASC",
+        {"id": int(run_id)},
+    ).to_dict("records")
+    concepts = query_df(
+        "SELECT * FROM teacher_evidence_concepts WHERE evidence_run_id=:id ORDER BY id ASC",
+        {"id": int(run_id)},
+    ).to_dict("records")
+    for card in cards:
+        try:
+            card["source_ids"] = json.loads(card.get("source_ids_json") or "[]")
+        except Exception:
+            card["source_ids"] = []
+        try:
+            card["intended_use"] = json.loads(card.get("intended_use_json") or "[]")
+        except Exception:
+            card["intended_use"] = []
+        card["claim"] = card.get("claim_text") or ""
+    for concept in concepts:
+        try:
+            concept["prerequisites"] = json.loads(concept.get("prerequisites_json") or "[]")
+        except Exception:
+            concept["prerequisites"] = []
+        try:
+            concept["source_ids"] = json.loads(concept.get("source_ids_json") or "[]")
+        except Exception:
+            concept["source_ids"] = []
+        concept["name"] = concept.get("concept_name") or ""
+    try:
+        quality = json.loads(run.get("quality_json") or "{}")
+    except Exception:
+        quality = {}
+    run["sources"] = sources
+    run["evidence_cards"] = cards
+    run["concepts"] = concepts
+    run["quality"] = quality
+    return run
+
+
+def latest_teacher_evidence(
+    project_id: int,
+    phase_number: int,
+    *,
+    approved_only: bool = False,
+) -> Optional[Dict[str, Any]]:
+    sql = """
+        SELECT id FROM teacher_evidence_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+    """
+    if approved_only:
+        sql += " AND approved_by_teacher=1"
+    sql += " ORDER BY id DESC LIMIT 1"
+    row = query_one(sql, {"project_id": int(project_id), "phase_number": int(phase_number)})
+    return teacher_evidence_bundle(int(row["id"])) if row else None
+
+
+def teacher_evidence_runs_df(project_id: int, phase_number: Optional[int] = None) -> pd.DataFrame:
+    if phase_number is None:
+        return query_df(
+            "SELECT * FROM teacher_evidence_runs WHERE project_id=:project_id ORDER BY id DESC",
+            {"project_id": int(project_id)},
+        )
+    return query_df(
+        """
+        SELECT * FROM teacher_evidence_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+        ORDER BY id DESC
+        """,
+        {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def approve_teacher_evidence_run(run_id: int, project_id: int, teacher_username: str) -> None:
+    project = get_teacher_project(int(project_id), str(teacher_username))
+    if not project:
+        raise ValueError("Teacher project not found or access denied")
+    run = query_one(
+        "SELECT * FROM teacher_evidence_runs WHERE id=:id AND project_id=:project_id",
+        {"id": int(run_id), "project_id": int(project_id)},
+    )
+    if not run:
+        raise ValueError("Evidence synthesis run not found")
+    if str(run.get("status") or "") == "error":
+        raise ValueError("An evidence synthesis run with errors cannot be approved")
+    exec_sql(
+        """
+        UPDATE teacher_evidence_runs
+        SET approved_by_teacher=1, approved_at=:approved_at, status='approved'
+        WHERE id=:id AND project_id=:project_id
+        """,
+        {"approved_at": utc_now(), "id": int(run_id), "project_id": int(project_id)},
+    )
+    exec_sql(
+        "UPDATE teacher_projects SET updated_at=:updated_at WHERE id=:id AND teacher_username=:username",
+        {"updated_at": utc_now(), "id": int(project_id), "username": str(teacher_username)},
     )
 
 
