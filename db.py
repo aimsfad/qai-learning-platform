@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.13-evidence-synthesis-foundation"
+APP_VERSION = "v6.13.1-provider-quota-resilience"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -1855,7 +1855,15 @@ def save_teacher_research_run(
     )
 
 
+def teacher_research_run(run_id: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM teacher_research_runs WHERE id=:run_id",
+        {"run_id": int(run_id)},
+    )
+
+
 def latest_teacher_research(project_id: int, phase_number: int) -> Optional[Dict[str, Any]]:
+    """Return the latest research attempt, including failed refresh attempts."""
     return query_one(
         """
         SELECT * FROM teacher_research_runs
@@ -1863,6 +1871,32 @@ def latest_teacher_research(project_id: int, phase_number: int) -> Optional[Dict
         ORDER BY id DESC LIMIT 1
         """,
         {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def latest_usable_teacher_research(
+    project_id: int,
+    phase_number: int,
+    research_mode: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return the newest completed/reviewable dossier, ignoring failed refreshes."""
+    params: Dict[str, Any] = {
+        "project_id": int(project_id),
+        "phase_number": int(phase_number),
+    }
+    mode_clause = ""
+    if research_mode:
+        params["research_mode"] = str(research_mode).strip().lower()
+        mode_clause = " AND LOWER(research_mode)=:research_mode"
+    return query_one(
+        f"""
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+          AND status IN ('completed', 'needs_review')
+          {mode_clause}
+        ORDER BY id DESC LIMIT 1
+        """,
+        params,
     )
 
 

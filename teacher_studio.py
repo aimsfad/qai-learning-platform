@@ -292,6 +292,7 @@ def teacher_ui() -> Dict[str, str]:
             "research_ready": "تم حفظ حزمة البحث وستُستخدم تلقائيًا في التوليد.",
             "research_missing": "لا توجد حزمة بحث محفوظة لهذه المرحلة؛ سيشغّلها النظام تلقائيًا عند التوليد ما دام البحث غير معطل.",
             "research_failed": "تعذر إكمال البحث الويبّي.",
+            "research_cached_fallback": "تعذر تحديث البحث حاليًا؛ تم الاحتفاظ بآخر حزمة بحث ناجحة ويمكن متابعة العمل بها.",
             "research_latest": "أحدث حزمة بحث",
             "research_queries": "عبارات البحث",
             "research_report": "ملخص الأدلة والموارد",
@@ -316,6 +317,7 @@ def teacher_ui() -> Dict[str, str]:
             "research_ready": "Le dossier de recherche est enregistré et sera utilisé automatiquement.",
             "research_missing": "Aucun dossier n’est enregistré; la recherche sera lancée automatiquement lors de la génération sauf si elle est désactivée.",
             "research_failed": "La recherche Web n’a pas pu être terminée.",
+            "research_cached_fallback": "La mise à jour a échoué; le dernier dossier de recherche valide reste actif.",
             "research_latest": "Dernier dossier de recherche",
             "research_queries": "Requêtes de recherche",
             "research_report": "Synthèse des preuves et ressources",
@@ -340,6 +342,7 @@ def teacher_ui() -> Dict[str, str]:
             "research_ready": "The research packet is stored and will be used automatically during generation.",
             "research_missing": "No research packet is stored; generation will run research automatically unless web research is disabled.",
             "research_failed": "Web research could not be completed.",
+            "research_cached_fallback": "The refresh failed; the latest usable research dossier remains active.",
             "research_latest": "Latest research packet",
             "research_queries": "Search queries",
             "research_report": "Evidence and resource synthesis",
@@ -787,7 +790,7 @@ def _split_domain_input(value: str) -> List[str]:
 
 
 def _render_latest_research(project_id: int, phase_number: int, u: Dict[str, str]) -> Optional[Dict[str, Any]]:
-    latest = db.latest_teacher_research(int(project_id), int(phase_number))
+    latest = db.latest_usable_teacher_research(int(project_id), int(phase_number))
     if not latest:
         st.caption(u["research_missing"])
         return None
@@ -910,7 +913,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 disabled=research_mode == "off",
             )
         st.caption(u["research_cost"])
-        latest_research = db.latest_teacher_research(project_id, phase_number)
+        latest_research = db.latest_usable_teacher_research(project_id, phase_number)
         research_button_label = u["research_refresh"] if latest_research else u["research_now"]
         if st.button(
             research_button_label,
@@ -929,7 +932,12 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                         preferred_domains=_split_domain_input(preferred_domains_raw),
                         excluded_domains=_split_domain_input(excluded_domains_raw),
                     )
-                if str(research_run.get("status") or "") in {"completed", "needs_review"}:
+                if bool(int(research_run.get("cache_fallback_used") or 0)):
+                    detail = str(research_run.get("refresh_diagnostic") or "").strip()
+                    st.session_state.teacher_flash_warning = (
+                        u["research_cached_fallback"] + (f" {detail}" if detail else "")
+                    )
+                elif str(research_run.get("status") or "") in {"completed", "needs_review"}:
                     st.session_state.teacher_flash_success = u["research_ready"]
                 else:
                     st.session_state.teacher_flash_error = (
@@ -1073,7 +1081,7 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
         format_func=lambda number: f"{number}. {PHASES[number]}",
         key=f"teacher_evidence_phase_{project_id}",
     )
-    latest_research = db.latest_teacher_research(project_id, int(phase_number))
+    latest_research = db.latest_usable_teacher_research(project_id, int(phase_number))
     col1, col2 = st.columns(2)
     with col1:
         max_cards = st.slider(

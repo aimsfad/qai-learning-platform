@@ -110,6 +110,63 @@ def _as_int(name: str, default: int, minimum: int, maximum: int) -> int:
     return max(int(minimum), min(int(maximum), value))
 
 
+def _estimate_tokens(text: str) -> int:
+    raw = str(text or "")
+    if not raw:
+        return 0
+    return max(1, (len(raw.encode("utf-8")) + 2) // 3)
+
+
+def _truncate_to_tokens(text: str, max_tokens: int) -> str:
+    clean = str(text or "").strip()
+    limit = max(120, int(max_tokens))
+    if _estimate_tokens(clean) <= limit:
+        return clean
+    marker = "\n\n[Research prompt compacted by 3alimnIA]"
+    usable = max(80, limit - _estimate_tokens(marker))
+    low, high = 0, len(clean)
+    while low < high:
+        mid = (low + high + 1) // 2
+        if _estimate_tokens(clean[:mid]) <= usable:
+            low = mid
+        else:
+            high = mid - 1
+    return clean[:low].rstrip() + marker
+
+
+def _hard_quota_response(response: requests.Response) -> bool:
+    if int(getattr(response, "status_code", 0) or 0) != 429:
+        return False
+    body = str(getattr(response, "text", "") or "").lower()
+    markers = (
+        "exceeded your current quota",
+        "check your plan and billing",
+        "quota exceeded",
+        "resource_exhausted",
+        "daily limit",
+        "billing",
+    )
+    return any(marker in body for marker in markers)
+
+
+def _friendly_provider_failure(provider: str, exc: Exception) -> str:
+    raw = re.sub(r"https?://\S+", "[provider link removed]", str(exc or ""))
+    raw = re.sub(r"\borg_[A-Za-z0-9_-]+\b", "[organization]", raw)
+    lower = raw.lower()
+    if "429" in lower and any(token in lower for token in ("quota", "billing", "resource_exhausted")):
+        return f"{provider}: quota is currently exhausted; check provider usage/billing or retry after the quota window resets"
+    if "429" in lower or "rate limit" in lower:
+        return f"{provider}: temporary request-rate limit; retry later"
+    if "413" in lower or "request entity too large" in lower or "tokens per minute" in lower:
+        return f"{provider}: request/token window exceeded; quick mode or a later retry is required"
+    if "401" in lower or "unauthorized" in lower or "invalid api key" in lower:
+        return f"{provider}: authentication failed"
+    if "timeout" in lower:
+        return f"{provider}: request timed out"
+    compact = re.sub(r"\s+", " ", raw).strip()
+    return f"{provider}: {compact[:300]}"
+
+
 def _parse_domains(value: Any) -> List[str]:
     if isinstance(value, (list, tuple, set)):
         raw_items = [str(item) for item in value]
@@ -374,14 +431,22 @@ def _post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any], provi
     for attempt in range(retries + 1):
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=_request_timeout())
+            # Hard quota exhaustion will not be fixed by an immediate retry.
+            if _hard_quota_response(response):
+                return response
             if response.status_code not in retry_codes or attempt >= retries:
                 return response
-            time.sleep(min(6.0, 1.2 * (2**attempt)))
+            retry_after = str(response.headers.get("Retry-After") or "").strip()
+            try:
+                delay = min(12.0, max(1.0, float(retry_after))) if retry_after else min(12.0, 1.5 * (2**attempt))
+            except ValueError:
+                delay = min(12.0, 1.5 * (2**attempt))
+            time.sleep(delay)
         except (requests.Timeout, requests.ConnectionError) as exc:
             last_error = exc
             if attempt >= retries:
                 raise RuntimeError(f"{provider} research connection failed: {exc}") from exc
-            time.sleep(min(6.0, 1.2 * (2**attempt)))
+            time.sleep(min(12.0, 1.5 * (2**attempt)))
     raise RuntimeError(f"{provider} research failed: {last_error}")
 
 
@@ -526,16 +591,11 @@ def _call_groq(
     api_key = _secret("GROQ_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("Groq research is not configured")
-    if str(mode).lower() == "quick":
-        model = _secret("CONTENT_GROQ_QUICK_RESEARCH_MODEL", "groq/compound-mini").strip() or "groq/compound-mini"
-    else:
-        model = _secret("CONTENT_GROQ_RESEARCH_MODEL", "groq/compound").strip() or "groq/compound"
+    quick_model = _secret("CONTENT_GROQ_QUICK_RESEARCH_MODEL", "groq/compound-mini").strip() or "groq/compound-mini"
+    normal_model = _secret("CONTENT_GROQ_RESEARCH_MODEL", "groq/compound").strip() or "groq/compound"
+    model = quick_model if str(mode).lower() == "quick" else normal_model
     base = _secret("GROQ_BASE_URL", "https://api.groq.com/openai/v1").strip().rstrip("/")
-    payload: Dict[str, Any] = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.15,
-    }
+
     settings: Dict[str, Any] = {}
     if preferred_domains:
         settings["include_domains"] = list(preferred_domains)[:20]
@@ -544,14 +604,36 @@ def _call_groq(
     country = _secret("CONTENT_RESEARCH_COUNTRY", "").strip().lower()
     if country:
         settings["country"] = country
-    if settings:
-        payload["search_settings"] = settings
-    response = _post_json(
-        f"{base}/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        payload=payload,
-        provider="groq",
-    )
+
+    def execute(selected_model: str, runtime_prompt: str, output_tokens: int) -> requests.Response:
+        payload: Dict[str, Any] = {
+            "model": selected_model,
+            "messages": [{"role": "user", "content": runtime_prompt}],
+            "temperature": 0.15,
+            "max_completion_tokens": int(output_tokens),
+        }
+        if settings:
+            payload["search_settings"] = settings
+        return _post_json(
+            f"{base}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            payload=payload,
+            provider="groq",
+        )
+
+    input_budget = _as_int("CONTENT_GROQ_RESEARCH_INPUT_TOKENS", 1600, 700, 6000)
+    output_budget = _as_int("CONTENT_GROQ_RESEARCH_MAX_OUTPUT_TOKENS", 1800, 500, 6000)
+    runtime_prompt = _truncate_to_tokens(prompt, input_budget)
+    response = execute(model, runtime_prompt, output_budget)
+
+    # A bounded, smaller second attempt is useful when the regular Compound
+    # request exceeds the current token window. It does not loop indefinitely.
+    if response.status_code == 413 and model != quick_model:
+        strict_input = _as_int("CONTENT_GROQ_RESEARCH_STRICT_INPUT_TOKENS", 850, 400, 2400)
+        strict_output = _as_int("CONTENT_GROQ_RESEARCH_STRICT_OUTPUT_TOKENS", 900, 300, 2400)
+        response = execute(quick_model, _truncate_to_tokens(prompt, strict_input), strict_output)
+        model = quick_model
+
     if response.status_code != 200:
         raise _api_error("groq", response)
     data = response.json()
@@ -657,8 +739,7 @@ def run_phase_research(
                 used_fallback=index > 0,
             )
         except Exception as exc:
-            message = re.sub(r"https?://\S+", "[provider link removed]", str(exc))
-            failures.append(f"{provider}: {message[:500]}")
+            failures.append(_friendly_provider_failure(provider, exc))
 
     return ResearchResult(
         report="",
@@ -666,8 +747,11 @@ def run_phase_research(
         queries=queries,
         provider=providers[0],
         model="unknown",
-        status="error",
-        diagnostic=" | ".join(failures)[:3000],
+        status="provider_unavailable",
+        diagnostic=(
+            "Web research providers are temporarily unavailable. "
+            + " | ".join(failures)
+        )[:3000],
         latency_ms=int((time.perf_counter() - started) * 1000),
     )
 

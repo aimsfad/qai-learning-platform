@@ -1,3 +1,7 @@
+# 3alimnIA V6.13.1 — Provider Quota Resilience
+
+The research and evidence workflow now survives Gemini quota exhaustion and Groq token-window failures without losing the last valid research dossier. Groq research requests are bounded and can retry once with Compound Mini; evidence synthesis can degrade to traceable deterministic records for teacher review. See `V6_13_1_PROVIDER_QUOTA_RESILIENCE_AR.md`.
+
 # 3alimnIA V6.13 — Evidence Synthesis Foundation
 
 The Teacher Content Studio now inserts a reviewable evidence layer between web research and lesson generation. It deduplicates and scores sources, extracts traceable evidence cards, identifies concept prerequisites, and lets the teacher approve the compact evidence bundle before downstream generation. See `V6_13_EVIDENCE_SYNTHESIS_FOUNDATION_AR.md`.

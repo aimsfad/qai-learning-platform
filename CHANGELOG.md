@@ -1,3 +1,14 @@
+# V6.13.1 — Provider Quota Resilience Hotfix
+
+- Classified Gemini quota exhaustion separately from temporary rate limits and stopped useless immediate retries for hard quota failures.
+- Added sanitized, teacher-friendly provider diagnostics without billing URLs or organization identifiers.
+- Bounded Groq research prompts and output tokens, with one strict `groq/compound-mini` retry after HTTP 413.
+- Preserved the latest usable research dossier when a refresh attempt fails.
+- Added cached-research fallback metadata and a warning instead of invalidating the project workflow.
+- Added deterministic evidence-card and concept fallback when all writing providers are unavailable.
+- Added `latest_usable_teacher_research` so failed refresh attempts no longer hide completed research.
+- Added `validate_v6131_provider_quota_resilience.py`.
+
 # V6.13 — Evidence Synthesis Foundation
 
 - Added a traceable evidence layer between web research and educational generation.
