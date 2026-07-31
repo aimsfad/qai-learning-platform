@@ -1,3 +1,15 @@
+# V6.13 — Evidence Synthesis Foundation
+
+- Added a traceable evidence layer between web research and educational generation.
+- Added canonical URL normalization and duplicate-source removal.
+- Added multidimensional source scoring for authority, relevance, freshness, pedagogical utility, accessibility, and licence clarity.
+- Added normalized persistence for evidence runs, scored sources, evidence cards, and concept/prerequisite candidates.
+- Added strict source-ID validation and deterministic fallbacks when structured LLM extraction is unavailable.
+- Added a teacher-facing Evidence Synthesis workspace with source assessment, evidence cards, concepts, quality gates, approval, and JSON export.
+- Added optional teacher-approval gating before educational generation.
+- Replaced oversized raw research dossiers with compact teacher-approved evidence packets in downstream prompts.
+- Added `validate_v613_evidence_synthesis.py`.
+
 # V6.12 — Research-Augmented Educational Content Builder
 
 - Added a separate phase-aware web research pass before educational generation.

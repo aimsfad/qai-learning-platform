@@ -1,3 +1,7 @@
+# 3alimnIA V6.13 — Evidence Synthesis Foundation
+
+The Teacher Content Studio now inserts a reviewable evidence layer between web research and lesson generation. It deduplicates and scores sources, extracts traceable evidence cards, identifies concept prerequisites, and lets the teacher approve the compact evidence bundle before downstream generation. See `V6_13_EVIDENCE_SYNTHESIS_FOUNDATION_AR.md`.
+
 # 3alimnIA V6.12 — Research-Augmented Educational Content Builder
 
 The Teacher Content Studio now performs a separate, phase-aware web research pass before educational synthesis. It stores reusable research dossiers and source registries, grounds generated claims with `[S1]` identifiers, validates citations, and prevents automatic phase advancement when the evidence requires teacher review. See `V6_12_RESEARCH_AUGMENTED_CONTENT_BUILDER_AR.md`.
