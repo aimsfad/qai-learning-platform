@@ -1,3 +1,7 @@
+# 3alimnIA V6.12 — Research-Augmented Educational Content Builder
+
+The Teacher Content Studio now performs a separate, phase-aware web research pass before educational synthesis. It stores reusable research dossiers and source registries, grounds generated claims with `[S1]` identifiers, validates citations, and prevents automatic phase advancement when the evidence requires teacher review. See `V6_12_RESEARCH_AUGMENTED_CONTENT_BUILDER_AR.md`.
+
 # 3alimnIA V6.11.1 — Prompt Budget and RTL Hotfix
 
 The Teacher Content Studio now compacts oversized Groq requests within a configurable token budget, retries HTTP 413 once with a stricter plan, sanitizes provider diagnostics, and normalizes Arabic generated Markdown for stable RTL display. See `V6_11_1_PROMPT_BUDGET_RTL_HOTFIX_AR.md`.

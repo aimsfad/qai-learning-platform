@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"
+APP_VERSION = "v6.12-research-augmented-content-builder"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -282,6 +282,25 @@ def init_db() -> None:
             diagnostic TEXT,
             latency_ms INTEGER,
             validation_status TEXT,
+            is_fallback_used INTEGER DEFAULT 0,
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_research_runs (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            phase_number INTEGER NOT NULL,
+            research_mode TEXT,
+            query_plan_json TEXT,
+            report_text TEXT,
+            sources_json TEXT,
+            provider TEXT,
+            model TEXT,
+            status TEXT,
+            diagnostic TEXT,
+            source_count INTEGER DEFAULT 0,
+            latency_ms INTEGER DEFAULT 0,
             is_fallback_used INTEGER DEFAULT 0,
             created_at {created_default}
         )
@@ -1708,6 +1727,77 @@ def save_teacher_generation(
             "is_fallback_used": 1 if is_fallback_used else 0,
             "created_at": utc_now(),
         },
+    )
+
+
+def save_teacher_research_run(
+    project_id: int,
+    phase_number: int,
+    research_mode: str,
+    query_plan_json: str,
+    report_text: str,
+    sources_json: str,
+    provider: str,
+    model: str,
+    status: str,
+    diagnostic: str = "",
+    *,
+    source_count: int = 0,
+    latency_ms: int = 0,
+    is_fallback_used: bool = False,
+) -> int:
+    """Persist a reusable web-research dossier for one production phase."""
+    return execute_returning_id(
+        """
+        INSERT INTO teacher_research_runs
+        (project_id, phase_number, research_mode, query_plan_json, report_text, sources_json,
+         provider, model, status, diagnostic, source_count, latency_ms, is_fallback_used, created_at)
+        VALUES (:project_id, :phase_number, :research_mode, :query_plan_json, :report_text, :sources_json,
+                :provider, :model, :status, :diagnostic, :source_count, :latency_ms, :is_fallback_used, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id),
+            "phase_number": int(phase_number),
+            "research_mode": str(research_mode or "balanced"),
+            "query_plan_json": str(query_plan_json or "[]"),
+            "report_text": str(report_text or ""),
+            "sources_json": str(sources_json or "[]"),
+            "provider": str(provider or ""),
+            "model": str(model or ""),
+            "status": str(status or ""),
+            "diagnostic": str(diagnostic or ""),
+            "source_count": int(source_count or 0),
+            "latency_ms": int(latency_ms or 0),
+            "is_fallback_used": 1 if is_fallback_used else 0,
+            "created_at": utc_now(),
+        },
+    )
+
+
+def latest_teacher_research(project_id: int, phase_number: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        """
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+        ORDER BY id DESC LIMIT 1
+        """,
+        {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def teacher_research_runs_df(project_id: int, phase_number: Optional[int] = None) -> pd.DataFrame:
+    if phase_number is None:
+        return query_df(
+            "SELECT * FROM teacher_research_runs WHERE project_id=:project_id ORDER BY id DESC",
+            {"project_id": int(project_id)},
+        )
+    return query_df(
+        """
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+        ORDER BY id DESC
+        """,
+        {"project_id": int(project_id), "phase_number": int(phase_number)},
     )
 
 

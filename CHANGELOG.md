@@ -1,3 +1,16 @@
+# V6.12 — Research-Augmented Educational Content Builder
+
+- Added a separate phase-aware web research pass before educational generation.
+- Added Gemini Google Search grounding with Groq Compound/Compound Mini fallback.
+- Added quick, balanced, and deep research modes, plus preferred/excluded domain controls.
+- Added stored research dossiers, query plans, source registries, latency, diagnostics, and fallback metadata.
+- Added source authority/diversity checks and `[S1]` citation validation.
+- Added a teacher-facing research panel with report, source registry, query list, and JSON export.
+- Preserved research evidence during provider prompt compaction.
+- Added prompt-injection boundaries for untrusted web content and licensing/freshness rules.
+- Prevented automatic phase advancement whenever the research dossier requires teacher review.
+- Added `validate_v612_research_augmented_builder.py`.
+
 # V6.11.1 — Prompt Budget and RTL Hotfix
 
 - Added provider-aware runtime prompt budgeting for constrained Groq tiers.
