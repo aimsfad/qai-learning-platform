@@ -93,7 +93,7 @@ def validate_ui_contract() -> None:
         "save_error",
     ])
     db_text = (ROOT / "db.py").read_text(encoding="utf-8")
-    assert any(v in db_text for v in ('APP_VERSION = "v6.9.3-save-prompt-hotfix"', 'APP_VERSION = "v6.9.4-premium-logo-prompt-state"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"', 'APP_VERSION = "v6.11-educational-content-builder"', 'APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"', 'APP_VERSION = "v6.12-research-augmented-content-builder"', 'APP_VERSION = "v6.13-evidence-synthesis-foundation"', 'APP_VERSION = "v6.13.1-provider-quota-resilience"'))
+    assert any(v in db_text for v in ('APP_VERSION = "v6.9.3-save-prompt-hotfix"', 'APP_VERSION = "v6.9.4-premium-logo-prompt-state"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"', 'APP_VERSION = "v6.11-educational-content-builder"', 'APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"', 'APP_VERSION = "v6.12-research-augmented-content-builder"', 'APP_VERSION = "v6.13-evidence-synthesis-foundation"', 'APP_VERSION = "v6.13.1-provider-quota-resilience"', 'APP_VERSION = "v6.14-evidence-to-lesson-blueprint"', 'APP_VERSION = "v6.15-blueprint-editor-versioning"'))
 
 
 def main() -> None:

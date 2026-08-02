@@ -1,3 +1,22 @@
+# V6.15 — Blueprint Editor and Versioning
+
+- Added dynamic table editors for concepts, units, lessons, and learning outcomes.
+- Added stable identifiers for new records and teacher-controlled ordering.
+- Added blueprint normalization, referential-integrity checks, prerequisite-cycle checks, and quality recalculation.
+- Added immutable revision history with parent links, change summaries, editor identity, and entity-level audit records.
+- Added restoration of any historical revision as a new draft.
+- Kept approved historical versions intact; edited revisions require renewed teacher approval.
+- Added `validate_v615_blueprint_editor.py`.
+
+# V6.14 — Evidence-to-Lesson Blueprint
+
+- Added a provider-independent concept graph and course-blueprint compiler.
+- Converts approved evidence into units, lessons, measurable outcomes, activities, and assessments.
+- Adds traceable `[U#]`, `[L#]`, and `[LO#]` identifiers to downstream prompts.
+- Adds quality gates for concept coverage, prerequisite cycles, source traceability, and alignment.
+- Adds teacher review, JSON export, and approval before phase 3 or later generation.
+- Added normalized blueprint tables for future research analytics.
+
 # V6.13.1 — Provider Quota Resilience Hotfix
 
 - Classified Gemini quota exhaustion separately from temporary rate limits and stopped useless immediate retries for hard quota failures.
