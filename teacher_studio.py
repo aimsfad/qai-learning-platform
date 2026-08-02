@@ -15,6 +15,7 @@ import content_generation_engine
 import educational_builder
 import evidence_synthesis_engine
 import lesson_blueprint_engine
+import lesson_block_generation_engine
 import gemini_file_analyzer
 import db
 import i18n
@@ -1207,83 +1208,6 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
                     f"Difficulty: {concept.get('difficulty') or 'introductory'}"
                 )
     with tabs[3]:
-        if not cfg.get("editor_enabled"):
-            st.warning(labels["editor_disabled"])
-        else:
-            st.info(labels["editor_help"])
-            table_data = lesson_blueprint_engine.editor_tables_from_blueprint(blueprint)
-            with st.form(f"blueprint_editor_form_{int(bundle.get('id') or 0)}"):
-                st.markdown(f"### {labels['concepts']}")
-                edited_concepts = st.data_editor(
-                    pd.DataFrame(table_data["concepts"]), num_rows="dynamic", use_container_width=True,
-                    hide_index=True, disabled=["concept_id"], key=f"edit_concepts_{int(bundle.get('id') or 0)}",
-                )
-                st.markdown(f"### {labels['course']}")
-                edited_units = st.data_editor(
-                    pd.DataFrame(table_data["units"]), num_rows="dynamic", use_container_width=True,
-                    hide_index=True, disabled=["unit_id"], key=f"edit_units_{int(bundle.get('id') or 0)}",
-                )
-                edited_lessons = st.data_editor(
-                    pd.DataFrame(table_data["lessons"]), num_rows="dynamic", use_container_width=True,
-                    hide_index=True, disabled=["lesson_id"], key=f"edit_lessons_{int(bundle.get('id') or 0)}",
-                )
-                st.markdown(f"### {labels['outcomes']}")
-                edited_outcomes = st.data_editor(
-                    pd.DataFrame(table_data["outcomes"]), num_rows="dynamic", use_container_width=True,
-                    hide_index=True, disabled=["outcome_id"], key=f"edit_outcomes_{int(bundle.get('id') or 0)}",
-                )
-                change_summary = st.text_input(
-                    labels["change_summary"], key=f"blueprint_change_summary_{int(bundle.get('id') or 0)}"
-                )
-                save_revision = st.form_submit_button(labels["save_revision"], type="primary", use_container_width=True)
-            if save_revision:
-                try:
-                    draft = lesson_blueprint_engine.blueprint_from_editor_tables(
-                        blueprint,
-                        concepts=edited_concepts.fillna("").to_dict("records"),
-                        units=edited_units.fillna("").to_dict("records"),
-                        lessons=edited_lessons.fillna("").to_dict("records"),
-                        outcomes=edited_outcomes.fillna("").to_dict("records"),
-                    )
-                    lesson_blueprint_engine.save_manual_revision(
-                        project, _current_teacher_username(), base_run_id=int(bundle["id"]),
-                        edited_blueprint=draft, change_summary=change_summary or labels["save_revision"],
-                    )
-                    st.session_state.teacher_flash_success = labels["save_revision"]
-                except Exception as exc:
-                    st.session_state.teacher_flash_error = str(exc)
-                st.rerun()
-    with tabs[4]:
-        history = db.teacher_blueprint_history_df(project_id)
-        if not history.empty:
-            display_history = history.copy()
-            display_history["approved"] = display_history["approved_by_teacher"].fillna(0).astype(int).astype(bool)
-            st.dataframe(
-                display_history[["id", "revision_number", "status", "approved", "unit_count", "lesson_count", "outcome_count", "change_summary", "edited_by", "edit_source", "created_at"]],
-                use_container_width=True, hide_index=True,
-            )
-            history_options = {
-                f"Revision {int(row.get('revision_number') or 1)} · run #{int(row['id'])} · {row.get('status') or ''}": int(row["id"])
-                for _, row in history.iterrows()
-            }
-            selected_history = st.selectbox(
-                labels["history"], list(history_options.keys()), key=f"blueprint_history_select_{project_id}"
-            )
-            if st.button(labels["restore"], use_container_width=True, key=f"restore_blueprint_{project_id}"):
-                try:
-                    lesson_blueprint_engine.restore_blueprint_as_revision(
-                        project, _current_teacher_username(), source_run_id=history_options[selected_history],
-                        parent_run_id=int(bundle["id"]),
-                    )
-                    st.session_state.teacher_flash_success = labels["restore"]
-                except Exception as exc:
-                    st.session_state.teacher_flash_error = str(exc)
-                st.rerun()
-        change_log = db.teacher_blueprint_change_log_df(project_id)
-        if not change_log.empty:
-            st.markdown("#### Change log")
-            st.dataframe(change_log, use_container_width=True, hide_index=True)
-    with tabs[5]:
         warnings = quality.get("warnings") or []
         if warnings:
             st.markdown(f"**{u['evidence_warnings']}**")
@@ -1330,6 +1254,263 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
 
 
 
+
+def _blueprint_editor_copy(lang: str) -> Dict[str, str]:
+    copies = {
+        "ar": {
+            "editor": "محرر المخطط", "versions": "الإصدارات والسجل", "disabled": "ENABLE_BLUEPRINT_EDITOR غير مفعّل في Streamlit Secrets.",
+            "draft_note": "تُحفظ التعديلات أولًا كمسودة داخل الجلسة. اضغط حفظ إصدار جديد لتثبيتها في قاعدة البيانات. أي إصدار جديد يلغي اعتماد الإصدار السابق حتى يراجعه الأستاذ.",
+            "draft_quality": "جودة المسودة", "reset": "إلغاء التعديلات وإعادة تحميل أحدث إصدار", "summary": "ملخص التعديلات",
+            "save": "حفظ إصدار جديد", "saved": "تم حفظ إصدار جديد للمخطط.", "no_changes": "لا توجد تغييرات مقارنة بأحدث إصدار.",
+            "units": "تحرير الوحدات", "lessons": "تحرير الدروس", "outcomes": "تحرير أهداف التعلم", "add_unit": "إضافة وحدة",
+            "add_lesson": "إضافة درس", "add_outcome": "إضافة هدف تعلم", "title": "العنوان", "description": "الوصف",
+            "duration": "المدة بالدقائق", "concepts": "معرّفات المفاهيم مفصولة بفواصل", "sources": "معرّفات المصادر مفصولة بفواصل",
+            "prerequisites": "المتطلبات السابقة", "misconceptions": "المفاهيم الخاطئة الشائعة", "unit": "الوحدة", "lesson": "الدرس",
+            "bloom": "مستوى Bloom", "verb": "الفعل القابل للقياس", "object": "موضوع الهدف", "condition": "شرط الأداء",
+            "criterion": "معيار النجاح", "update": "حفظ التعديل في المسودة", "up": "نقل إلى أعلى", "down": "نقل إلى أسفل",
+            "delete": "حذف", "confirm_cascade": "أؤكد حذف الوحدة وكل دروسها وأهدافها", "restore": "استعادة هذا الإصدار كإصدار جديد",
+            "restore_summary": "سبب الاستعادة", "compare": "مقارنة مع أحدث إصدار", "audit": "سجل العمليات", "history": "تاريخ الإصدارات",
+            "approved_warning": "هذا الإصدار معتمد حاليًا. حفظ تعديل جديد سيوقف اعتماده حتى اعتماد الإصدار الجديد.",
+        },
+        "fr": {
+            "editor": "Éditeur du plan", "versions": "Versions et journal", "disabled": "ENABLE_BLUEPRINT_EDITOR est désactivé dans Streamlit Secrets.",
+            "draft_note": "Les modifications restent dans un brouillon de session jusqu’à l’enregistrement d’une nouvelle version. Une nouvelle version invalide l’approbation précédente.",
+            "draft_quality": "Qualité du brouillon", "reset": "Annuler et recharger la dernière version", "summary": "Résumé des modifications",
+            "save": "Enregistrer une nouvelle version", "saved": "Nouvelle version enregistrée.", "no_changes": "Aucune modification par rapport à la dernière version.",
+            "units": "Modifier les unités", "lessons": "Modifier les leçons", "outcomes": "Modifier les objectifs", "add_unit": "Ajouter une unité",
+            "add_lesson": "Ajouter une leçon", "add_outcome": "Ajouter un objectif", "title": "Titre", "description": "Description",
+            "duration": "Durée en minutes", "concepts": "Identifiants de concepts séparés par des virgules", "sources": "Identifiants de sources séparés par des virgules",
+            "prerequisites": "Prérequis", "misconceptions": "Conceptions erronées", "unit": "Unité", "lesson": "Leçon",
+            "bloom": "Niveau de Bloom", "verb": "Verbe mesurable", "object": "Objet de l’objectif", "condition": "Condition",
+            "criterion": "Critère de réussite", "update": "Mettre à jour le brouillon", "up": "Monter", "down": "Descendre",
+            "delete": "Supprimer", "confirm_cascade": "Je confirme la suppression de l’unité et de toutes ses leçons", "restore": "Restaurer comme nouvelle version",
+            "restore_summary": "Motif de restauration", "compare": "Comparer à la dernière version", "audit": "Journal des opérations", "history": "Historique des versions",
+            "approved_warning": "Cette version est approuvée. Une nouvelle modification annulera son approbation jusqu’à une nouvelle validation.",
+        },
+        "en": {
+            "editor": "Blueprint editor", "versions": "Versions and audit", "disabled": "ENABLE_BLUEPRINT_EDITOR is disabled in Streamlit Secrets.",
+            "draft_note": "Changes remain in a session draft until a new immutable version is saved. Saving a version invalidates the previous approval until the teacher approves the new version.",
+            "draft_quality": "Draft quality", "reset": "Discard changes and reload latest", "summary": "Change summary",
+            "save": "Save new version", "saved": "A new blueprint version was saved.", "no_changes": "No changes compared with the latest version.",
+            "units": "Edit units", "lessons": "Edit lessons", "outcomes": "Edit learning outcomes", "add_unit": "Add unit",
+            "add_lesson": "Add lesson", "add_outcome": "Add learning outcome", "title": "Title", "description": "Description",
+            "duration": "Duration in minutes", "concepts": "Comma-separated concept IDs", "sources": "Comma-separated source IDs",
+            "prerequisites": "Prerequisites", "misconceptions": "Misconceptions", "unit": "Unit", "lesson": "Lesson",
+            "bloom": "Bloom level", "verb": "Measurable verb", "object": "Outcome object", "condition": "Performance condition",
+            "criterion": "Success criterion", "update": "Update session draft", "up": "Move up", "down": "Move down",
+            "delete": "Delete", "confirm_cascade": "I confirm deleting the unit and all its lessons", "restore": "Restore as a new version",
+            "restore_summary": "Restore reason", "compare": "Compare with latest", "audit": "Audit trail", "history": "Version history",
+            "approved_warning": "This version is currently approved. Saving a new edit will invalidate approval until the new version is reviewed.",
+        },
+    }
+    return copies.get(lang, copies["en"])
+
+
+def _set_blueprint_draft(project_id: int, draft: Dict[str, Any]) -> None:
+    st.session_state[f"blueprint_editor_draft_{project_id}"] = lesson_blueprint_engine.normalize_blueprint(draft)
+    st.session_state[f"blueprint_editor_nonce_{project_id}"] = int(st.session_state.get(f"blueprint_editor_nonce_{project_id}", 0)) + 1
+
+
+def render_blueprint_editor(project: Dict[str, Any], bundle: Dict[str, Any], lang: str) -> None:
+    copy = _blueprint_editor_copy(lang)
+    cfg = lesson_blueprint_engine.blueprint_status()
+    project_id = int(project["id"])
+    if not cfg.get("editor_enabled"):
+        st.warning(copy["disabled"])
+        return
+    st.info(copy["draft_note"])
+    if bool(int(bundle.get("approved_by_teacher") or 0)):
+        st.warning(copy["approved_warning"])
+
+    draft_key = f"blueprint_editor_draft_{project_id}"
+    source_key = f"blueprint_editor_source_{project_id}"
+    if draft_key not in st.session_state or int(st.session_state.get(source_key, 0) or 0) != int(bundle.get("id") or 0):
+        st.session_state[draft_key] = lesson_blueprint_engine.prepare_editor_draft(bundle)
+        st.session_state[source_key] = int(bundle.get("id") or 0)
+    draft = st.session_state[draft_key]
+    quality = lesson_blueprint_engine.recompute_blueprint_quality(draft)
+    comparison = lesson_blueprint_engine.compare_blueprints(bundle.get("blueprint") or {}, draft)
+    changed = bool(comparison.get("changed"))
+
+    q1, q2, q3, q4 = st.columns(4)
+    q1.metric(copy["draft_quality"], f"{float(quality.get('readiness_score') or 0):.0%}")
+    q2.metric(copy["units"], len(draft.get("units") or []))
+    q3.metric(copy["lessons"], len(draft.get("lessons") or []))
+    q4.metric(copy["outcomes"], len(draft.get("outcomes") or []))
+    if quality.get("warnings"):
+        with st.expander(copy["draft_quality"]):
+            for warning in quality.get("warnings") or []:
+                st.markdown(f"- {warning}")
+
+    with st.expander(copy["add_unit"]):
+        with st.form(f"add_unit_form_{project_id}", clear_on_submit=True):
+            add_title = st.text_input(copy["title"])
+            add_desc = st.text_area(copy["description"])
+            if st.form_submit_button(copy["add_unit"], use_container_width=True):
+                try:
+                    _set_blueprint_draft(project_id, lesson_blueprint_engine.add_unit(draft, add_title, add_desc))
+                    st.rerun()
+                except Exception as exc:
+                    st.error(str(exc))
+
+    units = draft.get("units") or []
+    unit_options = {f"{item.get('unit_id')} · {item.get('title')}": str(item.get("unit_id")) for item in units}
+    if unit_options:
+        st.markdown(f"### {copy['units']}")
+        selected_unit_label = st.selectbox(copy["unit"], list(unit_options), key=f"edit_unit_select_{project_id}")
+        selected_unit_id = unit_options[selected_unit_label]
+        selected_unit = next(item for item in units if str(item.get("unit_id")) == selected_unit_id)
+        with st.form(f"edit_unit_form_{project_id}_{selected_unit_id}"):
+            unit_title = st.text_input(copy["title"], value=str(selected_unit.get("title") or ""))
+            unit_desc = st.text_area(copy["description"], value=str(selected_unit.get("description") or ""))
+            if st.form_submit_button(copy["update"], use_container_width=True):
+                _set_blueprint_draft(project_id, lesson_blueprint_engine.update_unit(draft, selected_unit_id, title=unit_title, description=unit_desc))
+                st.rerun()
+        c1, c2, c3 = st.columns(3)
+        if c1.button(copy["up"], key=f"unit_up_{project_id}_{selected_unit_id}", use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.move_unit(draft, selected_unit_id, -1)); st.rerun()
+        if c2.button(copy["down"], key=f"unit_down_{project_id}_{selected_unit_id}", use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.move_unit(draft, selected_unit_id, 1)); st.rerun()
+        confirm = st.checkbox(copy["confirm_cascade"], key=f"confirm_unit_delete_{project_id}_{selected_unit_id}")
+        if c3.button(copy["delete"], key=f"unit_delete_{project_id}_{selected_unit_id}", disabled=not confirm, use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.delete_unit(draft, selected_unit_id, cascade=True)); st.rerun()
+
+    units = st.session_state[draft_key].get("units") or []
+    unit_ids = [str(item.get("unit_id")) for item in units]
+    if unit_ids:
+        with st.expander(copy["add_lesson"]):
+            with st.form(f"add_lesson_form_{project_id}", clear_on_submit=True):
+                lesson_unit = st.selectbox(copy["unit"], unit_ids)
+                lesson_title = st.text_input(copy["title"])
+                lesson_duration = st.number_input(copy["duration"], min_value=5, max_value=600, value=45, step=5)
+                lesson_concepts = st.text_input(copy["concepts"])
+                lesson_sources = st.text_input(copy["sources"])
+                if st.form_submit_button(copy["add_lesson"], use_container_width=True):
+                    _set_blueprint_draft(project_id, lesson_blueprint_engine.add_lesson(st.session_state[draft_key], unit_id=lesson_unit, title=lesson_title, duration_minutes=int(lesson_duration), concept_ids=lesson_concepts, source_ids=lesson_sources))
+                    st.rerun()
+
+    draft = st.session_state[draft_key]
+    lessons = draft.get("lessons") or []
+    lesson_options = {f"{item.get('lesson_id')} · {item.get('title')}": str(item.get("lesson_id")) for item in lessons}
+    if lesson_options:
+        st.markdown(f"### {copy['lessons']}")
+        selected_lesson_label = st.selectbox(copy["lesson"], list(lesson_options), key=f"edit_lesson_select_{project_id}")
+        selected_lesson_id = lesson_options[selected_lesson_label]
+        selected_lesson = next(item for item in lessons if str(item.get("lesson_id")) == selected_lesson_id)
+        with st.form(f"edit_lesson_form_{project_id}_{selected_lesson_id}"):
+            current_unit = str(selected_lesson.get("unit_id") or "")
+            edit_unit = st.selectbox(copy["unit"], unit_ids, index=max(0, unit_ids.index(current_unit)) if current_unit in unit_ids else 0)
+            edit_title = st.text_input(copy["title"], value=str(selected_lesson.get("title") or ""))
+            edit_duration = st.number_input(copy["duration"], min_value=5, max_value=600, value=int(selected_lesson.get("estimated_duration_minutes") or 45), step=5)
+            edit_concepts = st.text_input(copy["concepts"], value=", ".join(selected_lesson.get("concept_ids") or []))
+            edit_sources = st.text_input(copy["sources"], value=", ".join(selected_lesson.get("source_ids") or []))
+            edit_prereq = st.text_input(copy["prerequisites"], value=", ".join(selected_lesson.get("prerequisites") or []))
+            edit_mis = st.text_area(copy["misconceptions"], value=", ".join(selected_lesson.get("misconceptions") or []))
+            if st.form_submit_button(copy["update"], use_container_width=True):
+                _set_blueprint_draft(project_id, lesson_blueprint_engine.update_lesson(draft, selected_lesson_id, unit_id=edit_unit, title=edit_title, duration_minutes=int(edit_duration), concept_ids=edit_concepts, source_ids=edit_sources, prerequisites=edit_prereq, misconceptions=edit_mis))
+                st.rerun()
+        c1, c2, c3 = st.columns(3)
+        if c1.button(copy["up"], key=f"lesson_up_{project_id}_{selected_lesson_id}", use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.move_lesson(draft, selected_lesson_id, -1)); st.rerun()
+        if c2.button(copy["down"], key=f"lesson_down_{project_id}_{selected_lesson_id}", use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.move_lesson(draft, selected_lesson_id, 1)); st.rerun()
+        if c3.button(copy["delete"], key=f"lesson_delete_{project_id}_{selected_lesson_id}", use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.delete_lesson(draft, selected_lesson_id)); st.rerun()
+
+    draft = st.session_state[draft_key]
+    lessons = draft.get("lessons") or []
+    if lessons:
+        with st.expander(copy["add_outcome"]):
+            with st.form(f"add_outcome_form_{project_id}", clear_on_submit=True):
+                outcome_lesson = st.selectbox(copy["lesson"], [str(item.get("lesson_id")) for item in lessons])
+                outcome_bloom = st.selectbox(copy["bloom"], ["remember", "understand", "apply", "analyze", "evaluate", "create"], index=2)
+                outcome_verb = st.text_input(copy["verb"])
+                outcome_object = st.text_input(copy["object"])
+                outcome_condition = st.text_input(copy["condition"])
+                outcome_criterion = st.text_area(copy["criterion"])
+                if st.form_submit_button(copy["add_outcome"], use_container_width=True):
+                    _set_blueprint_draft(project_id, lesson_blueprint_engine.add_outcome(draft, lesson_id=outcome_lesson, bloom_level=outcome_bloom, verb=outcome_verb, object_text=outcome_object, condition=outcome_condition, success_criterion=outcome_criterion))
+                    st.rerun()
+
+    draft = st.session_state[draft_key]
+    outcomes = draft.get("outcomes") or []
+    outcome_options = {f"{item.get('outcome_id')} · {item.get('verb')} {item.get('object')}": str(item.get("outcome_id")) for item in outcomes}
+    if outcome_options:
+        st.markdown(f"### {copy['outcomes']}")
+        selected_outcome_label = st.selectbox(copy["outcomes"], list(outcome_options), key=f"edit_outcome_select_{project_id}")
+        selected_outcome_id = outcome_options[selected_outcome_label]
+        selected_outcome = next(item for item in outcomes if str(item.get("outcome_id")) == selected_outcome_id)
+        with st.form(f"edit_outcome_form_{project_id}_{selected_outcome_id}"):
+            bloom_values = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+            current_bloom = str(selected_outcome.get("bloom_level") or "apply")
+            edit_bloom = st.selectbox(copy["bloom"], bloom_values, index=bloom_values.index(current_bloom) if current_bloom in bloom_values else 2)
+            edit_verb = st.text_input(copy["verb"], value=str(selected_outcome.get("verb") or ""))
+            edit_object = st.text_input(copy["object"], value=str(selected_outcome.get("object") or ""))
+            edit_condition = st.text_input(copy["condition"], value=str(selected_outcome.get("condition") or ""))
+            edit_criterion = st.text_area(copy["criterion"], value=str(selected_outcome.get("success_criterion") or ""))
+            if st.form_submit_button(copy["update"], use_container_width=True):
+                _set_blueprint_draft(project_id, lesson_blueprint_engine.update_outcome(draft, selected_outcome_id, bloom_level=edit_bloom, verb=edit_verb, object_text=edit_object, condition=edit_condition, success_criterion=edit_criterion))
+                st.rerun()
+        if st.button(copy["delete"], key=f"outcome_delete_{project_id}_{selected_outcome_id}", use_container_width=True):
+            _set_blueprint_draft(project_id, lesson_blueprint_engine.delete_outcome(draft, selected_outcome_id)); st.rerun()
+
+    st.divider()
+    change_summary = st.text_area(copy["summary"], key=f"blueprint_change_summary_{project_id}")
+    b1, b2 = st.columns(2)
+    if b1.button(copy["reset"], use_container_width=True, key=f"blueprint_reset_{project_id}"):
+        st.session_state[draft_key] = lesson_blueprint_engine.prepare_editor_draft(bundle)
+        st.session_state[source_key] = int(bundle.get("id") or 0)
+        st.rerun()
+    if b2.button(copy["save"], type="primary", use_container_width=True, disabled=not changed, key=f"blueprint_save_revision_{project_id}"):
+        try:
+            saved = lesson_blueprint_engine.save_manual_revision(project_id, int(bundle["id"]), _current_teacher_username(), st.session_state[draft_key], change_summary)
+            st.session_state[source_key] = int(saved.get("id") or 0)
+            st.session_state[draft_key] = lesson_blueprint_engine.prepare_editor_draft(saved)
+            st.session_state.teacher_flash_success = copy["saved"]
+        except Exception as exc:
+            st.session_state.teacher_flash_error = str(exc)
+        st.rerun()
+    if not changed:
+        st.caption(copy["no_changes"])
+
+
+def render_blueprint_versions(project: Dict[str, Any], current_bundle: Dict[str, Any], lang: str) -> None:
+    copy = _blueprint_editor_copy(lang)
+    project_id = int(project["id"])
+    versions = db.teacher_blueprint_versions_df(project_id)
+    st.markdown(f"### {copy['history']}")
+    if versions.empty:
+        st.info(copy["no_changes"])
+        return
+    display = versions.copy()
+    display["approved"] = display["approved_by_teacher"].fillna(0).astype(int).map({1: "✓", 0: ""})
+    columns = [col for col in ["version_number", "revision_type", "status", "approved", "unit_count", "lesson_count", "outcome_count", "edited_by", "change_summary", "created_at"] if col in display.columns]
+    st.dataframe(display[columns], use_container_width=True, hide_index=True)
+    options = {
+        f"v{int(row.get('version_number') or 1)} · #{int(row['id'])} · {row.get('revision_type') or 'generated'}": int(row["id"])
+        for _, row in versions.iterrows()
+    }
+    selected_label = st.selectbox(copy["history"], list(options), key=f"blueprint_version_select_{project_id}")
+    selected = db.teacher_blueprint_bundle(options[selected_label]) or {}
+    diff = lesson_blueprint_engine.compare_blueprints(selected.get("blueprint") or {}, current_bundle.get("blueprint") or {})
+    with st.expander(copy["compare"], expanded=True):
+        st.json(diff)
+    restore_summary = st.text_input(copy["restore_summary"], key=f"blueprint_restore_summary_{project_id}")
+    if int(selected.get("id") or 0) != int(current_bundle.get("id") or 0):
+        if st.button(copy["restore"], type="primary", use_container_width=True, key=f"blueprint_restore_{project_id}_{int(selected.get('id') or 0)}"):
+            try:
+                db.restore_teacher_blueprint_version(project_id=project_id, source_run_id=int(selected["id"]), teacher_username=_current_teacher_username(), change_summary=restore_summary)
+                st.session_state.pop(f"blueprint_editor_draft_{project_id}", None)
+                st.session_state.teacher_flash_success = copy["restore"]
+            except Exception as exc:
+                st.session_state.teacher_flash_error = str(exc)
+            st.rerun()
+    st.markdown(f"### {copy['audit']}")
+    audit = db.teacher_blueprint_audit_df(project_id)
+    if not audit.empty:
+        st.dataframe(audit[[col for col in ["action", "actor_username", "summary", "blueprint_run_id", "parent_run_id", "created_at"] if col in audit.columns]], use_container_width=True, hide_index=True)
+
+
 def render_lesson_blueprint(project: Dict[str, Any]) -> None:
     """Render the V6.14 evidence-to-lesson planning workspace."""
     lang = i18n.current_lang(st)
@@ -1353,13 +1534,8 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
             "approved": "تم اعتماد المخطط، وسيصبح قيدًا بنيويًا لمراحل التوليد اللاحقة.",
             "download": "تنزيل المخطط بصيغة JSON",
             "warnings": "ملاحظات الجودة",
-            "editor": "تحرير المخطط",
-            "history": "الإصدارات وسجل التعديلات",
-            "save_revision": "حفظ نسخة جديدة من المخطط",
-            "change_summary": "ملخص التعديلات",
-            "editor_help": "عدّل الجداول، أضف أو احذف الصفوف، وغيّر ترتيب الوحدات والدروس. تُحفظ التعديلات كنسخة جديدة دون الكتابة فوق النسخ السابقة.",
-            "restore": "استعادة النسخة المحددة كمسودة جديدة",
-            "editor_disabled": "ENABLE_BLUEPRINT_EDITOR غير مفعّل في Streamlit Secrets.",
+            "editor": "محرر المخطط",
+            "versions": "الإصدارات والسجل",
         },
         "fr": {
             "title": "Plan du cours et des leçons",
@@ -1380,13 +1556,8 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
             "approved": "Le plan est approuvé et contraindra les phases de génération suivantes.",
             "download": "Télécharger le plan JSON",
             "warnings": "Alertes qualité",
-            "editor": "Modifier le plan",
-            "history": "Versions et journal des changements",
-            "save_revision": "Enregistrer une nouvelle version",
-            "change_summary": "Résumé des modifications",
-            "editor_help": "Modifiez, ajoutez, supprimez et réordonnez les unités, leçons, concepts et objectifs. Chaque sauvegarde crée une nouvelle version.",
-            "restore": "Restaurer la version sélectionnée comme nouveau brouillon",
-            "editor_disabled": "ENABLE_BLUEPRINT_EDITOR est désactivé dans Streamlit Secrets.",
+            "editor": "Éditeur du plan",
+            "versions": "Versions et journal",
         },
         "en": {
             "title": "Course and lesson blueprint",
@@ -1407,13 +1578,8 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
             "approved": "The blueprint is approved and will constrain later generation phases.",
             "download": "Download blueprint JSON",
             "warnings": "Quality warnings",
-            "editor": "Edit blueprint",
-            "history": "Versions and change log",
-            "save_revision": "Save new blueprint revision",
-            "change_summary": "Change summary",
-            "editor_help": "Edit, add, delete, and reorder units, lessons, concepts, and outcomes. Every save creates a new revision without overwriting history.",
-            "restore": "Restore selected version as a new draft",
-            "editor_disabled": "ENABLE_BLUEPRINT_EDITOR is disabled in Streamlit Secrets.",
+            "editor": "Blueprint editor",
+            "versions": "Versions and audit",
         },
     }.get(lang, {})
     cfg = lesson_blueprint_engine.blueprint_status()
@@ -1486,13 +1652,12 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
     m4.metric(labels["outcomes"], len(outcomes))
     st.caption(
         f"{bundle.get('provider') or 'deterministic'} / {bundle.get('model') or 'blueprint'} · "
-        f"status={bundle.get('status') or 'unknown'} · evidence_run={bundle.get('evidence_run_id')} · "
-        f"revision={int(bundle.get('revision_number') or 1)}"
+        f"status={bundle.get('status') or 'unknown'} · evidence_run={bundle.get('evidence_run_id')}"
     )
     if approved:
         st.success(labels["approved"])
 
-    tabs = st.tabs([labels["concepts"], labels["course"], labels["outcomes"], labels["editor"], labels["history"], labels["quality"]])
+    tabs = st.tabs([labels["concepts"], labels["course"], labels["outcomes"], labels["quality"], labels["editor"], labels["versions"]])
     with tabs[0]:
         concept_rows = []
         incoming = {}
@@ -1547,6 +1712,10 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
         else:
             st.success("Quality gate passed without automatic warnings.")
         st.json(quality)
+    with tabs[4]:
+        render_blueprint_editor(project, bundle, lang)
+    with tabs[5]:
+        render_blueprint_versions(project, bundle, lang)
 
     payload = {"run": {k: v for k, v in bundle.items() if k not in {"blueprint", "quality", "units", "lessons", "outcomes", "concepts", "concept_edges"}}, "blueprint": blueprint, "quality": quality}
     st.download_button(
@@ -1596,7 +1765,7 @@ def project_workspace_ui() -> Dict[str, str]:
         "ar": {
             "new": "مشروع جديد", "projects": "مشاريعي التعليمية", "workspace": "واجهة المشروع", "outputs": "كل المخرجات",
             "open": "فتح المشروع", "continue": "متابعة الإنتاج", "preview": "معاينة كمتعلم", "back": "العودة إلى المشاريع",
-            "overview": "نظرة عامة", "production": "الإنتاج والتحرير", "evidence": "تركيب الأدلة", "blueprint": "مخطط المقرر", "assets": "المحتوى والمخرجات", "publish": "المعاينة والنشر",
+            "overview": "نظرة عامة", "production": "الإنتاج والتحرير", "evidence": "تركيب الأدلة", "blueprint": "مخطط المقرر", "blocks": "بناء الدروس", "assets": "المحتوى والمخرجات", "publish": "المعاينة والنشر",
             "draft": "مسودة", "review": "قيد المراجعة", "published": "منشور", "archived": "مؤرشف",
             "progress": "تقدم الإنتاج", "phases": "المراحل المنجزة", "runs": "عمليات التوليد", "updated": "آخر تحديث",
             "empty_title": "ابدأ أول مشروع تعليمي", "empty_body": "أنشئ مشروعًا، أضف محتوى المادة وطريقة التدريس والتقييم، ثم أنتج موارده على مراحل.",
@@ -1615,7 +1784,7 @@ def project_workspace_ui() -> Dict[str, str]:
         "fr": {
             "new": "Nouveau projet", "projects": "Mes projets pédagogiques", "workspace": "Espace projet", "outputs": "Toutes les productions",
             "open": "Ouvrir le projet", "continue": "Continuer la production", "preview": "Aperçu apprenant", "back": "Retour aux projets",
-            "overview": "Vue d’ensemble", "production": "Production et édition", "evidence": "Synthèse des preuves", "blueprint": "Plan du cours", "assets": "Contenus et productions", "publish": "Aperçu et publication",
+            "overview": "Vue d’ensemble", "production": "Production et édition", "evidence": "Synthèse des preuves", "blueprint": "Plan du cours", "blocks": "Construction des leçons", "assets": "Contenus et productions", "publish": "Aperçu et publication",
             "draft": "Brouillon", "review": "En révision", "published": "Publié", "archived": "Archivé",
             "progress": "Progression de production", "phases": "Phases terminées", "runs": "Générations", "updated": "Dernière mise à jour",
             "empty_title": "Commencez votre premier projet", "empty_body": "Définissez le contenu, la pédagogie et l’évaluation, puis produisez les ressources par étapes.",
@@ -1634,7 +1803,7 @@ def project_workspace_ui() -> Dict[str, str]:
         "en": {
             "new": "New project", "projects": "My educational projects", "workspace": "Project workspace", "outputs": "All outputs",
             "open": "Open project", "continue": "Continue production", "preview": "Preview as learner", "back": "Back to projects",
-            "overview": "Overview", "production": "Production and editing", "evidence": "Evidence synthesis", "blueprint": "Lesson blueprint", "assets": "Content and outputs", "publish": "Preview and publish",
+            "overview": "Overview", "production": "Production and editing", "evidence": "Evidence synthesis", "blueprint": "Lesson blueprint", "blocks": "Lesson blocks", "assets": "Content and outputs", "publish": "Preview and publish",
             "draft": "Draft", "review": "In review", "published": "Published", "archived": "Archived",
             "progress": "Production progress", "phases": "Completed phases", "runs": "Generation runs", "updated": "Last updated",
             "empty_title": "Start your first educational project", "empty_body": "Define the subject, pedagogy, and assessment, then produce the assets phase by phase.",
@@ -1849,6 +2018,126 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             st.success(copy["draft_ok"] if action == "draft" else copy["archive_ok"]); st.rerun()
 
 
+
+def render_lesson_blocks(project: Dict[str, Any]) -> None:
+    """Render V6.16 block-level lesson generation and editing workspace."""
+    lang = i18n.current_lang(st)
+    labels = {
+        "ar": {
+            "title": "بناء محتوى الدرس على مستوى الكتل",
+            "intro": "ولّد كل جزء من الدرس بصورة مستقلة، راجعه، عدّله واعتمده دون إعادة إنشاء الدرس كاملًا.",
+            "blueprint_missing": "يجب اعتماد مخطط مقرر أولًا.",
+            "lesson": "الدرس", "block": "كتلة المحتوى", "generate": "توليد هذه الكتلة بالذكاء الاصطناعي",
+            "regenerate": "إعادة توليد الكتلة", "preview": "المعاينة", "edit": "مراجعة وتحرير",
+            "versions": "الإصدارات", "audit": "سجل العمليات", "approve": "اعتماد الكتلة",
+            "approved": "تم اعتماد هذه الكتلة.", "save": "حفظ إصدار جديد", "summary": "ملخص التعديل",
+            "progress": "اكتمال الدرس", "no_output": "لم تُولّد هذه الكتلة بعد.", "download": "تنزيل الكتلة",
+            "validation": "فحص الجودة", "provider": "المزوّد والنموذج", "latency": "زمن الاستجابة",
+        },
+        "fr": {
+            "title": "Construction modulaire de la leçon", "intro": "Générez, révisez et approuvez chaque bloc séparément.",
+            "blueprint_missing": "Un plan de cours approuvé est requis.", "lesson": "Leçon", "block": "Bloc",
+            "generate": "Générer ce bloc", "regenerate": "Régénérer", "preview": "Aperçu", "edit": "Réviser",
+            "versions": "Versions", "audit": "Journal", "approve": "Approuver le bloc", "approved": "Bloc approuvé.",
+            "save": "Enregistrer une nouvelle version", "summary": "Résumé des modifications", "progress": "Achèvement",
+            "no_output": "Ce bloc n’a pas encore été généré.", "download": "Télécharger", "validation": "Validation",
+            "provider": "Fournisseur et modèle", "latency": "Latence",
+        },
+        "en": {
+            "title": "Block-level lesson production", "intro": "Generate, review, edit, version, and approve each lesson block independently.",
+            "blueprint_missing": "An approved course blueprint is required.", "lesson": "Lesson", "block": "Content block",
+            "generate": "Generate this block with AI", "regenerate": "Regenerate block", "preview": "Preview", "edit": "Review and edit",
+            "versions": "Versions", "audit": "Audit trail", "approve": "Approve block", "approved": "This block is approved.",
+            "save": "Save new version", "summary": "Change summary", "progress": "Lesson completion",
+            "no_output": "This block has not been generated yet.", "download": "Download block", "validation": "Quality validation",
+            "provider": "Provider and model", "latency": "Latency",
+        },
+    }.get(lang, {})
+    st.markdown(f"## {labels['title']}")
+    st.write(labels["intro"])
+    cfg = lesson_block_generation_engine.block_generation_status()
+    if not cfg.get("enabled"):
+        st.warning("ENABLE_LESSON_BLOCK_GENERATION is disabled.")
+        return
+    project_id = int(project["id"])
+    blueprint = db.latest_teacher_blueprint(project_id, approved_only=True)
+    if not blueprint:
+        st.warning(labels["blueprint_missing"])
+        return
+    lessons = list((blueprint.get("blueprint") or {}).get("lessons") or [])
+    lesson_options = {f"{item.get('lesson_id')} - {item.get('title')}": str(item.get("lesson_id")) for item in lessons}
+    if not lesson_options:
+        st.warning(labels["blueprint_missing"])
+        return
+    c1, c2 = st.columns(2)
+    with c1:
+        lesson_label = st.selectbox(labels["lesson"], list(lesson_options), key=f"block_lesson_{project_id}")
+        lesson_id = lesson_options[lesson_label]
+    with c2:
+        block_options = {
+            lesson_block_generation_engine.block_label(key, "ar" if lang == "ar" else "en"): key
+            for key in lesson_block_generation_engine.BLOCK_SPECS
+        }
+        block_label = st.selectbox(labels["block"], list(block_options), key=f"block_type_{project_id}_{lesson_id}")
+        block_type = block_options[block_label]
+
+    completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+    st.progress(completion["approved"] / max(completion["required"], 1), text=f"{labels['progress']}: {completion['approved']}/{completion['required']}")
+    latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+    button_label = labels["regenerate"] if latest else labels["generate"]
+    if st.button(button_label, type="primary", use_container_width=True, key=f"generate_block_{project_id}_{lesson_id}_{block_type}"):
+        try:
+            lesson_block_generation_engine.generate_and_persist(project, _current_teacher_username(), blueprint, lesson_id, block_type)
+            st.session_state.teacher_flash_success = button_label
+        except Exception as exc:
+            st.session_state.teacher_flash_error = str(exc)
+        st.rerun()
+
+    latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+    if not latest:
+        st.info(labels["no_output"])
+        return
+    validation = latest.get("validation") or {}
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Status", str(latest.get("status") or "unknown"))
+    m2.metric(labels["provider"], f"{latest.get('provider') or '-'} / {latest.get('model') or '-'}")
+    m3.metric(labels["latency"], f"{int(latest.get('latency_ms') or 0)/1000:.1f}s")
+    m4.metric("Words", int(latest.get("word_count") or 0))
+    if int(latest.get("approved_by_teacher") or 0) == 1:
+        st.success(labels["approved"])
+    tabs = st.tabs([labels["preview"], labels["edit"], labels["versions"], labels["audit"]])
+    with tabs[0]:
+        _render_generation_markdown(str(latest.get("content_text") or ""), str(project.get("primary_language_code") or lang))
+        st.caption(f"{labels['validation']}: {json.dumps(validation, ensure_ascii=False)}")
+        st.download_button(labels["download"], data=str(latest.get("content_text") or ""), file_name=f"{lesson_id}_{block_type}_v{latest.get('version_number')}.md", mime="text/markdown", use_container_width=True)
+        if int(latest.get("approved_by_teacher") or 0) != 1:
+            if st.button(labels["approve"], type="primary", use_container_width=True, key=f"approve_block_{latest['id']}"):
+                try:
+                    db.approve_teacher_lesson_block(int(latest["id"]), project_id, _current_teacher_username())
+                    st.session_state.teacher_flash_success = labels["approved"]
+                except Exception as exc:
+                    st.session_state.teacher_flash_error = str(exc)
+                st.rerun()
+    with tabs[1]:
+        edited = st.text_area(labels["edit"], value=str(latest.get("content_text") or ""), height=520, key=f"edit_block_{latest['id']}")
+        change_summary = st.text_input(labels["summary"], key=f"block_change_summary_{latest['id']}")
+        if st.button(labels["save"], type="primary", use_container_width=True, key=f"save_block_revision_{latest['id']}"):
+            try:
+                lesson_block_generation_engine.save_teacher_revision(project_id=project_id, base_run_id=int(latest["id"]), teacher_username=_current_teacher_username(), content_text=edited, change_summary=change_summary)
+                st.session_state.teacher_flash_success = labels["save"]
+            except Exception as exc:
+                st.session_state.teacher_flash_error = str(exc)
+            st.rerun()
+    with tabs[2]:
+        versions = db.teacher_lesson_block_versions_df(project_id, lesson_id, block_type)
+        if not versions.empty:
+            st.dataframe(versions, use_container_width=True, hide_index=True)
+    with tabs[3]:
+        audit = db.teacher_lesson_block_audit_df(project_id, lesson_id)
+        if not audit.empty:
+            st.dataframe(audit, use_container_width=True, hide_index=True)
+
+
 def render_project_workspace() -> None:
     project_id = st.session_state.get("teacher_active_project_id")
     if not project_id:
@@ -1861,12 +2150,13 @@ def render_project_workspace() -> None:
         return
     _project_header(project)
     copy = project_workspace_ui()
-    sections = ["overview", "production", "evidence", "blueprint", "assets", "publish"]
+    sections = ["overview", "production", "evidence", "blueprint", "blocks", "assets", "publish"]
     labels = {
         "overview": copy["overview"],
         "production": copy["production"],
         "evidence": copy["evidence"],
         "blueprint": copy["blueprint"],
+        "blocks": copy["blocks"],
         "assets": copy["assets"],
         "publish": copy["publish"],
     }
@@ -1894,6 +2184,8 @@ def render_project_workspace() -> None:
         render_evidence_synthesis(project)
     elif section == "blueprint":
         render_lesson_blueprint(project)
+    elif section == "blocks":
+        render_lesson_blocks(project)
     elif section == "assets":
         render_outputs(project)
     else:
