@@ -1,3 +1,13 @@
+# V6.16.3 - Professional Layout & Frontend Polish
+
+- Fixed `StreamlitInvalidVerticalAlignmentError` by replacing unsupported `vertical_alignment="stretch"` with `"top"`.
+- Centered the teacher login in a constrained professional card.
+- Added an adaptive projects grid: centered single project, two-column pair, and three-column catalog for larger sets.
+- Rebuilt the public navbar as a frameless, flat header with one primary CTA.
+- Grouped project title, metadata, status, progress, and navigation into one coherent header.
+- Reworked project overview metadata into chips and structured cards.
+- Added responsive rules for desktop, tablet, and mobile without changing databases or generation engines.
+
 # V6.16.2 - Professional Teacher AI Studio UI
 
 - Replaced duplicate project progress bars with one compact premium header.

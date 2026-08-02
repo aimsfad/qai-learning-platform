@@ -461,80 +461,119 @@ def _current_teacher_username() -> str:
 
 
 def render_teacher_login() -> None:
+    """Render a centered, calm authentication card for the teacher workspace."""
     u = teacher_ui()
-    st.markdown(f"## {u['login']}")
-    st.caption(u["subtitle"])
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    login_copy = {
+        "ar": {
+            "eyebrow": "استوديو إنتاج المحتوى",
+            "title": "مرحبًا بعودتك",
+            "body": "سجّل الدخول لمتابعة مشاريعك التعليمية وبناء المقررات خطوة بخطوة.",
+        },
+        "fr": {
+            "eyebrow": "Studio de production pédagogique",
+            "title": "Heureux de vous revoir",
+            "body": "Connectez-vous pour reprendre vos projets et construire vos cours étape par étape.",
+        },
+        "en": {
+            "eyebrow": "Learning content studio",
+            "title": "Welcome back",
+            "body": "Sign in to continue your educational projects and build courses step by step.",
+        },
+    }.get(lang)
 
-    allow_registration = teacher_registration_enabled()
-    tabs = st.tabs([u["login_tab"], u["register_tab"]]) if allow_registration else [st.container()]
+    st.markdown("<span class='v6163-login-page-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    _, login_col, _ = st.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
+    with login_col:
+        with st.container(border=True, key="v6163_teacher_login_card"):
+            st.markdown("<span class='v6163-login-card-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            logo_path = getattr(branding, "OFFICIAL_LOGO_PATH", None)
+            if logo_path and logo_path.exists():
+                st.image(str(logo_path), width=188)
+            st.markdown(
+                f"<div class='v6163-login-copy' dir='{direction}'>"
+                f"<span>{escape(login_copy['eyebrow'])}</span>"
+                f"<h2>{escape(login_copy['title'])}</h2>"
+                f"<p>{escape(login_copy['body'])}</p>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
-    with tabs[0]:
-        with st.form("teacher_login_form"):
-            identifier = st.text_input(u["identifier"])
-            password = st.text_input(u["password"], type="password")
-            submitted = st.form_submit_button(u["sign_in"], type="primary", use_container_width=True)
-        if submitted:
-            account = authenticate_teacher_credentials(identifier, password)
-            if account:
-                _activate_teacher_session(account)
-                st.rerun()
-            st.error(u["invalid"])
-        if _secret("TEACHER_USERNAME", "").strip() and (
-            _secret("TEACHER_PASSWORD", "").strip() or _secret("TEACHER_PASSWORD_HASH", "").strip()
-        ):
-            st.caption(u["legacy_info"])
+            allow_registration = teacher_registration_enabled()
+            if allow_registration:
+                login_tab, register_tab = st.tabs([u["login_tab"], u["register_tab"]])
+            else:
+                login_tab = st.container()
+                register_tab = None
 
-    if allow_registration:
-        with tabs[1]:
-            registration_code_required = teacher_registration_code()
-            with st.form("teacher_registration_form", clear_on_submit=False):
-                col1, col2 = st.columns(2)
-                with col1:
-                    full_name = st.text_input(u["full_name"])
-                    username = st.text_input(u["username"], help=u["username_help"])
-                    email = st.text_input(u["email"])
-                with col2:
-                    institution = st.text_input(u["institution"])
-                    specialization = st.text_input(u["specialization"])
-                    registration_code_value = ""
-                    if registration_code_required:
-                        registration_code_value = st.text_input(u["registration_code"], type="password")
-                password = st.text_input(u["password"], type="password", help=u["password_help"], key="teacher_register_password")
-                password2 = st.text_input(u["confirm_password"], type="password", key="teacher_register_password_confirm")
-                accepted = st.checkbox(u["accept_policy"])
-                create_submitted = st.form_submit_button(u["create_account"], type="primary", use_container_width=True)
+            with login_tab:
+                with st.form("teacher_login_form"):
+                    identifier = st.text_input(u["identifier"], placeholder=u["identifier"])
+                    password = st.text_input(u["password"], type="password", placeholder=u["password"])
+                    submitted = st.form_submit_button(u["sign_in"], type="primary", use_container_width=True)
+                if submitted:
+                    account = authenticate_teacher_credentials(identifier, password)
+                    if account:
+                        _activate_teacher_session(account)
+                        st.rerun()
+                    st.error(u["invalid"])
+                if _secret("TEACHER_USERNAME", "").strip() and (
+                    _secret("TEACHER_PASSWORD", "").strip() or _secret("TEACHER_PASSWORD_HASH", "").strip()
+                ):
+                    st.caption(u["legacy_info"])
 
-            if create_submitted:
-                if not _valid_teacher_username(username):
-                    st.error(u["invalid_username"]); return
-                if not _valid_email(email):
-                    st.error(u["invalid_email"]); return
-                if not _valid_password(password):
-                    st.error(u["weak_password"]); return
-                if password != password2:
-                    st.error(u["password_mismatch"]); return
-                if registration_code_required and registration_code_value.strip() != registration_code_required:
-                    st.error(u["invalid_registration_code"]); return
-                if not accepted:
-                    st.error(u["accept_required"]); return
-                try:
-                    account = db.create_teacher_account(
-                        full_name=full_name,
-                        username=username,
-                        email=email,
-                        institution=institution,
-                        specialization=specialization,
-                        password=password,
-                        preferred_language=i18n.current_lang(st),
-                    )
-                    db.log_event(None, "teacher", "account_created", f"Teacher username: {account.get('username')}")
-                    _activate_teacher_session(account)
-                    st.success(u["account_created"])
-                    st.rerun()
-                except Exception as exc:
-                    st.error(str(exc))
-    else:
-        st.info(u["registration_disabled"])
+            if allow_registration and register_tab is not None:
+                with register_tab:
+                    registration_code_required = teacher_registration_code()
+                    with st.form("teacher_registration_form", clear_on_submit=False):
+                        col1, col2 = st.columns(2, gap="medium", vertical_alignment="top")
+                        with col1:
+                            full_name = st.text_input(u["full_name"])
+                            username = st.text_input(u["username"], help=u["username_help"])
+                            email = st.text_input(u["email"])
+                        with col2:
+                            institution = st.text_input(u["institution"])
+                            specialization = st.text_input(u["specialization"])
+                            registration_code_value = ""
+                            if registration_code_required:
+                                registration_code_value = st.text_input(u["registration_code"], type="password")
+                        password = st.text_input(u["password"], type="password", help=u["password_help"], key="teacher_register_password")
+                        password2 = st.text_input(u["confirm_password"], type="password", key="teacher_register_password_confirm")
+                        accepted = st.checkbox(u["accept_policy"])
+                        create_submitted = st.form_submit_button(u["create_account"], type="primary", use_container_width=True)
+
+                    if create_submitted:
+                        if not _valid_teacher_username(username):
+                            st.error(u["invalid_username"]); return
+                        if not _valid_email(email):
+                            st.error(u["invalid_email"]); return
+                        if not _valid_password(password):
+                            st.error(u["weak_password"]); return
+                        if password != password2:
+                            st.error(u["password_mismatch"]); return
+                        if registration_code_required and registration_code_value.strip() != registration_code_required:
+                            st.error(u["invalid_registration_code"]); return
+                        if not accepted:
+                            st.error(u["accept_required"]); return
+                        try:
+                            account = db.create_teacher_account(
+                                full_name=full_name,
+                                username=username,
+                                email=email,
+                                institution=institution,
+                                specialization=specialization,
+                                password=password,
+                                preferred_language=i18n.current_lang(st),
+                            )
+                            db.log_event(None, "teacher", "account_created", f"Teacher username: {account.get('username')}")
+                            _activate_teacher_session(account)
+                            st.success(u["account_created"])
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(str(exc))
+            else:
+                st.info(u["registration_disabled"])
 
 
 def _teacher_brief(data: Dict[str, Any]) -> str:
@@ -1922,7 +1961,7 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
             st.caption(copy["status"].get(status, status))
 
     st.markdown("<span class='v6162-current-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    main_col, summary_col = st.columns([2.25, 1], gap="large", vertical_alignment="stretch")
+    main_col, summary_col = st.columns([2.25, 1], gap="large", vertical_alignment="top")
     with main_col:
         with st.container(border=False):
             st.caption(copy["current_step"])
@@ -2036,58 +2075,82 @@ def _open_project(project_id: int, section: str = "overview") -> None:
     st.session_state.teacher_studio_view = "workspace"
 
 
+def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
+    completed, runs, pct = _project_progress_values(project)
+    status = str(project.get("status") or "draft").lower()
+    project_id = int(project["id"])
+    title = escape(str(project.get("project_name") or project.get("unit_title") or ""))
+    domain = escape(str(project.get("domain") or ""))
+    program = escape(str(project.get("program_name") or project.get("unit_title") or ""))
+    concept = escape(str(project.get("target_concept") or "")[:220])
+
+    with st.container(border=True, key=f"v6163_project_card_{project_id}"):
+        st.markdown(
+            f"<span class='v692-project-card-marker v6163-project-card-marker' aria-hidden='true'></span>"
+            f"<div class='v692-project-card-head'><span>{escape(_status_label(status, copy))}</span>"
+            f"<small>#{project_id}</small></div>"
+            f"<div class='v6163-project-card-copy'><h3>{title}</h3>"
+            f"<p class='v6163-project-taxonomy'>{domain}{' · ' if domain and program else ''}{program}</p>"
+            f"<p class='v6163-project-concept'>{concept or '—'}</p></div>",
+            unsafe_allow_html=True,
+        )
+        st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{len(PHASES)}")
+        st.markdown(
+            f"<div class='v6163-project-facts'>"
+            f"<span><b>{completed}/{len(PHASES)}</b><small>{escape(copy['phases'])}</small></span>"
+            f"<span><b>{runs}</b><small>{escape(copy['runs'])}</small></span>"
+            f"<span><b>{escape(_status_label(status, copy))}</b><small>{escape(copy['status'])}</small></span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        b1, b2 = st.columns(2, gap="small", vertical_alignment="center")
+        with b1:
+            if st.button(copy["open"], type="primary", use_container_width=True, key=f"open_teacher_project_{project_id}"):
+                _open_project(project_id, "overview")
+                st.rerun()
+        with b2:
+            if st.button(copy["continue"], use_container_width=True, key=f"continue_teacher_project_{project_id}"):
+                full_project = db.get_teacher_project(project_id, _current_teacher_username()) or project
+                journey = guided_teacher_workflow.load_workflow_state(full_project)
+                resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
+                _open_project(project_id, resume_section)
+                st.rerun()
+
+
 def render_projects_grid() -> None:
     copy = project_workspace_ui()
     username = _current_teacher_username()
     projects = db.teacher_projects_with_progress_df(username)
+    st.markdown("<span class='v6163-project-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     st.markdown(f"## {copy['projects']}")
     if projects.empty:
-        with st.container(border=True):
-            st.markdown(f"### {copy['empty_title']}")
-            st.write(copy["empty_body"])
-            if st.button(copy["create"], type="primary", use_container_width=True, key="teacher_empty_create"):
-                st.session_state.teacher_studio_view = "new"
-                st.rerun()
+        _, empty_col, _ = st.columns([1, 1.5, 1], gap="large", vertical_alignment="top")
+        with empty_col:
+            with st.container(border=True, key="v6163_empty_projects"):
+                st.markdown(f"### {copy['empty_title']}")
+                st.write(copy["empty_body"])
+                if st.button(copy["create"], type="primary", use_container_width=True, key="teacher_empty_create"):
+                    st.session_state.teacher_studio_view = "new"
+                    st.rerun()
         return
 
     rows = projects.to_dict("records")
-    for start in range(0, len(rows), 2):
-        cols = st.columns(2, gap="large")
-        for col, project in zip(cols, rows[start:start + 2]):
-            completed, runs, pct = _project_progress_values(project)
-            status = str(project.get("status") or "draft").lower()
+    if len(rows) == 1:
+        _, center_col, _ = st.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
+        with center_col:
+            _render_project_card(rows[0], copy)
+        return
+
+    column_count = 3 if len(rows) >= 3 else 2
+    for start in range(0, len(rows), column_count):
+        cols = st.columns(column_count, gap="large", vertical_alignment="top")
+        for col, project in zip(cols, rows[start:start + column_count]):
             with col:
-                with st.container(border=True):
-                    st.markdown(
-                        f"<span class='v692-project-card-marker' aria-hidden='true'></span>"
-                        f"<div class='v692-project-card-head'><span>{escape(_status_label(status, copy))}</span>"
-                        f"<small>#{int(project['id'])}</small></div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(f"### {project.get('project_name') or project.get('unit_title')}")
-                    st.caption(f"{project.get('domain','')} · {project.get('program_name') or project.get('unit_title','')}")
-                    st.write(str(project.get("target_concept") or "")[:240])
-                    st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{len(PHASES)}")
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric(copy["phases"], f"{completed}/{len(PHASES)}")
-                    m2.metric(copy["runs"], runs)
-                    m3.metric(copy["status"], _status_label(status, copy))
-                    b1, b2 = st.columns(2)
-                    with b1:
-                        if st.button(copy["open"], type="primary", use_container_width=True, key=f"open_teacher_project_{int(project['id'])}"):
-                            _open_project(int(project["id"]), "overview")
-                            st.rerun()
-                    with b2:
-                        if st.button(copy["continue"], use_container_width=True, key=f"continue_teacher_project_{int(project['id'])}"):
-                            full_project = db.get_teacher_project(int(project["id"]), _current_teacher_username()) or project
-                            journey = guided_teacher_workflow.load_workflow_state(full_project)
-                            resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
-                            _open_project(int(project["id"]), resume_section)
-                            st.rerun()
+                _render_project_card(project, copy)
 
 
 def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, Any]] = None) -> None:
-    """Render a compact, premium project header without duplicating progress bars."""
+    """Render one coherent project header with grouped metadata and progress."""
     copy = project_workspace_ui()
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
@@ -2105,30 +2168,31 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
         str(p.get("expected_duration") or "").strip(),
         languages,
     ]
-    chips = "".join(
-        f"<span class='v6162-meta-chip'>{escape(item)}</span>"
-        for item in meta_items if item
-    )
+    chips = "".join(f"<span class='v6162-meta-chip'>{escape(item)}</span>" for item in meta_items if item)
     title = escape(str(project.get("project_name") or project.get("unit_title") or ""))
     subtitle = escape(str(project.get("unit_title") or project.get("program_name") or ""))
-    progress_label = {
-        "ar": "اكتمال رحلة المقرر",
-        "fr": "Parcours du cours",
-        "en": "Course journey",
-    }.get(lang, "Course journey")
+    progress_label = {"ar": "اكتمال رحلة المقرر", "fr": "Parcours du cours", "en": "Course journey"}.get(lang, "Course journey")
 
-    st.markdown("<span class='v6162-studio-header-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    header_col, back_col = st.columns([6.3, 1.25], vertical_alignment="center", gap="large")
-    with header_col:
+    with st.container(border=False, key="v6163_project_header"):
+        st.markdown("<span class='v6162-studio-header-marker v6163-project-header-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        breadcrumb_col, back_col = st.columns([6.2, 1.25], vertical_alignment="center", gap="large")
+        with breadcrumb_col:
+            st.markdown(
+                f"<div class='v6163-project-breadcrumb' dir='{direction}'>"
+                f"{escape(copy['project_center'])} · #{int(project['id'])}</div>",
+                unsafe_allow_html=True,
+            )
+        with back_col:
+            if st.button(f"← {copy['back']}", use_container_width=True, key="teacher_back_to_projects"):
+                st.session_state.teacher_studio_view = "projects"
+                st.rerun()
+
         st.markdown(
-            f"<section class='v6162-studio-header' dir='{direction}'>"
-            f"<div class='v6162-header-topline'>"
-            f"<span class='v6162-status-pill'>{escape(status_text)}</span>"
-            f"<span class='v6162-project-id'>{escape(copy['project_center'])} · #{int(project['id'])}</span>"
-            f"</div>"
+            f"<section class='v6162-studio-header v6163-studio-header' dir='{direction}'>"
             f"<div class='v6162-header-main'>"
-            f"<div class='v6162-header-copy'><h1>{title}</h1><p>{subtitle}</p>"
-            f"<div class='v6162-meta-chips'>{chips}</div></div>"
+            f"<div class='v6162-header-copy'>"
+            f"<div class='v6163-title-row'><span class='v6162-status-pill'>{escape(status_text)}</span><h1>{title}</h1></div>"
+            f"<p>{subtitle}</p><div class='v6162-meta-chips'>{chips}</div></div>"
             f"<div class='v6162-progress-stat'><strong>{pct}%</strong>"
             f"<span>{escape(progress_label)}</span><small>{completed}/{total}</small></div>"
             f"</div>"
@@ -2137,11 +2201,6 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
             f"</section>",
             unsafe_allow_html=True,
         )
-    with back_col:
-        if st.button(f"← {copy['back']}", use_container_width=True, key="teacher_back_to_projects"):
-            st.session_state.teacher_studio_view = "projects"
-            st.rerun()
-
 
 
 def _render_phase_map(project: Dict[str, Any]) -> None:
@@ -2163,71 +2222,38 @@ def _render_phase_map(project: Dict[str, Any]) -> None:
 def render_project_overview(project: Dict[str, Any]) -> None:
     copy = project_workspace_ui()
     p = _project_defaults(project)
-    c1, c2 = st.columns(2, gap="large")
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    languages = ", ".join(p.get("target_languages") or []) or "—"
+    components = ", ".join(p.get("platform_components") or []) or "—"
+    identity_chips = "".join(
+        f"<span class='v6163-overview-chip'>{escape(value)}</span>"
+        for value in [str(p.get("learner_level") or "—"), str(p.get("expected_duration") or "—"), languages]
+    )
+    c1, c2 = st.columns(2, gap="large", vertical_alignment="top")
     with c1:
-        with st.container(border=True):
-            st.markdown(f"### {copy['course_identity']}")
-            st.markdown(f"**{p.get('unit_title','')}**")
-            st.write(p.get("target_concept") or "")
-            st.caption(f"{p.get('target_learners','')} · {p.get('learner_level','')}")
-            st.write(f"**Languages:** {', '.join(p.get('target_languages') or [])}")
-            st.write(f"**Duration:** {p.get('expected_duration') or '—'}")
+        with st.container(border=True, key="v6163_course_identity_card"):
+            st.markdown("<span class='v6163-overview-card-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='v6163-overview-card' dir='{direction}'><h3>{escape(copy['course_identity'])}</h3>"
+                f"<h4>{escape(str(p.get('unit_title') or '—'))}</h4>"
+                f"<p>{escape(str(p.get('target_concept') or '—'))}</p>"
+                f"<div class='v6163-overview-chips'>{identity_chips}</div></div>",
+                unsafe_allow_html=True,
+            )
     with c2:
-        with st.container(border=True):
-            st.markdown(f"### {copy['learning_design']}")
-            st.write(p.get("teaching_preferences") or "—")
-            st.markdown("**Assessment**")
-            st.write(p.get("assessment_preferences") or "—")
-            st.markdown("**Platform components**")
-            st.write(", ".join(p.get("platform_components") or []) or "—")
-    phase_label = {"ar": "التفاصيل التقنية لمراحل التوليد القديمة", "fr": "Détails techniques des phases de génération", "en": "Technical phase-generation details"}.get(i18n.current_lang(st), "Technical phase-generation details")
+        with st.container(border=True, key="v6163_learning_design_card"):
+            st.markdown("<span class='v6163-overview-card-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='v6163-overview-card' dir='{direction}'><h3>{escape(copy['learning_design'])}</h3>"
+                f"<div class='v6163-overview-field'><span>Teaching</span><b>{escape(str(p.get('teaching_preferences') or '—'))}</b></div>"
+                f"<div class='v6163-overview-field'><span>Assessment</span><b>{escape(str(p.get('assessment_preferences') or '—'))}</b></div>"
+                f"<div class='v6163-overview-field'><span>Components</span><b>{escape(components)}</b></div></div>",
+                unsafe_allow_html=True,
+            )
+    phase_label = {"ar": "التفاصيل التقنية لمراحل التوليد القديمة", "fr": "Détails techniques des phases de génération", "en": "Technical phase-generation details"}.get(lang, "Technical phase-generation details")
     with st.expander(phase_label, expanded=False):
         _render_phase_map(project)
-
-
-def _latest_completed_output(project_id: int, phase: int) -> str:
-    row = db.teacher_project_phase_outputs(int(project_id)).get(int(phase))
-    if not row or str(row.get("status")) != "completed":
-        return ""
-    return str(row.get("response_text") or "").strip()
-
-
-def render_project_student_preview(project: Dict[str, Any], public_view: bool = False) -> None:
-    copy = project_workspace_ui()
-    p = _project_defaults(project)
-    direction = i18n.direction(i18n.current_lang(st))
-    st.markdown(
-        f"<section class='v692-course-preview-hero' dir='{direction}'>"
-        f"<span>{escape(copy['educator_content'])}</span>"
-        f"<h1>{escape(str(p.get('unit_title') or p.get('project_name') or ''))}</h1>"
-        f"<p>{escape(str(p.get('target_concept') or ''))}</p>"
-        f"<div><b>{escape(str(p.get('domain') or ''))}</b><i>{escape(str(p.get('learner_level') or ''))}</i>"
-        f"<i>{escape(str(p.get('expected_duration') or ''))}</i></div></section>",
-        unsafe_allow_html=True,
-    )
-    st.caption(copy["preview_note"])
-    lesson_text = _latest_completed_output(int(p["id"]), 3)
-    activity_text = _latest_completed_output(int(p["id"]), 6)
-    assessment_text = _latest_completed_output(int(p["id"]), 8)
-    coach_text = _latest_completed_output(int(p["id"]), 7)
-    tabs = st.tabs([copy["lesson"], copy["activity"], copy["assessment"], copy["ai_coach"], copy["references"]])
-    with tabs[0]:
-        if lesson_text:
-            st.markdown(lesson_text)
-        else:
-            st.info(copy["not_ready"])
-            st.markdown(str(p.get("source_material") or p.get("target_concept") or ""))
-    with tabs[1]:
-        st.markdown(activity_text) if activity_text else st.info(copy["not_ready"])
-    with tabs[2]:
-        st.markdown(assessment_text) if assessment_text else st.info(copy["not_ready"])
-    with tabs[3]:
-        st.markdown(coach_text) if coach_text else st.info(copy["not_ready"])
-    with tabs[4]:
-        st.markdown(str(p.get("source_material") or "—"))
-        if p.get("additional_notes"):
-            st.markdown("---")
-            st.write(p.get("additional_notes"))
 
 
 def render_project_publication(project: Dict[str, Any]) -> None:
