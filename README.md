@@ -1,47 +1,6 @@
-# 3alimnIA V6.16.2 - Professional Teacher AI Studio UI
+# 3alimnIA V6.16.3 - Professional Layout & Frontend Polish
 
-Teacher projects now use a compact premium header, a connected seven-stage workflow, one clear next action, and a responsive academic visual system. The release changes presentation only and preserves all V6.12-V6.16 engines and database structures. See `V6_16_2_PROFESSIONAL_TEACHER_AI_STUDIO_UI_AR.md`.
-
-# 3alimnIA V6.16.1 - Guided Teacher Workflow UI
-
-Teacher projects now open as a seven-stage guided journey: project setup, sources and research, evidence review, course blueprint, lesson building, quality review, and publication. The interface calculates readiness from persisted research, evidence, blueprint, and lesson-block records, then returns the teacher to the first unfinished stage. Technical prompt/provider controls remain available in collapsed advanced sections. See `V6_16_1_GUIDED_TEACHER_WORKFLOW_UI_AR.md`.
-
-# 3alimnIA V6.15 — Blueprint Editor and Immutable Versioning
-
-The Teacher Content Studio now provides a teacher-controlled editor for units, lessons, learning outcomes, ordering, concept/source assignments, and alignment. Every saved change becomes an immutable version with a parent link, change summary, approval reset, restore workflow, comparison view, and audit trail. See `V6_15_BLUEPRINT_EDITOR_VERSIONING_AR.md`.
-
-# 3alimnIA V6.14 — Evidence-to-Lesson Blueprint
-
-The Teacher Content Studio now turns approved evidence into a teacher-reviewable concept graph and structured course blueprint before long-form generation. Units, lessons, learning outcomes, activities, assessments, and success criteria are traceable to evidence and preserved in later prompts. See `V6_14_EVIDENCE_TO_LESSON_BLUEPRINT_AR.md`.
-
-# 3alimnIA V6.13.1 — Provider Quota Resilience
-
-The research and evidence workflow now survives Gemini quota exhaustion and Groq token-window failures without losing the last valid research dossier. Groq research requests are bounded and can retry once with Compound Mini; evidence synthesis can degrade to traceable deterministic records for teacher review. See `V6_13_1_PROVIDER_QUOTA_RESILIENCE_AR.md`.
-
-# 3alimnIA V6.13 — Evidence Synthesis Foundation
-
-The Teacher Content Studio now inserts a reviewable evidence layer between web research and lesson generation. It deduplicates and scores sources, extracts traceable evidence cards, identifies concept prerequisites, and lets the teacher approve the compact evidence bundle before downstream generation. See `V6_13_EVIDENCE_SYNTHESIS_FOUNDATION_AR.md`.
-
-# 3alimnIA V6.12 — Research-Augmented Educational Content Builder
-
-The Teacher Content Studio now performs a separate, phase-aware web research pass before educational synthesis. It stores reusable research dossiers and source registries, grounds generated claims with `[S1]` identifiers, validates citations, and prevents automatic phase advancement when the evidence requires teacher review. See `V6_12_RESEARCH_AUGMENTED_CONTENT_BUILDER_AR.md`.
-
-# 3alimnIA V6.11.1 — Prompt Budget and RTL Hotfix
-
-The Teacher Content Studio now compacts oversized Groq requests within a configurable token budget, retries HTTP 413 once with a stricter plan, sanitizes provider diagnostics, and normalizes Arabic generated Markdown for stable RTL display. See `V6_11_1_PROMPT_BUDGET_RTL_HOTFIX_AR.md`.
-
-# 3alimnIA V6.11 — Educational Content Builder
-
-The Teacher Content Studio now generates, validates, stores, reviews, and chains educational content across 11 production phases. See `V6_11_EDUCATIONAL_CONTENT_BUILDER_AR.md` for deployment and configuration details.
-
-# 3alimnIA V6.10 — Gemini File Analyzer & Model Router
-
-The homepage hero now keeps English/French copy away from the left edge and Arabic RTL copy away from the right edge, with responsive spacing on tablets and phones.
-
-# 3alimnIA V6.7.2 — Classic White Header Logo
-
-3alimnIA is a multilingual generative-AI learning platform for difficult concepts, beginning with Quantum Computing and Qiskit.
-
+This release fixes the invalid Streamlit column alignment and upgrades the teacher-facing frontend: centered authentication, adaptive project grids, a minimalist navbar, grouped project metadata, and calmer responsive spacing. It preserves the V6.12-V6.16 research, evidence, blueprint, and lesson-generation engines. See `V6_16_3_PROFESSIONAL_LAYOUT_POLISH_AR.md`.
 
 ## V6.7.2 classic white header logo
 

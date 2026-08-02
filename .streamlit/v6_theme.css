@@ -3271,3 +3271,199 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
   .v6162-section-heading h2 { font-size:1.25rem !important; }
   .v6162-summary-card { margin-top:.25rem; }
 }
+
+/* ========================================================================== 
+   3alimnIA V6.16.3 - Professional layout, authentication, grid, and navbar
+   Fixes invalid Streamlit alignment and moves the interface from functional
+   forms to a balanced EdTech studio with constrained widths and clear grouping.
+   ========================================================================== */
+.v6163-login-page-marker,
+.v6163-login-card-marker,
+.v6163-project-grid-marker,
+.v6163-project-card-marker,
+.v6163-project-header-marker,
+.v6163-overview-card-marker,
+.v6163-nav-active-marker,
+.v6163-nav-cta-marker,
+.v6163-header-logo-marker { display:none !important; }
+
+/* Centered teacher authentication card. */
+[data-testid="stVerticalBlock"]:has(.v6163-login-page-marker) {
+  min-height:calc(100vh - 150px);
+  padding:clamp(1rem,4vh,3.4rem) 0 2rem;
+  background:
+    radial-gradient(circle at 80% 8%,rgba(6,182,212,.09),transparent 24rem),
+    radial-gradient(circle at 12% 88%,rgba(37,99,235,.08),transparent 22rem);
+}
+.st-key-v6163_teacher_login_card > [data-testid="stVerticalBlockBorderWrapper"] {
+  border:1px solid rgba(37,99,235,.13) !important;
+  border-radius:24px !important;
+  padding:clamp(1.25rem,2.6vw,2.2rem) !important;
+  background:rgba(255,255,255,.97) !important;
+  box-shadow:0 26px 70px rgba(15,35,65,.11) !important;
+}
+.st-key-v6163_teacher_login_card [data-testid="stImage"] {
+  display:flex !important;
+  justify-content:center !important;
+  margin:0 auto .4rem !important;
+}
+.st-key-v6163_teacher_login_card [data-testid="stImage"] img {
+  max-height:58px !important;
+  object-fit:contain !important;
+  background:transparent !important;
+}
+.v6163-login-copy { text-align:center; margin:.25rem 0 1.1rem; }
+.v6163-login-copy > span {
+  display:inline-flex; padding:.28rem .65rem; border-radius:999px;
+  background:#eef5ff; color:#1d5bb8; font-size:.72rem; font-weight:850;
+}
+.v6163-login-copy h2 { margin:.65rem 0 .35rem !important; font-size:1.75rem !important; color:#0b2447 !important; }
+.v6163-login-copy p { margin:0 auto; max-width:520px; color:#66758d; line-height:1.7; font-size:.9rem; }
+.st-key-v6163_teacher_login_card [data-baseweb="tab-list"] { margin-bottom:.8rem; }
+.st-key-v6163_teacher_login_card [data-baseweb="input"] > div,
+.st-key-v6163_teacher_login_card input { min-height:48px !important; }
+
+/* Balanced projects grid and compact cards. */
+[data-testid="stVerticalBlock"]:has(.v6163-project-grid-marker) > h2 { margin-bottom:1rem !important; }
+[class*="st-key-v6163_project_card_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  min-height:0 !important;
+  height:100% !important;
+  border:1px solid rgba(37,99,235,.12) !important;
+  border-radius:20px !important;
+  padding:1rem !important;
+  background:linear-gradient(155deg,#fff 0%,#f8fbff 100%) !important;
+  box-shadow:0 14px 36px rgba(15,35,65,.065) !important;
+}
+.v6163-project-card-copy h3 {
+  margin:.55rem 0 .25rem !important; color:#0b2447 !important;
+  font-size:1.25rem !important; line-height:1.35 !important;
+}
+.v6163-project-taxonomy { margin:0 0 .55rem; color:#64748b; font-size:.8rem; font-weight:700; }
+.v6163-project-concept { min-height:3.1rem; margin:0 0 .85rem; color:#43536c; line-height:1.6; font-size:.88rem; }
+.v6163-project-facts {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; margin:.75rem 0;
+}
+.v6163-project-facts span {
+  min-width:0; padding:.55rem .45rem; border:1px solid #e2eaf4; border-radius:12px;
+  background:rgba(255,255,255,.82); text-align:center;
+}
+.v6163-project-facts b { display:block; color:#123b68; font-size:.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.v6163-project-facts small { display:block; color:#7b8798; font-size:.66rem; margin-top:.12rem; }
+.st-key-v6163_empty_projects > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius:22px !important; padding:2rem !important; text-align:center;
+  background:linear-gradient(145deg,#fff,#f6faff) !important;
+}
+
+/* One grouped project header instead of floating metadata. */
+.st-key-v6163_project_header {
+  margin:.1rem 0 1rem; padding:1rem 1.15rem 1.15rem;
+  border:1px solid rgba(37,99,235,.12); border-radius:24px;
+  background:
+    radial-gradient(circle at 93% 5%,rgba(6,182,212,.10),transparent 24%),
+    linear-gradient(145deg,#fff 0%,#f7fbff 100%);
+  box-shadow:0 20px 48px rgba(15,35,65,.07);
+}
+.st-key-v6163_project_header > div { background:transparent !important; }
+.st-key-v6163_project_header [data-testid="stButton"] button {
+  min-height:40px !important; border-radius:12px !important; background:#fff !important;
+  color:#164e8c !important; box-shadow:none !important;
+}
+.v6163-project-breadcrumb { color:#6b7a91; font-size:.78rem; font-weight:750; }
+.v6163-studio-header { margin-top:.55rem; }
+.v6163-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:.65rem; }
+.v6163-title-row h1 { flex:1 1 320px; }
+.st-key-v6163_project_header .v6162-header-main { align-items:flex-end; }
+.st-key-v6163_project_header .v6162-progress-stat { flex:0 0 112px; }
+
+/* Current action columns align from the top; CSS handles visual balance. */
+[data-testid="stVerticalBlock"]:has(.v6162-current-action-marker) > [data-testid="stHorizontalBlock"] {
+  align-items:stretch !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6162-current-action-marker) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+  display:flex !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6162-current-action-marker) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div {
+  width:100% !important;
+}
+
+/* Overview cards use grouping, chips, and explicit fields. */
+.st-key-v6163_course_identity_card > [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-v6163_learning_design_card > [data-testid="stVerticalBlockBorderWrapper"] {
+  height:100% !important; min-height:250px;
+  border:1px solid #e0e8f3 !important; border-radius:18px !important;
+  padding:1rem !important; background:#fff !important; box-shadow:0 10px 28px rgba(15,35,65,.045) !important;
+}
+.v6163-overview-card h3 { margin:0 0 .85rem !important; color:#0b2447 !important; font-size:1.15rem !important; }
+.v6163-overview-card h4 { margin:0 0 .4rem !important; color:#153968 !important; font-size:1rem !important; }
+.v6163-overview-card p { color:#65738a; line-height:1.65; }
+.v6163-overview-chips { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.8rem; }
+.v6163-overview-chip { padding:.3rem .58rem; border-radius:999px; background:#f4f8fd; border:1px solid #e0e8f3; color:#41536d; font-size:.75rem; font-weight:750; }
+.v6163-overview-field { padding:.65rem 0; border-bottom:1px solid #edf1f6; }
+.v6163-overview-field:last-child { border-bottom:0; }
+.v6163-overview-field span { display:block; color:#8691a2; font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }
+.v6163-overview-field b { display:block; color:#31435e; margin-top:.22rem; font-size:.86rem; line-height:1.55; }
+
+/* Minimalist public navbar: flat white surface, one primary CTA. */
+.st-key-v61_public_header {
+  padding:.4rem .65rem !important; margin:.1rem 0 .8rem !important;
+  border:0 !important; border-bottom:1px solid rgba(203,213,225,.72) !important;
+  border-radius:0 !important; background:rgba(255,255,255,.97) !important;
+  box-shadow:none !important; backdrop-filter:blur(16px) !important;
+}
+.st-key-v61_public_header [data-testid="stImage"],
+.st-key-v61_public_header [data-testid="stImage"] img {
+  background:transparent !important; border:0 !important; border-radius:0 !important; box-shadow:none !important;
+}
+.st-key-v61_public_header [data-testid="stImage"] img { width:192px !important; min-width:0 !important; max-width:192px !important; max-height:52px !important; }
+.st-key-v61_public_header .stButton > button {
+  min-height:40px !important; padding:.35rem .45rem !important;
+  border:1px solid transparent !important; border-radius:9px !important;
+  background:transparent !important; color:#42526a !important; box-shadow:none !important;
+  font-size:.76rem !important; font-weight:750 !important;
+}
+.st-key-v61_public_header .stButton > button:hover {
+  transform:none !important; background:#f4f7fb !important; color:#1451b8 !important; border-color:#e0e8f3 !important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v6163-nav-active-marker) .stButton > button {
+  color:#1451b8 !important; background:#eef5ff !important; border-color:#d8e7fb !important;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v6163-nav-active-marker) .stButton > button::after {
+  content:""; position:absolute; inset:auto .55rem -.42rem; height:2px; border-radius:999px; background:#2563eb;
+}
+.st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v6163-nav-cta-marker) .stButton > button,
+[class*="st-key-v61_public_start"] button {
+  background:linear-gradient(135deg,#123b68,#2563eb) !important;
+  color:#fff !important; border-color:transparent !important; box-shadow:0 9px 20px rgba(37,99,235,.18) !important;
+}
+
+/* Internal workspace toolbar: flatter and quieter, with one dominant sign-out. */
+.st-key-v68_workspace_toolbar > [data-testid="stVerticalBlockBorderWrapper"] {
+  border:0 !important; border-bottom:1px solid rgba(203,213,225,.75) !important;
+  border-radius:0 !important; padding:.32rem .35rem !important;
+  background:rgba(255,255,255,.97) !important; box-shadow:none !important;
+}
+.st-key-v68_workspace_toolbar [data-testid="stVerticalBlock"]:has(.v68-internal-logo-marker) [data-testid="stImage"] {
+  border:0 !important; border-radius:0 !important; box-shadow:none !important; background:transparent !important;
+}
+.st-key-v68_workspace_toolbar .stButton > button:not([kind="primary"]) {
+  background:transparent !important; border-color:transparent !important; box-shadow:none !important;
+}
+
+@media (max-width:980px) {
+  .st-key-v6163_project_header .v6162-header-main { align-items:flex-start; }
+  .v6163-title-row { align-items:flex-start; }
+  .v6163-project-facts { grid-template-columns:1fr 1fr 1fr; }
+}
+@media (max-width:720px) {
+  [data-testid="stVerticalBlock"]:has(.v6163-login-page-marker) { padding:.7rem 0 1.25rem; min-height:0; }
+  .st-key-v6163_teacher_login_card > [data-testid="stVerticalBlockBorderWrapper"] { padding:1rem !important; border-radius:18px !important; }
+  .v6163-login-copy h2 { font-size:1.45rem !important; }
+  .v6163-project-facts { grid-template-columns:1fr; }
+  .st-key-v6163_project_header { padding:.8rem; border-radius:18px; }
+  .st-key-v6163_project_header .v6162-header-main { flex-direction:column; }
+  .st-key-v6163_project_header .v6162-progress-stat { width:100%; flex-direction:row; gap:.7rem; justify-content:flex-start; }
+  .v6163-title-row { display:block; }
+  .v6163-title-row .v6162-status-pill { margin-bottom:.55rem; }
+  .st-key-v61_public_header [data-testid="stImage"] img { width:min(190px,70vw) !important; max-width:190px !important; }
+}
+

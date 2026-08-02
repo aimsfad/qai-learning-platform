@@ -251,28 +251,25 @@ def _route_button(label: str, route: str, *, key: str, primary: bool = False, ic
         router.navigate(route)
 
 
-def _render_official_logo(width: int = 224) -> None:
-    """Render the classic white-pill 3alimnIA lockup used in the public header.
-
-    A dedicated asset filename prevents stale browser caching and guarantees
-    that the white background, rounded outline, and full horizontal wordmark
-    remain identical in RTL and LTR layouts on Streamlit Cloud.
-    """
-    st.markdown("<span class='v672-header-logo-marker v694-premium-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    header_logo = getattr(branding, "HEADER_WHITE_LOGO_PATH", branding.OFFICIAL_LOGO_PATH)
-    if header_logo.exists():
+def _render_official_logo(width: int = 192) -> None:
+    """Render the frameless official brand lockup in the minimalist header."""
+    st.markdown("<span class='v672-header-logo-marker v694-premium-logo-marker v6163-header-logo-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    header_logo = getattr(branding, "OFFICIAL_LOGO_PATH", None)
+    if header_logo and header_logo.exists():
         st.image(str(header_logo), width=width)
-    elif branding.OFFICIAL_LOGO_PATH.exists():
-        st.image(str(branding.OFFICIAL_LOGO_PATH), width=width)
     else:
         st.markdown(branding.logo_lockup_html(compact=False, language=i18n.current_lang(st)), unsafe_allow_html=True)
 
 
 def _header_button(label: str, route: str, *, key: str, active: bool = False, cta: bool = False) -> None:
+    if active:
+        st.markdown("<span class='v6163-nav-active-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    if cta:
+        st.markdown("<span class='v6163-nav-cta-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     st.button(
         label,
         key=key,
-        type="primary" if active or cta else "secondary",
+        type="primary" if cta else "secondary",
         use_container_width=True,
         on_click=router.queue,
         args=(route,),
@@ -293,7 +290,7 @@ def render_public_header(current_title: str = "") -> None:
             [1.85, 3.55, .95, .95, .95, 1.0], gap="small", vertical_alignment="center"
         )
         with logo_col:
-            _render_official_logo(224)
+            _render_official_logo(192)
         with nav_col:
             home_col, programs_col, ai_col, institutions_col = st.columns([.84, .95, 1.05, 1.06], gap="small")
             nav_items = [
