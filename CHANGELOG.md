@@ -1,3 +1,12 @@
+# V6.16.2 - Professional Teacher AI Studio UI
+
+- Replaced duplicate project progress bars with one compact premium header.
+- Added a connected seven-stage workflow stepper with clear completed, active, review, available, and locked states.
+- Added one dominant current-stage action and a compact project summary panel.
+- Introduced a light academic design system using navy, blue, cyan, and restrained gold accents.
+- Improved responsive behavior without replacing native Streamlit controls.
+- Added `validate_v6162_professional_teacher_ui.py`.
+
 # V6.16.1 - Guided Teacher Workflow UI
 
 - Replaced the flat project-section selector with a seven-stage guided course-building journey.

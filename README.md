@@ -1,3 +1,7 @@
+# 3alimnIA V6.16.2 - Professional Teacher AI Studio UI
+
+Teacher projects now use a compact premium header, a connected seven-stage workflow, one clear next action, and a responsive academic visual system. The release changes presentation only and preserves all V6.12-V6.16 engines and database structures. See `V6_16_2_PROFESSIONAL_TEACHER_AI_STUDIO_UI_AR.md`.
+
 # 3alimnIA V6.16.1 - Guided Teacher Workflow UI
 
 Teacher projects now open as a seven-stage guided journey: project setup, sources and research, evidence review, course blueprint, lesson building, quality review, and publication. The interface calculates readiness from persisted research, evidence, blueprint, and lesson-block records, then returns the teacher to the first unfinished stage. Technical prompt/provider controls remain available in collapsed advanced sections. See `V6_16_1_GUIDED_TEACHER_WORKFLOW_UI_AR.md`.
