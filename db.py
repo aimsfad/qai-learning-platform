@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.15-blueprint-editor-versioning"
+APP_VERSION = "v6.16-lesson-block-generation"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -401,6 +401,12 @@ def init_db() -> None:
             outcome_count INTEGER DEFAULT 0,
             latency_ms INTEGER DEFAULT 0,
             is_fallback_used INTEGER DEFAULT 0,
+            parent_run_id INTEGER,
+            version_number INTEGER DEFAULT 1,
+            revision_type TEXT DEFAULT 'generated',
+            change_summary TEXT,
+            edited_by TEXT,
+            restored_from_run_id INTEGER,
             approved_by_teacher INTEGER DEFAULT 0,
             approved_at {created_default},
             created_at {created_default}
@@ -427,7 +433,6 @@ def init_db() -> None:
             unit_id TEXT NOT NULL,
             lesson_id TEXT NOT NULL,
             title TEXT NOT NULL,
-            sequence_order INTEGER DEFAULT 0,
             duration_minutes INTEGER DEFAULT 45,
             prerequisites_json TEXT,
             concept_ids_json TEXT,
@@ -466,18 +471,57 @@ def init_db() -> None:
         )
         """,
         f"""
-        CREATE TABLE IF NOT EXISTS teacher_blueprint_change_log (
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_audit_events (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER,
+            parent_run_id INTEGER,
+            action TEXT NOT NULL,
+            actor_username TEXT,
+            summary TEXT,
+            details_json TEXT,
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_lesson_block_runs (
             id {id_col},
             project_id INTEGER NOT NULL,
             blueprint_run_id INTEGER NOT NULL,
+            lesson_id TEXT NOT NULL,
+            block_type TEXT NOT NULL,
+            sequence_order INTEGER DEFAULT 0,
+            prompt_text TEXT,
+            content_text TEXT,
+            provider TEXT,
+            model TEXT,
+            status TEXT,
+            diagnostic TEXT,
+            validation_json TEXT,
+            word_count INTEGER DEFAULT 0,
+            latency_ms INTEGER DEFAULT 0,
+            is_fallback_used INTEGER DEFAULT 0,
             parent_run_id INTEGER,
-            teacher_username TEXT NOT NULL,
-            action TEXT NOT NULL,
-            entity_type TEXT,
-            entity_id TEXT,
-            before_json TEXT,
-            after_json TEXT,
+            version_number INTEGER DEFAULT 1,
+            revision_type TEXT DEFAULT 'generated',
             change_summary TEXT,
+            edited_by TEXT,
+            approved_by_teacher INTEGER DEFAULT 0,
+            approved_at {created_default},
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_lesson_block_audit_events (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            block_run_id INTEGER,
+            lesson_id TEXT,
+            block_type TEXT,
+            action TEXT NOT NULL,
+            actor_username TEXT,
+            summary TEXT,
+            details_json TEXT,
             created_at {created_default}
         )
         """,
@@ -534,11 +578,11 @@ def init_db() -> None:
     ensure_column("teacher_evidence_runs", "approved_at", "TEXT")
     ensure_column("teacher_evidence_runs", "quality_json", "TEXT")
     ensure_column("teacher_blueprint_runs", "parent_run_id", "INTEGER")
-    ensure_column("teacher_blueprint_runs", "revision_number", "INTEGER DEFAULT 1")
+    ensure_column("teacher_blueprint_runs", "version_number", "INTEGER DEFAULT 1")
+    ensure_column("teacher_blueprint_runs", "revision_type", "TEXT DEFAULT 'generated'")
     ensure_column("teacher_blueprint_runs", "change_summary", "TEXT")
     ensure_column("teacher_blueprint_runs", "edited_by", "TEXT")
-    ensure_column("teacher_blueprint_runs", "edit_source", "TEXT DEFAULT 'generated'")
-    ensure_column("teacher_blueprint_lessons", "sequence_order", "INTEGER DEFAULT 0")
+    ensure_column("teacher_blueprint_runs", "restored_from_run_id", "INTEGER")
 
 
 def ensure_column(table: str, column: str, col_type: str) -> None:
@@ -2264,6 +2308,70 @@ def latest_teacher_evidence_for_project(project_id: int, *, approved_only: bool 
     return teacher_evidence_bundle(int(row["id"])) if row else None
 
 
+def next_teacher_blueprint_version(project_id: int) -> int:
+    row = query_one(
+        "SELECT MAX(COALESCE(version_number, 1)) AS max_version FROM teacher_blueprint_runs WHERE project_id=:project_id",
+        {"project_id": int(project_id)},
+    )
+    return int((row or {}).get("max_version") or 0) + 1
+
+
+def invalidate_teacher_blueprint_approvals(project_id: int) -> None:
+    exec_sql(
+        "UPDATE teacher_blueprint_runs SET approved_by_teacher=0, approved_at=NULL WHERE project_id=:project_id",
+        {"project_id": int(project_id)},
+    )
+
+
+def record_teacher_blueprint_audit(
+    *, project_id: int, blueprint_run_id: Optional[int], parent_run_id: Optional[int],
+    action: str, actor_username: str, summary: str = "", details: Optional[Dict[str, Any]] = None,
+) -> int:
+    return execute_returning_id(
+        """
+        INSERT INTO teacher_blueprint_audit_events
+        (project_id, blueprint_run_id, parent_run_id, action, actor_username, summary, details_json, created_at)
+        VALUES (:project_id, :blueprint_run_id, :parent_run_id, :action, :actor_username, :summary, :details_json, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id) if blueprint_run_id else None,
+            "parent_run_id": int(parent_run_id) if parent_run_id else None,
+            "action": str(action or "update"),
+            "actor_username": str(actor_username or ""),
+            "summary": str(summary or ""),
+            "details_json": json.dumps(details or {}, ensure_ascii=False),
+            "created_at": utc_now(),
+        },
+    )
+
+
+def teacher_blueprint_versions_df(project_id: int) -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT id, project_id, evidence_run_id, parent_run_id, version_number, revision_type,
+               change_summary, edited_by, restored_from_run_id, status, approved_by_teacher,
+               approved_at, unit_count, lesson_count, outcome_count, provider, model, created_at
+        FROM teacher_blueprint_runs
+        WHERE project_id=:project_id
+        ORDER BY COALESCE(version_number, 1) DESC, id DESC
+        """,
+        {"project_id": int(project_id)},
+    )
+
+
+def teacher_blueprint_audit_df(project_id: int) -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT id, blueprint_run_id, parent_run_id, action, actor_username, summary, details_json, created_at
+        FROM teacher_blueprint_audit_events
+        WHERE project_id=:project_id
+        ORDER BY id DESC
+        """,
+        {"project_id": int(project_id)},
+    )
+
+
 def save_teacher_blueprint_bundle(
     *,
     project_id: int,
@@ -2279,35 +2387,28 @@ def save_teacher_blueprint_bundle(
     latency_ms: int = 0,
     is_fallback_used: bool = False,
     parent_run_id: Optional[int] = None,
-    revision_number: Optional[int] = None,
+    version_number: Optional[int] = None,
+    revision_type: str = "generated",
     change_summary: str = "",
     edited_by: str = "",
-    edit_source: str = "generated",
+    restored_from_run_id: Optional[int] = None,
 ) -> int:
     units = list(blueprint.get("units") or [])
     lessons = list(blueprint.get("lessons") or [])
     outcomes = list(blueprint.get("outcomes") or [])
     edges = list(blueprint.get("concept_edges") or [])
-    if revision_number is None:
-        if parent_run_id:
-            parent = query_one("SELECT revision_number FROM teacher_blueprint_runs WHERE id=:id", {"id": int(parent_run_id)}) or {}
-            revision_number = int(parent.get("revision_number") or 1) + 1
-        else:
-            previous = query_one(
-                "SELECT MAX(revision_number) AS value FROM teacher_blueprint_runs WHERE project_id=:project_id",
-                {"project_id": int(project_id)},
-            ) or {}
-            revision_number = int(previous.get("value") or 0) + 1
     run_id = execute_returning_id(
         """
         INSERT INTO teacher_blueprint_runs
         (project_id, evidence_run_id, prompt_text, response_text, blueprint_json, quality_json,
          provider, model, status, diagnostic, unit_count, lesson_count, outcome_count,
-         latency_ms, is_fallback_used, parent_run_id, revision_number, change_summary, edited_by, edit_source, created_at)
+         latency_ms, is_fallback_used, parent_run_id, version_number, revision_type, change_summary,
+         edited_by, restored_from_run_id, created_at)
         VALUES
         (:project_id, :evidence_run_id, :prompt_text, :response_text, :blueprint_json, :quality_json,
          :provider, :model, :status, :diagnostic, :unit_count, :lesson_count, :outcome_count,
-         :latency_ms, :is_fallback_used, :parent_run_id, :revision_number, :change_summary, :edited_by, :edit_source, :created_at)
+         :latency_ms, :is_fallback_used, :parent_run_id, :version_number, :revision_type, :change_summary,
+         :edited_by, :restored_from_run_id, :created_at)
         """ + (" RETURNING id" if dialect() != "sqlite" else ""),
         {
             "project_id": int(project_id),
@@ -2326,10 +2427,11 @@ def save_teacher_blueprint_bundle(
             "latency_ms": int(latency_ms or 0),
             "is_fallback_used": 1 if is_fallback_used else 0,
             "parent_run_id": int(parent_run_id) if parent_run_id else None,
-            "revision_number": int(revision_number or 1),
+            "version_number": int(version_number or next_teacher_blueprint_version(int(project_id))),
+            "revision_type": str(revision_type or "generated"),
             "change_summary": str(change_summary or ""),
             "edited_by": str(edited_by or ""),
-            "edit_source": str(edit_source or "generated"),
+            "restored_from_run_id": int(restored_from_run_id) if restored_from_run_id else None,
             "created_at": utc_now(),
         },
     )
@@ -2355,10 +2457,10 @@ def save_teacher_blueprint_bundle(
         exec_sql(
             """
             INSERT INTO teacher_blueprint_lessons
-            (blueprint_run_id, unit_id, lesson_id, title, sequence_order, duration_minutes, prerequisites_json,
+            (blueprint_run_id, unit_id, lesson_id, title, duration_minutes, prerequisites_json,
              concept_ids_json, source_ids_json, lesson_sequence_json, misconceptions_json,
              activities_json, assessments_json, status)
-            VALUES (:blueprint_run_id, :unit_id, :lesson_id, :title, :sequence_order, :duration_minutes, :prerequisites_json,
+            VALUES (:blueprint_run_id, :unit_id, :lesson_id, :title, :duration_minutes, :prerequisites_json,
                     :concept_ids_json, :source_ids_json, :lesson_sequence_json, :misconceptions_json,
                     :activities_json, :assessments_json, :status)
             """,
@@ -2367,7 +2469,6 @@ def save_teacher_blueprint_bundle(
                 "unit_id": str(lesson.get("unit_id") or ""),
                 "lesson_id": str(lesson.get("lesson_id") or ""),
                 "title": str(lesson.get("title") or ""),
-                "sequence_order": int(lesson.get("sequence_order") or 0),
                 "duration_minutes": int(lesson.get("estimated_duration_minutes") or 45),
                 "prerequisites_json": json.dumps(lesson.get("prerequisites") or [], ensure_ascii=False),
                 "concept_ids_json": json.dumps(lesson.get("concept_ids") or [], ensure_ascii=False),
@@ -2461,6 +2562,7 @@ def approve_teacher_blueprint_run(run_id: int, project_id: int, teacher_username
         raise ValueError("Lesson blueprint run not found")
     if str(run.get("status") or "") == "error":
         raise ValueError("A blueprint with errors cannot be approved")
+    invalidate_teacher_blueprint_approvals(int(project_id))
     exec_sql(
         """
         UPDATE teacher_blueprint_runs
@@ -2469,106 +2571,66 @@ def approve_teacher_blueprint_run(run_id: int, project_id: int, teacher_username
         """,
         {"approved_at": utc_now(), "id": int(run_id), "project_id": int(project_id)},
     )
+    record_teacher_blueprint_audit(
+        project_id=int(project_id), blueprint_run_id=int(run_id), parent_run_id=run.get("parent_run_id"),
+        action="approve", actor_username=str(teacher_username),
+        summary="Teacher approved blueprint version for generation.",
+        details={"version_number": int(run.get("version_number") or 1)},
+    )
     exec_sql(
         "UPDATE teacher_projects SET updated_at=:updated_at WHERE id=:id AND teacher_username=:username",
         {"updated_at": utc_now(), "id": int(project_id), "username": str(teacher_username)},
     )
-    try:
-        log_teacher_blueprint_change(
-            project_id=int(project_id), blueprint_run_id=int(run_id),
-            parent_run_id=run.get("parent_run_id"), teacher_username=str(teacher_username),
-            action="approved", entity_type="blueprint", entity_id=str(run_id),
-            before={"approved_by_teacher": 0, "status": run.get("status")},
-            after={"approved_by_teacher": 1, "status": "approved"},
-            change_summary="Teacher approved blueprint revision.",
-        )
-    except Exception:
-        pass
 
-
-def teacher_blueprint_history_df(project_id: int) -> pd.DataFrame:
-    frame = query_df(
-        """
-        SELECT id, parent_run_id, revision_number, status, approved_by_teacher, approved_at,
-               unit_count, lesson_count, outcome_count, quality_json, change_summary,
-               edited_by, edit_source, provider, model, created_at
-        FROM teacher_blueprint_runs
-        WHERE project_id=:project_id
-        ORDER BY id DESC
-        """,
-        {"project_id": int(project_id)},
-    )
-    if frame.empty:
-        frame["readiness_value"] = pd.Series(dtype=float)
-        return frame
-    def _readiness(raw: Any) -> float:
-        try:
-            return float(json.loads(raw or "{}").get("readiness_score") or 0.0)
-        except Exception:
-            return 0.0
-    frame["readiness_value"] = frame["quality_json"].map(_readiness)
-    return frame
-
-
-def log_teacher_blueprint_change(
-    *,
-    project_id: int,
-    blueprint_run_id: int,
-    parent_run_id: Optional[int],
-    teacher_username: str,
-    action: str,
-    entity_type: str = "blueprint",
-    entity_id: str = "",
-    before: Optional[Dict[str, Any]] = None,
-    after: Optional[Dict[str, Any]] = None,
-    change_summary: str = "",
+def save_teacher_blueprint_revision(
+    *, project_id: int, base_run_id: int, teacher_username: str, blueprint: Dict[str, Any],
+    quality: Dict[str, Any], change_summary: str, revision_type: str = "manual_edit",
+    restored_from_run_id: Optional[int] = None,
 ) -> int:
-    return execute_returning_id(
-        """
-        INSERT INTO teacher_blueprint_change_log
-        (project_id, blueprint_run_id, parent_run_id, teacher_username, action,
-         entity_type, entity_id, before_json, after_json, change_summary, created_at)
-        VALUES
-        (:project_id, :blueprint_run_id, :parent_run_id, :teacher_username, :action,
-         :entity_type, :entity_id, :before_json, :after_json, :change_summary, :created_at)
-        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
-        {
-            "project_id": int(project_id),
-            "blueprint_run_id": int(blueprint_run_id),
-            "parent_run_id": int(parent_run_id) if parent_run_id else None,
-            "teacher_username": str(teacher_username or ""),
-            "action": str(action or "revision"),
-            "entity_type": str(entity_type or "blueprint"),
-            "entity_id": str(entity_id or ""),
-            "before_json": json.dumps(before or {}, ensure_ascii=False),
-            "after_json": json.dumps(after or {}, ensure_ascii=False),
-            "change_summary": str(change_summary or ""),
-            "created_at": utc_now(),
-        },
+    project = get_teacher_project(int(project_id), str(teacher_username))
+    if not project:
+        raise ValueError("Teacher project not found or access denied")
+    base = query_one(
+        "SELECT * FROM teacher_blueprint_runs WHERE id=:id AND project_id=:project_id",
+        {"id": int(base_run_id), "project_id": int(project_id)},
+    )
+    if not base:
+        raise ValueError("Base blueprint version not found")
+    version_number = next_teacher_blueprint_version(int(project_id))
+    run_id = save_teacher_blueprint_bundle(
+        project_id=int(project_id), evidence_run_id=int(base.get("evidence_run_id") or 0),
+        blueprint=blueprint, quality=quality, provider="teacher", model="manual-blueprint-editor-v1",
+        status=str(quality.get("status") or "needs_review"),
+        diagnostic="Teacher-authored immutable blueprint revision.", parent_run_id=int(base_run_id),
+        version_number=version_number, revision_type=str(revision_type or "manual_edit"),
+        change_summary=str(change_summary or "Teacher edited blueprint."), edited_by=str(teacher_username),
+        restored_from_run_id=restored_from_run_id,
+    )
+    invalidate_teacher_blueprint_approvals(int(project_id))
+    record_teacher_blueprint_audit(
+        project_id=int(project_id), blueprint_run_id=int(run_id), parent_run_id=int(base_run_id),
+        action=str(revision_type or "manual_edit"), actor_username=str(teacher_username),
+        summary=str(change_summary or "Teacher edited blueprint."),
+        details={"version_number": version_number, "restored_from_run_id": restored_from_run_id, "quality": quality},
+    )
+    return int(run_id)
+
+
+def restore_teacher_blueprint_version(
+    *, project_id: int, source_run_id: int, teacher_username: str, change_summary: str = "",
+) -> int:
+    source = teacher_blueprint_bundle(int(source_run_id))
+    if not source or int(source.get("project_id") or 0) != int(project_id):
+        raise ValueError("Blueprint version not found for this project")
+    latest = latest_teacher_blueprint(int(project_id), approved_only=False)
+    base_run_id = int((latest or {}).get("id") or source_run_id)
+    return save_teacher_blueprint_revision(
+        project_id=int(project_id), base_run_id=base_run_id, teacher_username=str(teacher_username),
+        blueprint=dict(source.get("blueprint") or {}), quality=dict(source.get("quality") or {}),
+        change_summary=change_summary or f"Restored blueprint version {int(source.get('version_number') or 1)}.",
+        revision_type="restore", restored_from_run_id=int(source_run_id),
     )
 
-
-def teacher_blueprint_change_log_df(project_id: int, run_id: Optional[int] = None) -> pd.DataFrame:
-    sql = """
-        SELECT id, blueprint_run_id, parent_run_id, teacher_username, action,
-               entity_type, entity_id, change_summary, created_at
-        FROM teacher_blueprint_change_log
-        WHERE project_id=:project_id
-    """
-    params: Dict[str, Any] = {"project_id": int(project_id)}
-    if run_id is not None:
-        sql += " AND blueprint_run_id=:run_id"
-        params["run_id"] = int(run_id)
-    sql += " ORDER BY id DESC"
-    return query_df(sql, params)
-
-
-def teacher_blueprint_run_for_project(run_id: int, project_id: int) -> Optional[Dict[str, Any]]:
-    row = query_one(
-        "SELECT id FROM teacher_blueprint_runs WHERE id=:id AND project_id=:project_id",
-        {"id": int(run_id), "project_id": int(project_id)},
-    )
-    return teacher_blueprint_bundle(int(row["id"])) if row else None
 
 def set_teacher_project_phase(project_id: int, teacher_username: str, phase_number: int) -> None:
     """Advance or reposition a project phase with an ownership check."""
@@ -2591,6 +2653,169 @@ def set_teacher_project_phase(project_id: int, teacher_username: str, phase_numb
             "username": str(teacher_username),
         },
     )
+
+
+def next_teacher_lesson_block_version(project_id: int, lesson_id: str, block_type: str) -> int:
+    row = query_one(
+        """SELECT MAX(COALESCE(version_number, 1)) AS max_version
+        FROM teacher_lesson_block_runs
+        WHERE project_id=:project_id AND lesson_id=:lesson_id AND block_type=:block_type""",
+        {"project_id": int(project_id), "lesson_id": str(lesson_id), "block_type": str(block_type)},
+    )
+    return int((row or {}).get("max_version") or 0) + 1
+
+
+def record_teacher_lesson_block_audit(
+    *, project_id: int, block_run_id: Optional[int], lesson_id: str, block_type: str,
+    action: str, actor_username: str, summary: str, details: Optional[Dict[str, Any]] = None,
+) -> None:
+    exec_sql(
+        """INSERT INTO teacher_lesson_block_audit_events
+        (project_id, block_run_id, lesson_id, block_type, action, actor_username, summary, details_json, created_at)
+        VALUES (:project_id, :block_run_id, :lesson_id, :block_type, :action, :actor_username, :summary, :details_json, :created_at)""",
+        {
+            "project_id": int(project_id), "block_run_id": int(block_run_id) if block_run_id else None,
+            "lesson_id": str(lesson_id), "block_type": str(block_type), "action": str(action),
+            "actor_username": str(actor_username or ""), "summary": str(summary or ""),
+            "details_json": json.dumps(details or {}, ensure_ascii=False), "created_at": utc_now(),
+        },
+    )
+
+
+def save_teacher_lesson_block(
+    *, project_id: int, blueprint_run_id: int, lesson_id: str, block_type: str,
+    sequence_order: int, prompt_text: str, content_text: str, provider: str, model: str,
+    status: str, diagnostic: str = "", validation: Optional[Dict[str, Any]] = None,
+    latency_ms: int = 0, is_fallback_used: bool = False, parent_run_id: Optional[int] = None,
+    revision_type: str = "generated", change_summary: str = "", edited_by: str = "",
+) -> int:
+    validation = dict(validation or {})
+    version_number = next_teacher_lesson_block_version(int(project_id), str(lesson_id), str(block_type))
+    run_id = execute_returning_id(
+        """INSERT INTO teacher_lesson_block_runs
+        (project_id, blueprint_run_id, lesson_id, block_type, sequence_order, prompt_text, content_text,
+         provider, model, status, diagnostic, validation_json, word_count, latency_ms, is_fallback_used,
+         parent_run_id, version_number, revision_type, change_summary, edited_by, approved_by_teacher, created_at)
+        VALUES (:project_id, :blueprint_run_id, :lesson_id, :block_type, :sequence_order, :prompt_text, :content_text,
+         :provider, :model, :status, :diagnostic, :validation_json, :word_count, :latency_ms, :is_fallback_used,
+         :parent_run_id, :version_number, :revision_type, :change_summary, :edited_by, 0, :created_at)""" + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id), "blueprint_run_id": int(blueprint_run_id), "lesson_id": str(lesson_id),
+            "block_type": str(block_type), "sequence_order": int(sequence_order or 0), "prompt_text": str(prompt_text or ""),
+            "content_text": str(content_text or ""), "provider": str(provider or ""), "model": str(model or ""),
+            "status": str(status or ""), "diagnostic": str(diagnostic or ""),
+            "validation_json": json.dumps(validation, ensure_ascii=False), "word_count": int(validation.get("word_count") or 0),
+            "latency_ms": int(latency_ms or 0), "is_fallback_used": 1 if is_fallback_used else 0,
+            "parent_run_id": int(parent_run_id) if parent_run_id else None, "version_number": int(version_number),
+            "revision_type": str(revision_type or "generated"), "change_summary": str(change_summary or ""),
+            "edited_by": str(edited_by or ""), "created_at": utc_now(),
+        },
+    )
+    record_teacher_lesson_block_audit(
+        project_id=int(project_id), block_run_id=int(run_id), lesson_id=str(lesson_id), block_type=str(block_type),
+        action=str(revision_type or "generated"), actor_username=str(edited_by or provider),
+        summary=str(change_summary or f"Created lesson block version {version_number}."),
+        details={"version_number": version_number, "status": status, "parent_run_id": parent_run_id},
+    )
+    return int(run_id)
+
+
+def teacher_lesson_block_bundle(run_id: int) -> Optional[Dict[str, Any]]:
+    run = query_one("SELECT * FROM teacher_lesson_block_runs WHERE id=:id", {"id": int(run_id)})
+    if not run:
+        return None
+    try:
+        run["validation"] = json.loads(run.get("validation_json") or "{}")
+    except Exception:
+        run["validation"] = {}
+    return run
+
+
+def latest_teacher_lesson_block(project_id: int, lesson_id: str, block_type: str, *, approved_only: bool = False) -> Optional[Dict[str, Any]]:
+    sql = """SELECT id FROM teacher_lesson_block_runs
+    WHERE project_id=:project_id AND lesson_id=:lesson_id AND block_type=:block_type"""
+    if approved_only:
+        sql += " AND approved_by_teacher=1"
+    sql += " ORDER BY id DESC LIMIT 1"
+    row = query_one(sql, {"project_id": int(project_id), "lesson_id": str(lesson_id), "block_type": str(block_type)})
+    return teacher_lesson_block_bundle(int(row["id"])) if row else None
+
+
+def latest_lesson_blocks_by_type(project_id: int, lesson_id: str) -> Dict[str, Dict[str, Any]]:
+    rows = query_df(
+        """SELECT id, block_type FROM teacher_lesson_block_runs
+        WHERE project_id=:project_id AND lesson_id=:lesson_id ORDER BY id DESC""",
+        {"project_id": int(project_id), "lesson_id": str(lesson_id)},
+    )
+    rows = rows.to_dict("records") if hasattr(rows, "to_dict") else []
+    result: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        block_type = str(row.get("block_type") or "")
+        if block_type and block_type not in result:
+            bundle = teacher_lesson_block_bundle(int(row["id"]))
+            if bundle:
+                result[block_type] = bundle
+    return result
+
+
+def latest_approved_lesson_blocks(project_id: int, lesson_id: str) -> List[Dict[str, Any]]:
+    rows = query_df(
+        """SELECT id FROM teacher_lesson_block_runs
+        WHERE project_id=:project_id AND lesson_id=:lesson_id AND approved_by_teacher=1
+        ORDER BY sequence_order ASC, id DESC""",
+        {"project_id": int(project_id), "lesson_id": str(lesson_id)},
+    )
+    rows = rows.to_dict("records") if hasattr(rows, "to_dict") else []
+    seen = set()
+    result = []
+    for row in rows:
+        bundle = teacher_lesson_block_bundle(int(row["id"]))
+        if bundle and bundle.get("block_type") not in seen:
+            seen.add(bundle.get("block_type")); result.append(bundle)
+    return result
+
+
+def approve_teacher_lesson_block(run_id: int, project_id: int, teacher_username: str) -> None:
+    run = teacher_lesson_block_bundle(int(run_id))
+    if not run or int(run.get("project_id") or 0) != int(project_id):
+        raise ValueError("Lesson block run not found.")
+    if str(run.get("status") or "") == "error":
+        raise ValueError("A block with validation errors cannot be approved.")
+    exec_sql(
+        """UPDATE teacher_lesson_block_runs SET approved_by_teacher=0, approved_at=NULL
+        WHERE project_id=:project_id AND lesson_id=:lesson_id AND block_type=:block_type""",
+        {"project_id": int(project_id), "lesson_id": str(run["lesson_id"]), "block_type": str(run["block_type"])},
+    )
+    exec_sql(
+        "UPDATE teacher_lesson_block_runs SET approved_by_teacher=1, approved_at=:approved_at WHERE id=:id",
+        {"id": int(run_id), "approved_at": utc_now()},
+    )
+    record_teacher_lesson_block_audit(
+        project_id=int(project_id), block_run_id=int(run_id), lesson_id=str(run["lesson_id"]),
+        block_type=str(run["block_type"]), action="approved", actor_username=str(teacher_username),
+        summary="Teacher approved lesson block for lesson assembly.",
+    )
+
+
+def teacher_lesson_block_versions_df(project_id: int, lesson_id: str, block_type: str) -> pd.DataFrame:
+    return query_df(
+        """SELECT id, version_number, revision_type, status, provider, model, word_count,
+        approved_by_teacher, change_summary, edited_by, created_at
+        FROM teacher_lesson_block_runs
+        WHERE project_id=:project_id AND lesson_id=:lesson_id AND block_type=:block_type
+        ORDER BY id DESC""",
+        {"project_id": int(project_id), "lesson_id": str(lesson_id), "block_type": str(block_type)},
+    )
+
+
+def teacher_lesson_block_audit_df(project_id: int, lesson_id: Optional[str] = None) -> pd.DataFrame:
+    sql = """SELECT id, block_run_id, lesson_id, block_type, action, actor_username, summary, created_at
+    FROM teacher_lesson_block_audit_events WHERE project_id=:project_id"""
+    params: Dict[str, Any] = {"project_id": int(project_id)}
+    if lesson_id:
+        sql += " AND lesson_id=:lesson_id"; params["lesson_id"] = str(lesson_id)
+    sql += " ORDER BY id DESC"
+    return query_df(sql, params)
 
 
 def latest_teacher_generation(project_id: int) -> Optional[Dict[str, Any]]:

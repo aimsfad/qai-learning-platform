@@ -1,6 +1,6 @@
-# 3alimnIA V6.15 — Blueprint Editor and Versioning
+# 3alimnIA V6.15 — Blueprint Editor and Immutable Versioning
 
-The Teacher Content Studio now supports teacher-controlled editing of concepts, units, lessons, and learning outcomes. Each save creates an auditable revision instead of overwriting prior plans, and historical versions can be restored as new drafts. See `V6_15_BLUEPRINT_EDITOR_VERSIONING_AR.md`.
+The Teacher Content Studio now provides a teacher-controlled editor for units, lessons, learning outcomes, ordering, concept/source assignments, and alignment. Every saved change becomes an immutable version with a parent link, change summary, approval reset, restore workflow, comparison view, and audit trail. See `V6_15_BLUEPRINT_EDITOR_VERSIONING_AR.md`.
 
 # 3alimnIA V6.14 — Evidence-to-Lesson Blueprint
 
@@ -278,3 +278,6 @@ python validate_v610_gemini_router.py
 
 ### V6.10.1 AI Tutor state safety
 Quick-support drafts now use learner-scoped storage and editor keys. Draft cleanup is deferred to the next Streamlit rerun, preventing widget-state mutation exceptions while preserving chat logging and research analytics.
+
+### V6.16 Lesson Blocks
+Approved course blueprints can now drive independent generation, review, versioning, and approval of nine lesson blocks. See `V6_16_LESSON_BLOCK_GENERATION_AR.md`.

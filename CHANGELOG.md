@@ -1,12 +1,12 @@
-# V6.15 — Blueprint Editor and Versioning
+# V6.15 — Blueprint Editor and Immutable Versioning
 
-- Added dynamic table editors for concepts, units, lessons, and learning outcomes.
-- Added stable identifiers for new records and teacher-controlled ordering.
-- Added blueprint normalization, referential-integrity checks, prerequisite-cycle checks, and quality recalculation.
-- Added immutable revision history with parent links, change summaries, editor identity, and entity-level audit records.
-- Added restoration of any historical revision as a new draft.
-- Kept approved historical versions intact; edited revisions require renewed teacher approval.
-- Added `validate_v615_blueprint_editor.py`.
+- Added a session-based teacher editor for units, lessons, learning outcomes, concept/source links, durations, prerequisites, and misconceptions.
+- Added add, update, delete, and reorder operations while preserving stable identifiers.
+- Added immutable blueprint versions with parent links, version numbers, revision type, change summary, editor identity, and restore provenance.
+- Added automatic approval invalidation after generation, manual edits, or restoration so stale blueprints cannot constrain later generation.
+- Added version comparison and a teacher-facing audit trail.
+- Added recomputed integrity, alignment, source-traceability, and readiness checks for every draft and saved version.
+- Added `validate_v615_blueprint_editor_versioning.py`.
 
 # V6.14 — Evidence-to-Lesson Blueprint
 
@@ -387,3 +387,9 @@
 - Separated stored draft state from the text-area widget state.
 - Deferred draft cleanup until the next rerun, before widget instantiation.
 - Scoped AI Tutor draft keys per learner and added a safe cancel action.
+
+## V6.16 - Lesson Block Generation and Versioning
+- Added independent generation for nine lesson blocks per approved lesson.
+- Added blueprint-constrained prompts, source-ID validation, and attempt-first pedagogy.
+- Added immutable block versions, teacher editing, approval, progress tracking, and audit events.
+- Added a dedicated Lesson Blocks workspace in Teacher Content Studio.
