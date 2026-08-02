@@ -1877,18 +1877,23 @@ def _set_workspace_section(section: str) -> None:
 
 
 def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> None:
+    """Render the connected seven-stage teacher journey and one primary next action."""
     lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
     copy = guided_teacher_workflow.workflow_copy(lang)
     statuses = dict(state.get("statuses") or {})
     current_key = str(state.get("current_key") or "setup")
     current_spec = copy["steps"][current_key]
+    current_status = statuses.get(current_key, "available")
+    completed = int(state.get("completed_count") or 0)
+    total = int(state.get("total_steps") or 7)
 
-    st.markdown("<span class='v6161-guided-workflow-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    st.markdown(f"## {copy['journey']}")
-    st.caption(copy["journey_help"])
-    st.progress(
-        int(state.get("progress_pct") or 0) / 100,
-        text=f"{copy['project_progress']}: {int(state.get('completed_count') or 0)}/{int(state.get('total_steps') or 7)}",
+    st.markdown("<span class='v6162-workflow-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='v6162-section-heading' dir='{direction}'>"
+        f"<div><span>{completed}/{total}</span><h2>{escape(copy['journey'])}</h2>"
+        f"<p>{escape(copy['journey_help'])}</p></div></div>",
+        unsafe_allow_html=True,
     )
 
     cols = st.columns(len(guided_teacher_workflow.WORKFLOW_STEPS), gap="small")
@@ -1896,10 +1901,18 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
         key = step["key"]
         status = statuses.get(key, "locked")
         spec = copy["steps"][key]
+        visual_status = status
+        if key == current_key and status not in {"completed", "review"}:
+            visual_status = "active"
+        node_text = "✓" if status == "completed" else str(index)
         with col:
-            st.markdown(f"<span class='v6161-step-marker v6161-step-{escape(status)}' aria-hidden='true'></span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='v6162-step-node v6162-step-{escape(visual_status)}' dir='{direction}'>"
+                f"<span>{node_text}</span></div>",
+                unsafe_allow_html=True,
+            )
             if st.button(
-                f"{index}. {spec['short']}",
+                spec["short"],
                 use_container_width=True,
                 disabled=status == "locked",
                 key=f"guided_workflow_step_{int(project['id'])}_{key}",
@@ -1908,14 +1921,17 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
                 _set_workspace_section(step["section"])
             st.caption(copy["status"].get(status, status))
 
-    with st.container(border=True):
-        left, right = st.columns([4.7, 1.3], vertical_alignment="center")
-        with left:
+    st.markdown("<span class='v6162-current-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    main_col, summary_col = st.columns([2.25, 1], gap="large", vertical_alignment="stretch")
+    with main_col:
+        with st.container(border=False):
             st.caption(copy["current_step"])
             st.markdown(f"### {current_spec['title']}")
             st.write(current_spec["description"])
-            st.caption(f"{current_spec['outcome']}")
-        with right:
+            st.markdown(
+                f"<div class='v6162-outcome-box' dir='{direction}'><span>{escape(current_spec['outcome'])}</span></div>",
+                unsafe_allow_html=True,
+            )
             if st.button(
                 current_spec["action"],
                 type="primary",
@@ -1923,12 +1939,29 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
                 key=f"guided_continue_{int(project['id'])}_{current_key}",
             ):
                 _set_workspace_section(guided_teacher_workflow.section_for_step(current_key))
+    with summary_col:
+        p = _project_defaults(project)
+        target_languages = ", ".join(str(item) for item in (p.get("target_languages") or []) if str(item).strip()) or "—"
+        status_label = copy["status"].get(current_status, current_status)
+        summary_title = {"ar": "ملخص سريع", "fr": "Résumé", "en": "Quick summary"}.get(lang, "Quick summary")
+        status_title = {"ar": "حالة المرحلة", "fr": "État de l’étape", "en": "Stage status"}.get(lang, "Stage status")
+        st.markdown(
+            f"<aside class='v6162-summary-card' dir='{direction}'>"
+            f"<h3>{escape(summary_title)}</h3>"
+            f"<div class='v6162-summary-row'><span>{escape(status_title)}</span><b>{escape(status_label)}</b></div>"
+            f"<div class='v6162-summary-row'><span>{escape(str(p.get('learner_level') or '—'))}</span><b>{escape(str(p.get('expected_duration') or '—'))}</b></div>"
+            f"<div class='v6162-summary-languages'>{escape(target_languages)}</div>"
+            f"</aside>",
+            unsafe_allow_html=True,
+        )
 
     lesson = dict(state.get("lesson_progress") or {})
     if int(lesson.get("required") or 0) > 0:
         approved = int(lesson.get("approved") or 0)
         required = int(lesson.get("required") or 0)
+        st.markdown("<span class='v6162-lesson-progress-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
         st.progress(approved / max(required, 1), text=f"{copy['lesson_progress']}: {approved}/{required}")
+
 
 
 def render_project_quality_summary(project: Dict[str, Any]) -> None:
@@ -2054,24 +2087,61 @@ def render_projects_grid() -> None:
 
 
 def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, Any]] = None) -> None:
+    """Render a compact, premium project header without duplicating progress bars."""
     copy = project_workspace_ui()
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
     workflow_state = workflow_state or guided_teacher_workflow.load_workflow_state(project)
     completed = int(workflow_state.get("completed_count") or 0)
     total = int(workflow_state.get("total_steps") or 7)
     pct = int(workflow_state.get("progress_pct") or 0)
-    c_back, c_title, c_status = st.columns([1.15, 5.1, 1.35], vertical_alignment="center")
-    with c_back:
+    p = _project_defaults(project)
+
+    status_text = _status_label(str(project.get("status") or "draft"), copy)
+    languages = ", ".join(str(item) for item in (p.get("target_languages") or []) if str(item).strip())
+    meta_items = [
+        str(p.get("domain") or "").strip(),
+        str(p.get("learner_level") or "").strip(),
+        str(p.get("expected_duration") or "").strip(),
+        languages,
+    ]
+    chips = "".join(
+        f"<span class='v6162-meta-chip'>{escape(item)}</span>"
+        for item in meta_items if item
+    )
+    title = escape(str(project.get("project_name") or project.get("unit_title") or ""))
+    subtitle = escape(str(project.get("unit_title") or project.get("program_name") or ""))
+    progress_label = {
+        "ar": "اكتمال رحلة المقرر",
+        "fr": "Parcours du cours",
+        "en": "Course journey",
+    }.get(lang, "Course journey")
+
+    st.markdown("<span class='v6162-studio-header-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    header_col, back_col = st.columns([6.3, 1.25], vertical_alignment="center", gap="large")
+    with header_col:
+        st.markdown(
+            f"<section class='v6162-studio-header' dir='{direction}'>"
+            f"<div class='v6162-header-topline'>"
+            f"<span class='v6162-status-pill'>{escape(status_text)}</span>"
+            f"<span class='v6162-project-id'>{escape(copy['project_center'])} · #{int(project['id'])}</span>"
+            f"</div>"
+            f"<div class='v6162-header-main'>"
+            f"<div class='v6162-header-copy'><h1>{title}</h1><p>{subtitle}</p>"
+            f"<div class='v6162-meta-chips'>{chips}</div></div>"
+            f"<div class='v6162-progress-stat'><strong>{pct}%</strong>"
+            f"<span>{escape(progress_label)}</span><small>{completed}/{total}</small></div>"
+            f"</div>"
+            f"<div class='v6162-progress-track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='{pct}'>"
+            f"<span style='width:{max(0, min(100, pct))}%'></span></div>"
+            f"</section>",
+            unsafe_allow_html=True,
+        )
+    with back_col:
         if st.button(f"← {copy['back']}", use_container_width=True, key="teacher_back_to_projects"):
             st.session_state.teacher_studio_view = "projects"
             st.rerun()
-    with c_title:
-        st.markdown(f"<span class='v692-project-workspace-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-        st.caption(f"{copy['project_center']} · #{int(project['id'])}")
-        st.markdown(f"# {project.get('project_name') or project.get('unit_title')}")
-        st.write(f"{project.get('domain','')} · {project.get('program_name') or ''} · {project.get('unit_title','')}")
-    with c_status:
-        st.metric(copy["status"], _status_label(str(project.get("status") or "draft"), copy))
-    st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{total}")
+
 
 
 def _render_phase_map(project: Dict[str, Any]) -> None:
