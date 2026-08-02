@@ -248,3 +248,6 @@ Quick-support drafts now use learner-scoped storage and editor keys. Draft clean
 
 ### V6.16 Lesson Blocks
 Approved course blueprints can now drive independent generation, review, versioning, and approval of nine lesson blocks. See `V6_16_LESSON_BLOCK_GENERATION_AR.md`.
+## V6.16.3.1 frontend runtime hotfix
+
+This hotfix imports the branding module used by the centered teacher login and restores the learner-safe project preview function used by publishing views. Run `python validate_v61631_frontend_runtime_hotfix.py` before deployment.
