@@ -1,3 +1,7 @@
+# 3alimnIA V6.16.1 - Guided Teacher Workflow UI
+
+Teacher projects now open as a seven-stage guided journey: project setup, sources and research, evidence review, course blueprint, lesson building, quality review, and publication. The interface calculates readiness from persisted research, evidence, blueprint, and lesson-block records, then returns the teacher to the first unfinished stage. Technical prompt/provider controls remain available in collapsed advanced sections. See `V6_16_1_GUIDED_TEACHER_WORKFLOW_UI_AR.md`.
+
 # 3alimnIA V6.15 — Blueprint Editor and Immutable Versioning
 
 The Teacher Content Studio now provides a teacher-controlled editor for units, lessons, learning outcomes, ordering, concept/source assignments, and alignment. Every saved change becomes an immutable version with a parent link, change summary, approval reset, restore workflow, comparison view, and audit trail. See `V6_15_BLUEPRINT_EDITOR_VERSIONING_AR.md`.

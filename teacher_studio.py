@@ -16,6 +16,7 @@ import educational_builder
 import evidence_synthesis_engine
 import lesson_blueprint_engine
 import lesson_block_generation_engine
+import guided_teacher_workflow
 import gemini_file_analyzer
 import db
 import i18n
@@ -965,104 +966,110 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 st.session_state.teacher_workspace_section_pending = "evidence"
                 st.rerun()
 
-    prompt = compile_project_prompt(p, phase_number)
-    st.session_state.teacher_last_prompt = prompt
-    expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
-    st.success(u["prompt_ready"])
-    status = content_generation_engine.provider_status()
-    fallback_text = ""
-    if status.get("ready_fallbacks"):
-        fallback_text = " | fallback: " + ", ".join(status["ready_fallbacks"])
-    st.info(
-        f"{u['provider']}: {status['provider']} / {status['model']} — "
-        f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
-    )
-    budget = content_generation_engine.prompt_budget_info(
-        prompt,
-        educational_builder.PHASE_MAX_TOKENS.get(phase_number, 3600),
-    )
-    compacted_label = u["prompt_compacted"] if budget.get("compacted") else ""
-    st.caption(
-        u["prompt_budget"].format(
-            runtime=budget.get("estimated_runtime_tokens", 0),
-            original=budget.get("estimated_original_tokens", 0),
-            output=budget.get("max_output_tokens", 0),
-            compacted=compacted_label,
+    advanced_label = {
+        "ar": "خيارات التوليد المرحلي المتقدمة",
+        "fr": "Options avancées de génération par phase",
+        "en": "Advanced phase-generation options",
+    }.get(i18n.current_lang(st), "Advanced phase-generation options")
+    with st.expander(advanced_label, expanded=False):
+        prompt = compile_project_prompt(p, phase_number)
+        st.session_state.teacher_last_prompt = prompt
+        expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
+        st.success(u["prompt_ready"])
+        status = content_generation_engine.provider_status()
+        fallback_text = ""
+        if status.get("ready_fallbacks"):
+            fallback_text = " | fallback: " + ", ".join(status["ready_fallbacks"])
+        st.info(
+            f"{u['provider']}: {status['provider']} / {status['model']} — "
+            f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
         )
-    )
-    st.caption(u["phase_only"])
-    if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{project_id}_{phase_number}"):
-        st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
-        st.session_state.teacher_expand_prompt = True
-        st.session_state.teacher_flash_success = u["prompt_ready"]
-        st.rerun()
-    with st.expander(u["prompt"], expanded=expand_prompt):
-        st.code(prompt, language="markdown")
-    if expand_prompt:
-        st.session_state.teacher_expand_prompt = False
-    safe_name = "_".join(str(p.get("project_name") or "project").split())
-    st.download_button(
-        u["download_prompt"],
-        prompt.encode("utf-8"),
-        file_name=f"{safe_name}_phase_{phase_number}_prompt.md",
-        mime="text/markdown",
-        use_container_width=True,
-    )
-    project_json = json.dumps(p, ensure_ascii=False, indent=2, default=str)
-    st.download_button(
-        u["download_project"],
-        project_json.encode("utf-8"),
-        file_name=f"{safe_name}_project.json",
-        mime="application/json",
-        use_container_width=True,
-    )
+        budget = content_generation_engine.prompt_budget_info(
+            prompt,
+            educational_builder.PHASE_MAX_TOKENS.get(phase_number, 3600),
+        )
+        compacted_label = u["prompt_compacted"] if budget.get("compacted") else ""
+        st.caption(
+            u["prompt_budget"].format(
+                runtime=budget.get("estimated_runtime_tokens", 0),
+                original=budget.get("estimated_original_tokens", 0),
+                output=budget.get("max_output_tokens", 0),
+                compacted=compacted_label,
+            )
+        )
+        st.caption(u["phase_only"])
+        if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{project_id}_{phase_number}"):
+            st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
+            st.session_state.teacher_expand_prompt = True
+            st.session_state.teacher_flash_success = u["prompt_ready"]
+            st.rerun()
+        with st.expander(u["prompt"], expanded=expand_prompt):
+            st.code(prompt, language="markdown")
+        if expand_prompt:
+            st.session_state.teacher_expand_prompt = False
+        safe_name = "_".join(str(p.get("project_name") or "project").split())
+        st.download_button(
+            u["download_prompt"],
+            prompt.encode("utf-8"),
+            file_name=f"{safe_name}_phase_{phase_number}_prompt.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+        project_json = json.dumps(p, ensure_ascii=False, indent=2, default=str)
+        st.download_button(
+            u["download_project"],
+            project_json.encode("utf-8"),
+            file_name=f"{safe_name}_project.json",
+            mime="application/json",
+            use_container_width=True,
+        )
 
-    _render_latest_generation(
-        project_id,
-        u,
-        str(p.get("primary_language_code") or "en"),
-    )
+        _render_latest_generation(
+            project_id,
+            u,
+            str(p.get("primary_language_code") or "en"),
+        )
 
-    generate_key = f"generate_teacher_phase_{project_id}_{phase_number}"
-    if st.button(u["generate"], type="primary", use_container_width=True, key=generate_key):
-        try:
-            with st.spinner(f"3alimnIA is generating phase {phase_number}: {PHASES[phase_number]}..."):
-                outcome = educational_builder.generate_project_phase(
-                    p,
-                    _current_teacher_username(),
-                    phase_number=phase_number,
-                    research_mode=research_mode,
-                    max_research_sources=max_sources,
-                    preferred_domains=_split_domain_input(preferred_domains_raw),
-                    excluded_domains=_split_domain_input(excluded_domains_raw),
-                    force_research=False,
-                )
-            st.session_state.teacher_last_response = outcome.response
-            research_note = ""
-            if outcome.research_source_count:
-                research_note = (
-                    f" Research: {outcome.research_provider}/{outcome.research_model}, "
-                    f"{outcome.research_source_count} source(s)."
-                )
-            if outcome.evidence_card_count:
-                research_note += (
-                    f" Evidence: {outcome.evidence_card_count} card(s), "
-                    f"approved={outcome.evidence_approved}."
-                )
-            if outcome.status == "completed":
-                st.session_state.teacher_flash_success = (
-                    f"{u['generated']} {phase_number}/{len(PHASES)} — "
-                    f"{outcome.provider}/{outcome.model}.{research_note}"
-                )
-            elif outcome.status == "needs_review":
-                st.session_state.teacher_flash_warning = f"{u['needs_review']} {outcome.diagnostic}"
-            elif outcome.status == "not_configured":
-                st.session_state.teacher_flash_warning = outcome.diagnostic
-            else:
-                st.session_state.teacher_flash_error = outcome.diagnostic or u["generation_failed"]
-        except Exception as exc:
-            st.session_state.teacher_flash_error = f"{u['generation_failed']} {exc}"
-        st.rerun()
+        generate_key = f"generate_teacher_phase_{project_id}_{phase_number}"
+        if st.button(u["generate"], type="primary", use_container_width=True, key=generate_key):
+            try:
+                with st.spinner(f"3alimnIA is generating phase {phase_number}: {PHASES[phase_number]}..."):
+                    outcome = educational_builder.generate_project_phase(
+                        p,
+                        _current_teacher_username(),
+                        phase_number=phase_number,
+                        research_mode=research_mode,
+                        max_research_sources=max_sources,
+                        preferred_domains=_split_domain_input(preferred_domains_raw),
+                        excluded_domains=_split_domain_input(excluded_domains_raw),
+                        force_research=False,
+                    )
+                st.session_state.teacher_last_response = outcome.response
+                research_note = ""
+                if outcome.research_source_count:
+                    research_note = (
+                        f" Research: {outcome.research_provider}/{outcome.research_model}, "
+                        f"{outcome.research_source_count} source(s)."
+                    )
+                if outcome.evidence_card_count:
+                    research_note += (
+                        f" Evidence: {outcome.evidence_card_count} card(s), "
+                        f"approved={outcome.evidence_approved}."
+                    )
+                if outcome.status == "completed":
+                    st.session_state.teacher_flash_success = (
+                        f"{u['generated']} {phase_number}/{len(PHASES)} — "
+                        f"{outcome.provider}/{outcome.model}.{research_note}"
+                    )
+                elif outcome.status == "needs_review":
+                    st.session_state.teacher_flash_warning = f"{u['needs_review']} {outcome.diagnostic}"
+                elif outcome.status == "not_configured":
+                    st.session_state.teacher_flash_warning = outcome.diagnostic
+                else:
+                    st.session_state.teacher_flash_error = outcome.diagnostic or u["generation_failed"]
+            except Exception as exc:
+                st.session_state.teacher_flash_error = f"{u['generation_failed']} {exc}"
+            st.rerun()
 
 def render_evidence_synthesis(project: Dict[str, Any]) -> None:
     """Render the V6.13 source-scoring and evidence-card review workspace."""
@@ -1823,6 +1830,162 @@ def project_workspace_ui() -> Dict[str, str]:
     return values.get(lang, values["en"])
 
 
+
+def _friendly_teacher_error(message: Any) -> tuple[str, str]:
+    """Return a concise teacher-facing error while preserving diagnostics."""
+    raw = str(message or "").strip()
+    lowered = raw.lower()
+    lang = i18n.current_lang(st)
+    if "429" in lowered or "quota" in lowered or "resource_exhausted" in lowered:
+        friendly = {
+            "ar": "تعذر الاتصال بخدمة الذكاء الاصطناعي لأن حد الاستخدام الحالي قد اكتمل. احتُفظ بآخر نتيجة ناجحة ويمكن المحاولة لاحقًا.",
+            "fr": "Le quota actuel du service d’IA est atteint. Le dernier résultat valide a été conservé; réessayez plus tard.",
+            "en": "The current AI-service quota has been reached. The last valid result was preserved; try again later.",
+        }
+    elif "413" in lowered or "too large" in lowered or "request entity" in lowered:
+        friendly = {
+            "ar": "حجم الطلب أكبر من الحد المتاح. ستحتاج العملية إلى سياق أقصر أو إعداد البحث السريع.",
+            "fr": "La requête dépasse la taille autorisée. Utilisez un contexte plus court ou le mode de recherche rapide.",
+            "en": "The request exceeds the available size limit. Use a shorter context or quick research mode.",
+        }
+    elif "nameerror" in lowered or "not defined" in lowered:
+        friendly = {
+            "ar": "حدث خلل في عرض هذه الصفحة. بيانات المشروع محفوظة؛ أعد تحميل التطبيق بعد تطبيق آخر تحديث.",
+            "fr": "Une erreur d’affichage est survenue. Les données sont conservées; rechargez l’application après la mise à jour.",
+            "en": "A page-rendering error occurred. Project data is preserved; reload the app after applying the latest update.",
+        }
+    else:
+        friendly = {
+            "ar": "تعذر إكمال العملية حاليًا. لم تُحذف بيانات المشروع، ويمكن إعادة المحاولة بعد مراجعة التفاصيل التقنية.",
+            "fr": "L’opération n’a pas pu être terminée. Les données du projet sont conservées; consultez les détails techniques.",
+            "en": "The operation could not be completed. Project data was preserved; review the technical details and retry.",
+        }
+    return friendly.get(lang, friendly["en"]), raw
+
+
+def _render_workspace_exception(exc: Exception) -> None:
+    friendly, technical = _friendly_teacher_error(exc)
+    st.error(friendly)
+    label = {"ar": "التفاصيل التقنية", "fr": "Détails techniques", "en": "Technical details"}.get(i18n.current_lang(st), "Technical details")
+    with st.expander(label, expanded=False):
+        st.code(technical or exc.__class__.__name__, language="text")
+
+
+def _set_workspace_section(section: str) -> None:
+    st.session_state.teacher_workspace_section_pending = str(section)
+    st.rerun()
+
+
+def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    copy = guided_teacher_workflow.workflow_copy(lang)
+    statuses = dict(state.get("statuses") or {})
+    current_key = str(state.get("current_key") or "setup")
+    current_spec = copy["steps"][current_key]
+
+    st.markdown("<span class='v6161-guided-workflow-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    st.markdown(f"## {copy['journey']}")
+    st.caption(copy["journey_help"])
+    st.progress(
+        int(state.get("progress_pct") or 0) / 100,
+        text=f"{copy['project_progress']}: {int(state.get('completed_count') or 0)}/{int(state.get('total_steps') or 7)}",
+    )
+
+    cols = st.columns(len(guided_teacher_workflow.WORKFLOW_STEPS), gap="small")
+    for index, (col, step) in enumerate(zip(cols, guided_teacher_workflow.WORKFLOW_STEPS), start=1):
+        key = step["key"]
+        status = statuses.get(key, "locked")
+        spec = copy["steps"][key]
+        with col:
+            st.markdown(f"<span class='v6161-step-marker v6161-step-{escape(status)}' aria-hidden='true'></span>", unsafe_allow_html=True)
+            if st.button(
+                f"{index}. {spec['short']}",
+                use_container_width=True,
+                disabled=status == "locked",
+                key=f"guided_workflow_step_{int(project['id'])}_{key}",
+                help=copy["locked_help"] if status == "locked" else spec["description"],
+            ):
+                _set_workspace_section(step["section"])
+            st.caption(copy["status"].get(status, status))
+
+    with st.container(border=True):
+        left, right = st.columns([4.7, 1.3], vertical_alignment="center")
+        with left:
+            st.caption(copy["current_step"])
+            st.markdown(f"### {current_spec['title']}")
+            st.write(current_spec["description"])
+            st.caption(f"{current_spec['outcome']}")
+        with right:
+            if st.button(
+                current_spec["action"],
+                type="primary",
+                use_container_width=True,
+                key=f"guided_continue_{int(project['id'])}_{current_key}",
+            ):
+                _set_workspace_section(guided_teacher_workflow.section_for_step(current_key))
+
+    lesson = dict(state.get("lesson_progress") or {})
+    if int(lesson.get("required") or 0) > 0:
+        approved = int(lesson.get("approved") or 0)
+        required = int(lesson.get("required") or 0)
+        st.progress(approved / max(required, 1), text=f"{copy['lesson_progress']}: {approved}/{required}")
+
+
+def render_project_quality_summary(project: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    labels = {
+        "ar": {
+            "title": "المراجعة والجودة",
+            "intro": "راجع جاهزية المشروع قبل المعاينة والنشر. تعرض هذه الصفحة نقاط الاكتمال والاعتماد دون إغراق الواجهة بالتفاصيل التقنية.",
+            "evidence": "الأدلة المعتمدة",
+            "blueprint": "المخطط المعتمد",
+            "blocks": "أجزاء الدروس المعتمدة",
+            "phase": "التدقيق النهائي",
+            "ready": "جاهز",
+            "pending": "غير مكتمل",
+            "outputs": "عرض جميع المخرجات والإصدارات",
+            "next": "أكمل العناصر غير الجاهزة، ثم انتقل إلى المعاينة والنشر.",
+        },
+        "fr": {
+            "title": "Révision et qualité", "intro": "Vérifiez la préparation du projet avant l’aperçu et la publication.",
+            "evidence": "Preuves approuvées", "blueprint": "Plan approuvé", "blocks": "Blocs approuvés",
+            "phase": "Contrôle final", "ready": "Prêt", "pending": "Incomplet", "outputs": "Afficher les productions et versions",
+            "next": "Terminez les éléments incomplets avant la publication.",
+        },
+        "en": {
+            "title": "Review and quality", "intro": "Check project readiness before preview and publication.",
+            "evidence": "Approved evidence", "blueprint": "Approved blueprint", "blocks": "Approved lesson blocks",
+            "phase": "Final quality phase", "ready": "Ready", "pending": "Incomplete", "outputs": "Show all outputs and versions",
+            "next": "Complete pending items before preview and publication.",
+        },
+    }.get(lang)
+    state = guided_teacher_workflow.load_workflow_state(project)
+    evidence = db.latest_teacher_evidence_for_project(int(project["id"]), approved_only=True)
+    blueprint = db.latest_teacher_blueprint(int(project["id"]), approved_only=True)
+    lesson = dict(state.get("lesson_progress") or {})
+    outputs = db.teacher_project_phase_outputs(int(project["id"]))
+    final_ready = str((outputs.get(11) or {}).get("status") or "") == "completed"
+
+    st.markdown(f"## {labels['title']}")
+    st.write(labels["intro"])
+    cols = st.columns(4)
+    checks = [
+        (labels["evidence"], bool(evidence)),
+        (labels["blueprint"], bool(blueprint)),
+        (labels["blocks"], bool(int(lesson.get("required") or 0) > 0 and int(lesson.get("approved") or 0) >= int(lesson.get("required") or 0))),
+        (labels["phase"], final_ready),
+    ]
+    for col, (title, ready) in zip(cols, checks):
+        with col:
+            with st.container(border=True):
+                st.caption(title)
+                st.markdown(f"### {'✓' if ready else '○'} {labels['ready'] if ready else labels['pending']}")
+    if not all(value for _, value in checks):
+        st.info(labels["next"])
+    with st.expander(labels["outputs"], expanded=False):
+        render_outputs(project)
+
+
 def _status_label(status: str, copy: Dict[str, str]) -> str:
     clean = str(status or "draft").strip().lower()
     return copy.get(clean, clean.title())
@@ -1883,15 +2046,19 @@ def render_projects_grid() -> None:
                             st.rerun()
                     with b2:
                         if st.button(copy["continue"], use_container_width=True, key=f"continue_teacher_project_{int(project['id'])}"):
-                            _open_project(int(project["id"]), "production")
+                            full_project = db.get_teacher_project(int(project["id"]), _current_teacher_username()) or project
+                            journey = guided_teacher_workflow.load_workflow_state(full_project)
+                            resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
+                            _open_project(int(project["id"]), resume_section)
                             st.rerun()
 
 
-def _project_header(project: Dict[str, Any]) -> None:
+def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, Any]] = None) -> None:
     copy = project_workspace_ui()
-    outputs = db.teacher_project_phase_outputs(int(project["id"]))
-    completed = sum(1 for row in outputs.values() if str(row.get("status")) == "completed")
-    pct = int(round(100 * completed / max(len(PHASES), 1)))
+    workflow_state = workflow_state or guided_teacher_workflow.load_workflow_state(project)
+    completed = int(workflow_state.get("completed_count") or 0)
+    total = int(workflow_state.get("total_steps") or 7)
+    pct = int(workflow_state.get("progress_pct") or 0)
     c_back, c_title, c_status = st.columns([1.15, 5.1, 1.35], vertical_alignment="center")
     with c_back:
         if st.button(f"← {copy['back']}", use_container_width=True, key="teacher_back_to_projects"):
@@ -1904,7 +2071,7 @@ def _project_header(project: Dict[str, Any]) -> None:
         st.write(f"{project.get('domain','')} · {project.get('program_name') or ''} · {project.get('unit_title','')}")
     with c_status:
         st.metric(copy["status"], _status_label(str(project.get("status") or "draft"), copy))
-    st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{len(PHASES)}")
+    st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{total}")
 
 
 def _render_phase_map(project: Dict[str, Any]) -> None:
@@ -1943,7 +2110,9 @@ def render_project_overview(project: Dict[str, Any]) -> None:
             st.write(p.get("assessment_preferences") or "—")
             st.markdown("**Platform components**")
             st.write(", ".join(p.get("platform_components") or []) or "—")
-    _render_phase_map(project)
+    phase_label = {"ar": "التفاصيل التقنية لمراحل التوليد القديمة", "fr": "Détails techniques des phases de génération", "en": "Technical phase-generation details"}.get(i18n.current_lang(st), "Technical phase-generation details")
+    with st.expander(phase_label, expanded=False):
+        _render_phase_map(project)
 
 
 def _latest_completed_output(project_id: int, phase: int) -> str:
@@ -2148,48 +2317,47 @@ def render_project_workspace() -> None:
         st.error("Project not found or access denied.")
         st.session_state.teacher_studio_view = "projects"
         return
-    _project_header(project)
-    copy = project_workspace_ui()
-    sections = ["overview", "production", "evidence", "blueprint", "blocks", "assets", "publish"]
-    labels = {
-        "overview": copy["overview"],
-        "production": copy["production"],
-        "evidence": copy["evidence"],
-        "blueprint": copy["blueprint"],
-        "blocks": copy["blocks"],
-        "assets": copy["assets"],
-        "publish": copy["publish"],
-    }
-    # Apply queued navigation before the radio is created. Streamlit permits
-    # state initialization here, but not after the widget with the same key has
-    # been instantiated.
+
+    state = guided_teacher_workflow.load_workflow_state(project)
+    _project_header(project, state)
+    _render_guided_workflow(project, state)
+
+    sections = [step["section"] for step in guided_teacher_workflow.WORKFLOW_STEPS]
     pending_section = st.session_state.pop("teacher_workspace_section_pending", None)
     if pending_section in sections:
         st.session_state.teacher_workspace_section = pending_section
-    if st.session_state.get("teacher_workspace_section") not in sections:
-        st.session_state.teacher_workspace_section = "overview"
-    section = st.radio(
-        "Project workspace section", sections, format_func=lambda x: labels[x], horizontal=True,
-        label_visibility="collapsed", key="teacher_workspace_section",
-    )
+    current_section = st.session_state.get("teacher_workspace_section")
+    if current_section not in sections:
+        current_section = guided_teacher_workflow.section_for_step(str(state.get("current_key") or "setup"))
+        st.session_state.teacher_workspace_section = current_section
+
+    selected_step = guided_teacher_workflow.step_for_section(str(current_section))
+    selected_status = str((state.get("statuses") or {}).get(selected_step) or "locked")
+    if selected_status == "locked":
+        current_section = guided_teacher_workflow.section_for_step(str(state.get("current_key") or "setup"))
+        st.session_state.teacher_workspace_section = current_section
+
     st.divider()
-    if section == "overview":
-        render_project_overview(project)
-    elif section == "production":
-        render_project_form(project)
-        refreshed = db.get_teacher_project(int(project_id), _current_teacher_username()) or project
-        st.divider()
-        render_prompt_and_generation(refreshed)
-    elif section == "evidence":
-        render_evidence_synthesis(project)
-    elif section == "blueprint":
-        render_lesson_blueprint(project)
-    elif section == "blocks":
-        render_lesson_blocks(project)
-    elif section == "assets":
-        render_outputs(project)
-    else:
-        render_project_publication(project)
+    try:
+        if current_section == "overview":
+            render_project_overview(project)
+            edit_label = {"ar": "تعديل إعدادات المشروع", "fr": "Modifier les paramètres du projet", "en": "Edit project setup"}.get(i18n.current_lang(st), "Edit project setup")
+            with st.expander(edit_label, expanded=False):
+                render_project_form(project)
+        elif current_section == "production":
+            render_prompt_and_generation(project)
+        elif current_section == "evidence":
+            render_evidence_synthesis(project)
+        elif current_section == "blueprint":
+            render_lesson_blueprint(project)
+        elif current_section == "blocks":
+            render_lesson_blocks(project)
+        elif current_section == "assets":
+            render_project_quality_summary(project)
+        else:
+            render_project_publication(project)
+    except Exception as exc:
+        _render_workspace_exception(exc)
 
 
 def render_all_outputs() -> None:
@@ -2257,7 +2425,11 @@ def render_teacher_app() -> None:
         st.warning(str(flash_warning))
     flash_error = st.session_state.pop("teacher_flash_error", None)
     if flash_error:
-        st.error(str(flash_error))
+        friendly, technical = _friendly_teacher_error(flash_error)
+        st.error(friendly)
+        details_label = {"ar": "التفاصيل التقنية", "fr": "Détails techniques", "en": "Technical details"}.get(i18n.current_lang(st), "Technical details")
+        with st.expander(details_label, expanded=False):
+            st.code(technical, language="text")
     views = ["projects", "new", "workspace", "outputs"]
     if st.session_state.get("teacher_studio_view") not in views:
         st.session_state.teacher_studio_view = "projects"
