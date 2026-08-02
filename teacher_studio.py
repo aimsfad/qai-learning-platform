@@ -22,6 +22,7 @@ import db
 import i18n
 import router
 import web_research_engine
+import branding
 from security import verify_password
 
 
@@ -2254,6 +2255,53 @@ def render_project_overview(project: Dict[str, Any]) -> None:
     phase_label = {"ar": "التفاصيل التقنية لمراحل التوليد القديمة", "fr": "Détails techniques des phases de génération", "en": "Technical phase-generation details"}.get(lang, "Technical phase-generation details")
     with st.expander(phase_label, expanded=False):
         _render_phase_map(project)
+
+
+def _latest_completed_output(project_id: int, phase: int) -> str:
+    """Return the latest validated legacy phase output used by learner previews."""
+    row = db.teacher_project_phase_outputs(int(project_id)).get(int(phase))
+    if not row or str(row.get("status")) != "completed":
+        return ""
+    return str(row.get("response_text") or "").strip()
+
+
+def render_project_student_preview(project: Dict[str, Any], public_view: bool = False) -> None:
+    """Render a learner-safe preview of a teacher-authored course."""
+    copy = project_workspace_ui()
+    p = _project_defaults(project)
+    direction = i18n.direction(i18n.current_lang(st))
+    st.markdown(
+        f"<section class='v692-course-preview-hero' dir='{direction}'>"
+        f"<span>{escape(copy['educator_content'])}</span>"
+        f"<h1>{escape(str(p.get('unit_title') or p.get('project_name') or ''))}</h1>"
+        f"<p>{escape(str(p.get('target_concept') or ''))}</p>"
+        f"<div><b>{escape(str(p.get('domain') or ''))}</b><i>{escape(str(p.get('learner_level') or ''))}</i>"
+        f"<i>{escape(str(p.get('expected_duration') or ''))}</i></div></section>",
+        unsafe_allow_html=True,
+    )
+    st.caption(copy["preview_note"])
+    lesson_text = _latest_completed_output(int(p["id"]), 3)
+    activity_text = _latest_completed_output(int(p["id"]), 6)
+    assessment_text = _latest_completed_output(int(p["id"]), 8)
+    coach_text = _latest_completed_output(int(p["id"]), 7)
+    tabs = st.tabs([copy["lesson"], copy["activity"], copy["assessment"], copy["ai_coach"], copy["references"]])
+    with tabs[0]:
+        if lesson_text:
+            st.markdown(lesson_text)
+        else:
+            st.info(copy["not_ready"])
+            st.markdown(str(p.get("source_material") or p.get("target_concept") or ""))
+    with tabs[1]:
+        st.markdown(activity_text) if activity_text else st.info(copy["not_ready"])
+    with tabs[2]:
+        st.markdown(assessment_text) if assessment_text else st.info(copy["not_ready"])
+    with tabs[3]:
+        st.markdown(coach_text) if coach_text else st.info(copy["not_ready"])
+    with tabs[4]:
+        st.markdown(str(p.get("source_material") or "—"))
+        if p.get("additional_notes"):
+            st.markdown("---")
+            st.write(p.get("additional_notes"))
 
 
 def render_project_publication(project: Dict[str, Any]) -> None:

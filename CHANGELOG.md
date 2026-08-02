@@ -1,3 +1,9 @@
+# V6.16.3.1 — Frontend runtime hotfix
+
+- Imported `branding` in `teacher_studio.py` to fix the teacher-login `NameError`.
+- Restored `render_project_student_preview` used by publication and learner catalogue views.
+- Added unresolved-global-name validation to prevent similar runtime regressions.
+
 # V6.16.3 - Professional Layout & Frontend Polish
 
 - Fixed `StreamlitInvalidVerticalAlignmentError` by replacing unsupported `vertical_alignment="stretch"` with `"top"`.
