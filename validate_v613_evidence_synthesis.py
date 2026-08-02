@@ -266,7 +266,7 @@ def main() -> None:
     ui_text = (ROOT / "teacher_studio.py").read_text(encoding="utf-8")
     assert "render_evidence_synthesis" in ui_text
     assert "تركيب الأدلة" in ui_text
-    assert 'sections = ["overview", "production", "evidence", "blueprint", "blocks", "assets", "publish"]' in ui_text
+    assert 'guided_teacher_workflow.WORKFLOW_STEPS' in ui_text
 
     print("V6.13 evidence synthesis foundation validation passed.")
 

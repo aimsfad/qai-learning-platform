@@ -2881,3 +2881,111 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
   overflow-x: auto;
   font-size: .94rem;
 }
+
+/* ========================================================================== 
+   3alimnIA V6.16.1 - Guided Teacher Workflow UI
+   A clear seven-stage course-building journey for teacher projects.
+   ========================================================================== */
+.v6161-guided-workflow-marker,
+.v6161-step-marker { display:none; }
+
+[data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) {
+  margin-top:.35rem;
+  padding:1rem 1.1rem 1.15rem;
+  border:1px solid rgba(37,99,235,.16);
+  border-radius:24px;
+  background:linear-gradient(180deg,rgba(239,246,255,.72),rgba(255,255,255,.9));
+  box-shadow:0 14px 36px rgba(15,23,42,.055);
+}
+
+[data-testid="stColumn"]:has(.v6161-step-marker) {
+  min-width:0;
+}
+[data-testid="stColumn"]:has(.v6161-step-marker) [data-testid="stButton"] button {
+  min-height:52px;
+  padding:.55rem .45rem;
+  border-radius:14px;
+  font-size:.86rem;
+  line-height:1.25;
+  font-weight:750;
+  white-space:normal;
+  border:1px solid rgba(148,163,184,.34);
+  background:#fff;
+  color:#334155;
+  box-shadow:none;
+}
+[data-testid="stColumn"]:has(.v6161-step-marker) [data-testid="stCaptionContainer"] {
+  margin-top:.2rem;
+  text-align:center;
+  font-size:.72rem;
+}
+[data-testid="stColumn"]:has(.v6161-step-completed) [data-testid="stButton"] button {
+  background:linear-gradient(135deg,#ecfdf5,#f0fdf4);
+  border-color:rgba(16,185,129,.42);
+  color:#047857;
+}
+[data-testid="stColumn"]:has(.v6161-step-in_progress) [data-testid="stButton"] button,
+[data-testid="stColumn"]:has(.v6161-step-available) [data-testid="stButton"] button {
+  background:linear-gradient(135deg,#eff6ff,#eef2ff);
+  border-color:rgba(37,99,235,.45);
+  color:#1d4ed8;
+  box-shadow:0 8px 20px rgba(37,99,235,.09);
+}
+[data-testid="stColumn"]:has(.v6161-step-review) [data-testid="stButton"] button {
+  background:linear-gradient(135deg,#fff7ed,#fffbeb);
+  border-color:rgba(245,158,11,.48);
+  color:#b45309;
+}
+[data-testid="stColumn"]:has(.v6161-step-locked) [data-testid="stButton"] button {
+  background:#f8fafc;
+  border-color:rgba(148,163,184,.22);
+  color:#94a3b8;
+  opacity:.78;
+}
+
+[data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) [data-testid="stProgress"] {
+  margin-bottom:.8rem;
+}
+[data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) [data-testid="stVerticalBlockBorderWrapper"] {
+  border-color:rgba(37,99,235,.14) !important;
+  background:rgba(255,255,255,.76) !important;
+  border-radius:18px !important;
+}
+
+/* Reduce visual noise in teacher workspaces while keeping advanced controls accessible. */
+[data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) + div [data-testid="stExpander"] {
+  border-radius:16px;
+}
+
+@media (max-width:1180px) {
+  [data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) [data-testid="stHorizontalBlock"]:has(.v6161-step-marker) {
+    gap:.35rem;
+  }
+  [data-testid="stColumn"]:has(.v6161-step-marker) [data-testid="stButton"] button {
+    min-height:58px;
+    font-size:.78rem;
+    padding:.45rem .28rem;
+  }
+}
+
+@media (max-width:760px) {
+  [data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) {
+    padding:.8rem;
+    border-radius:18px;
+  }
+  [data-testid="stVerticalBlock"]:has(.v6161-guided-workflow-marker) [data-testid="stHorizontalBlock"]:has(.v6161-step-marker) {
+    overflow-x:auto;
+    display:flex;
+    flex-wrap:nowrap;
+    padding-bottom:.35rem;
+    scrollbar-width:thin;
+  }
+  [data-testid="stColumn"]:has(.v6161-step-marker) {
+    flex:0 0 128px !important;
+    min-width:128px !important;
+  }
+  [data-testid="stColumn"]:has(.v6161-step-marker) [data-testid="stButton"] button {
+    min-height:52px;
+    font-size:.8rem;
+  }
+}

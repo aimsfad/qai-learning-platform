@@ -1,3 +1,15 @@
+# V6.16.1 - Guided Teacher Workflow UI
+
+- Replaced the flat project-section selector with a seven-stage guided course-building journey.
+- Added state-driven completed, current, review, available, and locked workflow statuses.
+- Added a current-step card and resume action that returns teachers to the first unfinished stage.
+- Added project-level and lesson-block progress indicators.
+- Moved phase prompt, token-budget, provider, and export controls into an advanced expander.
+- Added a compact review-and-quality readiness dashboard.
+- Added friendly provider and rendering error messages with collapsible technical details.
+- Added responsive desktop/tablet/mobile workflow styling.
+- Added `guided_teacher_workflow.py` and `validate_v6161_guided_teacher_workflow.py`.
+
 # V6.15 — Blueprint Editor and Immutable Versioning
 
 - Added a session-based teacher editor for units, lessons, learning outcomes, concept/source links, durations, prerequisites, and misconceptions.

@@ -177,7 +177,7 @@ def main() -> None:
     ui = (ROOT / "teacher_studio.py").read_text(encoding="utf-8")
     assert "render_lesson_blueprint" in ui
     assert "مخطط المقرر" in ui
-    assert 'sections = ["overview", "production", "evidence", "blueprint", "blocks", "assets", "publish"]' in ui
+    assert 'guided_teacher_workflow.WORKFLOW_STEPS' in ui
 
     print("V6.14 evidence-to-lesson blueprint validation passed.")
 
