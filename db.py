@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.13-evidence-synthesis-foundation"
+APP_VERSION = "v6.15-blueprint-editor-versioning"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -384,6 +384,104 @@ def init_db() -> None:
         )
         """,
         f"""
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_runs (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            evidence_run_id INTEGER NOT NULL,
+            prompt_text TEXT,
+            response_text TEXT,
+            blueprint_json TEXT NOT NULL,
+            quality_json TEXT,
+            provider TEXT,
+            model TEXT,
+            status TEXT,
+            diagnostic TEXT,
+            unit_count INTEGER DEFAULT 0,
+            lesson_count INTEGER DEFAULT 0,
+            outcome_count INTEGER DEFAULT 0,
+            latency_ms INTEGER DEFAULT 0,
+            is_fallback_used INTEGER DEFAULT 0,
+            approved_by_teacher INTEGER DEFAULT 0,
+            approved_at {created_default},
+            created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_units (
+            id {id_col},
+            blueprint_run_id INTEGER NOT NULL,
+            unit_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            sequence_order INTEGER DEFAULT 0,
+            lesson_ids_json TEXT,
+            concept_ids_json TEXT,
+            source_ids_json TEXT,
+            UNIQUE(blueprint_run_id, unit_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_lessons (
+            id {id_col},
+            blueprint_run_id INTEGER NOT NULL,
+            unit_id TEXT NOT NULL,
+            lesson_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            sequence_order INTEGER DEFAULT 0,
+            duration_minutes INTEGER DEFAULT 45,
+            prerequisites_json TEXT,
+            concept_ids_json TEXT,
+            source_ids_json TEXT,
+            lesson_sequence_json TEXT,
+            misconceptions_json TEXT,
+            activities_json TEXT,
+            assessments_json TEXT,
+            status TEXT DEFAULT 'teacher_review',
+            UNIQUE(blueprint_run_id, lesson_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_outcomes (
+            id {id_col},
+            blueprint_run_id INTEGER NOT NULL,
+            lesson_id TEXT NOT NULL,
+            outcome_id TEXT NOT NULL,
+            bloom_level TEXT,
+            verb TEXT,
+            object_text TEXT,
+            condition_text TEXT,
+            success_criterion TEXT,
+            activity_id TEXT,
+            assessment_id TEXT,
+            UNIQUE(blueprint_run_id, outcome_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_edges (
+            id {id_col},
+            blueprint_run_id INTEGER NOT NULL,
+            from_concept_id TEXT NOT NULL,
+            to_concept_id TEXT NOT NULL,
+            relation_type TEXT DEFAULT 'prerequisite'
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_blueprint_change_log (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER NOT NULL,
+            parent_run_id INTEGER,
+            teacher_username TEXT NOT NULL,
+            action TEXT NOT NULL,
+            entity_type TEXT,
+            entity_id TEXT,
+            before_json TEXT,
+            after_json TEXT,
+            change_summary TEXT,
+            created_at {created_default}
+        )
+        """,
+        f"""
         CREATE TABLE IF NOT EXISTS adaptive_recommendations (
             id {id_col},
             student_id INTEGER UNIQUE NOT NULL,
@@ -435,6 +533,12 @@ def init_db() -> None:
     ensure_column("teacher_evidence_runs", "approved_by_teacher", "INTEGER DEFAULT 0")
     ensure_column("teacher_evidence_runs", "approved_at", "TEXT")
     ensure_column("teacher_evidence_runs", "quality_json", "TEXT")
+    ensure_column("teacher_blueprint_runs", "parent_run_id", "INTEGER")
+    ensure_column("teacher_blueprint_runs", "revision_number", "INTEGER DEFAULT 1")
+    ensure_column("teacher_blueprint_runs", "change_summary", "TEXT")
+    ensure_column("teacher_blueprint_runs", "edited_by", "TEXT")
+    ensure_column("teacher_blueprint_runs", "edit_source", "TEXT DEFAULT 'generated'")
+    ensure_column("teacher_blueprint_lessons", "sequence_order", "INTEGER DEFAULT 0")
 
 
 def ensure_column(table: str, column: str, col_type: str) -> None:
@@ -1855,7 +1959,15 @@ def save_teacher_research_run(
     )
 
 
+def teacher_research_run(run_id: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        "SELECT * FROM teacher_research_runs WHERE id=:run_id",
+        {"run_id": int(run_id)},
+    )
+
+
 def latest_teacher_research(project_id: int, phase_number: int) -> Optional[Dict[str, Any]]:
+    """Return the latest research attempt, including failed refresh attempts."""
     return query_one(
         """
         SELECT * FROM teacher_research_runs
@@ -1863,6 +1975,32 @@ def latest_teacher_research(project_id: int, phase_number: int) -> Optional[Dict
         ORDER BY id DESC LIMIT 1
         """,
         {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def latest_usable_teacher_research(
+    project_id: int,
+    phase_number: int,
+    research_mode: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return the newest completed/reviewable dossier, ignoring failed refreshes."""
+    params: Dict[str, Any] = {
+        "project_id": int(project_id),
+        "phase_number": int(phase_number),
+    }
+    mode_clause = ""
+    if research_mode:
+        params["research_mode"] = str(research_mode).strip().lower()
+        mode_clause = " AND LOWER(research_mode)=:research_mode"
+    return query_one(
+        f"""
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+          AND status IN ('completed', 'needs_review')
+          {mode_clause}
+        ORDER BY id DESC LIMIT 1
+        """,
+        params,
     )
 
 
@@ -2115,6 +2253,322 @@ def approve_teacher_evidence_run(run_id: int, project_id: int, teacher_username:
         {"updated_at": utc_now(), "id": int(project_id), "username": str(teacher_username)},
     )
 
+
+
+def latest_teacher_evidence_for_project(project_id: int, *, approved_only: bool = False) -> Optional[Dict[str, Any]]:
+    sql = "SELECT id FROM teacher_evidence_runs WHERE project_id=:project_id"
+    if approved_only:
+        sql += " AND approved_by_teacher=1"
+    sql += " ORDER BY id DESC LIMIT 1"
+    row = query_one(sql, {"project_id": int(project_id)})
+    return teacher_evidence_bundle(int(row["id"])) if row else None
+
+
+def save_teacher_blueprint_bundle(
+    *,
+    project_id: int,
+    evidence_run_id: int,
+    blueprint: Dict[str, Any],
+    quality: Dict[str, Any],
+    prompt_text: str = "",
+    response_text: str = "",
+    provider: str = "deterministic",
+    model: str = "evidence-blueprint-compiler-v1",
+    status: str = "needs_review",
+    diagnostic: str = "",
+    latency_ms: int = 0,
+    is_fallback_used: bool = False,
+    parent_run_id: Optional[int] = None,
+    revision_number: Optional[int] = None,
+    change_summary: str = "",
+    edited_by: str = "",
+    edit_source: str = "generated",
+) -> int:
+    units = list(blueprint.get("units") or [])
+    lessons = list(blueprint.get("lessons") or [])
+    outcomes = list(blueprint.get("outcomes") or [])
+    edges = list(blueprint.get("concept_edges") or [])
+    if revision_number is None:
+        if parent_run_id:
+            parent = query_one("SELECT revision_number FROM teacher_blueprint_runs WHERE id=:id", {"id": int(parent_run_id)}) or {}
+            revision_number = int(parent.get("revision_number") or 1) + 1
+        else:
+            previous = query_one(
+                "SELECT MAX(revision_number) AS value FROM teacher_blueprint_runs WHERE project_id=:project_id",
+                {"project_id": int(project_id)},
+            ) or {}
+            revision_number = int(previous.get("value") or 0) + 1
+    run_id = execute_returning_id(
+        """
+        INSERT INTO teacher_blueprint_runs
+        (project_id, evidence_run_id, prompt_text, response_text, blueprint_json, quality_json,
+         provider, model, status, diagnostic, unit_count, lesson_count, outcome_count,
+         latency_ms, is_fallback_used, parent_run_id, revision_number, change_summary, edited_by, edit_source, created_at)
+        VALUES
+        (:project_id, :evidence_run_id, :prompt_text, :response_text, :blueprint_json, :quality_json,
+         :provider, :model, :status, :diagnostic, :unit_count, :lesson_count, :outcome_count,
+         :latency_ms, :is_fallback_used, :parent_run_id, :revision_number, :change_summary, :edited_by, :edit_source, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id),
+            "evidence_run_id": int(evidence_run_id),
+            "prompt_text": str(prompt_text or ""),
+            "response_text": str(response_text or ""),
+            "blueprint_json": json.dumps(blueprint or {}, ensure_ascii=False),
+            "quality_json": json.dumps(quality or {}, ensure_ascii=False),
+            "provider": str(provider or ""),
+            "model": str(model or ""),
+            "status": str(status or "needs_review"),
+            "diagnostic": str(diagnostic or ""),
+            "unit_count": len(units),
+            "lesson_count": len(lessons),
+            "outcome_count": len(outcomes),
+            "latency_ms": int(latency_ms or 0),
+            "is_fallback_used": 1 if is_fallback_used else 0,
+            "parent_run_id": int(parent_run_id) if parent_run_id else None,
+            "revision_number": int(revision_number or 1),
+            "change_summary": str(change_summary or ""),
+            "edited_by": str(edited_by or ""),
+            "edit_source": str(edit_source or "generated"),
+            "created_at": utc_now(),
+        },
+    )
+    for unit in units:
+        exec_sql(
+            """
+            INSERT INTO teacher_blueprint_units
+            (blueprint_run_id, unit_id, title, description, sequence_order, lesson_ids_json, concept_ids_json, source_ids_json)
+            VALUES (:blueprint_run_id, :unit_id, :title, :description, :sequence_order, :lesson_ids_json, :concept_ids_json, :source_ids_json)
+            """,
+            {
+                "blueprint_run_id": int(run_id),
+                "unit_id": str(unit.get("unit_id") or ""),
+                "title": str(unit.get("title") or ""),
+                "description": str(unit.get("description") or ""),
+                "sequence_order": int(unit.get("sequence_order") or 0),
+                "lesson_ids_json": json.dumps(unit.get("lesson_ids") or [], ensure_ascii=False),
+                "concept_ids_json": json.dumps(unit.get("concept_ids") or [], ensure_ascii=False),
+                "source_ids_json": json.dumps(unit.get("source_ids") or [], ensure_ascii=False),
+            },
+        )
+    for lesson in lessons:
+        exec_sql(
+            """
+            INSERT INTO teacher_blueprint_lessons
+            (blueprint_run_id, unit_id, lesson_id, title, sequence_order, duration_minutes, prerequisites_json,
+             concept_ids_json, source_ids_json, lesson_sequence_json, misconceptions_json,
+             activities_json, assessments_json, status)
+            VALUES (:blueprint_run_id, :unit_id, :lesson_id, :title, :sequence_order, :duration_minutes, :prerequisites_json,
+                    :concept_ids_json, :source_ids_json, :lesson_sequence_json, :misconceptions_json,
+                    :activities_json, :assessments_json, :status)
+            """,
+            {
+                "blueprint_run_id": int(run_id),
+                "unit_id": str(lesson.get("unit_id") or ""),
+                "lesson_id": str(lesson.get("lesson_id") or ""),
+                "title": str(lesson.get("title") or ""),
+                "sequence_order": int(lesson.get("sequence_order") or 0),
+                "duration_minutes": int(lesson.get("estimated_duration_minutes") or 45),
+                "prerequisites_json": json.dumps(lesson.get("prerequisites") or [], ensure_ascii=False),
+                "concept_ids_json": json.dumps(lesson.get("concept_ids") or [], ensure_ascii=False),
+                "source_ids_json": json.dumps(lesson.get("source_ids") or [], ensure_ascii=False),
+                "lesson_sequence_json": json.dumps(lesson.get("lesson_sequence") or [], ensure_ascii=False),
+                "misconceptions_json": json.dumps(lesson.get("misconceptions") or [], ensure_ascii=False),
+                "activities_json": json.dumps(lesson.get("activities") or [], ensure_ascii=False),
+                "assessments_json": json.dumps(lesson.get("assessments") or [], ensure_ascii=False),
+                "status": str(lesson.get("status") or "teacher_review"),
+            },
+        )
+    for outcome in outcomes:
+        exec_sql(
+            """
+            INSERT INTO teacher_blueprint_outcomes
+            (blueprint_run_id, lesson_id, outcome_id, bloom_level, verb, object_text,
+             condition_text, success_criterion, activity_id, assessment_id)
+            VALUES (:blueprint_run_id, :lesson_id, :outcome_id, :bloom_level, :verb, :object_text,
+                    :condition_text, :success_criterion, :activity_id, :assessment_id)
+            """,
+            {
+                "blueprint_run_id": int(run_id),
+                "lesson_id": str(outcome.get("lesson_id") or ""),
+                "outcome_id": str(outcome.get("outcome_id") or ""),
+                "bloom_level": str(outcome.get("bloom_level") or ""),
+                "verb": str(outcome.get("verb") or ""),
+                "object_text": str(outcome.get("object") or outcome.get("object_text") or ""),
+                "condition_text": str(outcome.get("condition") or outcome.get("condition_text") or ""),
+                "success_criterion": str(outcome.get("success_criterion") or ""),
+                "activity_id": str(outcome.get("activity_id") or ""),
+                "assessment_id": str(outcome.get("assessment_id") or ""),
+            },
+        )
+    for edge in edges:
+        exec_sql(
+            """
+            INSERT INTO teacher_blueprint_edges
+            (blueprint_run_id, from_concept_id, to_concept_id, relation_type)
+            VALUES (:blueprint_run_id, :from_concept_id, :to_concept_id, :relation_type)
+            """,
+            {
+                "blueprint_run_id": int(run_id),
+                "from_concept_id": str(edge.get("from_concept_id") or ""),
+                "to_concept_id": str(edge.get("to_concept_id") or ""),
+                "relation_type": str(edge.get("relation_type") or "prerequisite"),
+            },
+        )
+    return int(run_id)
+
+
+def teacher_blueprint_bundle(run_id: int) -> Optional[Dict[str, Any]]:
+    run = query_one("SELECT * FROM teacher_blueprint_runs WHERE id=:id", {"id": int(run_id)})
+    if not run:
+        return None
+    try:
+        blueprint = json.loads(run.get("blueprint_json") or "{}")
+    except Exception:
+        blueprint = {}
+    try:
+        quality = json.loads(run.get("quality_json") or "{}")
+    except Exception:
+        quality = {}
+    run["blueprint"] = blueprint
+    run["quality"] = quality
+    run["units"] = list(blueprint.get("units") or [])
+    run["lessons"] = list(blueprint.get("lessons") or [])
+    run["outcomes"] = list(blueprint.get("outcomes") or [])
+    run["concept_edges"] = list(blueprint.get("concept_edges") or [])
+    run["concepts"] = list(blueprint.get("concepts") or [])
+    return run
+
+
+def latest_teacher_blueprint(project_id: int, *, approved_only: bool = False) -> Optional[Dict[str, Any]]:
+    sql = "SELECT id FROM teacher_blueprint_runs WHERE project_id=:project_id"
+    if approved_only:
+        sql += " AND approved_by_teacher=1"
+    sql += " ORDER BY id DESC LIMIT 1"
+    row = query_one(sql, {"project_id": int(project_id)})
+    return teacher_blueprint_bundle(int(row["id"])) if row else None
+
+
+def approve_teacher_blueprint_run(run_id: int, project_id: int, teacher_username: str) -> None:
+    project = get_teacher_project(int(project_id), str(teacher_username))
+    if not project:
+        raise ValueError("Teacher project not found or access denied")
+    run = query_one(
+        "SELECT * FROM teacher_blueprint_runs WHERE id=:id AND project_id=:project_id",
+        {"id": int(run_id), "project_id": int(project_id)},
+    )
+    if not run:
+        raise ValueError("Lesson blueprint run not found")
+    if str(run.get("status") or "") == "error":
+        raise ValueError("A blueprint with errors cannot be approved")
+    exec_sql(
+        """
+        UPDATE teacher_blueprint_runs
+        SET approved_by_teacher=1, approved_at=:approved_at, status='approved'
+        WHERE id=:id AND project_id=:project_id
+        """,
+        {"approved_at": utc_now(), "id": int(run_id), "project_id": int(project_id)},
+    )
+    exec_sql(
+        "UPDATE teacher_projects SET updated_at=:updated_at WHERE id=:id AND teacher_username=:username",
+        {"updated_at": utc_now(), "id": int(project_id), "username": str(teacher_username)},
+    )
+    try:
+        log_teacher_blueprint_change(
+            project_id=int(project_id), blueprint_run_id=int(run_id),
+            parent_run_id=run.get("parent_run_id"), teacher_username=str(teacher_username),
+            action="approved", entity_type="blueprint", entity_id=str(run_id),
+            before={"approved_by_teacher": 0, "status": run.get("status")},
+            after={"approved_by_teacher": 1, "status": "approved"},
+            change_summary="Teacher approved blueprint revision.",
+        )
+    except Exception:
+        pass
+
+
+def teacher_blueprint_history_df(project_id: int) -> pd.DataFrame:
+    frame = query_df(
+        """
+        SELECT id, parent_run_id, revision_number, status, approved_by_teacher, approved_at,
+               unit_count, lesson_count, outcome_count, quality_json, change_summary,
+               edited_by, edit_source, provider, model, created_at
+        FROM teacher_blueprint_runs
+        WHERE project_id=:project_id
+        ORDER BY id DESC
+        """,
+        {"project_id": int(project_id)},
+    )
+    if frame.empty:
+        frame["readiness_value"] = pd.Series(dtype=float)
+        return frame
+    def _readiness(raw: Any) -> float:
+        try:
+            return float(json.loads(raw or "{}").get("readiness_score") or 0.0)
+        except Exception:
+            return 0.0
+    frame["readiness_value"] = frame["quality_json"].map(_readiness)
+    return frame
+
+
+def log_teacher_blueprint_change(
+    *,
+    project_id: int,
+    blueprint_run_id: int,
+    parent_run_id: Optional[int],
+    teacher_username: str,
+    action: str,
+    entity_type: str = "blueprint",
+    entity_id: str = "",
+    before: Optional[Dict[str, Any]] = None,
+    after: Optional[Dict[str, Any]] = None,
+    change_summary: str = "",
+) -> int:
+    return execute_returning_id(
+        """
+        INSERT INTO teacher_blueprint_change_log
+        (project_id, blueprint_run_id, parent_run_id, teacher_username, action,
+         entity_type, entity_id, before_json, after_json, change_summary, created_at)
+        VALUES
+        (:project_id, :blueprint_run_id, :parent_run_id, :teacher_username, :action,
+         :entity_type, :entity_id, :before_json, :after_json, :change_summary, :created_at)
+        """ + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+            "parent_run_id": int(parent_run_id) if parent_run_id else None,
+            "teacher_username": str(teacher_username or ""),
+            "action": str(action or "revision"),
+            "entity_type": str(entity_type or "blueprint"),
+            "entity_id": str(entity_id or ""),
+            "before_json": json.dumps(before or {}, ensure_ascii=False),
+            "after_json": json.dumps(after or {}, ensure_ascii=False),
+            "change_summary": str(change_summary or ""),
+            "created_at": utc_now(),
+        },
+    )
+
+
+def teacher_blueprint_change_log_df(project_id: int, run_id: Optional[int] = None) -> pd.DataFrame:
+    sql = """
+        SELECT id, blueprint_run_id, parent_run_id, teacher_username, action,
+               entity_type, entity_id, change_summary, created_at
+        FROM teacher_blueprint_change_log
+        WHERE project_id=:project_id
+    """
+    params: Dict[str, Any] = {"project_id": int(project_id)}
+    if run_id is not None:
+        sql += " AND blueprint_run_id=:run_id"
+        params["run_id"] = int(run_id)
+    sql += " ORDER BY id DESC"
+    return query_df(sql, params)
+
+
+def teacher_blueprint_run_for_project(run_id: int, project_id: int) -> Optional[Dict[str, Any]]:
+    row = query_one(
+        "SELECT id FROM teacher_blueprint_runs WHERE id=:id AND project_id=:project_id",
+        {"id": int(run_id), "project_id": int(project_id)},
+    )
+    return teacher_blueprint_bundle(int(row["id"])) if row else None
 
 def set_teacher_project_phase(project_id: int, teacher_username: str, phase_number: int) -> None:
     """Advance or reposition a project phase with an ownership check."""

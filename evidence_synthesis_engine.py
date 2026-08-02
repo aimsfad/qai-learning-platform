@@ -714,17 +714,24 @@ def synthesize_evidence(
     )
     if quality.get("warnings"):
         diagnostic_parts.append("Warnings: " + " | ".join(quality["warnings"]))
+    provider_name = generation.provider
+    model_name = generation.model
+    response_text = generation.response
+    if generation.status != "completed":
+        provider_name = "deterministic"
+        model_name = "evidence-fallback-v1"
+        response_text = "Structured LLM extraction was unavailable; deterministic evidence records were generated from the stored source registry."
     return EvidenceSynthesisResult(
         sources=sources,
         evidence_cards=cards,
         concepts=concepts,
         quality=quality,
-        provider=generation.provider,
-        model=generation.model,
+        provider=provider_name,
+        model=model_name,
         status=status,
         diagnostic=" | ".join(diagnostic_parts)[:7000],
         prompt_text=prompt,
-        response_text=generation.response,
+        response_text=response_text,
         latency_ms=int(generation.latency_ms or 0),
         used_fallback=bool(generation.used_fallback or not llm_payload_valid),
     )
@@ -745,7 +752,7 @@ def synthesize_and_persist(
     if not saved:
         raise ValueError("Teacher project not found or access denied.")
     phase = int(phase_number or saved.get("current_phase") or 1)
-    run = dict(research_run or db.latest_teacher_research(project_id, phase) or {})
+    run = dict(research_run or db.latest_usable_teacher_research(project_id, phase) or {})
     if not run:
         raise ValueError("Run web research for this phase before synthesizing evidence.")
     result = synthesize_evidence(saved, phase, run, max_cards=max_cards, max_concepts=max_concepts)

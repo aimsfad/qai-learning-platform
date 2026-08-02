@@ -1,3 +1,15 @@
+# 3alimnIA V6.15 — Blueprint Editor and Versioning
+
+The Teacher Content Studio now supports teacher-controlled editing of concepts, units, lessons, and learning outcomes. Each save creates an auditable revision instead of overwriting prior plans, and historical versions can be restored as new drafts. See `V6_15_BLUEPRINT_EDITOR_VERSIONING_AR.md`.
+
+# 3alimnIA V6.14 — Evidence-to-Lesson Blueprint
+
+The Teacher Content Studio now turns approved evidence into a teacher-reviewable concept graph and structured course blueprint before long-form generation. Units, lessons, learning outcomes, activities, assessments, and success criteria are traceable to evidence and preserved in later prompts. See `V6_14_EVIDENCE_TO_LESSON_BLUEPRINT_AR.md`.
+
+# 3alimnIA V6.13.1 — Provider Quota Resilience
+
+The research and evidence workflow now survives Gemini quota exhaustion and Groq token-window failures without losing the last valid research dossier. Groq research requests are bounded and can retry once with Compound Mini; evidence synthesis can degrade to traceable deterministic records for teacher review. See `V6_13_1_PROVIDER_QUOTA_RESILIENCE_AR.md`.
+
 # 3alimnIA V6.13 — Evidence Synthesis Foundation
 
 The Teacher Content Studio now inserts a reviewable evidence layer between web research and lesson generation. It deduplicates and scores sources, extracts traceable evidence cards, identifies concept prerequisites, and lets the teacher approve the compact evidence bundle before downstream generation. See `V6_13_EVIDENCE_SYNTHESIS_FOUNDATION_AR.md`.

@@ -280,7 +280,7 @@ def compile_project_prompt(
     if prior_context is None and data.get("id"):
         prior_context = previous_phase_context(int(data["id"]), phase_number)
     if research_packet is None and data.get("id"):
-        latest_research = db.latest_teacher_research(int(data["id"]), phase_number)
+        latest_research = db.latest_usable_teacher_research(int(data["id"]), phase_number)
         research_packet = web_research_engine.build_research_packet(latest_research or {})
     if evidence_packet is None and data.get("id"):
         latest_evidence = db.latest_teacher_evidence(int(data["id"]), phase_number, approved_only=True)
@@ -430,6 +430,7 @@ def run_project_research(
     if phase not in PHASES:
         raise ValueError(f"Unsupported production phase: {phase}")
 
+    cached_usable = db.latest_usable_teacher_research(project_id, phase, research_mode) or {}
     result = web_research_engine.run_phase_research(
         saved,
         phase,
@@ -453,8 +454,14 @@ def run_project_research(
         latency_ms=result.latency_ms,
         is_fallback_used=result.used_fallback,
     )
-    stored = db.latest_teacher_research(project_id, phase) or {}
+    stored = db.teacher_research_run(run_id) or {}
     stored["id"] = int(stored.get("id") or run_id)
+    if str(result.status or "") not in {"completed", "needs_review"} and cached_usable:
+        fallback = dict(cached_usable)
+        fallback["cache_fallback_used"] = 1
+        fallback["refresh_status"] = str(result.status or "error")
+        fallback["refresh_diagnostic"] = str(result.diagnostic or "")
+        return fallback
     return stored
 
 
@@ -507,7 +514,7 @@ def generate_project_phase(
     research_packet = ""
     research_sources: List[web_research_engine.ResearchSource] = []
     if mode != "off":
-        cached = db.latest_teacher_research(project_id, phase) or {}
+        cached = db.latest_usable_teacher_research(project_id, phase, mode) or {}
         cached_mode = str(cached.get("research_mode") or "").strip().lower()
         reusable = bool(
             cached
