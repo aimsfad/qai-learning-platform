@@ -25,6 +25,7 @@ import router
 import web_research_engine
 import branding
 import ui_stability
+import global_design_system as global_ui
 from security import verify_password
 
 
@@ -2064,7 +2065,7 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
                 _set_workspace_section(step["section"])
             st.caption(copy["status"].get(status, status))
 
-    st.markdown("<span class='v6172-current-stage-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    st.markdown("<span class='v6172-current-stage-marker v6162-current-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     main_col, summary_col = ui_stability.columns([2.25, 1], gap="large", vertical_alignment="top")
     with main_col:
         now_label = {"ar": "المرحلة الحالية", "fr": "Étape actuelle", "en": "Current stage"}.get(lang, "Current stage")
@@ -2199,7 +2200,7 @@ def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
 
     with st.container(border=True, key=f"v6163_project_card_{project_id}"):
         st.markdown(
-            f"<span class='v692-project-card-marker v6163-project-card-marker' aria-hidden='true'></span>"
+            f"<span class='v692-project-card-marker v6163-project-card-marker v618-project-card-marker' aria-hidden='true'></span>"
             f"<div class='v692-project-card-head'><span>{escape(_status_label(status, copy))}</span>"
             f"<small>#{project_id}</small></div>"
             f"<div class='v6163-project-card-copy'><h3>{title}</h3>"
@@ -2234,8 +2235,12 @@ def render_projects_grid() -> None:
     copy = project_workspace_ui()
     username = _current_teacher_username()
     projects = db.teacher_projects_with_progress_df(username)
-    st.markdown("<span class='v6163-project-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    st.markdown(f"## {copy['projects']}")
+    st.markdown("<span class='v6163-project-grid-marker v618-teacher-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    global_ui.render_section_header(
+        copy["projects"],
+        {"ar": "أدر مشاريعك التعليمية، وتابع مستوى تقدم كل مقرر من مكان واحد.", "fr": "Gérez vos projets pédagogiques et suivez leur progression depuis un seul espace.", "en": "Manage educational projects and track every course from one workspace."}.get(i18n.current_lang(st), ""),
+        lang=i18n.current_lang(st),
+    )
     if projects.empty:
         _, empty_col, _ = ui_stability.columns([1, 1.5, 1], gap="large", vertical_alignment="top")
         with empty_col:
@@ -2700,7 +2705,10 @@ def render_published_course_catalog(student: Optional[Dict[str, Any]] = None) ->
             return
         st.session_state.published_teacher_project_id = None
     projects = db.published_teacher_projects_df()
-    st.markdown(f"# {copy['public_catalog']}")
+    global_ui.render_page_header(
+        copy["public_catalog"], copy["educator_content"], lang=i18n.current_lang(st),
+        eyebrow="3alimnIA", compact=True, icon="menu_book",
+    )
     if projects.empty:
         st.info(copy["no_public"])
         return
@@ -2728,8 +2736,14 @@ def render_teacher_app() -> None:
     u = teacher_ui()
     copy = project_workspace_ui()
     display_name = str(st.session_state.get("teacher_display_name") or _current_teacher_username()).strip()
-    st.markdown(f"# {u['workspace']}")
-    st.caption(f"{u['welcome']}، {display_name} — {u['subtitle']}" if i18n.current_lang(st) == "ar" else f"{u['welcome']}, {display_name} — {u['subtitle']}")
+    lang = i18n.current_lang(st)
+    welcome_line = f"{u['welcome']}، {display_name} — {u['subtitle']}" if lang == "ar" else f"{u['welcome']}, {display_name} — {u['subtitle']}"
+    st.markdown("<span class='v618-teacher-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    global_ui.render_page_header(
+        u["workspace"], welcome_line, lang=lang,
+        eyebrow={"ar": "فضاء الأستاذ", "fr": "Espace enseignant", "en": "Teacher workspace"}.get(lang, "Teacher workspace"),
+        compact=True, icon="edit_note",
+    )
     flash_success = st.session_state.pop("teacher_flash_success", None)
     if flash_success:
         st.success(str(flash_success))

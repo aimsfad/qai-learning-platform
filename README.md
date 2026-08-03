@@ -284,3 +284,11 @@ The course-blueprint build action now shows progress and results in place. It no
 ```bash
 python validate_v6173_blueprint_action_feedback.py
 ```
+
+## V6.18 global interface refresh
+
+The platform now uses a shared visual design layer across public pages and the learner, evaluator, and teacher workspaces. See `V6_18_GLOBAL_PROFESSIONAL_DESIGN_SYSTEM_AR.md` for the Arabic implementation guide and run:
+
+```bash
+python validate_v618_global_design_system.py
+```

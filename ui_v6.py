@@ -287,6 +287,7 @@ def render_public_header(current_title: str = "") -> None:
         "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "teacher": "Teacher", "evaluator": "Evaluator", "start": "Start now"},
     }[lang]
     with st.container(border=False, key="v61_public_header"):
+        st.markdown("<span class='v618-public-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
         logo_col, nav_col, language_col, teacher_col, evaluator_col, start_col = ui_stability.columns(
             [1.85, 3.55, .95, .95, .95, 1.0], gap="small", vertical_alignment="center"
         )

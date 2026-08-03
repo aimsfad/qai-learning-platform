@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 db_source = (ROOT / 'db.py').read_text(encoding='utf-8')
-assert 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"' in db_source
+assert 'APP_VERSION = "v6.18-global-professional-design-system"' in db_source or 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"' in db_source
 ui = (ROOT / "teacher_studio.py").read_text(encoding="utf-8")
 
 assert 'build_clicked = st.button(' in ui
