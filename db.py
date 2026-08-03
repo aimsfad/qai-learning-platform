@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.17-hybrid-background-production"
+APP_VERSION = "v6.17.1-unified-guided-production-journey"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -327,6 +327,9 @@ def init_db() -> None:
             source_count INTEGER DEFAULT 0,
             latency_ms INTEGER DEFAULT 0,
             is_fallback_used INTEGER DEFAULT 0,
+            approved_by_teacher INTEGER DEFAULT 0,
+            approved_at TEXT,
+            approved_by TEXT,
             created_at {created_default}
         )
         """,
@@ -599,6 +602,9 @@ def init_db() -> None:
     ensure_column("ai_interactions", "selected_text", "TEXT")
     ensure_column("ai_interactions", "student_usefulness_rating", "INTEGER")
     ensure_column("ai_interactions", "student_ai_feedback", "TEXT")
+    ensure_column("teacher_research_runs", "approved_by_teacher", "INTEGER DEFAULT 0")
+    ensure_column("teacher_research_runs", "approved_at", "TEXT")
+    ensure_column("teacher_research_runs", "approved_by", "TEXT")
     ensure_column("teacher_evidence_runs", "approved_by_teacher", "INTEGER DEFAULT 0")
     ensure_column("teacher_evidence_runs", "approved_at", "TEXT")
     ensure_column("teacher_evidence_runs", "quality_json", "TEXT")
@@ -2114,6 +2120,56 @@ def latest_usable_teacher_research(
         ORDER BY id DESC LIMIT 1
         """,
         params,
+    )
+
+
+def latest_approved_teacher_research(
+    project_id: int,
+    phase_number: int = 1,
+) -> Optional[Dict[str, Any]]:
+    """Return the newest teacher-approved research dossier for the canonical stage."""
+    return query_one(
+        """
+        SELECT * FROM teacher_research_runs
+        WHERE project_id=:project_id AND phase_number=:phase_number
+          AND status IN ('completed', 'needs_review')
+          AND COALESCE(approved_by_teacher, 0)=1
+        ORDER BY id DESC LIMIT 1
+        """,
+        {"project_id": int(project_id), "phase_number": int(phase_number)},
+    )
+
+
+def approve_teacher_research_run(
+    run_id: int,
+    project_id: int,
+    teacher_username: str,
+) -> None:
+    """Approve one research dossier and revoke older approvals for the same phase."""
+    row = teacher_research_run(int(run_id))
+    if not row or int(row.get("project_id") or 0) != int(project_id):
+        raise ValueError("Research dossier not found for this project.")
+    phase_number = int(row.get("phase_number") or 1)
+    exec_sql(
+        """
+        UPDATE teacher_research_runs
+        SET approved_by_teacher=0, approved_at=NULL, approved_by=NULL
+        WHERE project_id=:project_id AND phase_number=:phase_number
+        """,
+        {"project_id": int(project_id), "phase_number": phase_number},
+    )
+    exec_sql(
+        """
+        UPDATE teacher_research_runs
+        SET approved_by_teacher=1, approved_at=:approved_at, approved_by=:approved_by
+        WHERE id=:run_id AND project_id=:project_id
+        """,
+        {
+            "run_id": int(run_id),
+            "project_id": int(project_id),
+            "approved_at": utc_now(),
+            "approved_by": str(teacher_username or ""),
+        },
     )
 
 

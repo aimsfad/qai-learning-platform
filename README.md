@@ -1,3 +1,7 @@
+# 3alimnIA V6.17.1 — Unified Guided Production Journey
+
+This release makes the teacher workflow strictly sequential and approval-driven. It separates the seven-stage teacher journey from the eleven internal production jobs, introduces teacher approval for the canonical research dossier, fixes phase-number collisions in evidence synthesis, and automatically advances after research, evidence, and blueprint approval. See `V6_17_1_UNIFIED_GUIDED_PRODUCTION_JOURNEY_AR.md`.
+
 # 3alimnIA V6.16.5 — UI Stability & Shared Design System
 
 This release consolidates the professional frontend into a safer shared UI layer: validated Streamlit layouts, centralized status semantics, localized error cards, accessible focus states, and reduced-motion support. It preserves the V6.16.4 research export and analytics features and does not alter databases or AI-generation workflows. See `V6_16_5_UI_STABILITY_DESIGN_SYSTEM_AR.md`.

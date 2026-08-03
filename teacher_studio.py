@@ -834,15 +834,28 @@ def _split_domain_input(value: str) -> List[str]:
     return [item.strip() for item in items if item.strip()]
 
 
-def _render_latest_research(project_id: int, phase_number: int, u: Dict[str, str]) -> Optional[Dict[str, Any]]:
+def _render_latest_research(
+    project_id: int,
+    phase_number: int,
+    u: Dict[str, str],
+    *,
+    canonical_stage: bool = False,
+) -> Optional[Dict[str, Any]]:
     latest = db.latest_usable_teacher_research(int(project_id), int(phase_number))
     if not latest:
         st.caption(u["research_missing"])
         return None
     sources = web_research_engine.sources_from_json(latest.get("sources_json") or "[]")
     status = str(latest.get("status") or "")
+    lang = i18n.current_lang(st)
+    canonical_title = {
+        "ar": "حزمة البحث الأساسية للمقرر",
+        "fr": "Dossier de recherche principal du cours",
+        "en": "Canonical course research dossier",
+    }.get(lang, "Canonical course research dossier")
+    expander_title = canonical_title if canonical_stage else f"{u['research_latest']} — {phase_number}. {PHASES.get(int(phase_number), '')}"
     with st.expander(
-        f"{u['research_latest']} — {phase_number}. {PHASES.get(int(phase_number), '')}",
+        expander_title,
         expanded=status in {"completed", "needs_review"},
     ):
         c1, c2, c3, c4 = st.columns(4)
@@ -851,6 +864,23 @@ def _render_latest_research(project_id: int, phase_number: int, u: Dict[str, str
         c3.metric(u["research_sources"], int(latest.get("source_count") or len(sources)))
         latency_ms = int(latest.get("latency_ms") or 0)
         c4.metric(u["latency"], f"{latency_ms / 1000:.1f} s" if latency_ms else "—")
+        approved = bool(int(latest.get("approved_by_teacher") or 0))
+        if approved:
+            approved_label = {"ar": "اعتمد الأستاذ حزمة البحث الأساسية.", "fr": "Le dossier de recherche est approuvé.", "en": "The teacher approved this research dossier."}.get(lang, "The teacher approved this research dossier.")
+            st.success(approved_label)
+        elif canonical_stage and status in {"completed", "needs_review"}:
+            approval_help = {
+                "ar": "راجع المصادر أولًا، ثم اعتمد الحزمة لفتح مرحلة تركيب الأدلة.",
+                "fr": "Révisez les sources puis approuvez le dossier pour ouvrir la synthèse des preuves.",
+                "en": "Review the sources, then approve the dossier to unlock evidence synthesis.",
+            }.get(lang, "Review and approve the dossier to unlock evidence synthesis.")
+            st.info(approval_help)
+            approve_label = {"ar": "اعتماد حزمة البحث والمتابعة", "fr": "Approuver la recherche et continuer", "en": "Approve research and continue"}.get(lang, "Approve research and continue")
+            if st.button(approve_label, type="primary", use_container_width=True, key=f"approve_research_{int(latest.get('id') or 0)}"):
+                db.approve_teacher_research_run(int(latest["id"]), int(project_id), _current_teacher_username())
+                st.session_state.teacher_flash_success = approve_label
+                st.session_state.teacher_workspace_section_pending = "evidence"
+                st.rerun()
         if latest.get("diagnostic"):
             st.caption(str(latest.get("diagnostic")))
         tabs = st.tabs([u["research_report"], u["research_registry"], u["research_queries"]])
@@ -903,10 +933,31 @@ def _render_latest_research(project_id: int, phase_number: int, u: Dict[str, str
 
 
 def render_prompt_and_generation(project: Dict[str, Any]) -> None:
+    """Render the canonical sources stage and keep legacy phase generation advanced.
+
+    The seven-stage teacher journey always researches phase 01 as the canonical
+    course dossier. The current legacy production phase is available only in the
+    collapsed advanced section, preventing phase-number collisions in the UI.
+    """
     u = teacher_ui()
     p = _project_defaults(project)
-    phase_number = int(p.get("current_phase") or 1)
+    generation_phase = int(p.get("current_phase") or 1)
+    research_phase = 1
     project_id = int(p["id"])
+    lang = i18n.current_lang(st)
+
+    stage_title = {
+        "ar": "المراجع والبحث",
+        "fr": "Sources et recherche",
+        "en": "Sources and research",
+    }.get(lang, "Sources and research")
+    stage_note = {
+        "ar": "هذه هي حزمة البحث الأساسية للمقرر. راجع المصادر واعتمدها مرة واحدة قبل الانتقال إلى تركيب الأدلة.",
+        "fr": "Il s’agit du dossier de recherche principal du cours. Révisez puis approuvez les sources avant la synthèse des preuves.",
+        "en": "This is the canonical course research dossier. Review and approve it before evidence synthesis.",
+    }.get(lang, "Review and approve the canonical research dossier before evidence synthesis.")
+    st.markdown(f"## {stage_title}")
+    st.caption(stage_note)
 
     research_status = web_research_engine.research_status()
     default_mode = str(research_status.get("default_mode") or "balanced").lower()
@@ -932,7 +983,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 modes,
                 index=modes.index(default_mode),
                 format_func=lambda value: mode_labels.get(value, value),
-                key=f"teacher_research_mode_{project_id}_{phase_number}",
+                key=f"teacher_research_mode_{project_id}_{research_phase}",
             )
         with r2:
             max_sources = st.slider(
@@ -941,37 +992,38 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 max_value=15,
                 value=8,
                 step=1,
-                key=f"teacher_research_sources_{project_id}_{phase_number}",
+                key=f"teacher_research_sources_{project_id}_{research_phase}",
                 disabled=research_mode == "off",
             )
         with st.expander("Source policy / سياسة المصادر", expanded=False):
             preferred_domains_raw = st.text_input(
                 u["preferred_domains"],
                 value="",
-                key=f"teacher_preferred_domains_{project_id}_{phase_number}",
+                key=f"teacher_preferred_domains_{project_id}_{research_phase}",
                 disabled=research_mode == "off",
             )
             excluded_domains_raw = st.text_input(
                 u["excluded_domains"],
                 value="wikipedia.org, pinterest.com, facebook.com, instagram.com, tiktok.com",
-                key=f"teacher_excluded_domains_{project_id}_{phase_number}",
+                key=f"teacher_excluded_domains_{project_id}_{research_phase}",
                 disabled=research_mode == "off",
             )
         st.caption(u["research_cost"])
-        latest_research = db.latest_usable_teacher_research(project_id, phase_number)
+        latest_research = db.latest_usable_teacher_research(project_id, research_phase)
         research_button_label = u["research_refresh"] if latest_research else u["research_now"]
         if st.button(
             research_button_label,
+            type="primary" if not latest_research else "secondary",
             use_container_width=True,
-            key=f"run_teacher_research_{project_id}_{phase_number}",
+            key=f"run_teacher_research_{project_id}_{research_phase}",
             disabled=research_mode == "off" or not research_status.get("available"),
         ):
             try:
-                with st.spinner(f"3alimnIA is researching phase {phase_number}: {PHASES[phase_number]}..."):
+                with st.spinner("3alimnIA is building the canonical course research dossier..."):
                     research_run = educational_builder.run_project_research(
                         p,
                         _current_teacher_username(),
-                        phase_number=phase_number,
+                        phase_number=research_phase,
                         research_mode=research_mode,
                         max_sources=max_sources,
                         preferred_domains=_split_domain_input(preferred_domains_raw),
@@ -979,42 +1031,51 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                     )
                 if bool(int(research_run.get("cache_fallback_used") or 0)):
                     detail = str(research_run.get("refresh_diagnostic") or "").strip()
-                    st.session_state.teacher_flash_warning = (
-                        u["research_cached_fallback"] + (f" {detail}" if detail else "")
-                    )
+                    st.session_state.teacher_flash_warning = u["research_cached_fallback"] + (f" {detail}" if detail else "")
                 elif str(research_run.get("status") or "") in {"completed", "needs_review"}:
                     st.session_state.teacher_flash_success = u["research_ready"]
                 else:
-                    st.session_state.teacher_flash_error = (
-                        str(research_run.get("diagnostic") or u["research_failed"])
-                    )
+                    st.session_state.teacher_flash_error = str(research_run.get("diagnostic") or u["research_failed"])
             except Exception as exc:
                 st.session_state.teacher_flash_error = f"{u['research_failed']} {exc}"
             st.rerun()
-        _render_latest_research(project_id, phase_number, u)
+        _render_latest_research(project_id, research_phase, u, canonical_stage=True)
 
-    evidence_cfg = evidence_synthesis_engine.evidence_status()
-    if evidence_cfg.get("enabled") and research_mode != "off":
-        evidence_bundle = db.latest_teacher_evidence(project_id, phase_number, approved_only=False)
-        if evidence_bundle and bool(int(evidence_bundle.get("approved_by_teacher") or 0)):
-            st.success(u["evidence_approved"])
-        else:
-            st.warning(u["evidence_missing"] if not evidence_bundle else u["needs_review"])
-            if st.button(
-                u["evidence_panel"],
-                use_container_width=True,
-                key=f"open_evidence_workspace_{project_id}_{phase_number}",
-            ):
-                st.session_state.teacher_workspace_section_pending = "evidence"
-                st.rerun()
+    approved_research = db.latest_approved_teacher_research(project_id, research_phase)
+    if approved_research:
+        next_label = {
+            "ar": "تم اعتماد المراجع. انتقل إلى تركيب الأدلة.",
+            "fr": "Les sources sont approuvées. Passez à la synthèse des preuves.",
+            "en": "Sources approved. Continue to evidence synthesis.",
+        }.get(lang, "Sources approved. Continue to evidence synthesis.")
+        st.success(next_label)
+        if st.button(
+            {"ar": "متابعة إلى تركيب الأدلة", "fr": "Continuer vers les preuves", "en": "Continue to evidence synthesis"}.get(lang, "Continue"),
+            type="primary",
+            use_container_width=True,
+            key=f"continue_to_evidence_{project_id}",
+        ):
+            _set_workspace_section("evidence")
+    else:
+        wait_label = {
+            "ar": "مرحلة تركيب الأدلة مقفلة حتى تعتمد حزمة البحث الأساسية.",
+            "fr": "La synthèse des preuves reste verrouillée jusqu’à l’approbation de la recherche.",
+            "en": "Evidence synthesis remains locked until the research dossier is approved.",
+        }.get(lang, "Evidence synthesis is locked until research approval.")
+        st.info(wait_label)
 
     advanced_label = {
-        "ar": "خيارات التوليد المرحلي المتقدمة",
-        "fr": "Options avancées de génération par phase",
-        "en": "Advanced phase-generation options",
-    }.get(i18n.current_lang(st), "Advanced phase-generation options")
+        "ar": "التوليد التقني المرحلي — خيارات متقدمة",
+        "fr": "Génération technique par phase — options avancées",
+        "en": "Technical phase generation — advanced options",
+    }.get(lang, "Technical phase generation — advanced options")
     with st.expander(advanced_label, expanded=False):
-        prompt = compile_project_prompt(p, phase_number)
+        st.caption({
+            "ar": "هذه المراحل التقنية الإحدى عشرة لا تمثل رحلة الأستاذ ذات السبع خطوات. تُستخدم داخليًا لإنتاج أصول متخصصة.",
+            "fr": "Ces onze phases techniques ne remplacent pas le parcours enseignant en sept étapes.",
+            "en": "These eleven technical phases do not replace the seven-stage teacher journey.",
+        }.get(lang, "These technical phases do not replace the teacher journey."))
+        prompt = compile_project_prompt(p, generation_phase)
         st.session_state.teacher_last_prompt = prompt
         expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
         st.success(u["prompt_ready"])
@@ -1028,7 +1089,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         )
         budget = content_generation_engine.prompt_budget_info(
             prompt,
-            educational_builder.PHASE_MAX_TOKENS.get(phase_number, 3600),
+            educational_builder.PHASE_MAX_TOKENS.get(generation_phase, 3600),
         )
         compacted_label = u["prompt_compacted"] if budget.get("compacted") else ""
         st.caption(
@@ -1039,9 +1100,9 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 compacted=compacted_label,
             )
         )
-        st.caption(u["phase_only"])
-        if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{project_id}_{phase_number}"):
-            st.session_state.teacher_last_prompt = compile_project_prompt(p, phase_number)
+        st.caption(f"{u['phase_only']} · {generation_phase}. {PHASES[generation_phase]}")
+        if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{project_id}_{generation_phase}"):
+            st.session_state.teacher_last_prompt = compile_project_prompt(p, generation_phase)
             st.session_state.teacher_expand_prompt = True
             st.session_state.teacher_flash_success = u["prompt_ready"]
             st.rerun()
@@ -1053,7 +1114,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         st.download_button(
             u["download_prompt"],
             prompt.encode("utf-8"),
-            file_name=f"{safe_name}_phase_{phase_number}_prompt.md",
+            file_name=f"{safe_name}_phase_{generation_phase}_prompt.md",
             mime="text/markdown",
             use_container_width=True,
         )
@@ -1065,21 +1126,14 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
             mime="application/json",
             use_container_width=True,
         )
-
-        _render_latest_generation(
-            project_id,
-            u,
-            str(p.get("primary_language_code") or "en"),
-        )
-
-        generate_key = f"generate_teacher_phase_{project_id}_{phase_number}"
-        if st.button(u["generate"], type="primary", use_container_width=True, key=generate_key):
+        _render_latest_generation(project_id, u, str(p.get("primary_language_code") or "en"))
+        if st.button(u["generate"], type="primary", use_container_width=True, key=f"generate_teacher_phase_{project_id}_{generation_phase}"):
             try:
-                with st.spinner(f"3alimnIA is generating phase {phase_number}: {PHASES[phase_number]}..."):
+                with st.spinner(f"3alimnIA is generating technical phase {generation_phase}: {PHASES[generation_phase]}..."):
                     outcome = educational_builder.generate_project_phase(
                         p,
                         _current_teacher_username(),
-                        phase_number=phase_number,
+                        phase_number=generation_phase,
                         research_mode=research_mode,
                         max_research_sources=max_sources,
                         preferred_domains=_split_domain_input(preferred_domains_raw),
@@ -1087,22 +1141,8 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                         force_research=False,
                     )
                 st.session_state.teacher_last_response = outcome.response
-                research_note = ""
-                if outcome.research_source_count:
-                    research_note = (
-                        f" Research: {outcome.research_provider}/{outcome.research_model}, "
-                        f"{outcome.research_source_count} source(s)."
-                    )
-                if outcome.evidence_card_count:
-                    research_note += (
-                        f" Evidence: {outcome.evidence_card_count} card(s), "
-                        f"approved={outcome.evidence_approved}."
-                    )
                 if outcome.status == "completed":
-                    st.session_state.teacher_flash_success = (
-                        f"{u['generated']} {phase_number}/{len(PHASES)} — "
-                        f"{outcome.provider}/{outcome.model}.{research_note}"
-                    )
+                    st.session_state.teacher_flash_success = f"{u['generated']} {generation_phase}/{len(PHASES)} — {outcome.provider}/{outcome.model}."
                 elif outcome.status == "needs_review":
                     st.session_state.teacher_flash_warning = f"{u['needs_review']} {outcome.diagnostic}"
                 elif outcome.status == "not_configured":
@@ -1117,22 +1157,21 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
     """Render the V6.13 source-scoring and evidence-card review workspace."""
     u = teacher_ui()
     project_id = int(project["id"])
-    current_phase = int(project.get("current_phase") or 1)
+    phase_number = 1
     cfg = evidence_synthesis_engine.evidence_status()
+    lang = i18n.current_lang(st)
 
     st.markdown(f"## {u['evidence_panel']}")
     st.write(u["evidence_intro"])
+    st.caption({
+        "ar": "تُبنى هنا حزمة الأدلة الأساسية للمقرر من حزمة البحث المعتمدة. المراحل التقنية الأخرى محفوظة في السجل المتقدم ولا تغيّر هذا التسلسل.",
+        "fr": "Le dossier de preuves principal est construit à partir de la recherche approuvée.",
+        "en": "The canonical course evidence bundle is built from the approved research dossier.",
+    }.get(lang, "The canonical evidence bundle is built from approved research."))
     if cfg.get("require_teacher_approval"):
         st.info(u["evidence_strict_gate"])
 
-    phase_number = st.selectbox(
-        u["evidence_phase"],
-        list(PHASES.keys()),
-        index=max(0, min(10, current_phase - 1)),
-        format_func=lambda number: f"{number}. {PHASES[number]}",
-        key=f"teacher_evidence_phase_{project_id}",
-    )
-    latest_research = db.latest_usable_teacher_research(project_id, int(phase_number))
+    latest_research = db.latest_approved_teacher_research(project_id, phase_number)
     col1, col2 = st.columns(2)
     with col1:
         max_cards = st.slider(
@@ -1161,7 +1200,7 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
         key=f"teacher_run_evidence_{project_id}_{phase_number}",
     ):
         try:
-            with st.spinner(f"3alimnIA is synthesizing evidence for phase {phase_number}..."):
+            with st.spinner("3alimnIA is synthesizing the canonical course evidence bundle..."):
                 evidence_synthesis_engine.synthesize_and_persist(
                     project,
                     _current_teacher_username(),
@@ -1176,7 +1215,11 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
         st.rerun()
 
     if not latest_research:
-        st.warning(u["evidence_missing_research"])
+        st.warning({
+            "ar": "اعتمد حزمة البحث الأساسية أولًا لفتح تركيب الأدلة.",
+            "fr": "Approuvez d’abord le dossier de recherche principal.",
+            "en": "Approve the canonical research dossier before evidence synthesis.",
+        }.get(lang, u["evidence_missing_research"]))
     if not cfg.get("enabled"):
         st.warning("ENABLE_EVIDENCE_SYNTHESIS is disabled in Streamlit secrets.")
 
@@ -1191,7 +1234,7 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
     concepts = bundle.get("concepts") or []
     approved = bool(int(bundle.get("approved_by_teacher") or 0))
 
-    st.markdown(f"### {u['evidence_latest']} — {phase_number}. {PHASES[int(phase_number)]}")
+    st.markdown(f"### {u['evidence_latest']} — " + {"ar": "الحزمة الأساسية للمقرر", "fr": "Dossier principal", "en": "Canonical course bundle"}.get(lang, "Canonical course bundle"))
     m1, m2, m3, m4 = st.columns(4)
     m1.metric(u["evidence_readiness"], f"{float(quality.get('readiness_score') or 0):.0%}")
     m2.metric(u["evidence_approved_sources"], int(quality.get("approved_source_count") or 0))
@@ -1297,6 +1340,7 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
                     _current_teacher_username(),
                 )
                 st.session_state.teacher_flash_success = u["evidence_approved"]
+                st.session_state.teacher_workspace_section_pending = "blueprint"
             except Exception as exc:
                 st.session_state.teacher_flash_error = str(exc)
             st.rerun()
@@ -1642,10 +1686,10 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
     approved_rows = []
     if not evidence_df.empty:
         for _, row in evidence_df.iterrows():
-            if int(row.get("approved_by_teacher") or 0) == 1:
+            if int(row.get("approved_by_teacher") or 0) == 1 and int(row.get("phase_number") or 1) == 1:
                 approved_rows.append(row.to_dict())
     evidence_options = {
-        f"#{int(item['id'])} — Phase {int(item.get('phase_number') or 1)} — {item.get('status') or 'approved'}": int(item["id"])
+        f"#{int(item['id'])} — Canonical evidence bundle — {item.get('status') or 'approved'}": int(item["id"])
         for item in approved_rows
     }
     selected_evidence = None
@@ -1780,6 +1824,7 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
             try:
                 db.approve_teacher_blueprint_run(int(bundle["id"]), project_id, _current_teacher_username())
                 st.session_state.teacher_flash_success = labels["approved"]
+                st.session_state.teacher_workspace_section_pending = "blocks"
             except Exception as exc:
                 st.session_state.teacher_flash_error = str(exc)
             st.rerun()
@@ -1901,6 +1946,39 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
     current_status = statuses.get(current_key, "available")
     completed = int(state.get("completed_count") or 0)
     total = int(state.get("total_steps") or 7)
+    step_keys = [item["key"] for item in guided_teacher_workflow.WORKFLOW_STEPS]
+    current_index = step_keys.index(current_key) if current_key in step_keys else 0
+    next_key = step_keys[current_index + 1] if current_index + 1 < len(step_keys) else None
+    next_spec = copy["steps"].get(next_key) if next_key else None
+    completion_rules = {
+        "ar": {
+            "setup": "بعد استكمال بيانات المقرر الأساسية.",
+            "resources": "بعد مراجعة حزمة البحث واعتمادها.",
+            "evidence": "بعد اعتماد حزمة الأدلة الأساسية.",
+            "blueprint": "بعد اعتماد مخطط المقرر.",
+            "lessons": "بعد اعتماد جميع أجزاء الدروس المطلوبة.",
+            "quality": "بعد اجتياز فحوص الجودة النهائية.",
+            "publish": "بعد المعاينة والنشر أو الإرسال للمراجعة.",
+        },
+        "fr": {
+            "setup": "Lorsque la fiche du cours est complète.",
+            "resources": "Après révision et approbation du dossier de recherche.",
+            "evidence": "Après approbation du dossier de preuves.",
+            "blueprint": "Après approbation du plan du cours.",
+            "lessons": "Après approbation de tous les blocs requis.",
+            "quality": "Après validation des contrôles qualité.",
+            "publish": "Après aperçu et publication.",
+        },
+        "en": {
+            "setup": "When the project brief is complete.",
+            "resources": "After the research dossier is reviewed and approved.",
+            "evidence": "After the canonical evidence bundle is approved.",
+            "blueprint": "After the course blueprint is approved.",
+            "lessons": "After all required lesson blocks are approved.",
+            "quality": "After the final quality checks pass.",
+            "publish": "After preview and publication.",
+        },
+    }.get(lang, {})
 
     st.markdown("<span class='v6162-workflow-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     st.markdown(
@@ -1944,6 +2022,18 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
             st.write(current_spec["description"])
             st.markdown(
                 f"<div class='v6162-outcome-box' dir='{direction}'><span>{escape(current_spec['outcome'])}</span></div>",
+                unsafe_allow_html=True,
+            )
+            now_label = {"ar": "الآن", "fr": "Maintenant", "en": "Now"}.get(lang, "Now")
+            done_label = {"ar": "تكتمل المرحلة عندما", "fr": "Étape terminée lorsque", "en": "Stage completes when"}.get(lang, "Stage completes when")
+            next_label = {"ar": "بعدها", "fr": "Ensuite", "en": "Next"}.get(lang, "Next")
+            next_title = next_spec["title"] if next_spec else current_spec["title"]
+            st.markdown(
+                f"<div class='v6171-stage-flow' dir='{direction}'>"
+                f"<div><small>{escape(now_label)}</small><strong>{escape(current_spec['title'])}</strong></div>"
+                f"<div><small>{escape(done_label)}</small><strong>{escape(completion_rules.get(current_key, current_spec['outcome']))}</strong></div>"
+                f"<div><small>{escape(next_label)}</small><strong>{escape(next_title)}</strong></div>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
             if st.button(
@@ -2277,8 +2367,13 @@ def render_project_overview(project: Dict[str, Any]) -> None:
                 f"<div class='v6163-overview-field'><span>Components</span><b>{escape(components)}</b></div></div>",
                 unsafe_allow_html=True,
             )
-    phase_label = {"ar": "التفاصيل التقنية لمراحل التوليد القديمة", "fr": "Détails techniques des phases de génération", "en": "Technical phase-generation details"}.get(lang, "Technical phase-generation details")
+    phase_label = {"ar": "سجل التوليد التقني المتقدم", "fr": "Journal technique avancé", "en": "Advanced technical generation log"}.get(lang, "Advanced technical generation log")
     with st.expander(phase_label, expanded=False):
+        st.info({
+            "ar": "هذه البطاقات الإحدى عشرة وظائف تقنية داخلية لإنتاج الأصول، وليست خطوات رحلة الأستاذ. اتبع المسار ذي السبع مراحل أعلى الصفحة.",
+            "fr": "Ces onze cartes sont des tâches techniques internes, pas les étapes du parcours enseignant.",
+            "en": "These eleven cards are internal production jobs, not the teacher journey. Follow the seven-stage path above.",
+        }.get(lang, "These are internal production jobs, not the teacher journey."))
         _render_phase_map(project)
 
 
