@@ -7,7 +7,7 @@ workflow = (ROOT / "guided_teacher_workflow.py").read_text(encoding="utf-8")
 db = (ROOT / "db.py").read_text(encoding="utf-8")
 css = (ROOT / ".streamlit" / "v6_theme.css").read_text(encoding="utf-8")
 
-assert 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"' in db
+assert any(v in db for v in ('APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"'))
 assert "v6172-research-steps" in teacher
 assert "بدء البحث وجمع المصادر" in teacher
 assert "اعتماد المصادر والانتقال إلى تركيب الأدلة" in teacher

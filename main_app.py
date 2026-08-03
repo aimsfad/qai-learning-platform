@@ -17,6 +17,7 @@ import plotly.express as px
 import streamlit as st
 
 import ui_stability
+import global_design_system as global_ui
 import streamlit.components.v1 as components
 
 import content
@@ -669,34 +670,21 @@ def render_global_escape_navigation() -> None:
 
 
 def hero(title: str, subtitle: str, *, localized: bool = False, compact: Optional[bool] = None) -> None:
-    """Render a language-aware premium page header used across the platform.
-
-    Use ``localized=True`` when text was already selected from a locale-specific
-    dictionary. This prevents phrase replacement from producing mixed-language
-    titles such as Arabic text with a remaining English word.
-
-    Evaluator pages use a compact header automatically so the operational
-    controls remain visible on laptop screens. Callers may override this with
-    ``compact=True`` or ``compact=False`` when a page needs a different density.
-    """
+    """Render the canonical multilingual page header across all workspaces."""
     lang = i18n.current_lang(st)
-    direction = i18n.direction(lang)
-    safe_title = escape(title if localized else i18n.tr(title))
-    safe_subtitle = escape(subtitle if localized else i18n.tr(subtitle))
+    safe_title = title if localized else i18n.tr(title)
+    safe_subtitle = subtitle if localized else i18n.tr(subtitle)
     if compact is None:
         compact = st.session_state.get("role") == "evaluator"
-    compact_class = " v47-page-hero-compact" if compact else ""
-    st.markdown(
-        f"""
-        <section class="qai-hero v4-page-hero{compact_class}" dir="{direction}">
-          <div class="v4-page-hero-glow"></div>
-          <div class="v4-page-hero-kicker">3alimnIA · {escape(branding.BRAND_NAME_AR)}</div>
-          <h1>{safe_title}</h1>
-          <p>{safe_subtitle}</p>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    role = str(st.session_state.get("role") or "public")
+    eyebrow = {
+        "student": {"ar": "فضاء المتعلم", "fr": "Espace apprenant", "en": "Learner workspace"},
+        "evaluator": {"ar": "فضاء المقيّم والباحث", "fr": "Évaluation et recherche", "en": "Evaluation and research"},
+        "teacher": {"ar": "استوديو إنتاج المحتوى", "fr": "Studio de production", "en": "Content production studio"},
+        "public": {"ar": "منصة 3alimnIA", "fr": "Plateforme 3alimnIA", "en": "3alimnIA platform"},
+    }.get(role, {}).get(lang, "3alimnIA")
+    icon = {"student": "school", "evaluator": "analytics", "teacher": "edit_note", "public": "auto_awesome"}.get(role, "auto_awesome")
+    global_ui.render_page_header(str(safe_title), str(safe_subtitle), lang=lang, eyebrow=eyebrow, compact=bool(compact), icon=icon)
 
 
 def card(title: str, body: str, pill: Optional[str] = None) -> None:
@@ -1588,15 +1576,23 @@ def render_password_reset_form(token: str) -> None:
 
 
 def render_student_signin() -> None:
+    lang = i18n.current_lang(st)
     hero("Student Sign in", "Access your existing participant account.")
-    st.markdown("<div class='qai-card'>", unsafe_allow_html=True)
-    with st.form("student_signin_form"):
-        identifier = st.text_input("Participant code, email, or exact registered full name")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-    with st.expander("Forgot password?", expanded=False):
-        render_password_reset_request()
+    _, form_col, _ = ui_stability.columns([1, 1.25, 1], gap="large", vertical_alignment="top")
+    with form_col:
+        with st.container(border=True, key="v618_student_auth_card"):
+            st.markdown("<span class='v618-auth-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            global_ui.render_section_header(
+                {"ar": "تسجيل دخول المتعلم", "fr": "Connexion apprenant", "en": "Learner sign in"}.get(lang, "Learner sign in"),
+                {"ar": "أدخل رمز المشاركة أو البريد الإلكتروني للعودة إلى مسارك.", "fr": "Utilisez votre code participant ou votre e-mail pour reprendre votre parcours.", "en": "Use your participant code or email to resume your learning path."}.get(lang, ""),
+                lang=lang,
+            )
+            with st.form("student_signin_form"):
+                identifier = st.text_input("Participant code, email, or exact registered full name")
+                password = st.text_input("Password", type="password")
+                submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+            with st.expander("Forgot password?", expanded=False):
+                render_password_reset_request()
     if submitted:
         student = db.authenticate_student(identifier, password)
         if student:
@@ -1613,36 +1609,39 @@ def render_student_signin() -> None:
 
 
 def render_student_registration() -> None:
+    lang = i18n.current_lang(st)
     hero("Create Student Account", "Register as a participant before starting the pilot study.")
     access_required = registration_code_required()
-    with st.form("student_register_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            full_name = st.text_input("Full name")
-            email = st.text_input("Email")
-            institution = st.text_input("Institution")
-        with col2:
-            academic_level = st.selectbox("Academic level", ["Licence", "Master", "PhD", "Other"])
-            render_self_eval_scale_help()
-            prior_python = st.slider(
-                "Prior Python level",
-                0, 3, 1,
-                help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use."
+    _, register_col, _ = ui_stability.columns([.5, 2.15, .5], gap="large", vertical_alignment="top")
+    with register_col:
+        with st.container(border=True, key="v618_student_registration_card"):
+            st.markdown("<span class='v618-auth-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            global_ui.render_section_header(
+                {"ar": "إنشاء حساب متعلم", "fr": "Créer un compte apprenant", "en": "Create a learner account"}.get(lang, "Create a learner account"),
+                {"ar": "أنشئ حسابًا واحدًا واحفظ رمز المشاركة قبل بدء المسار.", "fr": "Créez un seul compte et conservez votre code participant.", "en": "Create one account and keep your participant code before starting."}.get(lang, ""),
+                lang=lang,
             )
-            prior_quantum = st.slider(
-                "Prior quantum programming knowledge",
-                0, 3, 0,
-                help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use."
-            )
-        password = st.text_input("Password", type="password")
-        password2 = st.text_input("Confirm password", type="password")
-        study_code = ""
-        if access_required:
-            study_code = st.text_input("Study registration access code", type="password")
-        st.markdown("#### Research notice")
-        st.caption("Your learning data, pre/post-test results, reflections, survey answers, and AI tutor interactions will be recorded for research analysis. Please create only one account and save your participant code.")
-        consent = st.checkbox("I have read the study notice and agree to participate in this pilot evaluation.")
-        submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
+            with st.form("student_register_form"):
+                col1, col2 = ui_stability.columns(2, gap="large", vertical_alignment="top")
+                with col1:
+                    full_name = st.text_input("Full name")
+                    email = st.text_input("Email")
+                    institution = st.text_input("Institution")
+                with col2:
+                    academic_level = st.selectbox("Academic level", ["Licence", "Master", "PhD", "Other"])
+                    render_self_eval_scale_help()
+                    prior_python = st.slider("Prior Python level", 0, 3, 1, help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use.")
+                    prior_quantum = st.slider("Prior quantum programming knowledge", 0, 3, 0, help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use.")
+                password = st.text_input("Password", type="password")
+                password2 = st.text_input("Confirm password", type="password")
+                study_code = st.text_input("Study registration access code", type="password") if access_required else ""
+                global_ui.render_inline_notice(
+                    {"ar": "إشعار البحث", "fr": "Information de recherche", "en": "Research notice"}.get(lang, "Research notice"),
+                    {"ar": "تُسجل نتائج التعلم والتفاعلات لأغراض التحليل البحثي وفق سياسة الدراسة.", "fr": "Les résultats et interactions sont enregistrés pour l’analyse de l’étude.", "en": "Learning outcomes and interactions are recorded for research analysis."}.get(lang, ""),
+                    lang=lang, tone="info",
+                )
+                consent = st.checkbox("I have read the study notice and agree to participate in this pilot evaluation.")
+                submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
     if submitted:
         try:
             if access_required and study_code.strip() != access_required:
@@ -1654,10 +1653,7 @@ def render_student_registration() -> None:
             if not consent:
                 st.error("Please confirm the study notice before creating an account.")
                 return
-            assigned_group = None
-            if control_group_enabled():
-                # Balanced assignment is finalized after the row is created.
-                assigned_group = "pending"
+            assigned_group = "pending" if control_group_enabled() else None
             student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password, study_group=("" if assigned_group else "single_arm"), preferred_language=i18n.current_lang(st))
             if control_group_enabled():
                 group = db.assign_study_group(student["id"])
@@ -1672,7 +1668,7 @@ def render_student_registration() -> None:
             st.success(f"Account created. Your participant code is: {student['participant_code']}")
             set_student_page("Student Home")
         except Exception as exc:
-            st.error(f"Could not create account: {exc}")
+            ui_stability.render_error_card(exc, lang=i18n.current_lang(st))
 
 # -----------------------------------------------------------------------------
 # Student study flow
@@ -3622,14 +3618,19 @@ def render_evaluator_app() -> None:
 
 def render_evaluator_login() -> None:
     u = evaluator_ui()
+    lang = i18n.current_lang(st)
     hero(u["login_title"], u["login_sub"], localized=True)
-    st.markdown(f"<div class='v45-login-note' dir='{u['dir']}'><b>3alimnIA Research</b><span>{escape(u['workspace_sub'])}</span></div>", unsafe_allow_html=True)
-    if secret("ADMIN_PASSWORD", "admin123") == "admin123" and not secret("EVALUATOR_PASSWORD_HASH", ""):
-        st.warning(i18n.tr("Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment."))
-    with st.form("eval_login"):
-        username = st.text_input(u["username"], value=secret("EVALUATOR_USERNAME", "evaluator"))
-        password = st.text_input(u["password"], type="password")
-        submitted = st.form_submit_button(u["sign_in"], type="primary", use_container_width=True)
+    _, form_col, _ = ui_stability.columns([1, 1.3, 1], gap="large", vertical_alignment="top")
+    with form_col:
+        with st.container(border=True, key="v618_evaluator_auth_card"):
+            st.markdown("<span class='v618-auth-marker v618-evaluator-auth-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            st.markdown(f"<div class='v618-auth-brand' dir='{u['dir']}'><b>3alimnIA Research</b><span>{escape(u['workspace_sub'])}</span></div>", unsafe_allow_html=True)
+            if secret("ADMIN_PASSWORD", "admin123") == "admin123" and not secret("EVALUATOR_PASSWORD_HASH", ""):
+                st.warning(i18n.tr("Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment."))
+            with st.form("eval_login"):
+                username = st.text_input(u["username"], value=secret("EVALUATOR_USERNAME", "evaluator"))
+                password = st.text_input(u["password"], type="password")
+                submitted = st.form_submit_button(u["sign_in"], type="primary", use_container_width=True)
     if submitted:
         if evaluator_password_is_valid(username, password):
             db.log_event(None, "evaluator", "sign_in", f"Evaluator username: {username.strip()}")
@@ -3969,7 +3970,7 @@ def render_evaluator_quick_actions(u: Dict[str, Any]) -> None:
         for col, (number, icon, title, subtitle, route, key) in zip(cols, actions):
             with col:
                 st.markdown(
-                    f"<article class='v49-action-card' dir='{u['dir']}'><div class='v49-action-top'><span class='v49-action-icon'>{escape(icon)}</span><small>{escape(number)}</small></div><h4>{escape(title)}</h4><p>{escape(subtitle)}</p></article>",
+                    f"<article class='v49-action-card v618-action-card' dir='{u['dir']}'><div class='v49-action-top'><span class='v49-action-icon'>{escape(icon)}</span><small>{escape(number)}</small></div><h4>{escape(title)}</h4><p>{escape(subtitle)}</p></article>",
                     unsafe_allow_html=True,
                 )
                 if st.button(title, key=key, use_container_width=True):
@@ -4170,22 +4171,29 @@ def render_evaluator_dashboard() -> None:
     lpqs_series = pd.to_numeric(evaluations.get("pedagogical_quality_score", pd.Series(dtype=float)), errors="coerce").dropna()
     mean_lpqs = float(lpqs_series.mean()) if not lpqs_series.empty else None
 
-    st.markdown("<span class='v62-evaluator-marker'></span>", unsafe_allow_html=True)
-    k1, k2, k3, k4 = st.columns(4, gap="small")
-    k1.metric(copy["registered"], len(df), help=u["registered_note"])
-    k2.metric(copy["completion"], f"{mean_completion:.1f}%" if mean_completion is not None else "—")
-    k3.metric(copy["gain"], f"{mean_gain:+.1f} pp" if mean_gain is not None else "—", help=u["gain_note"])
-    k4.metric(copy["ai_interactions"], total_ai, help=u["ai_note"])
+    st.markdown("<span class='v62-evaluator-marker v618-evaluator-marker'></span>", unsafe_allow_html=True)
+    k1, k2, k3, k4 = ui_stability.columns(4, gap="small", vertical_alignment="top")
+    with k1:
+        global_ui.render_kpi_card(copy["registered"], len(df), caption=u["registered_note"], lang=lang)
+    with k2:
+        global_ui.render_kpi_card(copy["completion"], f"{mean_completion:.1f}" if mean_completion is not None else "—", unit="%", lang=lang, tone="cyan")
+    with k3:
+        global_ui.render_kpi_card(copy["gain"], f"{mean_gain:+.1f}" if mean_gain is not None else "—", unit="pp", caption=u["gain_note"], lang=lang, tone="success")
+    with k4:
+        global_ui.render_kpi_card(copy["ai_interactions"], total_ai, caption=u["ai_note"], lang=lang, tone="gold")
 
     tab_overview, tab_learners, tab_ai, tab_exports = st.tabs([
         copy["overview"], copy["learners"], copy["ai_quality"], copy["exports"]
     ])
 
     with tab_overview:
-        s1, s2, s3 = st.columns(3, gap="small")
-        s1.metric(copy["complete_cases"], complete_cases)
-        s2.metric(copy["paired"], len(paired))
-        s3.metric(copy["lpqs"], f"{mean_lpqs:.2f}/5" if mean_lpqs is not None else "—")
+        s1, s2, s3 = ui_stability.columns(3, gap="small", vertical_alignment="top")
+        with s1:
+            global_ui.render_kpi_card(copy["complete_cases"], complete_cases, lang=lang, tone="success")
+        with s2:
+            global_ui.render_kpi_card(copy["paired"], len(paired), lang=lang, tone="cyan")
+        with s3:
+            global_ui.render_kpi_card(copy["lpqs"], f"{mean_lpqs:.2f}" if mean_lpqs is not None else "—", unit="/5", lang=lang, tone="gold")
 
         chart_left, chart_right = st.columns(2, gap="large")
         with chart_left:
@@ -4210,8 +4218,9 @@ def render_evaluator_dashboard() -> None:
                     fig.add_shape(type="line", x0=0, y0=0, x1=100, y1=100, line=dict(color="#94A3B8", dash="dash", width=1.5))
                     fig.update_xaxes(range=[0, 100], gridcolor="rgba(148,163,184,.18)")
                     fig.update_yaxes(range=[0, 100], gridcolor="rgba(148,163,184,.18)")
-                    fig.update_layout(height=360, margin=dict(l=12, r=12, t=16, b=12), legend_title_text="", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_pre_post")
+                    fig.update_layout(legend_title_text="")
+                    global_ui.apply_plotly_theme(fig, x_title=copy["pre"], y_title=copy["post"], height=360)
+                    st.plotly_chart(fig, width="stretch", theme=None, key="v62_pre_post")
                     st.caption(copy["reference"])
 
         with chart_right:
@@ -4266,9 +4275,8 @@ def render_evaluator_dashboard() -> None:
                         paper_bgcolor="rgba(0,0,0,0)",
                         plot_bgcolor="rgba(0,0,0,0)",
                     )
-                    fig.update_xaxes(gridcolor="rgba(148,163,184,.12)")
-                    fig.update_yaxes(gridcolor="rgba(148,163,184,.18)")
-                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v6164_activity")
+                    global_ui.apply_plotly_theme(fig, x_title=copy["date"], y_title="", height=360)
+                    st.plotly_chart(fig, width="stretch", theme=None, key="v6164_activity")
 
         with st.container(border=True):
             st.markdown(f"### {copy['completion_chart']}")
@@ -4277,10 +4285,9 @@ def render_evaluator_dashboard() -> None:
             else:
                 hist_df = pd.DataFrame({"progress_percent": completion.clip(0, 100)})
                 fig = px.histogram(hist_df, x="progress_percent", nbins=10, labels={"progress_percent": copy["progress"]})
-                fig.update_layout(height=280, showlegend=False, margin=dict(l=12, r=12, t=12, b=12), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                fig.update_xaxes(range=[0, 100], gridcolor="rgba(148,163,184,.12)")
-                fig.update_yaxes(gridcolor="rgba(148,163,184,.18)")
-                st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_completion")
+                global_ui.apply_plotly_theme(fig, x_title=copy["progress"], y_title="", show_legend=False, height=280)
+                fig.update_xaxes(range=[0, 100])
+                st.plotly_chart(fig, width="stretch", theme=None, key="v62_completion")
 
     with tab_learners:
         st.markdown(f"### {copy['student_table']}")
@@ -4328,9 +4335,12 @@ def render_evaluator_dashboard() -> None:
             mean_latency = float(latency.mean()) if not latency.empty else None
             usefulness = pd.to_numeric(logs.get("student_usefulness_rating", pd.Series(dtype=float)), errors="coerce").dropna()
             mean_usefulness = float(usefulness.mean()) if not usefulness.empty else None
-        health_1.metric(copy["fallback"], f"{fallback_rate:.1f}%" if fallback_rate is not None else "—")
-        health_2.metric(copy["latency"], f"{mean_latency:.0f} ms" if mean_latency is not None else "—")
-        health_3.metric(copy["usefulness"], f"{mean_usefulness:.2f}/5" if mean_usefulness is not None else "—")
+        with health_1:
+            global_ui.render_kpi_card(copy["fallback"], f"{fallback_rate:.1f}" if fallback_rate is not None else "—", unit="%", lang=lang)
+        with health_2:
+            global_ui.render_kpi_card(copy["latency"], f"{mean_latency:.0f}" if mean_latency is not None else "—", unit="ms", lang=lang, tone="cyan")
+        with health_3:
+            global_ui.render_kpi_card(copy["usefulness"], f"{mean_usefulness:.2f}" if mean_usefulness is not None else "—", unit="/5", lang=lang, tone="success")
 
         ai_left, ai_right = st.columns(2, gap="large")
         with ai_left:
@@ -4341,9 +4351,8 @@ def render_evaluator_dashboard() -> None:
                 else:
                     modes = logs.groupby("mode", dropna=False).size().reset_index(name="interactions").sort_values("interactions", ascending=False)
                     fig = px.bar(modes, x="interactions", y="mode", orientation="h", labels={"interactions": copy["interactions"], "mode": ""})
-                    fig.update_layout(height=330, margin=dict(l=12, r=12, t=12, b=12), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    fig.update_xaxes(gridcolor="rgba(148,163,184,.18)")
-                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_ai_modes")
+                    global_ui.apply_plotly_theme(fig, x_title=copy["interactions"], y_title="", show_legend=False, height=330)
+                    st.plotly_chart(fig, width="stretch", theme=None, key="v62_ai_modes")
 
         with ai_right:
             with st.container(border=True):
@@ -4361,9 +4370,8 @@ def render_evaluator_dashboard() -> None:
                 else:
                     quality_df = pd.DataFrame(quality_rows).sort_values("score")
                     fig = px.bar(quality_df, x="score", y="metric", orientation="h", range_x=[0, 5], labels={"score": "LPQS", "metric": ""})
-                    fig.update_layout(height=330, margin=dict(l=12, r=12, t=12, b=12), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    fig.update_xaxes(gridcolor="rgba(148,163,184,.18)")
-                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_lpqs")
+                    global_ui.apply_plotly_theme(fig, x_title="LPQS", y_title="", show_legend=False, height=330)
+                    st.plotly_chart(fig, width="stretch", theme=None, key="v62_lpqs")
 
     with tab_exports:
         with st.container(border=True):

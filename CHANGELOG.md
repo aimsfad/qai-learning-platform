@@ -467,3 +467,20 @@
 ## V6.17.2 — Simplified Guided Research Flow
 - Removed duplicate research actions and clarified the three-step research-review-approval flow.
 - Approval now remains the single gate that opens evidence synthesis.
+
+## V6.17.3 — Blueprint Action Feedback Hotfix
+- Fixed the course-blueprint action appearing inactive after a click.
+- Removed the unconditional rerun that moved success and error feedback to the top of the teacher workspace.
+- Added an inline progress spinner, immediate success confirmation, and inline safe error reporting.
+- Renders the newly created blueprint in the same interaction without requiring a second click or manual page navigation.
+
+## V6.18 — Global Professional Design System
+
+- Added `global_design_system.py` for shared page headers, KPI cards, section headers, action cards, notices, and Plotly styling.
+- Unified learner, evaluator, and teacher page headers.
+- Centered and constrained learner/evaluator authentication forms.
+- Rebuilt evaluator KPI cards and normalized units such as `+30.0 pp`.
+- Added transparent dashboard charts with lighter horizontal grids and no vertical grids.
+- Replaced filled Streamlit tabs with clean text tabs and an active underline.
+- Polished the public navbar, internal toolbar, learner dashboard, teacher project cards, forms, tables, expanders, and alerts.
+- Added responsive and accessibility refinements without changing the database schema.

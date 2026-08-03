@@ -277,3 +277,18 @@ Long-running teacher production can use an RQ/Redis worker. See `V6_17_HYBRID_BA
 ## V6.17.2 — Simplified Guided Research Flow
 - Removed duplicate research actions and clarified the three-step research-review-approval flow.
 - Approval now remains the single gate that opens evidence synthesis.
+
+## V6.17.3 — Blueprint action feedback
+The course-blueprint build action now shows progress and results in place. It no longer performs an unconditional rerun that made the button appear inactive. Validate before deployment with:
+
+```bash
+python validate_v6173_blueprint_action_feedback.py
+```
+
+## V6.18 global interface refresh
+
+The platform now uses a shared visual design layer across public pages and the learner, evaluator, and teacher workspaces. See `V6_18_GLOBAL_PROFESSIONAL_DESIGN_SYSTEM_AR.md` for the Arabic implementation guide and run:
+
+```bash
+python validate_v618_global_design_system.py
+```
