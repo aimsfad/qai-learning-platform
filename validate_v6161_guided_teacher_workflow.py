@@ -49,7 +49,7 @@ css = (ROOT / ".streamlit" / "v6_theme.css").read_text(encoding="utf-8")
 assert "import guided_teacher_workflow" in teacher
 assert "def _render_guided_workflow" in teacher
 assert "def render_project_quality_summary" in teacher
-assert "التوليد التقني المرحلي — خيارات متقدمة" in teacher
+assert any(label in teacher for label in ("التوليد التقني المرحلي — خيارات متقدمة", "السجل التقني المتقدم للتوليد"))
 assert "guided_workflow_step_" in teacher
 assert "render_project_workspace" in teacher
 assert "Project workspace section" not in teacher

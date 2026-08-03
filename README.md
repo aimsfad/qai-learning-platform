@@ -272,3 +272,8 @@ This hotfix imports the branding module used by the centered teacher login and r
 
 ## V6.17 Hybrid Background Production
 Long-running teacher production can use an RQ/Redis worker. See `V6_17_HYBRID_BACKGROUND_PRODUCTION_AR.md`.
+
+
+## V6.17.2 — Simplified Guided Research Flow
+- Removed duplicate research actions and clarified the three-step research-review-approval flow.
+- Approval now remains the single gate that opens evidence synthesis.

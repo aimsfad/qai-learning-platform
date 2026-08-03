@@ -462,3 +462,8 @@
 
 ## V6.17 — Hybrid Background Production
 - Added persistent production jobs, RQ/Redis worker support, phase dependency DAG, and batch generation for phases 04–09.
+
+
+## V6.17.2 — Simplified Guided Research Flow
+- Removed duplicate research actions and clarified the three-step research-review-approval flow.
+- Approval now remains the single gate that opens evidence synthesis.
