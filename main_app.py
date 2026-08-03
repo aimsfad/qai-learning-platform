@@ -15,6 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+
+import ui_stability
 import streamlit.components.v1 as components
 
 import content
@@ -1473,7 +1475,7 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         course_copy = teacher_studio.project_workspace_ui()
         with st.container(border=True):
             st.markdown("<span class='v692-home-catalog-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-            cc1, cc2 = st.columns([4.5, 1.2], vertical_alignment="center")
+            cc1, cc2 = ui_stability.columns([4.5, 1.2], vertical_alignment="center")
             with cc1:
                 st.markdown(f"### {course_copy['public_catalog']}")
                 st.caption(f"{len(published_courses)} · {course_copy['educator_content']}")

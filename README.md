@@ -1,3 +1,7 @@
+# 3alimnIA V6.16.5 — UI Stability & Shared Design System
+
+This release consolidates the professional frontend into a safer shared UI layer: validated Streamlit layouts, centralized status semantics, localized error cards, accessible focus states, and reduced-motion support. It preserves the V6.16.4 research export and analytics features and does not alter databases or AI-generation workflows. See `V6_16_5_UI_STABILITY_DESIGN_SYSTEM_AR.md`.
+
 # 3alimnIA V6.16.3 - Professional Layout & Frontend Polish
 
 This release fixes the invalid Streamlit column alignment and upgrades the teacher-facing frontend: centered authentication, adaptive project grids, a minimalist navbar, grouped project metadata, and calmer responsive spacing. It preserves the V6.12-V6.16 research, evidence, blueprint, and lesson-generation engines. See `V6_16_3_PROFESSIONAL_LAYOUT_POLISH_AR.md`.

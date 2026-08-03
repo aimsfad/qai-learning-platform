@@ -8,7 +8,7 @@ css = (ROOT / ".streamlit" / "v6_theme.css").read_text(encoding="utf-8")
 
 checks = {
     "invalid stretch alignment removed": 'vertical_alignment="stretch"' not in teacher,
-    "centered login card": 'v6163_teacher_login_card' in teacher and 'st.columns([1, 1.55, 1]' in teacher,
+    "centered login card": 'v6163_teacher_login_card' in teacher and ('st.columns([1, 1.55, 1]' in teacher or 'ui_stability.columns([1, 1.55, 1]' in teacher),
     "adaptive project grid": 'def _render_project_card' in teacher and 'if len(rows) == 1' in teacher and 'column_count = 3 if len(rows) >= 3 else 2' in teacher,
     "grouped project header": 'v6163_project_header' in teacher and 'v6163-title-row' in teacher,
     "grouped overview cards": 'v6163_course_identity_card' in teacher and 'v6163_learning_design_card' in teacher,
