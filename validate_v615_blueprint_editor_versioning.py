@@ -202,7 +202,7 @@ def main() -> None:
     assert "render_blueprint_versions" in ui
     assert "محرر المخطط" in ui
     assert "الإصدارات والسجل" in ui
-    assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in ('APP_VERSION = \"v6.15-blueprint-editor-versioning\"', 'APP_VERSION = \"v6.16-lesson-block-generation\"', 'APP_VERSION = \"v6.16.4-research-export-analytics-polish\"', 'APP_VERSION = \"v6.16.5-ui-stability-design-system\"', 'APP_VERSION = \"v6.17-hybrid-background-production\"'))
+    assert 'APP_VERSION = "v6.17.1-unified-guided-production-journey"' in (ROOT / "db.py").read_text(encoding="utf-8")
 
     print("V6.15 blueprint editor and versioning validation passed.")
 

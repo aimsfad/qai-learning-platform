@@ -1,3 +1,14 @@
+# V6.17.1 — Unified guided production journey
+
+- Enforced one strict seven-stage teacher journey: setup → research → evidence → blueprint → lessons → quality → publish.
+- Added teacher approval for the canonical phase-01 research dossier before evidence synthesis can unlock.
+- Forced the guided research and evidence workspaces to use the canonical course dossier instead of the legacy current production phase.
+- Prevented multiple stages from appearing active or under review at the same time.
+- Added automatic navigation after research, evidence, and blueprint approval.
+- Added an explicit Now / Completion rule / Next panel for the current stage.
+- Reclassified the eleven production phases as an advanced technical log rather than the teacher-facing journey.
+- Added lightweight database migration fields for research approval and a dedicated V6.17.1 validation suite.
+
 # V6.16.5 — UI stability and shared design system
 
 - Added `ui_stability.py` for validated Streamlit columns, localized safe errors, incident fingerprints, and centralized status semantics.

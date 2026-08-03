@@ -149,16 +149,24 @@ def evaluate_workflow(
     lesson_progress: Optional[Dict[str, int]] = None,
     quality_ready: bool = False,
 ) -> Dict[str, Any]:
-    """Pure workflow-state evaluator used by the UI and validation tests."""
+    """Evaluate one strict, teacher-approved seven-stage journey.
+
+    V6.17.1 deliberately prevents later stages from becoming actionable while
+    an earlier stage still needs review. This removes the former situation in
+    which Sources and Evidence could both appear active at the same time.
+    """
     research_rows = list(research_runs or [])
     lesson_progress = dict(lesson_progress or {})
     required_fields = ["project_name", "domain", "unit_title", "target_concept", "target_learners"]
     setup_complete = all(str(project.get(name) or "").strip() for name in required_fields)
 
     usable = _usable_research(research_rows)
+    approved_research = [
+        row for row in usable
+        if int(row.get("approved_by_teacher") or 0) == 1
+        and int(row.get("source_count") or 0) > 0
+    ]
     has_reference_material = bool(str(project.get("source_material") or "").strip())
-    research_completed = any(str(row.get("status") or "") == "completed" and int(row.get("source_count") or 0) > 0 for row in usable)
-    research_review = any(str(row.get("status") or "") == "needs_review" for row in usable)
 
     evidence_exists = bool(evidence)
     evidence_approved = bool(evidence and int(evidence.get("approved_by_teacher") or 0) == 1)
@@ -172,76 +180,85 @@ def evaluate_workflow(
 
     statuses: Dict[str, str] = {}
     statuses["setup"] = "completed" if setup_complete else "in_progress"
+
     if not setup_complete:
         statuses["resources"] = "locked"
-    elif research_completed:
+    elif approved_research:
         statuses["resources"] = "completed"
-    elif research_review:
+    elif usable:
         statuses["resources"] = "review"
-    elif usable or has_reference_material:
+    elif has_reference_material:
         statuses["resources"] = "in_progress"
     else:
         statuses["resources"] = "available"
 
-    resources_ready = statuses["resources"] in {"completed", "review", "in_progress"}
-    if evidence_approved:
+    if statuses["resources"] != "completed":
+        statuses["evidence"] = "locked"
+    elif evidence_approved:
         statuses["evidence"] = "completed"
     elif evidence_exists:
         statuses["evidence"] = "review"
-    elif resources_ready:
-        statuses["evidence"] = "available"
     else:
-        statuses["evidence"] = "locked"
+        statuses["evidence"] = "available"
 
-    if blueprint_approved:
+    if statuses["evidence"] != "completed":
+        statuses["blueprint"] = "locked"
+    elif blueprint_approved:
         statuses["blueprint"] = "completed"
     elif blueprint_exists:
         statuses["blueprint"] = "review"
-    elif evidence_approved:
-        statuses["blueprint"] = "available"
     else:
-        statuses["blueprint"] = "locked"
+        statuses["blueprint"] = "available"
 
-    if lessons_complete:
+    if statuses["blueprint"] != "completed":
+        statuses["lessons"] = "locked"
+    elif lessons_complete:
         statuses["lessons"] = "completed"
     elif lesson_available > 0 or lesson_approved > 0:
         statuses["lessons"] = "in_progress"
-    elif blueprint_approved:
+    else:
         statuses["lessons"] = "available"
-    else:
-        statuses["lessons"] = "locked"
 
-    if quality_ready:
-        statuses["quality"] = "completed"
-    elif lessons_complete:
-        statuses["quality"] = "available"
-    else:
+    if statuses["lessons"] != "completed":
         statuses["quality"] = "locked"
+    elif quality_ready:
+        statuses["quality"] = "completed"
+    else:
+        statuses["quality"] = "available"
 
     project_status = str(project.get("status") or "draft").lower()
-    if project_status == "published":
+    if statuses["quality"] != "completed":
+        statuses["publish"] = "locked"
+    elif project_status == "published":
         statuses["publish"] = "completed"
     elif project_status == "review":
         statuses["publish"] = "review"
-    elif statuses["quality"] == "completed":
-        statuses["publish"] = "available"
     else:
-        statuses["publish"] = "locked"
+        statuses["publish"] = "available"
 
     current_key = "publish"
     for step in WORKFLOW_STEPS:
-        status = statuses[step["key"]]
-        if status != "completed":
+        if statuses[step["key"]] != "completed":
             current_key = step["key"]
             break
 
     completed_count = sum(1 for value in statuses.values() if value == "completed")
+    requirements = {
+        "setup": ["complete_project_brief"],
+        "resources": ["run_research", "approve_research"],
+        "evidence": ["build_evidence", "approve_evidence"],
+        "blueprint": ["build_blueprint", "approve_blueprint"],
+        "lessons": ["generate_blocks", "approve_required_blocks"],
+        "quality": ["pass_quality_gate"],
+        "publish": ["preview_course", "publish_course"],
+    }
     return {
         "statuses": statuses,
         "current_key": current_key,
         "completed_count": completed_count,
         "total_steps": len(WORKFLOW_STEPS),
         "progress_pct": int(round(100 * completed_count / len(WORKFLOW_STEPS))),
+        "requirements": requirements.get(current_key, []),
         "lesson_progress": {
             "required": lesson_required,
             "available": lesson_available,
@@ -250,14 +267,13 @@ def evaluate_workflow(
         },
     }
 
-
 def load_workflow_state(project: Dict[str, Any]) -> Dict[str, Any]:
     import db
     import lesson_block_generation_engine
     project_id = int(project.get("id") or 0)
-    research_df = db.teacher_research_runs_df(project_id)
+    research_df = db.teacher_research_runs_df(project_id, phase_number=1)
     research_runs = research_df.to_dict("records") if hasattr(research_df, "to_dict") else []
-    evidence = db.latest_teacher_evidence_for_project(project_id, approved_only=False)
+    evidence = db.latest_teacher_evidence(project_id, 1, approved_only=False)
     blueprint = db.latest_teacher_blueprint(project_id, approved_only=False)
     approved_blueprint = db.latest_teacher_blueprint(project_id, approved_only=True)
 

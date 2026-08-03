@@ -3670,3 +3670,67 @@ a:focus-visible {
   .qai-status-badge { font-size:.7rem; white-space:normal; }
   .v6165-prod-card footer { align-items:flex-start; flex-direction:column; }
 }
+
+/* ========================================================================== 
+   3alimnIA V6.17.1 — Unified guided production journey
+   One canonical teacher journey, one active stage, and clear completion gates.
+   ========================================================================== */
+.v6171-stage-flow {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.65rem;
+  margin:.8rem 0 1rem;
+}
+.v6171-stage-flow > div {
+  min-height:82px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:.28rem;
+  padding:.72rem .82rem;
+  border:1px solid #dfe8f3;
+  border-radius:14px;
+  background:linear-gradient(145deg,#fbfdff,#f5f9ff);
+}
+.v6171-stage-flow > div:nth-child(1) {
+  border-color:#bdd8fb;
+  background:linear-gradient(145deg,#f7fbff,#edf5ff);
+}
+.v6171-stage-flow small {
+  color:#6b7b90;
+  font-size:.69rem;
+  font-weight:750;
+}
+.v6171-stage-flow strong {
+  color:#173a63;
+  font-size:.8rem;
+  line-height:1.5;
+  font-weight:820;
+}
+
+/* Keep the teacher journey visually compact and continuous. */
+[data-testid="stVerticalBlock"]:has(.v6162-workflow-marker) {
+  margin:.15rem 0 .75rem;
+  padding:.85rem 1rem .95rem;
+}
+[data-testid="stHorizontalBlock"]:has(.v6162-step-node) {
+  margin-bottom:.25rem;
+}
+[data-testid="stVerticalBlock"]:has(.v6162-current-action-marker) {
+  margin:.65rem 0 .8rem;
+  padding:.85rem;
+}
+.v6162-section-heading { margin-bottom:.45rem; }
+.v6162-section-heading p { max-width:52rem; }
+.v6162-summary-card { min-height:100%; }
+
+/* Future stages stay visually quiet; the current stage is the only dominant node. */
+.v6162-step-locked,
+.v6162-step-available { box-shadow:0 0 0 5px #fff; }
+.v6162-step-review { box-shadow:0 0 0 5px #fff,0 0 0 8px rgba(245,185,66,.10); }
+.v6162-step-active { box-shadow:0 0 0 5px #fff,0 0 0 8px rgba(59,130,246,.14); }
+
+@media (max-width:900px) {
+  .v6171-stage-flow { grid-template-columns:1fr; }
+  .v6171-stage-flow > div { min-height:0; }
+}

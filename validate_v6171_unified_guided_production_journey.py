@@ -1,0 +1,84 @@
+"""Validation for 3alimnIA V6.17.1 unified guided production journey."""
+from __future__ import annotations
+
+from pathlib import Path
+
+import guided_teacher_workflow as workflow
+
+
+ROOT = Path(__file__).resolve().parent
+
+
+def _project() -> dict:
+    return {
+        "id": 1,
+        "project_name": "Learn Python",
+        "domain": "Programming",
+        "unit_title": "Python fundamentals",
+        "target_concept": "Python basics",
+        "target_learners": "Beginners",
+        "source_material": "",
+        "status": "draft",
+    }
+
+
+def main() -> None:
+    project = _project()
+
+    unapproved_research = [{
+        "status": "completed",
+        "source_count": 6,
+        "approved_by_teacher": 0,
+        "phase_number": 1,
+    }]
+    out_of_order_evidence = {"approved_by_teacher": 1, "phase_number": 1}
+    state = workflow.evaluate_workflow(
+        project,
+        research_runs=unapproved_research,
+        evidence=out_of_order_evidence,
+    )
+    assert state["current_key"] == "resources", state
+    assert state["statuses"]["resources"] == "review", state
+    assert state["statuses"]["evidence"] == "locked", state
+    assert state["statuses"]["blueprint"] == "locked", state
+
+    approved_research = [{
+        "status": "completed",
+        "source_count": 6,
+        "approved_by_teacher": 1,
+        "phase_number": 1,
+    }]
+    state = workflow.evaluate_workflow(project, research_runs=approved_research)
+    assert state["statuses"]["resources"] == "completed", state
+    assert state["statuses"]["evidence"] == "available", state
+    assert state["current_key"] == "evidence", state
+
+    approved_evidence = {"approved_by_teacher": 1, "phase_number": 1}
+    state = workflow.evaluate_workflow(
+        project,
+        research_runs=approved_research,
+        evidence=approved_evidence,
+    )
+    assert state["statuses"]["evidence"] == "completed", state
+    assert state["statuses"]["blueprint"] == "available", state
+    assert state["current_key"] == "blueprint", state
+
+    teacher_source = (ROOT / "teacher_studio.py").read_text(encoding="utf-8")
+    db_source = (ROOT / "db.py").read_text(encoding="utf-8")
+    css_source = (ROOT / ".streamlit" / "v6_theme.css").read_text(encoding="utf-8")
+
+    assert "latest_approved_teacher_research" in teacher_source
+    assert "phase_number = 1" in teacher_source
+    assert "Canonical course research dossier" in teacher_source
+    assert "v6171-stage-flow" in teacher_source
+    assert "v6171-stage-flow" in css_source
+    assert "def approve_teacher_research_run" in db_source
+    assert "approved_by_teacher INTEGER DEFAULT 0" in db_source
+    assert 'APP_VERSION = "v6.17.1-unified-guided-production-journey"' in db_source
+    assert 'vertical_alignment="stretch"' not in teacher_source
+
+    print("V6.17.1 unified guided production journey validation passed.")
+
+
+if __name__ == "__main__":
+    main()
