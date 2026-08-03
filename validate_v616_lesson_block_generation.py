@@ -51,7 +51,7 @@ def main():
  assert 'Generate ONE lesson block only' in prompt and lesson_id in prompt and 'S1' in prompt
  invalid=engine.validate_block_content('summary','# ملخص\nادعاء [S99]',['S1']); assert invalid['status']=='error'
  ui=(ROOT/'teacher_studio.py').read_text(encoding='utf-8'); assert 'render_lesson_blocks' in ui and 'بناء محتوى الدرس على مستوى الكتل' in ui
- assert 'APP_VERSION = "v6.17.1-unified-guided-production-journey"' in (ROOT/'db.py').read_text(encoding='utf-8')
+ assert any(v in (ROOT/'db.py').read_text(encoding='utf-8') for v in ('APP_VERSION = "v6.17.1-unified-guided-production-journey"', 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"'))
  print('V6.16 lesson block generation validation passed.')
 
 if __name__=='__main__':

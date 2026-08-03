@@ -69,12 +69,12 @@ def main() -> None:
 
     assert "latest_approved_teacher_research" in teacher_source
     assert "phase_number = 1" in teacher_source
-    assert "Canonical course research dossier" in teacher_source
-    assert "v6171-stage-flow" in teacher_source
-    assert "v6171-stage-flow" in css_source
+    assert any(marker in teacher_source for marker in ("Canonical course research dossier", "Research results and source review", "نتائج البحث ومراجعة المصادر"))
+    assert any(marker in teacher_source for marker in ("v6171-stage-flow", "v6172-current-stage-card"))
+    assert any(marker in css_source for marker in ("v6171-stage-flow", "v6172-current-stage-card"))
     assert "def approve_teacher_research_run" in db_source
     assert "approved_by_teacher INTEGER DEFAULT 0" in db_source
-    assert 'APP_VERSION = "v6.17.1-unified-guided-production-journey"' in db_source
+    assert any(v in db_source for v in ('APP_VERSION = "v6.17.1-unified-guided-production-journey"', 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"'))
     assert 'vertical_alignment="stretch"' not in teacher_source
 
     print("V6.17.1 unified guided production journey validation passed.")

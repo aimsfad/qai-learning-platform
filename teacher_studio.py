@@ -841,123 +841,130 @@ def _render_latest_research(
     *,
     canonical_stage: bool = False,
 ) -> Optional[Dict[str, Any]]:
+    """Render one visible research-review area with one approval action."""
     latest = db.latest_usable_teacher_research(int(project_id), int(phase_number))
     if not latest:
-        st.caption(u["research_missing"])
         return None
+
     sources = web_research_engine.sources_from_json(latest.get("sources_json") or "[]")
     status = str(latest.get("status") or "")
     lang = i18n.current_lang(st)
-    canonical_title = {
-        "ar": "حزمة البحث الأساسية للمقرر",
-        "fr": "Dossier de recherche principal du cours",
-        "en": "Canonical course research dossier",
-    }.get(lang, "Canonical course research dossier")
-    expander_title = canonical_title if canonical_stage else f"{u['research_latest']} — {phase_number}. {PHASES.get(int(phase_number), '')}"
-    with st.expander(
-        expander_title,
-        expanded=status in {"completed", "needs_review"},
-    ):
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Status", status or "—")
-        c2.metric("Provider", f"{latest.get('provider') or '—'} / {latest.get('model') or '—'}")
-        c3.metric(u["research_sources"], int(latest.get("source_count") or len(sources)))
-        latency_ms = int(latest.get("latency_ms") or 0)
-        c4.metric(u["latency"], f"{latency_ms / 1000:.1f} s" if latency_ms else "—")
-        approved = bool(int(latest.get("approved_by_teacher") or 0))
-        if approved:
-            approved_label = {"ar": "اعتمد الأستاذ حزمة البحث الأساسية.", "fr": "Le dossier de recherche est approuvé.", "en": "The teacher approved this research dossier."}.get(lang, "The teacher approved this research dossier.")
-            st.success(approved_label)
-        elif canonical_stage and status in {"completed", "needs_review"}:
-            approval_help = {
-                "ar": "راجع المصادر أولًا، ثم اعتمد الحزمة لفتح مرحلة تركيب الأدلة.",
-                "fr": "Révisez les sources puis approuvez le dossier pour ouvrir la synthèse des preuves.",
-                "en": "Review the sources, then approve the dossier to unlock evidence synthesis.",
-            }.get(lang, "Review and approve the dossier to unlock evidence synthesis.")
-            st.info(approval_help)
-            approve_label = {"ar": "اعتماد حزمة البحث والمتابعة", "fr": "Approuver la recherche et continuer", "en": "Approve research and continue"}.get(lang, "Approve research and continue")
-            if st.button(approve_label, type="primary", use_container_width=True, key=f"approve_research_{int(latest.get('id') or 0)}"):
-                db.approve_teacher_research_run(int(latest["id"]), int(project_id), _current_teacher_username())
-                st.session_state.teacher_flash_success = approve_label
-                st.session_state.teacher_workspace_section_pending = "evidence"
-                st.rerun()
-        if latest.get("diagnostic"):
-            st.caption(str(latest.get("diagnostic")))
-        tabs = st.tabs([u["research_report"], u["research_registry"], u["research_queries"]])
-        with tabs[0]:
-            report = str(latest.get("report_text") or "").strip()
-            if report:
-                _render_generation_markdown(report, "ar" if i18n.current_lang(st) == "ar" else "en")
-        with tabs[1]:
-            if not sources:
-                st.info(u["research_missing"])
-            for source in sources:
-                with st.container(border=True):
-                    if source.url:
-                        st.markdown(f"**[{source.source_id}] [{source.title}]({source.url})**")
-                    else:
-                        st.markdown(f"**[{source.source_id}] {source.title}**")
-                    st.caption(
-                        f"{source.domain} · {source.source_type} · {u['authority']}: {source.authority_level}/5"
-                    )
-                    if source.snippet:
-                        st.write(source.snippet)
-        with tabs[2]:
-            try:
-                queries = json.loads(latest.get("query_plan_json") or "[]")
-            except Exception:
-                queries = []
-            for query in queries:
-                st.markdown(f"- {query}")
-        payload = {
-            "project_id": int(project_id),
-            "phase_number": int(phase_number),
-            "research_mode": latest.get("research_mode"),
-            "provider": latest.get("provider"),
-            "model": latest.get("model"),
-            "status": latest.get("status"),
-            "queries": queries,
-            "sources": [source.__dict__ for source in sources],
-            "report": latest.get("report_text"),
-            "diagnostic": latest.get("diagnostic"),
-        }
-        st.download_button(
-            u["research_download"],
-            json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
-            file_name=f"project_{int(project_id)}_phase_{int(phase_number)}_research.json",
-            mime="application/json",
-            use_container_width=True,
-            key=f"download_research_{int(latest.get('id') or 0)}",
-        )
+    approved = bool(int(latest.get("approved_by_teacher") or 0))
+    labels = {
+        "ar": {
+            "title": "نتائج البحث ومراجعة المصادر",
+            "status": "الحالة",
+            "provider": "خدمة البحث",
+            "count": "المصادر",
+            "latency": "المدة",
+            "instruction": "راجع ملخص البحث وسجل المصادر. عند الاطمئنان إلى جودتها، اعتمد الحزمة للانتقال تلقائيًا إلى تركيب الأدلة.",
+            "approve": "اعتماد المصادر والانتقال إلى تركيب الأدلة",
+            "approved": "تم اعتماد حزمة البحث الأساسية.",
+            "download": "تنزيل حزمة البحث JSON",
+        },
+        "fr": {
+            "title": "Résultats et révision des sources",
+            "status": "État",
+            "provider": "Service",
+            "count": "Sources",
+            "latency": "Durée",
+            "instruction": "Révisez les résultats et les sources, puis approuvez le dossier pour passer automatiquement aux preuves.",
+            "approve": "Approuver les sources et continuer",
+            "approved": "Le dossier de recherche est approuvé.",
+            "download": "Télécharger le dossier JSON",
+        },
+        "en": {
+            "title": "Research results and source review",
+            "status": "Status",
+            "provider": "Provider",
+            "count": "Sources",
+            "latency": "Duration",
+            "instruction": "Review the report and sources, then approve the dossier to continue automatically to evidence synthesis.",
+            "approve": "Approve sources and continue to evidence",
+            "approved": "The canonical research dossier is approved.",
+            "download": "Download research JSON",
+        },
+    }.get(lang)
+
+    st.markdown(f"### {labels['title']}")
+    st.caption(labels["instruction"])
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(labels["status"], status or "—")
+    c2.metric(labels["provider"], f"{latest.get('provider') or '—'} / {latest.get('model') or '—'}")
+    c3.metric(labels["count"], int(latest.get("source_count") or len(sources)))
+    latency_ms = int(latest.get("latency_ms") or 0)
+    c4.metric(labels["latency"], f"{latency_ms / 1000:.1f} s" if latency_ms else "—")
+
+    if latest.get("diagnostic"):
+        st.caption(str(latest.get("diagnostic")))
+
+    tabs = st.tabs([u["research_report"], u["research_registry"], u["research_queries"]])
+    with tabs[0]:
+        report = str(latest.get("report_text") or "").strip()
+        if report:
+            _render_generation_markdown(report, "ar" if lang == "ar" else "en")
+        else:
+            st.info(u["research_missing"])
+    with tabs[1]:
+        if not sources:
+            st.info(u["research_missing"])
+        for source in sources:
+            with st.container(border=True):
+                if source.url:
+                    st.markdown(f"**[{source.source_id}] [{source.title}]({source.url})**")
+                else:
+                    st.markdown(f"**[{source.source_id}] {source.title}**")
+                st.caption(f"{source.domain} · {source.source_type} · {u['authority']}: {source.authority_level}/5")
+                if source.snippet:
+                    st.write(source.snippet)
+    with tabs[2]:
+        try:
+            queries = json.loads(latest.get("query_plan_json") or "[]")
+        except Exception:
+            queries = []
+        for query in queries:
+            st.markdown(f"- {query}")
+
+    payload = {
+        "project_id": int(project_id),
+        "phase_number": int(phase_number),
+        "research_mode": latest.get("research_mode"),
+        "provider": latest.get("provider"),
+        "model": latest.get("model"),
+        "status": latest.get("status"),
+        "queries": queries,
+        "sources": [source.__dict__ for source in sources],
+        "report": latest.get("report_text"),
+        "diagnostic": latest.get("diagnostic"),
+    }
+    st.download_button(
+        labels["download"],
+        json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
+        file_name=f"project_{int(project_id)}_phase_{int(phase_number)}_research.json",
+        mime="application/json",
+        use_container_width=True,
+        key=f"download_research_{int(latest.get('id') or 0)}",
+    )
+
+    if approved:
+        st.success(labels["approved"])
+    elif canonical_stage and status in {"completed", "needs_review"}:
+        st.markdown("<span class='v6172-approval-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        if st.button(labels["approve"], type="primary", use_container_width=True, key=f"approve_research_{int(latest.get('id') or 0)}"):
+            db.approve_teacher_research_run(int(latest["id"]), int(project_id), _current_teacher_username())
+            st.session_state.teacher_flash_success = labels["approved"]
+            st.session_state.teacher_workspace_section_pending = "evidence"
+            st.rerun()
     return latest
 
-
 def render_prompt_and_generation(project: Dict[str, Any]) -> None:
-    """Render the canonical sources stage and keep legacy phase generation advanced.
-
-    The seven-stage teacher journey always researches phase 01 as the canonical
-    course dossier. The current legacy production phase is available only in the
-    collapsed advanced section, preventing phase-number collisions in the UI.
-    """
+    """Render a single, guided sources-and-research workspace."""
     u = teacher_ui()
     p = _project_defaults(project)
     generation_phase = int(p.get("current_phase") or 1)
     research_phase = 1
     project_id = int(p["id"])
     lang = i18n.current_lang(st)
-
-    stage_title = {
-        "ar": "المراجع والبحث",
-        "fr": "Sources et recherche",
-        "en": "Sources and research",
-    }.get(lang, "Sources and research")
-    stage_note = {
-        "ar": "هذه هي حزمة البحث الأساسية للمقرر. راجع المصادر واعتمدها مرة واحدة قبل الانتقال إلى تركيب الأدلة.",
-        "fr": "Il s’agit du dossier de recherche principal du cours. Révisez puis approuvez les sources avant la synthèse des preuves.",
-        "en": "This is the canonical course research dossier. Review and approve it before evidence synthesis.",
-    }.get(lang, "Review and approve the canonical research dossier before evidence synthesis.")
-    st.markdown(f"## {stage_title}")
-    st.caption(stage_note)
 
     research_status = web_research_engine.research_status()
     default_mode = str(research_status.get("default_mode") or "balanced").lower()
@@ -973,32 +980,90 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         "deep": u["research_mode_deep"],
     }
 
-    with st.container(border=True):
-        st.markdown(f"### {u['research_panel']}")
-        st.write(u["research_intro"])
+    latest_research = db.latest_usable_teacher_research(project_id, research_phase)
+    approved_research = db.latest_approved_teacher_research(project_id, research_phase)
+    stage_state = "approved" if approved_research else ("review" if latest_research else "search")
+    stage_labels = {
+        "ar": {
+            "workspace": "مساحة العمل — المراجع والبحث",
+            "intro": "هذه المرحلة بسيطة: اضبط البحث، شغّله مرة واحدة، راجع المصادر، ثم اعتمدها. بعد الاعتماد تنتقل المنصة تلقائيًا إلى تركيب الأدلة.",
+            "s1": "إعداد البحث",
+            "s2": "جمع المصادر",
+            "s3": "المراجعة والاعتماد",
+            "settings": "إعدادات البحث",
+            "start": "بدء البحث وجمع المصادر",
+            "refresh": "تحديث البحث والمصادر",
+            "no_result": "لم تُنشأ حزمة بحث بعد. ابدأ البحث من الزر أعلاه.",
+            "review_hint": "اكتمل البحث. راجع النتائج أدناه، ثم اضغط زر الاعتماد الموجود بعد سجل المصادر.",
+            "approved": "تم اعتماد المصادر، وأصبحت مرحلة تركيب الأدلة متاحة.",
+            "open_evidence": "فتح مرحلة تركيب الأدلة",
+            "next_hint": "لن تحتاج إلى تشغيل البحث مرة أخرى إلا إذا أردت تحديث المصادر.",
+        },
+        "fr": {
+            "workspace": "Espace de travail — Sources et recherche",
+            "intro": "Réglez la recherche, lancez-la, révisez les sources, puis approuvez-les. La plateforme passera ensuite automatiquement aux preuves.",
+            "s1": "Configurer",
+            "s2": "Collecter",
+            "s3": "Réviser et approuver",
+            "settings": "Paramètres de recherche",
+            "start": "Lancer la recherche et collecter les sources",
+            "refresh": "Actualiser la recherche",
+            "no_result": "Aucun dossier de recherche n’est encore disponible.",
+            "review_hint": "La recherche est terminée. Révisez les résultats ci-dessous puis approuvez le dossier.",
+            "approved": "Les sources sont approuvées; l’étape des preuves est ouverte.",
+            "open_evidence": "Ouvrir la synthèse des preuves",
+            "next_hint": "Relancez la recherche uniquement si vous souhaitez actualiser les sources.",
+        },
+        "en": {
+            "workspace": "Workspace — Sources and research",
+            "intro": "Configure the search, run it once, review the sources, and approve them. The platform then moves automatically to evidence synthesis.",
+            "s1": "Configure",
+            "s2": "Collect sources",
+            "s3": "Review and approve",
+            "settings": "Research settings",
+            "start": "Start research and collect sources",
+            "refresh": "Refresh research",
+            "no_result": "No research dossier has been created yet.",
+            "review_hint": "Research is complete. Review the results below, then approve the dossier.",
+            "approved": "Sources are approved and evidence synthesis is available.",
+            "open_evidence": "Open evidence synthesis",
+            "next_hint": "Run research again only when you want to refresh the sources.",
+        },
+    }.get(lang)
+
+    st.markdown(f"## {stage_labels['workspace']}")
+    st.write(stage_labels["intro"])
+    step_classes = {
+        "search": ("active", "locked", "locked"),
+        "review": ("done", "done", "active"),
+        "approved": ("done", "done", "done"),
+    }[stage_state]
+    st.markdown(
+        f"<div class='v6172-research-steps' dir='{i18n.direction(lang)}'>"
+        f"<div class='v6172-research-step {step_classes[0]}'><span>1</span><strong>{escape(stage_labels['s1'])}</strong></div>"
+        f"<div class='v6172-research-step {step_classes[1]}'><span>2</span><strong>{escape(stage_labels['s2'])}</strong></div>"
+        f"<div class='v6172-research-step {step_classes[2]}'><span>3</span><strong>{escape(stage_labels['s3'])}</strong></div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.expander(stage_labels["settings"], expanded=not bool(latest_research)):
         r1, r2 = st.columns([2, 1])
         with r1:
             research_mode = st.selectbox(
-                u["research_mode"],
-                modes,
-                index=modes.index(default_mode),
+                u["research_mode"], modes, index=modes.index(default_mode),
                 format_func=lambda value: mode_labels.get(value, value),
                 key=f"teacher_research_mode_{project_id}_{research_phase}",
             )
         with r2:
             max_sources = st.slider(
-                u["research_sources"],
-                min_value=3,
-                max_value=15,
-                value=8,
-                step=1,
+                u["research_sources"], min_value=3, max_value=15, value=8, step=1,
                 key=f"teacher_research_sources_{project_id}_{research_phase}",
                 disabled=research_mode == "off",
             )
         with st.expander("Source policy / سياسة المصادر", expanded=False):
             preferred_domains_raw = st.text_input(
-                u["preferred_domains"],
-                value="",
+                u["preferred_domains"], value="",
                 key=f"teacher_preferred_domains_{project_id}_{research_phase}",
                 disabled=research_mode == "off",
             )
@@ -1009,72 +1074,67 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 disabled=research_mode == "off",
             )
         st.caption(u["research_cost"])
-        latest_research = db.latest_usable_teacher_research(project_id, research_phase)
-        research_button_label = u["research_refresh"] if latest_research else u["research_now"]
-        if st.button(
-            research_button_label,
-            type="primary" if not latest_research else "secondary",
-            use_container_width=True,
-            key=f"run_teacher_research_{project_id}_{research_phase}",
-            disabled=research_mode == "off" or not research_status.get("available"),
-        ):
-            try:
-                with st.spinner("3alimnIA is building the canonical course research dossier..."):
-                    research_run = educational_builder.run_project_research(
-                        p,
-                        _current_teacher_username(),
-                        phase_number=research_phase,
-                        research_mode=research_mode,
-                        max_sources=max_sources,
-                        preferred_domains=_split_domain_input(preferred_domains_raw),
-                        excluded_domains=_split_domain_input(excluded_domains_raw),
-                    )
-                if bool(int(research_run.get("cache_fallback_used") or 0)):
-                    detail = str(research_run.get("refresh_diagnostic") or "").strip()
-                    st.session_state.teacher_flash_warning = u["research_cached_fallback"] + (f" {detail}" if detail else "")
-                elif str(research_run.get("status") or "") in {"completed", "needs_review"}:
-                    st.session_state.teacher_flash_success = u["research_ready"]
-                else:
-                    st.session_state.teacher_flash_error = str(research_run.get("diagnostic") or u["research_failed"])
-            except Exception as exc:
-                st.session_state.teacher_flash_error = f"{u['research_failed']} {exc}"
-            st.rerun()
+
+    # Inputs must exist even when the settings expander is closed.
+    research_mode = st.session_state.get(f"teacher_research_mode_{project_id}_{research_phase}", default_mode)
+    max_sources = int(st.session_state.get(f"teacher_research_sources_{project_id}_{research_phase}", 8))
+    preferred_domains_raw = st.session_state.get(f"teacher_preferred_domains_{project_id}_{research_phase}", "")
+    excluded_domains_raw = st.session_state.get(
+        f"teacher_excluded_domains_{project_id}_{research_phase}",
+        "wikipedia.org, pinterest.com, facebook.com, instagram.com, tiktok.com",
+    )
+
+    button_label = stage_labels["refresh"] if latest_research else stage_labels["start"]
+    if st.button(
+        button_label,
+        type="secondary" if latest_research else "primary",
+        use_container_width=True,
+        key=f"run_teacher_research_{project_id}_{research_phase}",
+        disabled=research_mode == "off" or not research_status.get("available"),
+    ):
+        try:
+            spinner_text = {"ar": "تجمع 3alimnIA المصادر وتبني حزمة البحث...", "fr": "3alimnIA construit le dossier de recherche...", "en": "3alimnIA is building the research dossier..."}.get(lang)
+            with st.spinner(spinner_text):
+                research_run = educational_builder.run_project_research(
+                    p, _current_teacher_username(), phase_number=research_phase,
+                    research_mode=research_mode, max_sources=max_sources,
+                    preferred_domains=_split_domain_input(preferred_domains_raw),
+                    excluded_domains=_split_domain_input(excluded_domains_raw),
+                )
+            if bool(int(research_run.get("cache_fallback_used") or 0)):
+                detail = str(research_run.get("refresh_diagnostic") or "").strip()
+                st.session_state.teacher_flash_warning = u["research_cached_fallback"] + (f" {detail}" if detail else "")
+            elif str(research_run.get("status") or "") in {"completed", "needs_review"}:
+                st.session_state.teacher_flash_success = u["research_ready"]
+            else:
+                st.session_state.teacher_flash_error = str(research_run.get("diagnostic") or u["research_failed"])
+        except Exception as exc:
+            st.session_state.teacher_flash_error = f"{u['research_failed']} {exc}"
+        st.rerun()
+
+    if not latest_research:
+        st.info(stage_labels["no_result"])
+    elif not approved_research:
+        st.info(stage_labels["review_hint"])
+        _render_latest_research(project_id, research_phase, u, canonical_stage=True)
+    else:
+        st.success(stage_labels["approved"])
+        st.caption(stage_labels["next_hint"])
+        if st.button(stage_labels["open_evidence"], type="primary", use_container_width=True, key=f"continue_to_evidence_{project_id}"):
+            _set_workspace_section("evidence")
         _render_latest_research(project_id, research_phase, u, canonical_stage=True)
 
-    approved_research = db.latest_approved_teacher_research(project_id, research_phase)
-    if approved_research:
-        next_label = {
-            "ar": "تم اعتماد المراجع. انتقل إلى تركيب الأدلة.",
-            "fr": "Les sources sont approuvées. Passez à la synthèse des preuves.",
-            "en": "Sources approved. Continue to evidence synthesis.",
-        }.get(lang, "Sources approved. Continue to evidence synthesis.")
-        st.success(next_label)
-        if st.button(
-            {"ar": "متابعة إلى تركيب الأدلة", "fr": "Continuer vers les preuves", "en": "Continue to evidence synthesis"}.get(lang, "Continue"),
-            type="primary",
-            use_container_width=True,
-            key=f"continue_to_evidence_{project_id}",
-        ):
-            _set_workspace_section("evidence")
-    else:
-        wait_label = {
-            "ar": "مرحلة تركيب الأدلة مقفلة حتى تعتمد حزمة البحث الأساسية.",
-            "fr": "La synthèse des preuves reste verrouillée jusqu’à l’approbation de la recherche.",
-            "en": "Evidence synthesis remains locked until the research dossier is approved.",
-        }.get(lang, "Evidence synthesis is locked until research approval.")
-        st.info(wait_label)
-
     advanced_label = {
-        "ar": "التوليد التقني المرحلي — خيارات متقدمة",
-        "fr": "Génération technique par phase — options avancées",
-        "en": "Technical phase generation — advanced options",
-    }.get(lang, "Technical phase generation — advanced options")
+        "ar": "السجل التقني المتقدم للتوليد",
+        "fr": "Journal technique avancé de génération",
+        "en": "Advanced technical generation log",
+    }.get(lang, "Advanced technical generation log")
     with st.expander(advanced_label, expanded=False):
         st.caption({
-            "ar": "هذه المراحل التقنية الإحدى عشرة لا تمثل رحلة الأستاذ ذات السبع خطوات. تُستخدم داخليًا لإنتاج أصول متخصصة.",
-            "fr": "Ces onze phases techniques ne remplacent pas le parcours enseignant en sept étapes.",
-            "en": "These eleven technical phases do not replace the seven-stage teacher journey.",
-        }.get(lang, "These technical phases do not replace the teacher journey."))
+            "ar": "هذا القسم تقني ولا يلزم لإنجاز رحلة الأستاذ. استخدمه فقط لمراجعة المراحل الداخلية المتخصصة.",
+            "fr": "Cette section est technique et n’est pas nécessaire au parcours enseignant.",
+            "en": "This technical section is not required for the teacher journey.",
+        }.get(lang))
         prompt = compile_project_prompt(p, generation_phase)
         st.session_state.teacher_last_prompt = prompt
         expand_prompt = bool(st.session_state.get("teacher_expand_prompt", False))
@@ -1083,23 +1143,10 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         fallback_text = ""
         if status.get("ready_fallbacks"):
             fallback_text = " | fallback: " + ", ".join(status["ready_fallbacks"])
-        st.info(
-            f"{u['provider']}: {status['provider']} / {status['model']} — "
-            f"{'ready' if status['available'] else 'prompt export only'}{fallback_text}"
-        )
-        budget = content_generation_engine.prompt_budget_info(
-            prompt,
-            educational_builder.PHASE_MAX_TOKENS.get(generation_phase, 3600),
-        )
+        st.info(f"{u['provider']}: {status['provider']} / {status['model']} — {'ready' if status['available'] else 'prompt export only'}{fallback_text}")
+        budget = content_generation_engine.prompt_budget_info(prompt, educational_builder.PHASE_MAX_TOKENS.get(generation_phase, 3600))
         compacted_label = u["prompt_compacted"] if budget.get("compacted") else ""
-        st.caption(
-            u["prompt_budget"].format(
-                runtime=budget.get("estimated_runtime_tokens", 0),
-                original=budget.get("estimated_original_tokens", 0),
-                output=budget.get("max_output_tokens", 0),
-                compacted=compacted_label,
-            )
-        )
+        st.caption(u["prompt_budget"].format(runtime=budget.get("estimated_runtime_tokens", 0), original=budget.get("estimated_original_tokens", 0), output=budget.get("max_output_tokens", 0), compacted=compacted_label))
         st.caption(f"{u['phase_only']} · {generation_phase}. {PHASES[generation_phase]}")
         if st.button(u["rebuild_prompt"], use_container_width=True, key=f"rebuild_teacher_prompt_{project_id}_{generation_phase}"):
             st.session_state.teacher_last_prompt = compile_project_prompt(p, generation_phase)
@@ -1111,34 +1158,18 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         if expand_prompt:
             st.session_state.teacher_expand_prompt = False
         safe_name = "_".join(str(p.get("project_name") or "project").split())
-        st.download_button(
-            u["download_prompt"],
-            prompt.encode("utf-8"),
-            file_name=f"{safe_name}_phase_{generation_phase}_prompt.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
+        st.download_button(u["download_prompt"], prompt.encode("utf-8"), file_name=f"{safe_name}_phase_{generation_phase}_prompt.md", mime="text/markdown", use_container_width=True)
         project_json = json.dumps(p, ensure_ascii=False, indent=2, default=str)
-        st.download_button(
-            u["download_project"],
-            project_json.encode("utf-8"),
-            file_name=f"{safe_name}_project.json",
-            mime="application/json",
-            use_container_width=True,
-        )
+        st.download_button(u["download_project"], project_json.encode("utf-8"), file_name=f"{safe_name}_project.json", mime="application/json", use_container_width=True)
         _render_latest_generation(project_id, u, str(p.get("primary_language_code") or "en"))
         if st.button(u["generate"], type="primary", use_container_width=True, key=f"generate_teacher_phase_{project_id}_{generation_phase}"):
             try:
                 with st.spinner(f"3alimnIA is generating technical phase {generation_phase}: {PHASES[generation_phase]}..."):
                     outcome = educational_builder.generate_project_phase(
-                        p,
-                        _current_teacher_username(),
-                        phase_number=generation_phase,
-                        research_mode=research_mode,
-                        max_research_sources=max_sources,
+                        p, _current_teacher_username(), phase_number=generation_phase,
+                        research_mode=research_mode, max_research_sources=max_sources,
                         preferred_domains=_split_domain_input(preferred_domains_raw),
-                        excluded_domains=_split_domain_input(excluded_domains_raw),
-                        force_research=False,
+                        excluded_domains=_split_domain_input(excluded_domains_raw), force_research=False,
                     )
                 st.session_state.teacher_last_response = outcome.response
                 if outcome.status == "completed":
@@ -1936,7 +1967,7 @@ def _set_workspace_section(section: str) -> None:
 
 
 def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> None:
-    """Render the connected seven-stage teacher journey and one primary next action."""
+    """Render one clear seven-stage teacher journey without duplicate actions."""
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
     copy = guided_teacher_workflow.workflow_copy(lang)
@@ -1950,33 +1981,36 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
     current_index = step_keys.index(current_key) if current_key in step_keys else 0
     next_key = step_keys[current_index + 1] if current_index + 1 < len(step_keys) else None
     next_spec = copy["steps"].get(next_key) if next_key else None
+    target_section = guided_teacher_workflow.section_for_step(current_key)
+    visible_section = str(st.session_state.get("teacher_workspace_section") or "")
+
     completion_rules = {
         "ar": {
-            "setup": "بعد استكمال بيانات المقرر الأساسية.",
-            "resources": "بعد مراجعة حزمة البحث واعتمادها.",
-            "evidence": "بعد اعتماد حزمة الأدلة الأساسية.",
-            "blueprint": "بعد اعتماد مخطط المقرر.",
-            "lessons": "بعد اعتماد جميع أجزاء الدروس المطلوبة.",
-            "quality": "بعد اجتياز فحوص الجودة النهائية.",
-            "publish": "بعد المعاينة والنشر أو الإرسال للمراجعة.",
+            "setup": "استكمال بيانات المقرر وحفظها.",
+            "resources": "مراجعة المصادر ثم اعتماد حزمة البحث.",
+            "evidence": "مراجعة بطاقات الأدلة ثم اعتماد الحزمة.",
+            "blueprint": "مراجعة مخطط المقرر ثم اعتماده.",
+            "lessons": "اعتماد جميع أجزاء الدروس المطلوبة.",
+            "quality": "اجتياز فحوص الجودة النهائية.",
+            "publish": "المعاينة ثم النشر أو الإرسال للمراجعة.",
         },
         "fr": {
-            "setup": "Lorsque la fiche du cours est complète.",
-            "resources": "Après révision et approbation du dossier de recherche.",
-            "evidence": "Après approbation du dossier de preuves.",
-            "blueprint": "Après approbation du plan du cours.",
-            "lessons": "Après approbation de tous les blocs requis.",
-            "quality": "Après validation des contrôles qualité.",
-            "publish": "Après aperçu et publication.",
+            "setup": "Compléter et enregistrer la fiche du cours.",
+            "resources": "Réviser puis approuver le dossier de recherche.",
+            "evidence": "Réviser puis approuver le dossier de preuves.",
+            "blueprint": "Réviser puis approuver le plan du cours.",
+            "lessons": "Approuver tous les blocs requis.",
+            "quality": "Valider les contrôles qualité.",
+            "publish": "Prévisualiser puis publier.",
         },
         "en": {
-            "setup": "When the project brief is complete.",
-            "resources": "After the research dossier is reviewed and approved.",
-            "evidence": "After the canonical evidence bundle is approved.",
-            "blueprint": "After the course blueprint is approved.",
-            "lessons": "After all required lesson blocks are approved.",
-            "quality": "After the final quality checks pass.",
-            "publish": "After preview and publication.",
+            "setup": "Complete and save the course brief.",
+            "resources": "Review the sources and approve the research dossier.",
+            "evidence": "Review and approve the evidence bundle.",
+            "blueprint": "Review and approve the course blueprint.",
+            "lessons": "Approve all required lesson blocks.",
+            "quality": "Pass the final quality checks.",
+            "publish": "Preview and publish or submit for review.",
         },
     }.get(lang, {})
 
@@ -2013,36 +2047,35 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
                 _set_workspace_section(step["section"])
             st.caption(copy["status"].get(status, status))
 
-    st.markdown("<span class='v6162-current-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    st.markdown("<span class='v6172-current-stage-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     main_col, summary_col = ui_stability.columns([2.25, 1], gap="large", vertical_alignment="top")
     with main_col:
-        with st.container(border=False):
-            st.caption(copy["current_step"])
-            st.markdown(f"### {current_spec['title']}")
-            st.write(current_spec["description"])
-            st.markdown(
-                f"<div class='v6162-outcome-box' dir='{direction}'><span>{escape(current_spec['outcome'])}</span></div>",
-                unsafe_allow_html=True,
-            )
-            now_label = {"ar": "الآن", "fr": "Maintenant", "en": "Now"}.get(lang, "Now")
-            done_label = {"ar": "تكتمل المرحلة عندما", "fr": "Étape terminée lorsque", "en": "Stage completes when"}.get(lang, "Stage completes when")
-            next_label = {"ar": "بعدها", "fr": "Ensuite", "en": "Next"}.get(lang, "Next")
-            next_title = next_spec["title"] if next_spec else current_spec["title"]
-            st.markdown(
-                f"<div class='v6171-stage-flow' dir='{direction}'>"
-                f"<div><small>{escape(now_label)}</small><strong>{escape(current_spec['title'])}</strong></div>"
-                f"<div><small>{escape(done_label)}</small><strong>{escape(completion_rules.get(current_key, current_spec['outcome']))}</strong></div>"
-                f"<div><small>{escape(next_label)}</small><strong>{escape(next_title)}</strong></div>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            if st.button(
-                current_spec["action"],
-                type="primary",
-                use_container_width=True,
-                key=f"guided_continue_{int(project['id'])}_{current_key}",
-            ):
-                _set_workspace_section(guided_teacher_workflow.section_for_step(current_key))
+        now_label = {"ar": "المرحلة الحالية", "fr": "Étape actuelle", "en": "Current stage"}.get(lang, "Current stage")
+        finish_label = {"ar": "تنتهي عندما", "fr": "Terminée lorsque", "en": "Completed when"}.get(lang, "Completed when")
+        next_label = {"ar": "المرحلة التالية", "fr": "Étape suivante", "en": "Next stage"}.get(lang, "Next stage")
+        next_title = next_spec["title"] if next_spec else current_spec["title"]
+        st.markdown(
+            f"<section class='v6172-current-stage-card' dir='{direction}'>"
+            f"<div class='v6172-current-stage-head'><small>{escape(now_label)}</small><h3>{escape(current_spec['title'])}</h3>"
+            f"<p>{escape(current_spec['description'])}</p></div>"
+            f"<div class='v6172-current-stage-grid'>"
+            f"<div><small>{escape(finish_label)}</small><strong>{escape(completion_rules.get(current_key, current_spec['outcome']))}</strong></div>"
+            f"<div><small>{escape(next_label)}</small><strong>{escape(next_title)}</strong></div>"
+            f"</div></section>",
+            unsafe_allow_html=True,
+        )
+        if visible_section != target_section:
+            open_label = {"ar": "فتح مساحة العمل الحالية", "fr": "Ouvrir l’espace de travail", "en": "Open current workspace"}.get(lang, "Open current workspace")
+            if st.button(open_label, type="primary", use_container_width=True, key=f"guided_open_{int(project['id'])}_{current_key}"):
+                _set_workspace_section(target_section)
+        else:
+            in_stage = {
+                "ar": "أنت داخل هذه المرحلة الآن. نفّذ الإجراء الرئيسي في مساحة العمل أدناه؛ لا يلزم الضغط على زر آخر للانتقال إليها.",
+                "fr": "Vous êtes déjà dans cette étape. Utilisez l’action principale ci-dessous.",
+                "en": "You are already in this stage. Use the primary action in the workspace below.",
+            }.get(lang, "Use the primary action below.")
+            st.caption(in_stage)
+
     with summary_col:
         p = _project_defaults(project)
         target_languages = ", ".join(str(item) for item in (p.get("target_languages") or []) if str(item).strip()) or "—"
@@ -2065,8 +2098,6 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
         required = int(lesson.get("required") or 0)
         st.markdown("<span class='v6162-lesson-progress-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
         st.progress(approved / max(required, 1), text=f"{copy['lesson_progress']}: {approved}/{required}")
-
-
 
 def render_project_quality_summary(project: Dict[str, Any]) -> None:
     lang = i18n.current_lang(st)
@@ -2582,14 +2613,15 @@ def render_project_workspace() -> None:
         st.session_state.teacher_studio_view = "projects"
         return
 
-    state = guided_teacher_workflow.load_workflow_state(project)
-    _project_header(project, state)
-    _render_guided_workflow(project, state)
-
     sections = [step["section"] for step in guided_teacher_workflow.WORKFLOW_STEPS]
     pending_section = st.session_state.pop("teacher_workspace_section_pending", None)
     if pending_section in sections:
         st.session_state.teacher_workspace_section = pending_section
+
+    state = guided_teacher_workflow.load_workflow_state(project)
+    _project_header(project, state)
+    _render_guided_workflow(project, state)
+
     current_section = st.session_state.get("teacher_workspace_section")
     if current_section not in sections:
         current_section = guided_teacher_workflow.section_for_step(str(state.get("current_key") or "setup"))

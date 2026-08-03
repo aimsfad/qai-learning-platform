@@ -50,7 +50,7 @@ COPY: Dict[str, Dict[str, Any]] = {
                 "short": "المراجع",
                 "description": "أضف ملفات الأستاذ وشغّل البحث عن مصادر وموارد تعليمية مناسبة.",
                 "outcome": "حزمة مصادر قابلة للتقييم والاستعمال.",
-                "action": "جمع المراجع وتشغيل البحث",
+                "action": "فتح مساحة المراجع والبحث",
             },
             "evidence": {
                 "title": "تدقيق الأدلة",
@@ -101,7 +101,7 @@ COPY: Dict[str, Dict[str, Any]] = {
         "status": {"completed": "Terminée", "in_progress": "En cours", "review": "À réviser", "available": "Prête", "locked": "Verrouillée"},
         "steps": {
             "setup": {"title": "Configurer le projet", "short": "Projet", "description": "Définissez le cours, le public, le niveau, les langues et la durée.", "outcome": "Fiche projet complète.", "action": "Vérifier le projet"},
-            "resources": {"title": "Sources et recherche", "short": "Sources", "description": "Ajoutez les fichiers et recherchez des ressources pédagogiques.", "outcome": "Dossier de sources exploitable.", "action": "Collecter les sources"},
+            "resources": {"title": "Sources et recherche", "short": "Sources", "description": "Ajoutez les fichiers et recherchez des ressources pédagogiques.", "outcome": "Dossier de sources exploitable.", "action": "Ouvrir les sources"},
             "evidence": {"title": "Validation des preuves", "short": "Preuves", "description": "Évaluez les sources, extrayez les preuves et approuvez-les.", "outcome": "Dossier de preuves approuvé.", "action": "Réviser les preuves"},
             "blueprint": {"title": "Plan du cours", "short": "Plan", "description": "Organisez concepts, unités, leçons, objectifs, activités et évaluations.", "outcome": "Plan approuvé.", "action": "Créer ou réviser le plan"},
             "lessons": {"title": "Construire les leçons", "short": "Leçons", "description": "Générez et approuvez chaque bloc de leçon séparément.", "outcome": "Leçons complètes.", "action": "Continuer les leçons"},
@@ -121,7 +121,7 @@ COPY: Dict[str, Dict[str, Any]] = {
         "status": {"completed": "Completed", "in_progress": "In progress", "review": "Needs review", "available": "Ready", "locked": "Locked"},
         "steps": {
             "setup": {"title": "Set up project", "short": "Setup", "description": "Define the course, learners, level, languages, and duration.", "outcome": "Complete project brief.", "action": "Review project setup"},
-            "resources": {"title": "Sources and research", "short": "Sources", "description": "Add teacher files and search for suitable learning resources.", "outcome": "Usable research dossier.", "action": "Collect sources and research"},
+            "resources": {"title": "Sources and research", "short": "Sources", "description": "Add teacher files and search for suitable learning resources.", "outcome": "Usable research dossier.", "action": "Open sources and research"},
             "evidence": {"title": "Evidence review", "short": "Evidence", "description": "Score sources, extract evidence and concepts, then approve them.", "outcome": "Teacher-approved evidence bundle.", "action": "Review evidence bundle"},
             "blueprint": {"title": "Course blueprint", "short": "Blueprint", "description": "Organize concepts, units, lessons, outcomes, activities, and assessments.", "outcome": "Approved course blueprint.", "action": "Create or review blueprint"},
             "lessons": {"title": "Build lessons", "short": "Lessons", "description": "Generate, edit, and approve each lesson block independently.", "outcome": "Complete approved lessons.", "action": "Continue lesson building"},

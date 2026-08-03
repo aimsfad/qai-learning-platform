@@ -3734,3 +3734,74 @@ a:focus-visible {
   .v6171-stage-flow { grid-template-columns:1fr; }
   .v6171-stage-flow > div { min-height:0; }
 }
+
+
+/* V6.17.2 — simplified guided research flow */
+.v6172-current-stage-card {
+  border: 1px solid var(--qai-border, #dbe5f2);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+  padding: 18px 20px;
+  margin: 12px 0 10px;
+  box-shadow: 0 8px 24px rgba(15, 47, 87, 0.05);
+}
+.v6172-current-stage-head small,
+.v6172-current-stage-grid small {
+  color: #718096;
+  font-weight: 700;
+}
+.v6172-current-stage-head h3 { margin: 4px 0 6px; color: #0f2f57; }
+.v6172-current-stage-head p { margin: 0; color: #52657a; }
+.v6172-current-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.v6172-current-stage-grid > div {
+  border: 1px solid #e4ebf4;
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: #fff;
+}
+.v6172-current-stage-grid strong { display: block; margin-top: 4px; color: #183b64; }
+.v6172-research-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 18px;
+}
+.v6172-research-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  border: 1px solid #dce6f2;
+  background: #fff;
+  color: #66788d;
+}
+.v6172-research-step span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef3f9;
+  font-weight: 800;
+}
+.v6172-research-step.active { border-color: #2c6bed; background: #f4f8ff; color: #123f7b; }
+.v6172-research-step.active span { background: #2c6bed; color: #fff; }
+.v6172-research-step.done { border-color: #bfe8d4; background: #f3fcf7; color: #166534; }
+.v6172-research-step.done span { background: #20b879; color: #fff; }
+.v6172-research-step.locked { opacity: .72; }
+.v6172-approval-marker + div[data-testid="stButton"] button {
+  min-height: 48px;
+  font-weight: 800;
+}
+@media (max-width: 760px) {
+  .v6172-current-stage-grid,
+  .v6172-research-steps { grid-template-columns: 1fr; }
+}

@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.17.1-unified-guided-production-journey"
+APP_VERSION = "v6.17.2-simplified-guided-research-flow"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
