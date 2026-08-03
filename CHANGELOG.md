@@ -467,3 +467,9 @@
 ## V6.17.2 — Simplified Guided Research Flow
 - Removed duplicate research actions and clarified the three-step research-review-approval flow.
 - Approval now remains the single gate that opens evidence synthesis.
+
+## V6.17.3 — Blueprint Action Feedback Hotfix
+- Fixed the course-blueprint action appearing inactive after a click.
+- Removed the unconditional rerun that moved success and error feedback to the top of the teacher workspace.
+- Added an inline progress spinner, immediate success confirmation, and inline safe error reporting.
+- Renders the newly created blueprint in the same interaction without requiring a second click or manual page navigation.

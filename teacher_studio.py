@@ -1737,27 +1737,44 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
         max_lessons = st.slider(labels["lessons"], 2, 30, int(cfg.get("max_lessons") or 12), key=f"blueprint_lessons_{project_id}")
 
     latest = db.latest_teacher_blueprint(project_id, approved_only=False)
-    if st.button(
+    build_clicked = st.button(
         labels["rebuild"] if latest else labels["build"],
         type="primary",
         use_container_width=True,
         disabled=not bool(selected_evidence) or not bool(cfg.get("enabled")),
         key=f"build_blueprint_{project_id}",
-    ):
+    )
+    if build_clicked:
+        progress_label = {
+            "ar": "جارٍ إنشاء مخطط المقرر من حزمة الأدلة المعتمدة...",
+            "fr": "Construction du plan du cours à partir des preuves approuvées...",
+            "en": "Building the course blueprint from the approved evidence bundle...",
+        }.get(lang, "Building the course blueprint...")
+        success_label = {
+            "ar": "تم إنشاء مخطط المقرر. راجعي الوحدات والدروس ثم اعتمدي المخطط للانتقال إلى بناء الدروس.",
+            "fr": "Le plan du cours a été créé. Vérifiez les unités et les leçons, puis approuvez-le pour continuer.",
+            "en": "The course blueprint was created. Review the units and lessons, then approve it to continue.",
+        }.get(lang, labels["build"])
         try:
-            lesson_blueprint_engine.generate_and_persist(
-                project,
-                _current_teacher_username(),
-                evidence_bundle=selected_evidence,
-                max_units=int(max_units),
-                max_lessons=int(max_lessons),
-            )
-            st.session_state.teacher_flash_success = labels["build"]
+            with st.spinner(progress_label):
+                created_bundle = lesson_blueprint_engine.generate_and_persist(
+                    project,
+                    _current_teacher_username(),
+                    evidence_bundle=selected_evidence,
+                    max_units=int(max_units),
+                    max_lessons=int(max_lessons),
+                )
+            st.success(success_label)
+            try:
+                st.toast(success_label, icon="✅")
+            except Exception:
+                pass
+            latest = created_bundle or db.latest_teacher_blueprint(project_id, approved_only=False)
         except Exception as exc:
-            st.session_state.teacher_flash_error = str(exc)
-        st.rerun()
+            ui_stability.render_error_card(str(exc), lang=lang)
+            latest = db.latest_teacher_blueprint(project_id, approved_only=False)
 
-    bundle = db.latest_teacher_blueprint(project_id, approved_only=False)
+    bundle = latest or db.latest_teacher_blueprint(project_id, approved_only=False)
     if not bundle:
         return
     quality = bundle.get("quality") or {}
