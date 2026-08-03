@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.16.5-ui-stability-design-system"
+APP_VERSION = "v6.17-hybrid-background-production"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -25,6 +25,9 @@ def utc_now() -> str:
 
 
 def _secret(name: str, default: str = "") -> str:
+    env_value = os.getenv(name)
+    if env_value not in {None, ""}:
+        return str(env_value)
     try:
         return str(st.secrets.get(name, default))
     except Exception:
@@ -284,6 +287,28 @@ def init_db() -> None:
             validation_status TEXT,
             is_fallback_used INTEGER DEFAULT 0,
             created_at {created_default}
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS teacher_production_jobs (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            teacher_username TEXT NOT NULL,
+            phase_number INTEGER NOT NULL,
+            batch_id TEXT,
+            queue_job_id TEXT,
+            backend TEXT DEFAULT 'inline',
+            status TEXT DEFAULT 'queued',
+            progress_percent INTEGER DEFAULT 0,
+            attempt_count INTEGER DEFAULT 0,
+            parent_job_ids_json TEXT,
+            result_run_id INTEGER,
+            error_code TEXT,
+            error_message_safe TEXT,
+            created_at {created_default},
+            started_at {created_default},
+            completed_at {created_default},
+            updated_at {created_default}
         )
         """,
         f"""
@@ -3035,3 +3060,32 @@ def get_published_teacher_project(project_id: int) -> Optional[Dict[str, Any]]:
         "SELECT * FROM teacher_projects WHERE id=:id AND status='published'",
         {"id": int(project_id)},
     )
+
+
+def create_teacher_production_job(project_id: int, teacher_username: str, phase_number: int, *, batch_id: str = "", backend: str = "inline", parent_job_ids_json: str = "[]") -> int:
+    return execute_returning_id(
+        """INSERT INTO teacher_production_jobs
+        (project_id, teacher_username, phase_number, batch_id, backend, status, progress_percent, attempt_count, parent_job_ids_json, created_at, updated_at)
+        VALUES (:project_id, :teacher_username, :phase_number, :batch_id, :backend, 'queued', 0, 0, :parents, :created_at, :updated_at)""" + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {"project_id": int(project_id), "teacher_username": str(teacher_username), "phase_number": int(phase_number), "batch_id": str(batch_id), "backend": str(backend), "parents": str(parent_job_ids_json), "created_at": utc_now(), "updated_at": utc_now()},
+    )
+
+def update_teacher_production_job(job_id: int, *, status: str | None = None, progress_percent: int | None = None, queue_job_id: str | None = None, attempt_count: int | None = None, result_run_id: int | None = None, error_code: str | None = None, error_message_safe: str | None = None, started: bool = False, completed: bool = False) -> None:
+    fields=[]; params={"id": int(job_id), "updated_at": utc_now()}
+    values={"status":status,"progress_percent":progress_percent,"queue_job_id":queue_job_id,"attempt_count":attempt_count,"result_run_id":result_run_id,"error_code":error_code,"error_message_safe":error_message_safe}
+    for key,val in values.items():
+        if val is not None:
+            fields.append(f"{key}=:{key}"); params[key]=val
+    if started: fields.append("started_at=:started_at"); params["started_at"]=utc_now()
+    if completed: fields.append("completed_at=:completed_at"); params["completed_at"]=utc_now()
+    fields.append("updated_at=:updated_at")
+    exec_sql("UPDATE teacher_production_jobs SET "+", ".join(fields)+" WHERE id=:id", params)
+
+def teacher_production_jobs_df(project_id: int, batch_id: str = "") -> pd.DataFrame:
+    sql="SELECT * FROM teacher_production_jobs WHERE project_id=:project_id"; params={"project_id":int(project_id)}
+    if batch_id:
+        sql += " AND batch_id=:batch_id"; params["batch_id"]=str(batch_id)
+    return query_df(sql+" ORDER BY id DESC", params)
+
+def latest_teacher_production_job(project_id: int, phase_number: int) -> Optional[Dict[str, Any]]:
+    return query_one("SELECT * FROM teacher_production_jobs WHERE project_id=:project_id AND phase_number=:phase ORDER BY id DESC LIMIT 1", {"project_id":int(project_id),"phase":int(phase_number)})

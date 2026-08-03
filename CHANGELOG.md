@@ -448,3 +448,6 @@
 - Added blueprint-constrained prompts, source-ID validation, and attempt-first pedagogy.
 - Added immutable block versions, teacher editing, approval, progress tracking, and audit events.
 - Added a dedicated Lesson Blocks workspace in Teacher Content Studio.
+
+## V6.17 — Hybrid Background Production
+- Added persistent production jobs, RQ/Redis worker support, phase dependency DAG, and batch generation for phases 04–09.

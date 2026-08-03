@@ -10,6 +10,8 @@ never allowed to override platform, teacher, phase, or safety instructions.
 
 from __future__ import annotations
 
+import os
+
 import json
 import re
 import time
@@ -91,6 +93,9 @@ LOW_TRUST_DOMAIN_HINTS = (
 
 
 def _secret(name: str, default: str = "") -> str:
+    env_value = os.getenv(name)
+    if env_value not in {None, ""}:
+        return str(env_value)
     try:
         return str(st.secrets.get(name, default))
     except Exception:
