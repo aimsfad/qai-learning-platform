@@ -1818,7 +1818,7 @@ def project_workspace_ui() -> Dict[str, str]:
             "empty_title": "ابدأ أول مشروع تعليمي", "empty_body": "أنشئ مشروعًا، أضف محتوى المادة وطريقة التدريس والتقييم، ثم أنتج موارده على مراحل.",
             "create": "إنشاء مشروع تعليمي", "project_center": "مركز المشروع التعليمي", "project_id": "رقم المشروع",
             "status": "حالة المشروع", "course_identity": "هوية المقرر", "learning_design": "التصميم التعليمي",
-            "phase_map": "خريطة مراحل الإنتاج", "ready": "جاهز", "not_ready": "لم يُنتج بعد",
+            "phase_map": "خريطة مراحل الإنتاج", "ready": "جاهز", "not_ready": "لم يبدأ", "needs_review": "تحتاج مراجعة", "failed": "تعذر التوليد", "running": "جارٍ التوليد",
             "student_preview": "معاينة واجهة المتعلم", "publish_action": "نشر في فضاء المتعلم", "review_action": "إرسال للمراجعة",
             "draft_action": "إرجاع إلى المسودة", "archive_action": "أرشفة المشروع", "published_ok": "تم نشر المشروع في فضاء المتعلم.",
             "review_ok": "أصبح المشروع قيد المراجعة.", "draft_ok": "أُعيد المشروع إلى حالة المسودة.", "archive_ok": "تمت أرشفة المشروع.",
@@ -1837,7 +1837,7 @@ def project_workspace_ui() -> Dict[str, str]:
             "empty_title": "Commencez votre premier projet", "empty_body": "Définissez le contenu, la pédagogie et l’évaluation, puis produisez les ressources par étapes.",
             "create": "Créer un projet pédagogique", "project_center": "Centre du projet", "project_id": "Projet",
             "status": "Statut", "course_identity": "Identité du cours", "learning_design": "Conception pédagogique",
-            "phase_map": "Carte des phases", "ready": "Prêt", "not_ready": "Non généré",
+            "phase_map": "Carte des phases", "ready": "Prêt", "not_ready": "Non démarré", "needs_review": "À réviser", "failed": "Échec", "running": "Génération",
             "student_preview": "Aperçu de l’espace apprenant", "publish_action": "Publier dans l’espace apprenant", "review_action": "Envoyer en révision",
             "draft_action": "Repasser en brouillon", "archive_action": "Archiver", "published_ok": "Projet publié dans l’espace apprenant.",
             "review_ok": "Projet envoyé en révision.", "draft_ok": "Projet repassé en brouillon.", "archive_ok": "Projet archivé.",
@@ -1856,7 +1856,7 @@ def project_workspace_ui() -> Dict[str, str]:
             "empty_title": "Start your first educational project", "empty_body": "Define the subject, pedagogy, and assessment, then produce the assets phase by phase.",
             "create": "Create educational project", "project_center": "Educational project center", "project_id": "Project",
             "status": "Status", "course_identity": "Course identity", "learning_design": "Learning design",
-            "phase_map": "Production phase map", "ready": "Ready", "not_ready": "Not generated",
+            "phase_map": "Production phase map", "ready": "Ready", "not_ready": "Not started", "needs_review": "Needs review", "failed": "Generation failed", "running": "Generating",
             "student_preview": "Learner workspace preview", "publish_action": "Publish to learner workspace", "review_action": "Send for review",
             "draft_action": "Return to draft", "archive_action": "Archive project", "published_ok": "Project published to the learner workspace.",
             "review_ok": "Project moved to review.", "draft_ok": "Project returned to draft.", "archive_ok": "Project archived.",
@@ -2207,17 +2207,33 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
 def _render_phase_map(project: Dict[str, Any]) -> None:
     copy = project_workspace_ui()
     outputs = db.teacher_project_phase_outputs(int(project["id"]))
+    direction = i18n.direction(i18n.current_lang(st))
     st.markdown(f"### {copy['phase_map']}")
     for start in range(1, 12, 3):
         cols = st.columns(3, gap="small")
         for col, phase in zip(cols, range(start, min(start + 3, 12))):
-            row = outputs.get(phase)
-            ready = bool(row and str(row.get("status")) == "completed")
+            row = outputs.get(phase) or {}
+            raw_status = str(row.get("status") or "").strip().lower()
+            if raw_status == "completed":
+                status_key, css_status = "ready", "ready"
+            elif raw_status in {"needs_review", "review"}:
+                status_key, css_status = "needs_review", "review"
+            elif raw_status in {"running", "generating", "queued"}:
+                status_key, css_status = "running", "running"
+            elif raw_status in {"failed", "error", "llm_error"}:
+                status_key, css_status = "failed", "failed"
+            else:
+                status_key, css_status = "not_ready", "pending"
             with col:
-                with st.container(border=True):
-                    st.caption(f"{phase:02d}")
-                    st.markdown(f"**{PHASES[phase]}**")
-                    st.success(copy["ready"]) if ready else st.caption(copy["not_ready"])
+                st.markdown(
+                    f"<article class='v6164-prod-card {css_status}' dir='{direction}'>"
+                    f"<header><span class='v6164-prod-num'>{phase:02d}</span>"
+                    f"<h4>{escape(str(PHASES[phase]))}</h4></header>"
+                    f"<footer><span class='v6164-status-badge {css_status}'>"
+                    f"<i aria-hidden='true'></i>{escape(copy[status_key])}</span></footer>"
+                    f"</article>",
+                    unsafe_allow_html=True,
+                )
 
 
 def render_project_overview(project: Dict[str, Any]) -> None:

@@ -1,3 +1,13 @@
+# V6.16.4 — Research export and analytics polish
+
+- Added strict anonymized research exports that exclude direct identifiers and high-risk raw free text.
+- Added consistent cohort, level, completion, and date filters across export datasets.
+- Added styled Excel workbooks, specialized CSV downloads, data dictionary, dataset inventory, and reproducibility ZIP bundles.
+- Added SHA-256 manifests and an evaluator export audit log.
+- Added explicit confirmation before preparing full administrative backups.
+- Added daily/weekly and line/grouped-bar controls to the AI activity chart.
+- Replaced heavy production-map status blocks with compact SaaS-style status badges.
+
 # V6.16.3.1 — Frontend runtime hotfix
 
 - Imported `branding` in `teacher_studio.py` to fix the teacher-login `NameError`.

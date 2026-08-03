@@ -7,6 +7,7 @@ import smtplib
 import ssl
 import time
 from email.message import EmailMessage
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -24,6 +25,7 @@ import branding
 import i18n
 import router
 import teacher_studio
+import research_export_center as research_export
 from content_locales import MEDIA_TRANSLATIONS
 from security import hash_password, verify_password
 from media_utils import render_image, render_video, render_simulator, render_micro_animation
@@ -4025,12 +4027,14 @@ def render_evaluator_dashboard() -> None:
             "download_csv": "تنزيل ملخص المشاركين CSV",
             "download_xlsx": "تنزيل الحزمة البحثية Excel",
             "open_export": "فتح مركز التصدير الكامل",
-            "privacy": "لا تتضمن الحزمة البحثية الأسماء أو البريد الإلكتروني أو المؤسسة أو معرّفات قاعدة البيانات الداخلية.",
+            "privacy": "الحزمة البحثية الصارمة تستبعد الأسماء والبريد والمؤسسة ومعرّفات قاعدة البيانات والنصوص الحرة عالية المخاطر.",
             "no_data": "لا توجد بيانات كافية ضمن المرشحات الحالية.",
             "reference": "الخط المرجعي يعني عدم وجود تحسن.",
             "date": "التاريخ",
             "interactions": "التفاعلات",
             "active_learners": "المتعلمون النشطون",
+            "activity_granularity": "الدقة الزمنية", "daily": "يومي", "weekly": "أسبوعي",
+            "chart_style": "طريقة العرض", "line": "منحنى", "bars": "أعمدة مجمعة",
         },
         "fr": {
             "title": "Tableau de pilotage de l’apprentissage et de l’évaluation",
@@ -4076,12 +4080,14 @@ def render_evaluator_dashboard() -> None:
             "download_csv": "Télécharger le résumé CSV",
             "download_xlsx": "Télécharger le classeur de recherche",
             "open_export": "Ouvrir le centre d’export",
-            "privacy": "L’export recherche exclut les noms, e-mails, établissements et identifiants internes de la base.",
+            "privacy": "L’export strict exclut les identifiants directs et les textes libres à risque de réidentification.",
             "no_data": "Aucune donnée suffisante pour les filtres actuels.",
             "reference": "La diagonale représente l’absence d’amélioration.",
             "date": "Date",
             "interactions": "Interactions",
             "active_learners": "Apprenants actifs",
+            "activity_granularity": "Granularité", "daily": "Quotidien", "weekly": "Hebdomadaire",
+            "chart_style": "Affichage", "line": "Courbe", "bars": "Barres groupées",
         },
         "en": {
             "title": "Learning and Evaluation Intelligence Dashboard",
@@ -4127,12 +4133,14 @@ def render_evaluator_dashboard() -> None:
             "download_csv": "Download participant summary CSV",
             "download_xlsx": "Download research workbook",
             "open_export": "Open full export centre",
-            "privacy": "The research export excludes names, email addresses, institutions, and internal database identifiers.",
+            "privacy": "The strict research export excludes direct identifiers and raw free text that could create re-identification risk.",
             "no_data": "There is not enough data for the current filters.",
             "reference": "The diagonal reference line represents no improvement.",
             "date": "Date",
             "interactions": "Interactions",
             "active_learners": "Active learners",
+            "activity_granularity": "Time granularity", "daily": "Daily", "weekly": "Weekly",
+            "chart_style": "Chart style", "line": "Line", "bars": "Grouped bars",
         },
     }[lang]
 
@@ -4210,21 +4218,55 @@ def render_evaluator_dashboard() -> None:
                 if logs.empty or "created_at" not in logs:
                     st.info(copy["no_data"])
                 else:
+                    control_a, control_b = st.columns(2, gap="small")
+                    granularity = control_a.selectbox(
+                        copy["activity_granularity"],
+                        [copy["daily"], copy["weekly"]],
+                        index=0,
+                        key="v6164_activity_granularity",
+                    )
+                    chart_style = control_b.selectbox(
+                        copy["chart_style"],
+                        [copy["line"], copy["bars"]],
+                        index=0,
+                        key="v6164_activity_chart_style",
+                    )
                     activity = logs.copy()
-                    activity["created_at"] = pd.to_datetime(activity["created_at"], errors="coerce")
+                    activity["created_at"] = pd.to_datetime(activity["created_at"], errors="coerce", utc=True)
                     activity = activity.dropna(subset=["created_at"])
-                    activity["date"] = activity["created_at"].dt.date
-                    daily = activity.groupby("date", as_index=False).agg(
+                    if granularity == copy["weekly"]:
+                        activity["period"] = activity["created_at"].dt.tz_convert(None).dt.to_period("W-MON").dt.start_time.dt.date
+                    else:
+                        activity["period"] = activity["created_at"].dt.date
+                    grouped = activity.groupby("period", as_index=False).agg(
                         interactions=("interaction_id", "count"),
                         active_learners=("participant_code", "nunique"),
                     )
-                    daily_long = daily.melt(id_vars="date", value_vars=["interactions", "active_learners"], var_name="metric", value_name="value")
-                    daily_long["metric"] = daily_long["metric"].map({"interactions": copy["interactions"], "active_learners": copy["active_learners"]})
-                    fig = px.line(daily_long, x="date", y="value", color="metric", markers=True, labels={"date": copy["date"], "value": "", "metric": ""})
-                    fig.update_layout(height=360, margin=dict(l=12, r=12, t=16, b=12), legend_orientation="h", legend_y=-0.2, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    activity_long = grouped.melt(
+                        id_vars="period",
+                        value_vars=["interactions", "active_learners"],
+                        var_name="metric",
+                        value_name="value",
+                    )
+                    activity_long["metric"] = activity_long["metric"].map(
+                        {"interactions": copy["interactions"], "active_learners": copy["active_learners"]}
+                    )
+                    labels = {"period": copy["date"], "value": "", "metric": ""}
+                    if chart_style == copy["bars"]:
+                        fig = px.bar(activity_long, x="period", y="value", color="metric", barmode="group", labels=labels)
+                    else:
+                        fig = px.line(activity_long, x="period", y="value", color="metric", markers=True, labels=labels)
+                    fig.update_layout(
+                        height=360,
+                        margin=dict(l=12, r=12, t=16, b=12),
+                        legend_orientation="h",
+                        legend_y=-0.2,
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                    )
                     fig.update_xaxes(gridcolor="rgba(148,163,184,.12)")
                     fig.update_yaxes(gridcolor="rgba(148,163,184,.18)")
-                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v62_activity")
+                    st.plotly_chart(fig, width="stretch", theme="streamlit", key="v6164_activity")
 
         with st.container(border=True):
             st.markdown(f"### {copy['completion_chart']}")
@@ -4326,10 +4368,17 @@ def render_evaluator_dashboard() -> None:
             st.markdown(f"### {copy['download_title']}")
             st.write(copy["download_body"])
             st.info(copy["privacy"])
-            anon_progress = db.anonymize_dataframe(df)
+            anon_progress = db.anonymize_dataframe(df, strict=True)
             csv_data = anon_progress.to_csv(index=False).encode("utf-8-sig") if not anon_progress.empty else b""
-            research_tables = db.research_export_tables(len(content.LESSONS), anonymized=True)
-            workbook = to_excel_bytes(research_tables)
+            research_tables = db.research_export_tables(
+                len(content.LESSONS), anonymized=True, include_free_text=False
+            )
+            research_tables.update(v125_research_interaction_tables(anonymized=True))
+            research_tables = research_export.add_derived_analysis_tables(research_tables)
+            workbook = research_export.tables_to_excel_bytes(
+                research_tables,
+                metadata={"app_version": getattr(db, "APP_VERSION", "unknown"), "export_mode": "strict_anonymized"},
+            )
             d1, d2, d3 = st.columns(3, gap="small")
             d1.download_button(copy["download_csv"], data=csv_data, file_name="3alimnia_participant_summary_anonymized.csv", mime="text/csv", width="stretch", disabled=not bool(csv_data))
             d2.download_button(copy["download_xlsx"], data=workbook, file_name="3alimnia_research_export_anonymized.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch")
@@ -5195,44 +5244,225 @@ def render_system_readiness() -> None:
     st.warning("Before changing database schema manually, download a backup from Results Export or Neon. These checks do not modify student data.")
 
 
+def _research_export_tables(*, anonymized: bool) -> Dict[str, pd.DataFrame]:
+    tables: Dict[str, pd.DataFrame] = {}
+    if not anonymized:
+        tables["students"] = db.students_df()
+    tables.update(
+        db.research_export_tables(
+            len(content.LESSONS),
+            anonymized=anonymized,
+            include_free_text=not anonymized,
+        )
+    )
+    tables.update(v125_research_interaction_tables(anonymized=anonymized))
+    return research_export.add_derived_analysis_tables(tables)
+
+
+def _export_event_detail(kind: str, filters: research_export.ExportFilters, payload: bytes, tables: Dict[str, pd.DataFrame]) -> str:
+    inventory = research_export.dataset_inventory(tables)
+    return json.dumps(
+        {
+            "kind": kind,
+            "filters": filters.to_dict(),
+            "sha256": research_export.sha256_bytes(payload),
+            "datasets": int(len(tables)),
+            "rows": int(inventory["rows"].sum()) if not inventory.empty else 0,
+            "app_version": getattr(db, "APP_VERSION", "unknown"),
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+
+
 def render_results_export() -> None:
     u = evaluator_ui()
+    lang = i18n.current_lang(st)
+    copy = research_export.export_ui_copy(lang)
     hero(u["exports_title"], u["exports_sub"], localized=True)
-    st.markdown(f"<div class='v45-export-grid' dir='{u['dir']}'><article><span>01</span><h3>{escape(u['anon_title'])}</h3><p>{escape(u['anon_body'])}</p></article><article class='secure'><span>02</span><h3>{escape(u['full_title'])}</h3><p>{escape(u['full_body'])}</p></article></div>", unsafe_allow_html=True)
-    col_a, col_b = st.columns(2)
-    prepare_anon = col_a.button(u["prepare_anon"], type="primary", use_container_width=True)
-    prepare_full = col_b.button(u["prepare_full"], use_container_width=True)
-    if prepare_anon:
-        with st.spinner(u["preparing"]):
-            dfs = db.research_export_tables(len(content.LESSONS), anonymized=True)
-            dfs.update(v125_research_interaction_tables(anonymized=True))
-            st.session_state["export_tables"] = dfs
-            st.session_state["export_excel"] = to_excel_bytes(dfs)
-            st.session_state["export_filename"] = "3alimnia_research_export_anonymized.xlsx"
-            st.session_state["export_kind"] = "anonymized"
-            db.log_event(None, "evaluator", "anonymized_export_prepared", "Evaluator prepared anonymized research export")
-    if prepare_full:
-        with st.spinner(u["preparing"]):
-            dfs = {"students": db.students_df(), **db.research_export_tables(len(content.LESSONS), anonymized=False)}
-            dfs.update(v125_research_interaction_tables(anonymized=False))
-            st.session_state["export_tables"] = dfs
-            st.session_state["export_excel"] = to_excel_bytes(dfs)
-            st.session_state["export_filename"] = "3alimnia_full_admin_backup.xlsx"
-            st.session_state["export_kind"] = "full"
-            db.log_event(None, "evaluator", "full_backup_prepared", "Evaluator prepared full administrative backup")
-    if "export_excel" in st.session_state:
-        kind = st.session_state.get("export_kind", "anonymized")
-        st.success(u["anon_title"] if kind == "anonymized" else u["full_title"])
-        st.download_button(u["download"], data=st.session_state["export_excel"], file_name=st.session_state.get("export_filename", "3alimnia_export.xlsx"), mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", use_container_width=True)
-        dfs = st.session_state.get("export_tables", {})
-        if dfs:
-            evaluator_section(u["preview"])
-            selected = st.selectbox(u["dataset"], list(dfs.keys()))
-            data = dfs[selected]
-            preview = data.head(200) if hasattr(data, "head") else data
-            st.dataframe(preview, use_container_width=True, hide_index=True)
-            if hasattr(data, "__len__") and len(data) > 200:
-                st.caption(f"200 / {len(data)}")
+
+    research_tab, csv_tab, admin_tab, audit_tab = st.tabs([
+        u["anon_title"], copy["download_csv"], copy["admin_title"], copy["audit"]
+    ])
+
+    base_tables = _research_export_tables(anonymized=True)
+    progress = base_tables.get("progress_summary", pd.DataFrame())
+    groups = sorted(progress.get("study_group", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()) if not progress.empty else []
+    levels = sorted(progress.get("academic_level", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()) if not progress.empty else []
+    min_date, max_date = research_export.infer_date_bounds(base_tables)
+
+    with research_tab:
+        st.markdown(f"<div class='v6164-export-note' dir='{u['dir']}'><strong>{escape(copy['strict_privacy'])}</strong><span>{escape(u['anon_body'])}</span></div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(f"### {copy['filters']}")
+            f1, f2, f3 = st.columns(3, gap="small")
+            selected_groups = f1.multiselect(copy["group"], groups, key="v6164_export_groups")
+            selected_levels = f2.multiselect(copy["level"], levels, key="v6164_export_levels")
+            completion_label = f3.selectbox(
+                copy["completion"],
+                [copy["all"], copy["complete"], copy["incomplete"]],
+                key="v6164_export_completion",
+            )
+            completion_value = {
+                copy["all"]: "all",
+                copy["complete"]: "complete",
+                copy["incomplete"]: "incomplete",
+            }[completion_label]
+            use_dates = st.checkbox(copy["date_filter"], value=False, key="v6164_export_use_dates")
+            date_from = date_to = None
+            if use_dates:
+                d1, d2 = st.columns(2, gap="small")
+                default_min = min_date or datetime.now(timezone.utc).date()
+                default_max = max_date or datetime.now(timezone.utc).date()
+                date_from = d1.date_input(copy["from"], value=default_min, key="v6164_export_date_from")
+                date_to = d2.date_input(copy["to"], value=default_max, key="v6164_export_date_to")
+                if date_from > date_to:
+                    st.error(f"{copy['from']} > {copy['to']}")
+
+        filters = research_export.ExportFilters(
+            study_groups=tuple(selected_groups),
+            academic_levels=tuple(selected_levels),
+            completion=completion_value,
+            date_from=date_from.isoformat() if date_from else None,
+            date_to=date_to.isoformat() if date_to else None,
+        )
+        filtered_tables = research_export.filter_export_tables(base_tables, filters)
+        inventory = research_export.dataset_inventory(filtered_tables)
+        total_rows = int(inventory["rows"].sum()) if not inventory.empty else 0
+        participants = 0
+        if not progress.empty and "participant_code" in filtered_tables.get("progress_summary", pd.DataFrame()).columns:
+            participants = int(filtered_tables["progress_summary"]["participant_code"].nunique())
+        m1, m2, m3 = st.columns(3, gap="small")
+        m1.metric(copy["dataset"], len(filtered_tables))
+        m2.metric(copy["rows"], total_rows)
+        m3.metric(copy["participants"], participants)
+
+        if st.button(copy["prepare"], type="primary", use_container_width=True, key="v6164_prepare_research"):
+            if total_rows == 0:
+                st.warning(copy["no_data"])
+            else:
+                with st.spinner(u["preparing"]):
+                    stamp = research_export.utc_stamp()
+                    metadata = {
+                        "app_version": getattr(db, "APP_VERSION", "unknown"),
+                        "generated_utc": datetime.now(timezone.utc).isoformat(),
+                        "export_mode": "strict_anonymized",
+                        "filters": json.dumps(filters.to_dict(), ensure_ascii=False),
+                    }
+                    workbook = research_export.tables_to_excel_bytes(filtered_tables, metadata=metadata)
+                    bundle, manifest = research_export.build_reproducibility_bundle(
+                        filtered_tables,
+                        filters=filters,
+                        app_version=getattr(db, "APP_VERSION", "unknown"),
+                        anonymized=True,
+                    )
+                    st.session_state["v6164_export_tables"] = filtered_tables
+                    st.session_state["v6164_export_workbook"] = workbook
+                    st.session_state["v6164_export_bundle"] = bundle
+                    st.session_state["v6164_export_manifest"] = manifest
+                    st.session_state["v6164_export_workbook_name"] = f"3alimnia_research_export_{stamp}.xlsx"
+                    st.session_state["v6164_export_bundle_name"] = f"3alimnia_reproducibility_bundle_{stamp}.zip"
+                    db.log_event(None, "evaluator", "anonymized_export_prepared", _export_event_detail("strict_anonymized", filters, workbook, filtered_tables))
+                st.success(u["anon_title"])
+
+        prepared_tables = st.session_state.get("v6164_export_tables")
+        workbook = st.session_state.get("v6164_export_workbook")
+        bundle = st.session_state.get("v6164_export_bundle")
+        if prepared_tables and workbook and bundle:
+            workbook_hash = research_export.sha256_bytes(workbook)
+            bundle_hash = research_export.sha256_bytes(bundle)
+            d1, d2 = st.columns(2, gap="small")
+            d1.download_button(
+                copy["download_workbook"],
+                data=workbook,
+                file_name=st.session_state.get("v6164_export_workbook_name", "3alimnia_research_export.xlsx"),
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True,
+            )
+            d2.download_button(
+                copy["download_bundle"],
+                data=bundle,
+                file_name=st.session_state.get("v6164_export_bundle_name", "3alimnia_reproducibility_bundle.zip"),
+                mime="application/zip",
+                use_container_width=True,
+            )
+            st.caption(f"{copy['hash']} — Excel: {workbook_hash} · ZIP: {bundle_hash}")
+
+            inv_tab, dict_tab, preview_tab = st.tabs([copy["inventory"], copy["dictionary"], copy["preview"]])
+            with inv_tab:
+                st.dataframe(research_export.dataset_inventory(prepared_tables), use_container_width=True, hide_index=True)
+            with dict_tab:
+                dictionary = research_export.data_dictionary(prepared_tables)
+                st.dataframe(dictionary, use_container_width=True, hide_index=True, height=420)
+                st.download_button(
+                    copy["dictionary"],
+                    data=dictionary.to_csv(index=False).encode("utf-8-sig"),
+                    file_name="3alimnia_data_dictionary.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+            with preview_tab:
+                selected = st.selectbox(copy["dataset"], list(prepared_tables), key="v6164_research_preview_dataset")
+                data = prepared_tables[selected]
+                st.dataframe(data.head(200), use_container_width=True, hide_index=True)
+                st.caption(f"{min(len(data), 200)} / {len(data)}")
+
+    with csv_tab:
+        tables = st.session_state.get("v6164_export_tables") or filtered_tables
+        if not tables:
+            st.info(copy["no_data"])
+        else:
+            selected = st.selectbox(copy["dataset"], list(tables), key="v6164_csv_dataset")
+            data = tables[selected]
+            st.dataframe(data.head(200), use_container_width=True, hide_index=True)
+            st.download_button(
+                copy["download_csv"],
+                data=research_export.excel_safe_frame(data).to_csv(index=False).encode("utf-8-sig"),
+                file_name=f"3alimnia_{research_export.safe_filename(selected)}.csv",
+                mime="text/csv",
+                type="primary",
+                use_container_width=True,
+                disabled=data.empty,
+            )
+
+    with admin_tab:
+        st.warning(copy["admin_warning"])
+        confirm = st.checkbox(copy["admin_confirm"], value=False, key="v6164_confirm_admin_backup")
+        if st.button(copy["prepare_admin"], use_container_width=True, disabled=not confirm, key="v6164_prepare_admin"):
+            with st.spinner(u["preparing"]):
+                full_tables = _research_export_tables(anonymized=False)
+                stamp = research_export.utc_stamp()
+                admin_workbook = research_export.tables_to_excel_bytes(
+                    full_tables,
+                    metadata={
+                        "app_version": getattr(db, "APP_VERSION", "unknown"),
+                        "generated_utc": datetime.now(timezone.utc).isoformat(),
+                        "export_mode": "full_administrative_backup",
+                    },
+                )
+                st.session_state["v6164_admin_workbook"] = admin_workbook
+                st.session_state["v6164_admin_name"] = f"3alimnia_full_admin_backup_{stamp}.xlsx"
+                db.log_event(None, "evaluator", "full_backup_prepared", _export_event_detail("full_administrative", research_export.ExportFilters(), admin_workbook, full_tables))
+            st.success(u["full_title"])
+        admin_workbook = st.session_state.get("v6164_admin_workbook")
+        if admin_workbook:
+            st.download_button(
+                u["download"],
+                data=admin_workbook,
+                file_name=st.session_state.get("v6164_admin_name", "3alimnia_full_admin_backup.xlsx"),
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True,
+            )
+            st.caption(f"{copy['hash']}: {research_export.sha256_bytes(admin_workbook)}")
+
+    with audit_tab:
+        audit = db.export_audit_df(limit=100)
+        if audit.empty:
+            st.info(u["no_data"])
+        else:
+            st.dataframe(audit, use_container_width=True, hide_index=True, height=440)
 
 
 # -----------------------------------------------------------------------------
