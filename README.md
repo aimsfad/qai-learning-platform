@@ -251,3 +251,13 @@ Approved course blueprints can now drive independent generation, review, version
 ## V6.16.3.1 frontend runtime hotfix
 
 This hotfix imports the branding module used by the centered teacher login and restores the learner-safe project preview function used by publishing views. Run `python validate_v61631_frontend_runtime_hotfix.py` before deployment.
+
+## V6.16.4 research export and analytics polish
+
+- Strict research-safe export without direct identifiers or high-risk raw free text.
+- Unified filters for study group, academic level, completion status, and date range.
+- Styled multi-sheet Excel workbook, selected-dataset CSV, data dictionary, and dataset inventory.
+- Reproducibility ZIP with CSV copies, codebook, analysis template, manifest, and SHA-256 sums.
+- Protected administrative backup with explicit confirmation and export audit log.
+- Daily/weekly and line/grouped-bar controls for generative-coach activity.
+- Lightweight production-phase cards with compact status badges.

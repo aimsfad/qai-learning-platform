@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.16-lesson-block-generation"
+APP_VERSION = "v6.16.4-research-export-analytics-polish"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -1632,28 +1632,62 @@ def events_log_df(limit: Optional[int] = None) -> pd.DataFrame:
 
 
 
-def anonymize_dataframe(df: pd.DataFrame, keep_student_id: bool = False) -> pd.DataFrame:
-    """Remove direct identifiers from exports while preserving research variables."""
+def anonymize_dataframe(
+    df: pd.DataFrame,
+    keep_student_id: bool = False,
+    strict: bool = False,
+) -> pd.DataFrame:
+    """Remove direct identifiers while preserving analysis variables.
+
+    ``strict=True`` also removes raw free-text fields that can contain names or
+    other self-disclosed identifiers.  The protected administrative backup is
+    the only export intended to preserve those columns.
+    """
     if df is None or df.empty:
         return df
     out = df.copy()
     drop_cols = [
         "full_name", "email", "institution", "password_hash", "raw_name", "name",
+        "evaluator_username",
     ]
     if not keep_student_id:
         drop_cols.extend(["student_id", "id"])
+    if strict:
+        drop_cols.extend([
+            "prompt", "response", "diagnostic", "reflection_text", "attempt_text",
+            "open_feedback_json", "overall_comment", "event_detail", "consent_text",
+            "selected_text",
+        ])
     out = out.drop(columns=[c for c in drop_cols if c in out.columns], errors="ignore")
     return out
 
 
-def research_export_tables(total_lessons: int, anonymized: bool = True) -> Dict[str, pd.DataFrame]:
-    """Paper-ready export tables. Defaults to anonymized data for ethics-safe analysis."""
+def research_export_tables(
+    total_lessons: int,
+    anonymized: bool = True,
+    include_free_text: bool = False,
+) -> Dict[str, pd.DataFrame]:
+    """Return analysis-ready research tables.
+
+    The default anonymized export is intentionally strict: it excludes direct
+    account identifiers and raw free-text fields that may contain self-disclosed
+    identifying information.  ``include_free_text`` is reserved for protected
+    administrative/restricted workflows and is never enabled by the public
+    research-export interface.
+    """
     tables: Dict[str, pd.DataFrame] = {
         "progress_summary": progress_summary_df(total_lessons),
         "test_attempts": attempts_df(),
         "question_responses": question_responses_df(),
         "concept_scores": concept_scores_df(),
-        "lesson_reflections": query_df("SELECT * FROM lesson_progress"),
+        "lesson_reflections": query_df(
+            """
+            SELECT lp.*, s.participant_code, s.full_name
+            FROM lesson_progress lp
+            LEFT JOIN students s ON s.id=lp.student_id
+            ORDER BY lp.updated_at DESC
+            """
+        ),
         "learner_attempts": learner_attempts_df(),
         "ai_interactions": ai_logs_df(),
         "llm_evaluations": llm_evaluations_df(),
@@ -1663,15 +1697,25 @@ def research_export_tables(total_lessons: int, anonymized: bool = True) -> Dict[
         "event_logs": events_log_df(),
     }
     if anonymized:
-        tables = {name: anonymize_dataframe(df) for name, df in tables.items()}
-        # Free-text attempts can contain names or other self-disclosed identifiers.
-        # Keep research-safe quantitative metadata in anonymized exports and reserve
-        # the raw attempt text for the protected administrative workbook.
-        if "learner_attempts" in tables and not tables["learner_attempts"].empty:
-            tables["learner_attempts"] = tables["learner_attempts"].drop(
-                columns=["attempt_text"], errors="ignore"
-            )
+        tables = {
+            name: anonymize_dataframe(df, strict=not include_free_text)
+            for name, df in tables.items()
+        }
     return tables
+
+
+def export_audit_df(limit: int = 100) -> pd.DataFrame:
+    """Return recent evaluator export events for the audit panel."""
+    return query_df(
+        """
+        SELECT created_at, actor_role, event_type, event_detail
+        FROM events_log
+        WHERE event_type LIKE '%export%' OR event_type LIKE '%backup%'
+        ORDER BY created_at DESC
+        LIMIT :limit
+        """,
+        {"limit": int(limit)},
+    )
 
 
 def system_readiness(total_lessons: int) -> Dict[str, Any]:

@@ -3467,3 +3467,54 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
   .st-key-v61_public_header [data-testid="stImage"] img { width:min(190px,70vw) !important; max-width:190px !important; }
 }
 
+
+/* -------------------------------------------------------------------------
+   V6.16.4 — Research export, analytics controls, and production-map polish
+   ------------------------------------------------------------------------- */
+.v6164-export-note {
+  display:flex; flex-direction:column; gap:.28rem; margin:.2rem 0 1rem;
+  padding:.9rem 1rem; border:1px solid #d8e7f8; border-radius:14px;
+  background:linear-gradient(135deg,#f8fbff,#eef6ff); color:#35506f;
+}
+.v6164-export-note strong { color:#123b68; font-size:.9rem; }
+.v6164-export-note span { color:#64748b; font-size:.8rem; line-height:1.55; }
+
+.v6164-prod-card {
+  height:176px; display:flex; flex-direction:column; justify-content:space-between;
+  padding:1rem; margin:0 0 .8rem; border:1px solid #dfe7f1; border-radius:16px;
+  background:#fff; box-shadow:0 7px 20px rgba(15,35,65,.035);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.v6164-prod-card:hover {
+  transform:translateY(-2px); border-color:#b9c9dc;
+  box-shadow:0 12px 28px rgba(15,35,65,.075);
+}
+.v6164-prod-card header { display:flex; flex-direction:column; gap:.9rem; }
+.v6164-prod-card h4 {
+  margin:0 !important; color:#183b66 !important; font-size:.95rem !important;
+  line-height:1.45 !important; font-weight:760 !important;
+}
+.v6164-prod-num {
+  font:700 .72rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:#94a3b8; letter-spacing:.04em;
+}
+.v6164-prod-card footer { border-top:1px solid #edf2f7; padding-top:.72rem; }
+.v6164-status-badge {
+  display:inline-flex; align-items:center; gap:.42rem; width:max-content;
+  padding:.27rem .62rem; border-radius:999px; font-size:.72rem; font-weight:800;
+}
+.v6164-status-badge i { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.v6164-status-badge.ready { background:#eaf8ef; color:#167447; }
+.v6164-status-badge.ready i { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.12); }
+.v6164-status-badge.review { background:#fff6df; color:#9a6200; }
+.v6164-status-badge.review i { background:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+.v6164-status-badge.running { background:#eaf3ff; color:#1d5fbd; }
+.v6164-status-badge.running i { background:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+.v6164-status-badge.failed { background:#fff0f0; color:#b42318; }
+.v6164-status-badge.failed i { background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.12); }
+.v6164-status-badge.pending { background:#f3f6fa; color:#6b7b90; }
+.v6164-status-badge.pending i { background:#94a3b8; }
+
+@media (max-width:900px) {
+  .v6164-prod-card { height:158px; }
+}
