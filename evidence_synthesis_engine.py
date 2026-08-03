@@ -16,6 +16,8 @@ not configured or does not return valid JSON.
 
 from __future__ import annotations
 
+import os
+
 import hashlib
 import json
 import math
@@ -139,6 +141,9 @@ STOPWORDS = {
 
 
 def _secret(name: str, default: str = "") -> str:
+    env_value = os.getenv(name)
+    if env_value not in {None, ""}:
+        return str(env_value)
     try:
         return str(st.secrets.get(name, default))
     except Exception:

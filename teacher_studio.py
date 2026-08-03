@@ -16,6 +16,7 @@ import educational_builder
 import evidence_synthesis_engine
 import lesson_blueprint_engine
 import lesson_block_generation_engine
+import production_pipeline
 import guided_teacher_workflow
 import gemini_file_analyzer
 import db
@@ -2179,7 +2180,15 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
 
 def _render_phase_map(project: Dict[str, Any]) -> None:
     copy = project_workspace_ui()
-    outputs = db.teacher_project_phase_outputs(int(project["id"]))
+    project_id = int(project["id"])
+    outputs = db.teacher_project_phase_outputs(project_id)
+    jobs = db.teacher_production_jobs_df(project_id)
+    latest_jobs = {}
+    if not jobs.empty:
+        for _, job_row in jobs.iterrows():
+            phase_key = int(job_row.get("phase_number") or 0)
+            if phase_key and phase_key not in latest_jobs:
+                latest_jobs[phase_key] = job_row.to_dict()
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
     st.markdown(f"### {copy['phase_map']}")
@@ -2187,14 +2196,16 @@ def _render_phase_map(project: Dict[str, Any]) -> None:
         cols = ui_stability.columns(3, gap="small", vertical_alignment="top")
         for col, phase in zip(cols, range(start, min(start + 3, 12))):
             row = outputs.get(phase) or {}
-            raw_status = str(row.get("status") or "not_started").strip().lower()
+            job_row = latest_jobs.get(phase) or {}
+            job_status = str(job_row.get("status") or "").strip().lower()
+            raw_status = job_status if job_status in {"queued", "waiting_for_dependency", "running", "failed", "retrying"} else str(row.get("status") or "not_started").strip().lower()
             semantic, css_status = ui_stability.status_semantics(raw_status)
             legacy_label_key = {
                 "approved": "ready", "ready": "ready", "review": "needs_review",
                 "running": "running", "queued": "running", "blocked": "not_ready",
                 "failed": "failed", "pending": "not_ready",
             }.get(semantic, "not_ready")
-            updated = str(row.get("updated_at") or row.get("created_at") or "").strip()
+            updated = str(job_row.get("updated_at") or row.get("updated_at") or row.get("created_at") or "").strip()
             updated_html = (
                 f"<small class='v6165-prod-updated'>{escape(updated[:16].replace('T', ' '))}</small>"
                 if updated else ""
@@ -2209,6 +2220,29 @@ def _render_phase_map(project: Dict[str, Any]) -> None:
                     f"</article>",
                     unsafe_allow_html=True,
                 )
+
+    completed = production_pipeline.completed_phases(project_id)
+    if 3 in completed:
+        backend = production_pipeline.queue_backend()
+        labels = {
+            "ar": ("الإنتاج الخلفي الهجين", "ابدأ المراحل 04–09 كدفعة إنتاج مستقلة. يمكن مغادرة الصفحة والعودة لاحقًا عند استخدام RQ/Redis.", "بدء الإنتاج الشامل", "التنفيذ المحلي متزامن؛ أضف REDIS_URL وعامل RQ للحصول على تنفيذ خلفي دائم."),
+            "fr": ("Production hybride en arrière-plan", "Lancez les phases 04–09 comme un lot indépendant.", "Démarrer la production groupée", "Le mode local est synchrone; configurez REDIS_URL et un worker RQ pour un vrai arrière-plan."),
+            "en": ("Hybrid background production", "Launch phases 04–09 as an independent production batch.", "Start batch production", "Inline mode is synchronous; configure REDIS_URL and an RQ worker for persistent background execution."),
+        }.get(lang, ("Hybrid background production", "Launch phases 04–09 as an independent production batch.", "Start batch production", "Inline mode is synchronous."))
+        st.markdown(f"#### {labels[0]}")
+        st.caption(labels[1])
+        if backend == "inline":
+            st.info(labels[3])
+        active = False
+        if not jobs.empty:
+            active = any(str(value).lower() in {"queued", "running", "waiting_for_dependency", "retrying"} for value in jobs["status"].tolist())
+        if st.button(labels[2], type="primary", use_container_width=True, disabled=active, key=f"start_batch_{project_id}"):
+            try:
+                batch = production_pipeline.enqueue_parallel_batch(project_id, _current_teacher_username())
+                st.session_state.teacher_flash_success = f"Batch {batch['batch_id']} submitted via {batch['backend']}."
+            except Exception as exc:
+                st.session_state.teacher_flash_error = str(exc)
+            st.rerun()
 
 
 def render_project_overview(project: Dict[str, Any]) -> None:

@@ -265,3 +265,6 @@ This hotfix imports the branding module used by the centered teacher login and r
 - Protected administrative backup with explicit confirmation and export audit log.
 - Daily/weekly and line/grouped-bar controls for generative-coach activity.
 - Lightweight production-phase cards with compact status badges.
+
+## V6.17 Hybrid Background Production
+Long-running teacher production can use an RQ/Redis worker. See `V6_17_HYBRID_BACKGROUND_PRODUCTION_AR.md`.
