@@ -23,6 +23,7 @@ import i18n
 import router
 import web_research_engine
 import branding
+import ui_stability
 from security import verify_password
 
 
@@ -485,7 +486,7 @@ def render_teacher_login() -> None:
     }.get(lang)
 
     st.markdown("<span class='v6163-login-page-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    _, login_col, _ = st.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
+    _, login_col, _ = ui_stability.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
     with login_col:
         with st.container(border=True, key="v6163_teacher_login_card"):
             st.markdown("<span class='v6163-login-card-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
@@ -572,7 +573,7 @@ def render_teacher_login() -> None:
                             st.success(u["account_created"])
                             st.rerun()
                         except Exception as exc:
-                            st.error(str(exc))
+                            ui_stability.render_error_card(exc, lang=i18n.current_lang(st))
             else:
                 st.info(u["registration_disabled"])
 
@@ -745,7 +746,7 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
         with st.spinner(u["saving"]):
             project_id, prompt = save_project_and_prepare_prompt(data, int(phase_number))
     except Exception as exc:
-        st.error(f"{u['save_error']} {exc}")
+        ui_stability.render_error_card(exc, lang=i18n.current_lang(st))
         return
 
     st.session_state.teacher_active_project_id = int(project_id)
@@ -1398,7 +1399,7 @@ def render_blueprint_editor(project: Dict[str, Any], bundle: Dict[str, Any], lan
                     _set_blueprint_draft(project_id, lesson_blueprint_engine.add_unit(draft, add_title, add_desc))
                     st.rerun()
                 except Exception as exc:
-                    st.error(str(exc))
+                    ui_stability.render_error_card(exc, lang=i18n.current_lang(st))
 
     units = draft.get("units") or []
     unit_options = {f"{item.get('unit_id')} · {item.get('title')}": str(item.get("unit_id")) for item in units}
@@ -1872,43 +1873,15 @@ def project_workspace_ui() -> Dict[str, str]:
 
 
 def _friendly_teacher_error(message: Any) -> tuple[str, str]:
-    """Return a concise teacher-facing error while preserving diagnostics."""
-    raw = str(message or "").strip()
-    lowered = raw.lower()
-    lang = i18n.current_lang(st)
-    if "429" in lowered or "quota" in lowered or "resource_exhausted" in lowered:
-        friendly = {
-            "ar": "تعذر الاتصال بخدمة الذكاء الاصطناعي لأن حد الاستخدام الحالي قد اكتمل. احتُفظ بآخر نتيجة ناجحة ويمكن المحاولة لاحقًا.",
-            "fr": "Le quota actuel du service d’IA est atteint. Le dernier résultat valide a été conservé; réessayez plus tard.",
-            "en": "The current AI-service quota has been reached. The last valid result was preserved; try again later.",
-        }
-    elif "413" in lowered or "too large" in lowered or "request entity" in lowered:
-        friendly = {
-            "ar": "حجم الطلب أكبر من الحد المتاح. ستحتاج العملية إلى سياق أقصر أو إعداد البحث السريع.",
-            "fr": "La requête dépasse la taille autorisée. Utilisez un contexte plus court ou le mode de recherche rapide.",
-            "en": "The request exceeds the available size limit. Use a shorter context or quick research mode.",
-        }
-    elif "nameerror" in lowered or "not defined" in lowered:
-        friendly = {
-            "ar": "حدث خلل في عرض هذه الصفحة. بيانات المشروع محفوظة؛ أعد تحميل التطبيق بعد تطبيق آخر تحديث.",
-            "fr": "Une erreur d’affichage est survenue. Les données sont conservées; rechargez l’application après la mise à jour.",
-            "en": "A page-rendering error occurred. Project data is preserved; reload the app after applying the latest update.",
-        }
-    else:
-        friendly = {
-            "ar": "تعذر إكمال العملية حاليًا. لم تُحذف بيانات المشروع، ويمكن إعادة المحاولة بعد مراجعة التفاصيل التقنية.",
-            "fr": "L’opération n’a pas pu être terminée. Les données du projet sont conservées; consultez les détails techniques.",
-            "en": "The operation could not be completed. Project data was preserved; review the technical details and retry.",
-        }
-    return friendly.get(lang, friendly["en"]), raw
+    """Return localized safe copy while preserving the technical diagnostic."""
+    friendly, technical, _ = ui_stability.friendly_error(message, i18n.current_lang(st))
+    return friendly, technical
 
 
 def _render_workspace_exception(exc: Exception) -> None:
-    friendly, technical = _friendly_teacher_error(exc)
-    st.error(friendly)
-    label = {"ar": "التفاصيل التقنية", "fr": "Détails techniques", "en": "Technical details"}.get(i18n.current_lang(st), "Technical details")
-    with st.expander(label, expanded=False):
-        st.code(technical or exc.__class__.__name__, language="text")
+    retry_key = f"teacher_workspace_retry_{ui_stability.error_fingerprint(exc)}"
+    if ui_stability.render_error_card(exc, lang=i18n.current_lang(st), retry_key=retry_key):
+        st.rerun()
 
 
 def _set_workspace_section(section: str) -> None:
@@ -1936,7 +1909,7 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
         unsafe_allow_html=True,
     )
 
-    cols = st.columns(len(guided_teacher_workflow.WORKFLOW_STEPS), gap="small")
+    cols = ui_stability.columns(len(guided_teacher_workflow.WORKFLOW_STEPS), gap="small", vertical_alignment="top")
     for index, (col, step) in enumerate(zip(cols, guided_teacher_workflow.WORKFLOW_STEPS), start=1):
         key = step["key"]
         status = statuses.get(key, "locked")
@@ -1962,7 +1935,7 @@ def _render_guided_workflow(project: Dict[str, Any], state: Dict[str, Any]) -> N
             st.caption(copy["status"].get(status, status))
 
     st.markdown("<span class='v6162-current-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    main_col, summary_col = st.columns([2.25, 1], gap="large", vertical_alignment="top")
+    main_col, summary_col = ui_stability.columns([2.25, 1], gap="large", vertical_alignment="top")
     with main_col:
         with st.container(border=False):
             st.caption(copy["current_step"])
@@ -2104,7 +2077,7 @@ def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
             f"</div>",
             unsafe_allow_html=True,
         )
-        b1, b2 = st.columns(2, gap="small", vertical_alignment="center")
+        b1, b2 = ui_stability.columns(2, gap="small", vertical_alignment="center")
         with b1:
             if st.button(copy["open"], type="primary", use_container_width=True, key=f"open_teacher_project_{project_id}"):
                 _open_project(project_id, "overview")
@@ -2125,7 +2098,7 @@ def render_projects_grid() -> None:
     st.markdown("<span class='v6163-project-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     st.markdown(f"## {copy['projects']}")
     if projects.empty:
-        _, empty_col, _ = st.columns([1, 1.5, 1], gap="large", vertical_alignment="top")
+        _, empty_col, _ = ui_stability.columns([1, 1.5, 1], gap="large", vertical_alignment="top")
         with empty_col:
             with st.container(border=True, key="v6163_empty_projects"):
                 st.markdown(f"### {copy['empty_title']}")
@@ -2137,14 +2110,14 @@ def render_projects_grid() -> None:
 
     rows = projects.to_dict("records")
     if len(rows) == 1:
-        _, center_col, _ = st.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
+        _, center_col, _ = ui_stability.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
         with center_col:
             _render_project_card(rows[0], copy)
         return
 
     column_count = 3 if len(rows) >= 3 else 2
     for start in range(0, len(rows), column_count):
-        cols = st.columns(column_count, gap="large", vertical_alignment="top")
+        cols = ui_stability.columns(column_count, gap="large", vertical_alignment="top")
         for col, project in zip(cols, rows[start:start + column_count]):
             with col:
                 _render_project_card(project, copy)
@@ -2176,7 +2149,7 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
 
     with st.container(border=False, key="v6163_project_header"):
         st.markdown("<span class='v6162-studio-header-marker v6163-project-header-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-        breadcrumb_col, back_col = st.columns([6.2, 1.25], vertical_alignment="center", gap="large")
+        breadcrumb_col, back_col = ui_stability.columns([6.2, 1.25], vertical_alignment="center", gap="large")
         with breadcrumb_col:
             st.markdown(
                 f"<div class='v6163-project-breadcrumb' dir='{direction}'>"
@@ -2207,30 +2180,32 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
 def _render_phase_map(project: Dict[str, Any]) -> None:
     copy = project_workspace_ui()
     outputs = db.teacher_project_phase_outputs(int(project["id"]))
-    direction = i18n.direction(i18n.current_lang(st))
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
     st.markdown(f"### {copy['phase_map']}")
     for start in range(1, 12, 3):
-        cols = st.columns(3, gap="small")
+        cols = ui_stability.columns(3, gap="small", vertical_alignment="top")
         for col, phase in zip(cols, range(start, min(start + 3, 12))):
             row = outputs.get(phase) or {}
-            raw_status = str(row.get("status") or "").strip().lower()
-            if raw_status == "completed":
-                status_key, css_status = "ready", "ready"
-            elif raw_status in {"needs_review", "review"}:
-                status_key, css_status = "needs_review", "review"
-            elif raw_status in {"running", "generating", "queued"}:
-                status_key, css_status = "running", "running"
-            elif raw_status in {"failed", "error", "llm_error"}:
-                status_key, css_status = "failed", "failed"
-            else:
-                status_key, css_status = "not_ready", "pending"
+            raw_status = str(row.get("status") or "not_started").strip().lower()
+            semantic, css_status = ui_stability.status_semantics(raw_status)
+            legacy_label_key = {
+                "approved": "ready", "ready": "ready", "review": "needs_review",
+                "running": "running", "queued": "running", "blocked": "not_ready",
+                "failed": "failed", "pending": "not_ready",
+            }.get(semantic, "not_ready")
+            updated = str(row.get("updated_at") or row.get("created_at") or "").strip()
+            updated_html = (
+                f"<small class='v6165-prod-updated'>{escape(updated[:16].replace('T', ' '))}</small>"
+                if updated else ""
+            )
+            badge = ui_stability.status_badge_html(raw_status, lang=lang, label=copy[legacy_label_key])
             with col:
                 st.markdown(
-                    f"<article class='v6164-prod-card {css_status}' dir='{direction}'>"
+                    f"<article class='v6164-prod-card v6165-prod-card {escape(css_status)}' dir='{direction}'>"
                     f"<header><span class='v6164-prod-num'>{phase:02d}</span>"
                     f"<h4>{escape(str(PHASES[phase]))}</h4></header>"
-                    f"<footer><span class='v6164-status-badge {css_status}'>"
-                    f"<i aria-hidden='true'></i>{escape(copy[status_key])}</span></footer>"
+                    f"<footer>{badge}{updated_html}</footer>"
                     f"</article>",
                     unsafe_allow_html=True,
                 )
@@ -2247,7 +2222,7 @@ def render_project_overview(project: Dict[str, Any]) -> None:
         f"<span class='v6163-overview-chip'>{escape(value)}</span>"
         for value in [str(p.get("learner_level") or "—"), str(p.get("expected_duration") or "—"), languages]
     )
-    c1, c2 = st.columns(2, gap="large", vertical_alignment="top")
+    c1, c2 = ui_stability.columns(2, gap="large", vertical_alignment="top")
     with c1:
         with st.container(border=True, key="v6163_course_identity_card"):
             st.markdown("<span class='v6163-overview-card-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
@@ -2585,11 +2560,7 @@ def render_teacher_app() -> None:
         st.warning(str(flash_warning))
     flash_error = st.session_state.pop("teacher_flash_error", None)
     if flash_error:
-        friendly, technical = _friendly_teacher_error(flash_error)
-        st.error(friendly)
-        details_label = {"ar": "التفاصيل التقنية", "fr": "Détails techniques", "en": "Technical details"}.get(i18n.current_lang(st), "Technical details")
-        with st.expander(details_label, expanded=False):
-            st.code(technical, language="text")
+        ui_stability.render_error_card(flash_error, lang=i18n.current_lang(st))
     views = ["projects", "new", "workspace", "outputs"]
     if st.session_state.get("teacher_studio_view") not in views:
         st.session_state.teacher_studio_view = "projects"

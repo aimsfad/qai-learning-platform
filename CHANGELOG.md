@@ -1,3 +1,11 @@
+# V6.16.5 — UI stability and shared design system
+
+- Added `ui_stability.py` for validated Streamlit columns, localized safe errors, incident fingerprints, and centralized status semantics.
+- Routed critical teacher, public-navbar, and evaluator layouts through backwards-compatible column handling.
+- Replaced raw teacher-workspace exception messages with friendly error cards and collapsed diagnostics.
+- Added shared design tokens, semantic status badges, keyboard focus visibility, reduced-motion support, and responsive error/empty states.
+- Added repository-wide validation for unsupported `vertical_alignment` values and unresolved global names.
+
 # V6.16.4 — Research export and analytics polish
 
 - Added strict anonymized research exports that exclude direct identifiers and high-risk raw free text.

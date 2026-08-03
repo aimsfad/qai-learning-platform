@@ -9,6 +9,7 @@ import branding
 import content
 import i18n
 import router
+import ui_stability
 
 
 COPY: Dict[str, Dict[str, object]] = {
@@ -286,7 +287,7 @@ def render_public_header(current_title: str = "") -> None:
         "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "teacher": "Teacher", "evaluator": "Evaluator", "start": "Start now"},
     }[lang]
     with st.container(border=False, key="v61_public_header"):
-        logo_col, nav_col, language_col, teacher_col, evaluator_col, start_col = st.columns(
+        logo_col, nav_col, language_col, teacher_col, evaluator_col, start_col = ui_stability.columns(
             [1.85, 3.55, .95, .95, .95, 1.0], gap="small", vertical_alignment="center"
         )
         with logo_col:
@@ -324,7 +325,7 @@ def render_home() -> None:
     }.get(lang, "GENERATIVE LEARNING OS")
     st.markdown("<span class='v61-home-marker'></span>", unsafe_allow_html=True)
     with st.container(border=False, key="v61_hero"):
-        copy_col, visual_col = st.columns([1.13, .87], gap="large", vertical_alignment="center")
+        copy_col, visual_col = ui_stability.columns([1.13, .87], gap="large", vertical_alignment="center")
         with copy_col:
             st.markdown(
                 f"""

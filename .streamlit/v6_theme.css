@@ -3518,3 +3518,155 @@ html[dir="rtl"] .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v
 @media (max-width:900px) {
   .v6164-prod-card { height:158px; }
 }
+
+/* ========================================================================== 
+   3alimnIA V6.16.5 — UI Stability & Shared Design System
+   Central tokens, accessible focus, resilient state cards, and safe errors.
+   ========================================================================== */
+:root {
+  --qai-primary: var(--v6-blue);
+  --qai-primary-dark: var(--v6-navy-2);
+  --qai-accent: var(--v6-cyan);
+  --qai-success: #159b68;
+  --qai-warning: #d38a14;
+  --qai-danger: #d64545;
+  --qai-info: #2563eb;
+  --qai-ink: var(--v6-ink);
+  --qai-body: var(--v6-body);
+  --qai-muted: var(--v6-muted);
+  --qai-surface: var(--v6-surface);
+  --qai-soft: #f3f7fc;
+  --qai-border: var(--v6-border);
+  --qai-radius-sm: 10px;
+  --qai-radius-md: 14px;
+  --qai-radius-lg: 20px;
+  --qai-space-1: .25rem;
+  --qai-space-2: .5rem;
+  --qai-space-3: .75rem;
+  --qai-space-4: 1rem;
+  --qai-space-5: 1.25rem;
+  --qai-space-6: 1.5rem;
+  --qai-shadow-sm: 0 4px 14px rgba(7,27,68,.045);
+  --qai-shadow-md: 0 12px 30px rgba(7,27,68,.075);
+}
+
+/* Keyboard access must remain visible on all native Streamlit controls. */
+.stButton > button:focus-visible,
+.stDownloadButton > button:focus-visible,
+[data-baseweb="select"]:focus-within,
+[data-testid="stTextInput"] input:focus-visible,
+[data-testid="stTextArea"] textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(25,103,255,.28) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 1px var(--qai-primary) !important;
+}
+
+/* Shared semantic status badge. */
+.qai-status-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:.48rem;
+  width:max-content;
+  max-width:100%;
+  padding:.34rem .72rem;
+  border-radius:999px;
+  border:1px solid transparent;
+  font-size:.73rem;
+  line-height:1.2;
+  font-weight:800;
+  white-space:nowrap;
+}
+.qai-status-badge i {
+  width:7px;
+  height:7px;
+  flex:0 0 7px;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+.qai-status-approved,.qai-status-ready { background:#eaf8ef; color:#167447; border-color:#cfeedd; }
+.qai-status-review { background:#fff7e2; color:#986000; border-color:#f7dfaa; }
+.qai-status-running { background:#eaf3ff; color:#1d5fbd; border-color:#cfe2fb; }
+.qai-status-queued { background:#f2efff; color:#6d46b5; border-color:#ded5fb; }
+.qai-status-blocked,.qai-status-pending { background:#f3f6fa; color:#6b7b90; border-color:#e0e7f0; }
+.qai-status-failed { background:#fff0f0; color:#b42318; border-color:#f5d0d0; }
+
+/* Friendly error surface: technical diagnostics stay collapsed. */
+.qai-ui-error-card {
+  display:flex;
+  align-items:flex-start;
+  gap:var(--qai-space-4);
+  padding:var(--qai-space-5);
+  margin:.75rem 0 .55rem;
+  background:linear-gradient(135deg,#fff8f8,#fffdfd);
+  border:1px solid #f3cccc;
+  border-inline-start:4px solid var(--qai-danger);
+  border-radius:var(--qai-radius-md);
+  box-shadow:var(--qai-shadow-sm);
+}
+.qai-ui-error-card h3 { margin:0 0 .28rem; font-size:1rem; color:#8f2525 !important; }
+.qai-ui-error-card p { margin:0 0 .38rem; line-height:1.65; color:#6f3d3d; }
+.qai-ui-error-card small { color:#9b6262; font-weight:700; }
+.qai-ui-error-icon {
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+  border-radius:50%;
+  color:#fff;
+  background:var(--qai-danger);
+  font-weight:900;
+}
+
+.qai-ui-empty-state {
+  text-align:center;
+  padding:2rem 1.25rem;
+  background:var(--qai-soft);
+  border:1px dashed var(--qai-border);
+  border-radius:var(--qai-radius-lg);
+}
+.qai-ui-empty-state > span {
+  display:block;
+  width:44px;
+  height:5px;
+  margin:0 auto .85rem;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--qai-primary),var(--qai-accent));
+}
+.qai-ui-empty-state h3 { margin:.15rem 0 .4rem; }
+.qai-ui-empty-state p { max-width:38rem; margin:0 auto; line-height:1.7; }
+
+/* Production map alignment and lighter information density. */
+.v6165-prod-card { min-height:148px; height:auto; }
+.v6165-prod-card footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:.55rem;
+}
+.v6165-prod-updated { color:var(--qai-muted); font-size:.67rem; font-weight:650; }
+.v6165-prod-card:hover {
+  transform:translateY(-2px);
+  border-color:#bfd2e9;
+  box-shadow:var(--qai-shadow-md);
+}
+
+/* Respect users who disable motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior:auto !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+  .v6165-prod-card:hover { transform:none; }
+}
+
+@media (max-width:720px) {
+  .qai-ui-error-card { padding:1rem; gap:.75rem; }
+  .qai-status-badge { font-size:.7rem; white-space:normal; }
+  .v6165-prod-card footer { align-items:flex-start; flex-direction:column; }
+}
