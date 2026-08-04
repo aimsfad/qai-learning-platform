@@ -4016,3 +4016,48 @@ html[dir="rtl"] .v618-page-header-accent { inset:-185px auto auto -90px; }
   .st-key-v618_student_registration_card > [data-testid="stVerticalBlockBorderWrapper"],
   .st-key-v618_evaluator_auth_card > [data-testid="stVerticalBlockBorderWrapper"] { padding:1rem !important; }
 }
+
+
+/* =========================================================
+   V6.18.2 — Teacher workspace and blueprint editor polish
+   ========================================================= */
+.v618-teacher-shell-marker { display:none !important; }
+.v618-teacher-shell-marker + div .v618-page-header,
+.v618-page-header-compact {
+  margin-bottom:.72rem !important;
+}
+.st-key-teacher_studio_nav_control [role="radiogroup"] {
+  display:flex !important; flex-wrap:wrap !important; gap:.5rem !important;
+  padding:.3rem !important; border:1px solid var(--v618-border) !important;
+  border-radius:14px !important; background:rgba(255,255,255,.78) !important;
+  box-shadow:var(--v618-shadow-sm) !important;
+}
+.st-key-teacher_studio_nav_control [role="radiogroup"] > label {
+  min-height:38px !important; margin:0 !important; padding:.42rem .85rem !important;
+  border:1px solid transparent !important; border-radius:10px !important;
+  transition:background .16s ease,border-color .16s ease,color .16s ease !important;
+}
+.st-key-teacher_studio_nav_control [role="radiogroup"] > label:hover {
+  background:#F3F7FD !important; border-color:#D7E5F8 !important;
+}
+.st-key-teacher_studio_nav_control [role="radiogroup"] > label:has(input:checked) {
+  color:var(--v618-midnight) !important; background:#EAF2FF !important;
+  border-color:#BFD5F5 !important; box-shadow:inset 0 -2px 0 var(--v618-blue) !important;
+}
+.st-key-teacher_studio_nav_control [data-testid="stMarkdownContainer"] p {
+  margin:0 !important; font-size:.8rem !important; font-weight:780 !important;
+}
+/* The blueprint editor is a workbench, not a raw form stack. */
+.st-key-blueprint_editor_workspace > [data-testid="stVerticalBlockBorderWrapper"] {
+  border:1px solid var(--v618-border) !important; border-radius:18px !important;
+  background:linear-gradient(145deg,#FFF,#FBFDFF) !important; box-shadow:var(--v618-shadow-sm) !important;
+}
+[data-testid="stMetric"] {
+  border:1px solid var(--v618-border); border-radius:14px; padding:.7rem .85rem;
+  background:linear-gradient(145deg,#FFF,#FBFDFF); box-shadow:0 3px 12px rgba(7,27,68,.035);
+}
+[data-testid="stMetricValue"] { color:var(--v618-midnight) !important; font-weight:850 !important; }
+@media (max-width:760px) {
+  .st-key-teacher_studio_nav_control [role="radiogroup"] { flex-wrap:nowrap !important; overflow-x:auto !important; }
+  .st-key-teacher_studio_nav_control [role="radiogroup"] > label { flex:0 0 auto !important; }
+}
