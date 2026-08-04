@@ -1443,6 +1443,19 @@ def render_blueprint_editor(project: Dict[str, Any], bundle: Dict[str, Any], lan
     if not cfg.get("editor_enabled"):
         st.warning(copy["disabled"])
         return
+    required_editor_api = (
+        "prepare_editor_draft", "normalize_blueprint", "recompute_blueprint_quality",
+        "compare_blueprints", "add_unit", "update_unit", "move_unit", "delete_unit",
+        "add_lesson", "update_lesson", "move_lesson", "delete_lesson",
+        "add_outcome", "update_outcome", "delete_outcome", "save_manual_revision",
+    )
+    missing_editor_api = [name for name in required_editor_api if not callable(getattr(lesson_blueprint_engine, name, None))]
+    if missing_editor_api:
+        ui_stability.render_error_card(
+            "Blueprint editor API is incomplete: " + ", ".join(missing_editor_api),
+            lang=lang,
+        )
+        return
     st.info(copy["draft_note"])
     if bool(int(bundle.get("approved_by_teacher") or 0)):
         st.warning(copy["approved_warning"])
@@ -1588,7 +1601,13 @@ def render_blueprint_editor(project: Dict[str, Any], bundle: Dict[str, Any], lan
         st.rerun()
     if b2.button(copy["save"], type="primary", use_container_width=True, disabled=not changed, key=f"blueprint_save_revision_{project_id}"):
         try:
-            saved = lesson_blueprint_engine.save_manual_revision(project_id, int(bundle["id"]), _current_teacher_username(), st.session_state[draft_key], change_summary)
+            saved = lesson_blueprint_engine.save_manual_revision(
+                project,
+                _current_teacher_username(),
+                base_run_id=int(bundle["id"]),
+                edited_blueprint=st.session_state[draft_key],
+                change_summary=change_summary,
+            )
             st.session_state[source_key] = int(saved.get("id") or 0)
             st.session_state[draft_key] = lesson_blueprint_engine.prepare_editor_draft(saved)
             st.session_state.teacher_flash_success = copy["saved"]
@@ -2739,10 +2758,16 @@ def render_teacher_app() -> None:
     lang = i18n.current_lang(st)
     welcome_line = f"{u['welcome']}، {display_name} — {u['subtitle']}" if lang == "ar" else f"{u['welcome']}, {display_name} — {u['subtitle']}"
     st.markdown("<span class='v618-teacher-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    workspace_meta = {
+        "ar": ["رحلة موجهة من 7 مراحل", "مراجعة واعتماد بشري"],
+        "fr": ["Parcours guidé en 7 étapes", "Validation humaine"],
+        "en": ["7-stage guided workflow", "Human review and approval"],
+    }.get(lang, ["7-stage guided workflow", "Human review and approval"])
     global_ui.render_page_header(
         u["workspace"], welcome_line, lang=lang,
         eyebrow={"ar": "فضاء الأستاذ", "fr": "Espace enseignant", "en": "Teacher workspace"}.get(lang, "Teacher workspace"),
-        compact=True, icon="edit_note",
+        status={"ar": "استوديو المحتوى", "fr": "Studio de contenu", "en": "Content Studio"}.get(lang, "Content Studio"),
+        meta=workspace_meta, compact=True, icon="edit_note",
     )
     flash_success = st.session_state.pop("teacher_flash_success", None)
     if flash_success:

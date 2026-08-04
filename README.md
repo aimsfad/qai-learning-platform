@@ -292,3 +292,17 @@ The platform now uses a shared visual design layer across public pages and the l
 ```bash
 python validate_v618_global_design_system.py
 ```
+
+## V6.18.2 — Blueprint editor runtime and teacher UI polish
+
+This maintenance release fixes the blueprint editor end to end and removes the visible `</div>` artifact from the teacher workspace header. It also adds the missing unit, lesson, and learning-outcome editing API, aligns manual revision persistence with the database contract, and improves teacher navigation styling.
+
+Validation:
+
+```bash
+python validate_v6182_blueprint_editor_runtime_ui.py
+python validate_v6181_blueprint_api_contract.py
+python validate_v615_blueprint_editor_versioning.py
+```
+
+See `V6_18_2_BLUEPRINT_EDITOR_RUNTIME_UI_POLISH_AR.md` for deployment instructions.

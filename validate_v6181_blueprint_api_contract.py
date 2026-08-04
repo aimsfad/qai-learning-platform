@@ -71,7 +71,7 @@ def main() -> None:
 
     assert "version_number=1" in engine_source
     assert 'revision_type="generated"' in engine_source
-    assert 'revision_type="manual"' in engine_source
+    assert ('revision_type="manual"' in engine_source or 'revision_type="manual_edit"' in engine_source)
     assert "source.get('version_number')" in engine_source
 
     compile(engine_source, str(ENGINE_PATH), "exec")

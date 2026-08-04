@@ -484,3 +484,15 @@
 - Replaced filled Streamlit tabs with clean text tabs and an active underline.
 - Polished the public navbar, internal toolbar, learner dashboard, teacher project cards, forms, tables, expanders, and alerts.
 - Added responsive and accessibility refinements without changing the database schema.
+
+## V6.18.2 — Blueprint Editor Runtime & Teacher UI Polish
+
+- Restored the complete blueprint-editor API used by the teacher workspace.
+- Added draft preparation, normalization, comparison, quality recomputation, and CRUD helpers for units, lessons, and outcomes.
+- Aligned manual-revision saving with the current database contract while preserving backward compatibility with older calls.
+- Invalidates prior blueprint approvals when a new manual revision is saved and records detailed audit events.
+- Fixed the teacher header rendering a literal `</div>` after Streamlit reruns by emitting one balanced HTML payload.
+- Added a defensive API readiness check before opening the blueprint editor.
+- Refined the teacher workspace header, metadata chips, navigation control, KPI typography, and mobile behavior.
+- Added a new behavioral/static validation and updated compatibility validators through V6.18.2.
+- No database schema migration and no new Secrets are required.

@@ -468,7 +468,7 @@ def generate_and_persist(
         project_id=project_id,
         blueprint_run_id=run_id,
         parent_run_id=None,
-        action="generated",
+        action="generate",
         actor_username=owner,
         summary="Generated from the approved evidence bundle.",
         details={
@@ -561,6 +561,366 @@ def blueprint_from_editor_tables(
     draft["lessons"] = [dict(item) for item in lessons]
     draft["outcomes"] = [dict(item) for item in outcomes]
     return draft
+
+
+
+
+def _blueprint_payload(value: Mapping[str, Any] | None) -> Dict[str, Any]:
+    """Return a detached blueprint dictionary from a run bundle or raw payload."""
+
+    raw = dict(value or {})
+    nested = raw.get("blueprint")
+    if isinstance(nested, Mapping):
+        raw = dict(nested)
+    return copy.deepcopy(raw)
+
+
+def normalize_blueprint(value: Mapping[str, Any] | None) -> Dict[str, Any]:
+    """Normalize the mutable editor representation without requiring a project.
+
+    This is deliberately structural. Project-aware localization and default
+    learning outcomes remain the responsibility of ``normalize_manual_blueprint``
+    immediately before an immutable revision is persisted.
+    """
+
+    draft = _blueprint_payload(value)
+    for field in ("concepts", "concept_edges", "units", "lessons", "outcomes", "alignments"):
+        items = draft.get(field)
+        draft[field] = [dict(item) for item in items] if isinstance(items, list) else []
+
+    # Concepts.
+    concepts: List[Dict[str, Any]] = []
+    used_concepts: set[str] = set()
+    for raw in draft["concepts"]:
+        concept_id = str(raw.get("concept_id") or "").strip() or _next_identifier("C", used_concepts)
+        used_concepts.add(concept_id)
+        item = dict(raw)
+        item["concept_id"] = concept_id
+        item["name"] = str(item.get("name") or concept_id).strip()
+        item["prerequisites"] = _split_values(item.get("prerequisites"))
+        item["source_ids"] = _split_values(item.get("source_ids"))
+        concepts.append(item)
+    draft["concepts"] = concepts
+
+    # Units.
+    units: List[Dict[str, Any]] = []
+    used_units: set[str] = set()
+    for position, raw in enumerate(draft["units"], start=1):
+        unit_id = str(raw.get("unit_id") or "").strip() or _next_identifier("U", used_units)
+        used_units.add(unit_id)
+        item = dict(raw)
+        item.update({
+            "unit_id": unit_id,
+            "title": str(item.get("title") or unit_id).strip(),
+            "description": str(item.get("description") or "").strip(),
+            "sequence_order": int(item.get("sequence_order") or position),
+        })
+        units.append(item)
+    units.sort(key=lambda item: (int(item.get("sequence_order") or 0), str(item.get("unit_id"))))
+    for position, item in enumerate(units, start=1):
+        item["sequence_order"] = position
+    draft["units"] = units
+    unit_ids = {str(item["unit_id"]) for item in units}
+
+    # Lessons.
+    lessons: List[Dict[str, Any]] = []
+    used_lessons: set[str] = set()
+    fallback_unit = units[0]["unit_id"] if units else ""
+    for position, raw in enumerate(draft["lessons"], start=1):
+        lesson_id = str(raw.get("lesson_id") or "").strip() or _next_identifier("L", used_lessons)
+        used_lessons.add(lesson_id)
+        item = dict(raw)
+        unit_id = str(item.get("unit_id") or fallback_unit).strip()
+        item.update({
+            "lesson_id": lesson_id,
+            "unit_id": unit_id,
+            "title": str(item.get("title") or lesson_id).strip(),
+            "sequence_order": int(item.get("sequence_order") or position),
+            "estimated_duration_minutes": max(5, int(item.get("estimated_duration_minutes") or item.get("duration_minutes") or 45)),
+            "concept_ids": _split_values(item.get("concept_ids")),
+            "source_ids": _split_values(item.get("source_ids")),
+            "prerequisites": _split_values(item.get("prerequisites")),
+            "misconceptions": _split_values(str(item.get("misconceptions") or "").replace("|", ",")),
+            "lesson_sequence": list(item.get("lesson_sequence") or []),
+            "activities": [dict(row) for row in item.get("activities") or []],
+            "assessments": [dict(row) for row in item.get("assessments") or []],
+            "learning_outcomes": [],
+            "status": str(item.get("status") or "teacher_review"),
+        })
+        lessons.append(item)
+    unit_order = {str(item["unit_id"]): int(item["sequence_order"]) for item in units}
+    lessons.sort(key=lambda item: (unit_order.get(str(item.get("unit_id")), 999), int(item.get("sequence_order") or 0), str(item.get("lesson_id"))))
+    per_unit: Dict[str, int] = {}
+    for item in lessons:
+        uid = str(item.get("unit_id") or "")
+        per_unit[uid] = per_unit.get(uid, 0) + 1
+        item["sequence_order"] = per_unit[uid]
+    draft["lessons"] = lessons
+    lesson_ids = {str(item["lesson_id"]) for item in lessons}
+
+    # Outcomes and alignment references.
+    outcomes: List[Dict[str, Any]] = []
+    used_outcomes: set[str] = set()
+    for raw in draft["outcomes"]:
+        item = dict(raw)
+        lesson_id = str(item.get("lesson_id") or "").strip()
+        outcome_id = str(item.get("outcome_id") or "").strip() or _next_identifier("LO", used_outcomes)
+        used_outcomes.add(outcome_id)
+        item.update({
+            "outcome_id": outcome_id,
+            "lesson_id": lesson_id,
+            "bloom_level": str(item.get("bloom_level") or "apply").strip(),
+            "verb": str(item.get("verb") or "apply").strip(),
+            "object": str(item.get("object") or item.get("object_text") or "").strip(),
+            "condition": str(item.get("condition") or item.get("condition_text") or "").strip(),
+            "success_criterion": str(item.get("success_criterion") or "").strip(),
+            "activity_id": str(item.get("activity_id") or f"A-{lesson_id}-{outcome_id}").strip(),
+            "assessment_id": str(item.get("assessment_id") or f"AS-{lesson_id}-{outcome_id}").strip(),
+        })
+        outcomes.append(item)
+    draft["outcomes"] = outcomes
+
+    lesson_map = {str(item["lesson_id"]): item for item in lessons}
+    alignments: List[Dict[str, Any]] = []
+    for outcome in outcomes:
+        lesson = lesson_map.get(str(outcome.get("lesson_id") or ""))
+        if lesson is not None:
+            lesson["learning_outcomes"].append(outcome)
+        alignments.append({
+            "outcome_id": outcome["outcome_id"],
+            "lesson_id": outcome["lesson_id"],
+            "activity_id": outcome["activity_id"],
+            "assessment_id": outcome["assessment_id"],
+            "aligned": bool(outcome.get("lesson_id") in lesson_ids),
+        })
+    draft["alignments"] = alignments
+
+    # Rebuild unit aggregates after every edit.
+    for unit in units:
+        linked = [lesson for lesson in lessons if str(lesson.get("unit_id")) == str(unit.get("unit_id"))]
+        unit["lesson_ids"] = [str(lesson["lesson_id"]) for lesson in linked]
+        unit["concept_ids"] = sorted({cid for lesson in linked for cid in lesson.get("concept_ids") or []})
+        unit["source_ids"] = sorted({sid for lesson in linked for sid in lesson.get("source_ids") or []})
+
+    # Keep only structurally valid prerequisite edges; quality reporting still
+    # exposes any dangling lesson/outcome references to the teacher.
+    draft["concept_edges"] = [dict(edge) for edge in draft.get("concept_edges") or []]
+    return draft
+
+
+def prepare_editor_draft(bundle_or_blueprint: Mapping[str, Any] | None) -> Dict[str, Any]:
+    """Create an isolated, mutable session draft for the blueprint editor."""
+
+    return normalize_blueprint(bundle_or_blueprint)
+
+
+def recompute_blueprint_quality(draft: Mapping[str, Any]) -> Dict[str, Any]:
+    quality = assess_blueprint_quality(normalize_blueprint(draft))
+    structural_errors = (
+        bool(quality.get("dangling_lessons"))
+        or bool(quality.get("dangling_outcomes"))
+        or bool(quality.get("duplicate_ids"))
+        or bool(quality.get("has_prerequisite_cycle"))
+    )
+    quality["integrity_score"] = 0.0 if structural_errors else 1.0
+    quality["status"] = "completed" if quality.get("readiness_score", 0) >= blueprint_status()["minimum_readiness"] and not structural_errors else "needs_review"
+    return quality
+
+
+def compare_blueprints(before: Mapping[str, Any], after: Mapping[str, Any]) -> Dict[str, Any]:
+    left = normalize_blueprint(before)
+    right = normalize_blueprint(after)
+    specs = (("concepts", "concept_id"), ("units", "unit_id"), ("lessons", "lesson_id"), ("outcomes", "outcome_id"))
+    result: Dict[str, Any] = {"changed": False, "changes": _diff_entity_sets(left, right)}
+    for field, key in specs:
+        old = _entity_map(left.get(field) or [], key)
+        new = _entity_map(right.get(field) or [], key)
+        added = sorted(set(new) - set(old))
+        removed = sorted(set(old) - set(new))
+        updated = sorted(identifier for identifier in set(old) & set(new) if old[identifier] != new[identifier])
+        result[field] = {"added": added, "removed": removed, "updated": updated}
+        result["changed"] = result["changed"] or bool(added or removed or updated)
+    if left.get("concept_edges") != right.get("concept_edges"):
+        result["changed"] = True
+        result["concept_edges"] = {"updated": True}
+    return result
+
+
+def add_unit(draft: Mapping[str, Any], title: str, description: str = "") -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    clean_title = str(title or "").strip()
+    if not clean_title:
+        raise ValueError("Unit title is required.")
+    used = {str(item.get("unit_id")) for item in data.get("units") or []}
+    unit_id = _next_identifier("U", used)
+    data["units"].append({
+        "unit_id": unit_id,
+        "title": clean_title,
+        "description": str(description or "").strip(),
+        "sequence_order": len(data["units"]) + 1,
+        "lesson_ids": [], "concept_ids": [], "source_ids": [],
+    })
+    return normalize_blueprint(data)
+
+
+def update_unit(draft: Mapping[str, Any], unit_id: str, *, title: str, description: str = "") -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    target = next((item for item in data["units"] if str(item.get("unit_id")) == str(unit_id)), None)
+    if target is None:
+        raise ValueError("Unit not found.")
+    if not str(title or "").strip():
+        raise ValueError("Unit title is required.")
+    target["title"] = str(title).strip()
+    target["description"] = str(description or "").strip()
+    return normalize_blueprint(data)
+
+
+def move_unit(draft: Mapping[str, Any], unit_id: str, offset: int) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    units = data["units"]
+    index = next((idx for idx, item in enumerate(units) if str(item.get("unit_id")) == str(unit_id)), -1)
+    if index < 0:
+        raise ValueError("Unit not found.")
+    target = max(0, min(len(units) - 1, index + int(offset)))
+    if target != index:
+        units[index], units[target] = units[target], units[index]
+    for position, item in enumerate(units, start=1):
+        item["sequence_order"] = position
+    return normalize_blueprint(data)
+
+
+def delete_unit(draft: Mapping[str, Any], unit_id: str, *, cascade: bool = False) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    if not any(str(item.get("unit_id")) == str(unit_id) for item in data["units"]):
+        raise ValueError("Unit not found.")
+    linked_lessons = {str(item.get("lesson_id")) for item in data["lessons"] if str(item.get("unit_id")) == str(unit_id)}
+    if linked_lessons and not cascade:
+        raise ValueError("The unit contains lessons. Confirm cascade deletion first.")
+    data["units"] = [item for item in data["units"] if str(item.get("unit_id")) != str(unit_id)]
+    if cascade:
+        data["lessons"] = [item for item in data["lessons"] if str(item.get("lesson_id")) not in linked_lessons]
+        data["outcomes"] = [item for item in data["outcomes"] if str(item.get("lesson_id")) not in linked_lessons]
+    return normalize_blueprint(data)
+
+
+def add_lesson(
+    draft: Mapping[str, Any], *, unit_id: str, title: str, duration_minutes: int = 45,
+    concept_ids: Any = None, source_ids: Any = None,
+) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    if str(unit_id) not in {str(item.get("unit_id")) for item in data["units"]}:
+        raise ValueError("Select a valid unit before adding a lesson.")
+    clean_title = str(title or "").strip()
+    if not clean_title:
+        raise ValueError("Lesson title is required.")
+    used = {str(item.get("lesson_id")) for item in data["lessons"]}
+    lesson_id = _next_identifier("L", used)
+    order = 1 + sum(1 for item in data["lessons"] if str(item.get("unit_id")) == str(unit_id))
+    data["lessons"].append({
+        "lesson_id": lesson_id, "unit_id": str(unit_id), "title": clean_title,
+        "sequence_order": order, "estimated_duration_minutes": max(5, int(duration_minutes or 45)),
+        "prerequisites": [], "concept_ids": _split_values(concept_ids), "source_ids": _split_values(source_ids),
+        "learning_outcomes": [], "misconceptions": [], "lesson_sequence": [],
+        "activities": [], "assessments": [], "status": "teacher_review",
+    })
+    return normalize_blueprint(data)
+
+
+def update_lesson(
+    draft: Mapping[str, Any], lesson_id: str, *, unit_id: str, title: str,
+    duration_minutes: int = 45, concept_ids: Any = None, source_ids: Any = None,
+    prerequisites: Any = None, misconceptions: Any = None,
+) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    target = next((item for item in data["lessons"] if str(item.get("lesson_id")) == str(lesson_id)), None)
+    if target is None:
+        raise ValueError("Lesson not found.")
+    if str(unit_id) not in {str(item.get("unit_id")) for item in data["units"]}:
+        raise ValueError("Select a valid unit.")
+    if not str(title or "").strip():
+        raise ValueError("Lesson title is required.")
+    target.update({
+        "unit_id": str(unit_id), "title": str(title).strip(),
+        "estimated_duration_minutes": max(5, int(duration_minutes or 45)),
+        "concept_ids": _split_values(concept_ids), "source_ids": _split_values(source_ids),
+        "prerequisites": _split_values(prerequisites),
+        "misconceptions": _split_values(str(misconceptions or "").replace("|", ",")),
+    })
+    return normalize_blueprint(data)
+
+
+def move_lesson(draft: Mapping[str, Any], lesson_id: str, offset: int) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    lesson = next((item for item in data["lessons"] if str(item.get("lesson_id")) == str(lesson_id)), None)
+    if lesson is None:
+        raise ValueError("Lesson not found.")
+    unit_id = str(lesson.get("unit_id"))
+    siblings = [item for item in data["lessons"] if str(item.get("unit_id")) == unit_id]
+    index = next(idx for idx, item in enumerate(siblings) if str(item.get("lesson_id")) == str(lesson_id))
+    target = max(0, min(len(siblings) - 1, index + int(offset)))
+    if target != index:
+        siblings[index], siblings[target] = siblings[target], siblings[index]
+    for position, item in enumerate(siblings, start=1):
+        item["sequence_order"] = position
+    return normalize_blueprint(data)
+
+
+def delete_lesson(draft: Mapping[str, Any], lesson_id: str) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    if not any(str(item.get("lesson_id")) == str(lesson_id) for item in data["lessons"]):
+        raise ValueError("Lesson not found.")
+    data["lessons"] = [item for item in data["lessons"] if str(item.get("lesson_id")) != str(lesson_id)]
+    data["outcomes"] = [item for item in data["outcomes"] if str(item.get("lesson_id")) != str(lesson_id)]
+    return normalize_blueprint(data)
+
+
+def add_outcome(
+    draft: Mapping[str, Any], *, lesson_id: str, bloom_level: str, verb: str,
+    object_text: str, condition: str = "", success_criterion: str = "",
+) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    if str(lesson_id) not in {str(item.get("lesson_id")) for item in data["lessons"]}:
+        raise ValueError("Select a valid lesson before adding an outcome.")
+    if not str(verb or "").strip() or not str(object_text or "").strip():
+        raise ValueError("A measurable verb and outcome object are required.")
+    used = {str(item.get("outcome_id")) for item in data["outcomes"]}
+    lesson_count = 1 + sum(1 for item in data["outcomes"] if str(item.get("lesson_id")) == str(lesson_id))
+    suffix = str(lesson_id)[1:] if str(lesson_id).startswith("L") else str(lesson_id)
+    candidate = f"LO{suffix}.{lesson_count}"
+    outcome_id = candidate if candidate not in used else _next_identifier("LO", used)
+    data["outcomes"].append({
+        "outcome_id": outcome_id, "lesson_id": str(lesson_id),
+        "bloom_level": str(bloom_level or "apply"), "verb": str(verb).strip(),
+        "object": str(object_text).strip(), "condition": str(condition or "").strip(),
+        "success_criterion": str(success_criterion or "").strip(),
+        "activity_id": f"A-{lesson_id}-{outcome_id}",
+        "assessment_id": f"AS-{lesson_id}-{outcome_id}",
+    })
+    return normalize_blueprint(data)
+
+
+def update_outcome(
+    draft: Mapping[str, Any], outcome_id: str, *, bloom_level: str, verb: str,
+    object_text: str, condition: str = "", success_criterion: str = "",
+) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    target = next((item for item in data["outcomes"] if str(item.get("outcome_id")) == str(outcome_id)), None)
+    if target is None:
+        raise ValueError("Learning outcome not found.")
+    target.update({
+        "bloom_level": str(bloom_level or "apply"), "verb": str(verb or "").strip(),
+        "object": str(object_text or "").strip(), "condition": str(condition or "").strip(),
+        "success_criterion": str(success_criterion or "").strip(),
+    })
+    return normalize_blueprint(data)
+
+
+def delete_outcome(draft: Mapping[str, Any], outcome_id: str) -> Dict[str, Any]:
+    data = prepare_editor_draft(draft)
+    if not any(str(item.get("outcome_id")) == str(outcome_id) for item in data["outcomes"]):
+        raise ValueError("Learning outcome not found.")
+    data["outcomes"] = [item for item in data["outcomes"] if str(item.get("outcome_id")) != str(outcome_id)]
+    return normalize_blueprint(data)
 
 
 def _entity_map(items: Sequence[Mapping[str, Any]], key: str) -> Dict[str, Dict[str, Any]]:
@@ -841,32 +1201,68 @@ def assess_blueprint_quality(blueprint: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def save_manual_revision(
-    project: Mapping[str, Any], teacher_username: str, *, base_run_id: int,
-    edited_blueprint: Mapping[str, Any], change_summary: str,
+    project: Mapping[str, Any] | int,
+    teacher_username: str | int,
+    *legacy_args: Any,
+    base_run_id: Optional[int] = None,
+    edited_blueprint: Optional[Mapping[str, Any]] = None,
+    change_summary: str = "",
 ) -> Dict[str, Any]:
-    project_id = int(project.get("id") or 0)
-    saved = db.get_teacher_project(project_id, str(teacher_username or ""))
-    if not saved:
+    """Persist a teacher-edited immutable blueprint revision.
+
+    The V6.15 UI originally called this function with five positional values
+    ``(project_id, base_run_id, username, draft, summary)``. Newer code passes
+    the project mapping and keyword-only revision data. Supporting both forms
+    keeps existing deployments and saved sessions functional during upgrades.
+    """
+
+    if isinstance(project, Mapping):
+        project_data = dict(project)
+        actor = str(teacher_username or "").strip()
+        if base_run_id is None or edited_blueprint is None:
+            raise TypeError("base_run_id and edited_blueprint are required.")
+    else:
+        project_id = int(project)
+        legacy_base_run_id = int(teacher_username)
+        if len(legacy_args) < 2:
+            raise TypeError("Legacy save_manual_revision requires username and draft.")
+        actor = str(legacy_args[0] or "").strip()
+        project_data = db.get_teacher_project(project_id, actor) or {}
+        base_run_id = legacy_base_run_id
+        edited_blueprint = legacy_args[1]
+        if len(legacy_args) >= 3 and not change_summary:
+            change_summary = str(legacy_args[2] or "")
+
+    project_id = int(project_data.get("id") or 0)
+    if not project_id or not actor:
         raise ValueError("Teacher project not found or access denied.")
-    base = db.teacher_blueprint_run_for_project(int(base_run_id), project_id)
-    if not base:
+    base = db.teacher_blueprint_bundle(int(base_run_id))
+    if not base or int(base.get("project_id") or 0) != project_id:
         raise ValueError("The selected blueprint revision does not belong to this project.")
-    result = normalize_manual_blueprint(saved, edited_blueprint)
+
+    result = normalize_manual_blueprint(project_data, edited_blueprint or {})
+    db.invalidate_teacher_blueprint_approvals(project_id)
     run_id = db.save_teacher_blueprint_bundle(
-        project_id=project_id, evidence_run_id=int(base.get("evidence_run_id") or result.evidence_run_id or 0),
-        blueprint=result.blueprint, quality=result.quality, provider=result.provider, model=result.model,
-        status=result.status, diagnostic=result.diagnostic, parent_run_id=int(base_run_id),
+        project_id=project_id,
+        evidence_run_id=int(base.get("evidence_run_id") or result.evidence_run_id or 0),
+        blueprint=result.blueprint,
+        quality=result.quality,
+        provider=result.provider,
+        model=result.model,
+        status=result.status,
+        diagnostic=result.diagnostic,
+        parent_run_id=int(base_run_id),
         change_summary=str(change_summary or "Manual blueprint revision"),
-        edited_by=str(teacher_username or ""),
-        revision_type="manual",
+        edited_by=actor,
+        revision_type="manual_edit",
     )
     changes = _diff_entity_sets(base.get("blueprint") or {}, result.blueprint)
     db.record_teacher_blueprint_audit(
         project_id=project_id,
         blueprint_run_id=run_id,
         parent_run_id=int(base_run_id),
-        action="revision_created",
-        actor_username=str(teacher_username or ""),
+        action="manual_edit",
+        actor_username=actor,
         summary=str(change_summary or "Manual blueprint revision"),
         details={
             "entity_type": "blueprint",
@@ -881,7 +1277,7 @@ def save_manual_revision(
             blueprint_run_id=run_id,
             parent_run_id=int(base_run_id),
             action=change["action"],
-            actor_username=str(teacher_username or ""),
+            actor_username=actor,
             summary=str(change_summary or ""),
             details={
                 "entity_type": change["entity_type"],
@@ -897,8 +1293,8 @@ def restore_blueprint_as_revision(
     project: Mapping[str, Any], teacher_username: str, *, source_run_id: int, parent_run_id: int,
 ) -> Dict[str, Any]:
     project_id = int(project.get("id") or 0)
-    source = db.teacher_blueprint_run_for_project(int(source_run_id), project_id)
-    if not source:
+    source = db.teacher_blueprint_bundle(int(source_run_id))
+    if not source or int(source.get("project_id") or 0) != project_id:
         raise ValueError("Historical blueprint revision not found.")
     return save_manual_revision(
         project, teacher_username, base_run_id=int(parent_run_id),

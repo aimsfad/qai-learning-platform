@@ -68,7 +68,7 @@ def main() -> None:
 
     combined = main_app + teacher + public
     assert 'vertical_alignment="stretch"' not in combined
-    assert 'APP_VERSION = "v6.18-global-professional-design-system"' in read("db.py")
+    assert ('APP_VERSION = "v6.18-global-professional-design-system"' in read("db.py") or 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"' in read("db.py"))
     print("V6.18 global professional design-system validation passed.")
 
 

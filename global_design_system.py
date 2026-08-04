@@ -65,22 +65,21 @@ def render_page_header(
     chips = _chips_html(meta or [])
     meta_html = f"<div class='v618-page-meta'>{chips}</div>" if chips else ""
     subtitle_html = f"<p>{escape(str(subtitle))}</p>" if str(subtitle).strip() else ""
-    api.markdown(
-        f"""
-        <section class="qai-hero v4-page-hero v618-page-header{compact_class}" dir="{dir_value}">
-          <div class="v618-page-header-accent" aria-hidden="true"></div>
-          <div class="v618-page-header-row">
-            <div class="v618-page-header-copy">
-              <div class="v618-page-eyebrow">{icon_html}<span>{escape(str(eyebrow))}</span>{status_html}</div>
-              <h1>{escape(str(title))}</h1>
-              {subtitle_html}
-              {meta_html}
-            </div>
-          </div>
-        </section>
-        """,
-        unsafe_allow_html=True,
+    # Keep the complete HTML tree in a single Markdown payload without leading
+    # indentation. Streamlit can otherwise interpret a detached closing tag as
+    # a Markdown code block after a rerun, which previously exposed ``</div>``
+    # inside the teacher workspace header.
+    header_html = (
+        f'<section class="qai-hero v4-page-hero v618-page-header{compact_class}" dir="{dir_value}">'
+        '<div class="v618-page-header-accent" aria-hidden="true"></div>'
+        '<div class="v618-page-header-row">'
+        '<div class="v618-page-header-copy">'
+        f'<div class="v618-page-eyebrow">{icon_html}<span>{escape(str(eyebrow))}</span>{status_html}</div>'
+        f'<h1>{escape(str(title))}</h1>'
+        f'{subtitle_html}{meta_html}'
+        '</div></div></section>'
     )
+    api.markdown(header_html, unsafe_allow_html=True)
 
 
 def render_section_header(
