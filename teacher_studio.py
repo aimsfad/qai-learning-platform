@@ -26,6 +26,7 @@ import web_research_engine
 import branding
 import ui_stability
 import global_design_system as global_ui
+import workflow_runtime_contracts
 from security import verify_password
 
 
@@ -1655,83 +1656,85 @@ def render_blueprint_versions(project: Dict[str, Any], current_bundle: Dict[str,
         st.dataframe(audit[[col for col in ["action", "actor_username", "summary", "blueprint_run_id", "parent_run_id", "created_at"] if col in audit.columns]], use_container_width=True, hide_index=True)
 
 
+def _runtime_contract_ready(scope: str, lang: str) -> bool:
+    report = workflow_runtime_contracts.check_contract(scope)
+    if report.get("ok"):
+        return True
+    translations = {
+        "ar": "تعذر فتح هذه المساحة لأن بعض مكونات التشغيل غير متوافقة: ",
+        "fr": "Cet espace ne peut pas être ouvert car certains composants sont incompatibles : ",
+        "en": "This workspace cannot open because runtime components are incompatible: ",
+    }
+    ui_stability.render_error_card(
+        translations.get(lang, translations["en"]) + ", ".join(str(item) for item in report.get("missing") or []),
+        lang=lang,
+    )
+    return False
+
+
+def _render_blueprint_stage_flow(*, built: bool, approved: bool, lang: str) -> None:
+    copy = {
+        "ar": [("إنشاء", "تحويل الأدلة إلى مخطط"), ("مراجعة", "فحص الوحدات والدروس"), ("اعتماد", "تثبيت النسخة المعتمدة"), ("الدروس", "بدء بناء كتل الدروس")],
+        "fr": [("Créer", "Transformer les preuves"), ("Réviser", "Vérifier unités et leçons"), ("Approuver", "Valider la version"), ("Leçons", "Construire les blocs")],
+        "en": [("Build", "Convert evidence"), ("Review", "Check units and lessons"), ("Approve", "Lock the approved version"), ("Lessons", "Build lesson blocks")],
+    }.get(lang, [])
+    states = ["done" if built else "active", "done" if approved else ("active" if built else "locked"), "done" if approved else "locked", "active" if approved else "locked"]
+    pieces = []
+    for index, ((title, desc), state) in enumerate(zip(copy, states), start=1):
+        marker = "✓" if state == "done" else str(index)
+        pieces.append(
+            f"<div class='v6183-flow-step v6183-flow-{state}'><span>{marker}</span><div><strong>{escape(title)}</strong><small>{escape(desc)}</small></div></div>"
+        )
+    st.markdown("<div class='v6183-stage-flow' dir='%s'>%s</div>" % ("rtl" if lang == "ar" else "ltr", "".join(pieces)), unsafe_allow_html=True)
+
+
 def render_lesson_blueprint(project: Dict[str, Any]) -> None:
-    """Render the V6.14 evidence-to-lesson planning workspace."""
+    """Render a guided evidence-to-blueprint review and approval workspace."""
     lang = i18n.current_lang(st)
     labels = {
         "ar": {
-            "title": "مخطط المقرر والدروس",
-            "intro": "تحوّل المنصة حزمة الأدلة المعتمدة إلى خريطة مفاهيم، وحدات، دروس، أهداف قابلة للقياس، وأنشطة وتقويمات مترابطة قبل توليد المحتوى المطول.",
-            "evidence": "حزمة الأدلة المعتمدة",
-            "units": "الحد الأقصى للوحدات",
-            "lessons": "الحد الأقصى للدروس",
-            "build": "إنشاء مخطط المقرر",
-            "rebuild": "إعادة بناء المخطط",
-            "missing": "اعتمد حزمة أدلة أولًا قبل إنشاء المخطط.",
-            "disabled": "ENABLE_LESSON_BLUEPRINT غير مفعّل في Streamlit Secrets.",
-            "readiness": "درجة الجاهزية",
-            "concepts": "المفاهيم",
-            "course": "بنية المقرر",
-            "outcomes": "الأهداف والمحاذاة",
-            "quality": "بوابة الجودة",
-            "approve": "اعتماد المخطط للتوليد",
-            "approved": "تم اعتماد المخطط، وسيصبح قيدًا بنيويًا لمراحل التوليد اللاحقة.",
-            "download": "تنزيل المخطط بصيغة JSON",
-            "warnings": "ملاحظات الجودة",
-            "editor": "محرر المخطط",
-            "versions": "الإصدارات والسجل",
+            "title": "مخطط المقرر والدروس", "intro": "حوّل الأدلة المعتمدة إلى بنية واضحة للمقرر، ثم راجعها واعتمدها قبل بناء الدروس.",
+            "evidence": "حزمة الأدلة المعتمدة", "units": "الحد الأقصى للوحدات", "lessons": "الحد الأقصى للدروس",
+            "build": "إنشاء مخطط المقرر", "rebuild": "إعادة بناء المخطط", "missing": "اعتمد حزمة أدلة أولًا قبل إنشاء المخطط.",
+            "disabled": "ENABLE_LESSON_BLUEPRINT غير مفعّل في Streamlit Secrets.", "readiness": "درجة الجاهزية",
+            "concepts": "المفاهيم", "course": "بنية المقرر", "outcomes": "الأهداف والمحاذاة", "quality": "بوابة الجودة",
+            "approve": "اعتماد المخطط والانتقال إلى بناء الدروس", "approved": "المخطط معتمد ويقيد عملية بناء الدروس.",
+            "open_lessons": "الانتقال إلى بناء الدروس", "download": "تنزيل المخطط بصيغة JSON", "warnings": "ملاحظات الجودة",
+            "editor": "محرر المخطط", "versions": "الإصدارات والسجل", "next_review": "الخطوة التالية: راجع الوحدات والدروس والأهداف، ثم اعتمد هذه النسخة.",
+            "next_lessons": "المخطط معتمد. يمكنك الآن بدء بناء أجزاء الدروس بالترتيب.", "version": "الإصدار", "status": "الحالة",
         },
         "fr": {
-            "title": "Plan du cours et des leçons",
-            "intro": "La plateforme transforme les preuves approuvées en carte conceptuelle, unités, leçons, objectifs mesurables, activités et évaluations alignées.",
-            "evidence": "Dossier de preuves approuvé",
-            "units": "Nombre maximal d’unités",
-            "lessons": "Nombre maximal de leçons",
-            "build": "Construire le plan du cours",
-            "rebuild": "Reconstruire le plan",
-            "missing": "Approuvez d’abord un dossier de preuves.",
-            "disabled": "ENABLE_LESSON_BLUEPRINT est désactivé dans Streamlit Secrets.",
-            "readiness": "Score de préparation",
-            "concepts": "Concepts",
-            "course": "Structure du cours",
-            "outcomes": "Objectifs et alignement",
-            "quality": "Contrôle qualité",
-            "approve": "Approuver le plan pour la génération",
-            "approved": "Le plan est approuvé et contraindra les phases de génération suivantes.",
-            "download": "Télécharger le plan JSON",
-            "warnings": "Alertes qualité",
-            "editor": "Éditeur du plan",
-            "versions": "Versions et journal",
+            "title": "Plan du cours et des leçons", "intro": "Transformez les preuves approuvées en une structure claire, révisez-la puis approuvez-la avant de construire les leçons.",
+            "evidence": "Dossier de preuves approuvé", "units": "Nombre maximal d’unités", "lessons": "Nombre maximal de leçons",
+            "build": "Construire le plan", "rebuild": "Reconstruire le plan", "missing": "Approuvez d’abord un dossier de preuves.",
+            "disabled": "ENABLE_LESSON_BLUEPRINT est désactivé.", "readiness": "Préparation", "concepts": "Concepts", "course": "Structure du cours",
+            "outcomes": "Objectifs et alignement", "quality": "Contrôle qualité", "approve": "Approuver et passer aux leçons",
+            "approved": "Le plan est approuvé et contraint la construction des leçons.", "open_lessons": "Ouvrir la construction des leçons",
+            "download": "Télécharger le plan JSON", "warnings": "Alertes qualité", "editor": "Éditeur du plan", "versions": "Versions et journal",
+            "next_review": "Étape suivante : vérifiez les unités, leçons et objectifs, puis approuvez cette version.",
+            "next_lessons": "Le plan est approuvé. Vous pouvez maintenant construire les blocs de leçon.", "version": "Version", "status": "Statut",
         },
         "en": {
-            "title": "Course and lesson blueprint",
-            "intro": "The platform converts approved evidence into a concept map, units, lessons, measurable outcomes, and aligned activities and assessments before long-form generation.",
-            "evidence": "Approved evidence bundle",
-            "units": "Maximum units",
-            "lessons": "Maximum lessons",
-            "build": "Build course blueprint",
-            "rebuild": "Rebuild blueprint",
-            "missing": "Approve an evidence bundle before building the blueprint.",
-            "disabled": "ENABLE_LESSON_BLUEPRINT is disabled in Streamlit Secrets.",
-            "readiness": "Readiness score",
-            "concepts": "Concepts",
-            "course": "Course structure",
-            "outcomes": "Outcomes and alignment",
-            "quality": "Quality gate",
-            "approve": "Approve blueprint for generation",
-            "approved": "The blueprint is approved and will constrain later generation phases.",
-            "download": "Download blueprint JSON",
-            "warnings": "Quality warnings",
-            "editor": "Blueprint editor",
-            "versions": "Versions and audit",
+            "title": "Course and lesson blueprint", "intro": "Convert approved evidence into a clear course structure, review it, and approve it before building lessons.",
+            "evidence": "Approved evidence bundle", "units": "Maximum units", "lessons": "Maximum lessons", "build": "Build course blueprint",
+            "rebuild": "Rebuild blueprint", "missing": "Approve an evidence bundle before building the blueprint.",
+            "disabled": "ENABLE_LESSON_BLUEPRINT is disabled.", "readiness": "Readiness", "concepts": "Concepts", "course": "Course structure",
+            "outcomes": "Outcomes and alignment", "quality": "Quality gate", "approve": "Approve and continue to lesson production",
+            "approved": "The blueprint is approved and constrains lesson production.", "open_lessons": "Open lesson production",
+            "download": "Download blueprint JSON", "warnings": "Quality warnings", "editor": "Blueprint editor", "versions": "Versions and audit",
+            "next_review": "Next: review the units, lessons, and outcomes, then approve this version.",
+            "next_lessons": "The blueprint is approved. You can now build lesson blocks in sequence.", "version": "Version", "status": "Status",
         },
     }.get(lang, {})
+
+    global_ui.render_section_header(labels["title"], labels["intro"], lang=lang, eyebrow="04")
+    if not _runtime_contract_ready("blueprint", lang):
+        return
     cfg = lesson_blueprint_engine.blueprint_status()
     project_id = int(project["id"])
-    st.markdown(f"## {labels['title']}")
-    st.write(labels["intro"])
     if not cfg.get("enabled"):
-        st.warning(labels["disabled"])
+        global_ui.render_inline_notice(labels["disabled"], "", lang=lang, tone="warning")
+        return
 
     evidence_df = db.teacher_evidence_runs_df(project_id)
     approved_rows = []
@@ -1748,7 +1751,7 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
         selected_label = st.selectbox(labels["evidence"], list(evidence_options.keys()), key=f"blueprint_evidence_{project_id}")
         selected_evidence = db.teacher_evidence_bundle(evidence_options[selected_label])
     else:
-        st.warning(labels["missing"])
+        global_ui.render_inline_notice(labels["missing"], "", lang=lang, tone="warning")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -1757,39 +1760,20 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
         max_lessons = st.slider(labels["lessons"], 2, 30, int(cfg.get("max_lessons") or 12), key=f"blueprint_lessons_{project_id}")
 
     latest = db.latest_teacher_blueprint(project_id, approved_only=False)
+    _render_blueprint_stage_flow(built=bool(latest), approved=bool(latest and int(latest.get("approved_by_teacher") or 0)), lang=lang)
     build_clicked = st.button(
-        labels["rebuild"] if latest else labels["build"],
-        type="primary",
-        use_container_width=True,
-        disabled=not bool(selected_evidence) or not bool(cfg.get("enabled")),
-        key=f"build_blueprint_{project_id}",
+        labels["rebuild"] if latest else labels["build"], type="primary", use_container_width=True,
+        disabled=not bool(selected_evidence), key=f"build_blueprint_{project_id}",
     )
     if build_clicked:
-        progress_label = {
-            "ar": "جارٍ إنشاء مخطط المقرر من حزمة الأدلة المعتمدة...",
-            "fr": "Construction du plan du cours à partir des preuves approuvées...",
-            "en": "Building the course blueprint from the approved evidence bundle...",
-        }.get(lang, "Building the course blueprint...")
-        success_label = {
-            "ar": "تم إنشاء مخطط المقرر. راجعي الوحدات والدروس ثم اعتمدي المخطط للانتقال إلى بناء الدروس.",
-            "fr": "Le plan du cours a été créé. Vérifiez les unités et les leçons, puis approuvez-le pour continuer.",
-            "en": "The course blueprint was created. Review the units and lessons, then approve it to continue.",
-        }.get(lang, labels["build"])
+        progress_label = {"ar": "جارٍ إنشاء المخطط...", "fr": "Construction du plan...", "en": "Building the blueprint..."}.get(lang, "Building...")
         try:
             with st.spinner(progress_label):
-                created_bundle = lesson_blueprint_engine.generate_and_persist(
-                    project,
-                    _current_teacher_username(),
-                    evidence_bundle=selected_evidence,
-                    max_units=int(max_units),
-                    max_lessons=int(max_lessons),
+                latest = lesson_blueprint_engine.generate_and_persist(
+                    project, _current_teacher_username(), evidence_bundle=selected_evidence,
+                    max_units=int(max_units), max_lessons=int(max_lessons),
                 )
-            st.success(success_label)
-            try:
-                st.toast(success_label, icon="✅")
-            except Exception:
-                pass
-            latest = created_bundle or db.latest_teacher_blueprint(project_id, approved_only=False)
+            st.success({"ar": "تم إنشاء المخطط. راجعه ثم اعتمده.", "fr": "Plan créé. Révisez-le puis approuvez-le.", "en": "Blueprint created. Review and approve it."}.get(lang, "Blueprint created."))
         except Exception as exc:
             ui_stability.render_error_card(str(exc), lang=lang)
             latest = db.latest_teacher_blueprint(project_id, approved_only=False)
@@ -1806,38 +1790,36 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
     edges = blueprint.get("concept_edges") or []
     approved = bool(int(bundle.get("approved_by_teacher") or 0))
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric(labels["readiness"], f"{float(quality.get('readiness_score') or 0):.0%}")
-    m2.metric(labels["units"], len(units))
-    m3.metric(labels["lessons"], len(lessons))
-    m4.metric(labels["outcomes"], len(outcomes))
-    st.caption(
-        f"{bundle.get('provider') or 'deterministic'} / {bundle.get('model') or 'blueprint'} · "
-        f"status={bundle.get('status') or 'unknown'} · evidence_run={bundle.get('evidence_run_id')}"
-    )
-    if approved:
-        st.success(labels["approved"])
+    metric_cols = st.columns(4)
+    metric_data = [
+        (labels["readiness"], f"{float(quality.get('readiness_score') or 0):.0%}", ""),
+        (labels["units"], len(units), ""), (labels["lessons"], len(lessons), ""), (labels["outcomes"], len(outcomes), ""),
+    ]
+    for col, (label, value, unit) in zip(metric_cols, metric_data):
+        with col:
+            global_ui.render_kpi_card(label, value, unit=unit, lang=lang)
 
-    tabs = st.tabs([labels["concepts"], labels["course"], labels["outcomes"], labels["quality"], labels["editor"], labels["versions"]])
+    version_text = f"{labels['version']}: {int(bundle.get('version_number') or 1)} · {labels['status']}: {bundle.get('status') or 'unknown'}"
+    st.caption(version_text)
+    if approved:
+        global_ui.render_inline_notice(labels["approved"], labels["next_lessons"], lang=lang, tone="success")
+        if st.button(labels["open_lessons"], type="primary", use_container_width=True, key=f"open_blocks_{project_id}"):
+            st.session_state.teacher_workspace_section_pending = "blocks"
+            st.rerun()
+    else:
+        global_ui.render_inline_notice(labels["next_review"], "", lang=lang, tone="info")
+        if str(bundle.get("status") or "") != "error":
+            if st.button(labels["approve"], type="primary", use_container_width=True, key=f"approve_blueprint_top_{int(bundle.get('id') or 0)}"):
+                try:
+                    db.approve_teacher_blueprint_run(int(bundle["id"]), project_id, _current_teacher_username())
+                    st.session_state.teacher_workspace_section_pending = "blocks"
+                    st.session_state.teacher_flash_success = labels["approved"]
+                except Exception as exc:
+                    st.session_state.teacher_flash_error = str(exc)
+                st.rerun()
+
+    tabs = st.tabs([labels["course"], labels["outcomes"], labels["concepts"], labels["quality"], labels["editor"], labels["versions"]])
     with tabs[0]:
-        concept_rows = []
-        incoming = {}
-        for edge in edges:
-            incoming.setdefault(str(edge.get("to_concept_id")), []).append(str(edge.get("from_concept_id")))
-        for concept in concepts:
-            concept_rows.append({
-                "ID": concept.get("concept_id"),
-                "Concept": concept.get("name"),
-                "Prerequisites": ", ".join(incoming.get(str(concept.get("concept_id")), []) or concept.get("prerequisites") or []),
-                "Difficulty": concept.get("difficulty"),
-                "Sources": ", ".join(concept.get("source_ids") or []),
-            })
-        if concept_rows:
-            st.dataframe(pd.DataFrame(concept_rows), use_container_width=True, hide_index=True)
-        if edges:
-            st.caption("Concept graph edges")
-            st.dataframe(pd.DataFrame(edges), use_container_width=True, hide_index=True)
-    with tabs[1]:
         lesson_by_id = {str(item.get("lesson_id")): item for item in lessons}
         for unit in units:
             with st.expander(f"{unit.get('unit_id')} · {unit.get('title')}", expanded=True):
@@ -1845,33 +1827,34 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
                 for lesson_id in unit.get("lesson_ids") or []:
                     lesson = lesson_by_id.get(str(lesson_id), {})
                     st.markdown(f"**{lesson.get('lesson_id')} · {lesson.get('title')}**")
-                    st.caption(
-                        f"{lesson.get('estimated_duration_minutes')} min · Concepts: {', '.join(lesson.get('concept_ids') or [])} · "
-                        f"Sources: {', '.join(lesson.get('source_ids') or [])}"
-                    )
+                    st.caption(f"{lesson.get('estimated_duration_minutes')} min · Concepts: {', '.join(lesson.get('concept_ids') or [])} · Sources: {', '.join(lesson.get('source_ids') or [])}")
                     st.write(" → ".join(lesson.get("lesson_sequence") or []))
+    with tabs[1]:
+        rows = [{
+            "Outcome": item.get("outcome_id"), "Lesson": item.get("lesson_id"), "Bloom": item.get("bloom_level"),
+            "Statement": f"{item.get('verb')} {item.get('object') or item.get('object_text') or ''}",
+            "Activity": item.get("activity_id"), "Assessment": item.get("assessment_id"), "Criterion": item.get("success_criterion"),
+        } for item in outcomes]
+        if rows:
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     with tabs[2]:
-        outcome_rows = []
-        for item in outcomes:
-            outcome_rows.append({
-                "Outcome": item.get("outcome_id"),
-                "Lesson": item.get("lesson_id"),
-                "Bloom": item.get("bloom_level"),
-                "Statement": f"{item.get('verb')} {item.get('object')}",
-                "Activity": item.get("activity_id"),
-                "Assessment": item.get("assessment_id"),
-                "Criterion": item.get("success_criterion"),
-            })
-        if outcome_rows:
-            st.dataframe(pd.DataFrame(outcome_rows), use_container_width=True, hide_index=True)
+        incoming: Dict[str, List[str]] = {}
+        for edge in edges:
+            incoming.setdefault(str(edge.get("to_concept_id")), []).append(str(edge.get("from_concept_id")))
+        rows = [{
+            "ID": item.get("concept_id"), "Concept": item.get("name"),
+            "Prerequisites": ", ".join(incoming.get(str(item.get("concept_id")), []) or item.get("prerequisites") or []),
+            "Difficulty": item.get("difficulty"), "Sources": ", ".join(item.get("source_ids") or []),
+        } for item in concepts]
+        if rows:
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     with tabs[3]:
         warnings = quality.get("warnings") or []
         if warnings:
-            st.markdown(f"**{labels['warnings']}**")
             for warning in warnings:
                 st.markdown(f"- {warning}")
         else:
-            st.success("Quality gate passed without automatic warnings.")
+            st.success({"ar": "اجتاز المخطط الفحوص الآلية.", "fr": "Le plan a réussi les contrôles automatiques.", "en": "The blueprint passed automated checks."}.get(lang, "Quality gate passed."))
         st.json(quality)
     with tabs[4]:
         render_blueprint_editor(project, bundle, lang)
@@ -1879,23 +1862,9 @@ def render_lesson_blueprint(project: Dict[str, Any]) -> None:
         render_blueprint_versions(project, bundle, lang)
 
     payload = {"run": {k: v for k, v in bundle.items() if k not in {"blueprint", "quality", "units", "lessons", "outcomes", "concepts", "concept_edges"}}, "blueprint": blueprint, "quality": quality}
-    st.download_button(
-        labels["download"],
-        json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"),
-        file_name=f"project_{project_id}_lesson_blueprint.json",
-        mime="application/json",
-        use_container_width=True,
-        key=f"download_blueprint_{int(bundle.get('id') or 0)}",
-    )
-    if not approved and str(bundle.get("status") or "") != "error":
-        if st.button(labels["approve"], type="primary", use_container_width=True, key=f"approve_blueprint_{int(bundle.get('id') or 0)}"):
-            try:
-                db.approve_teacher_blueprint_run(int(bundle["id"]), project_id, _current_teacher_username())
-                st.session_state.teacher_flash_success = labels["approved"]
-                st.session_state.teacher_workspace_section_pending = "blocks"
-            except Exception as exc:
-                st.session_state.teacher_flash_error = str(exc)
-            st.rerun()
+    st.download_button(labels["download"], json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"),
+                       file_name=f"project_{project_id}_lesson_blueprint.json", mime="application/json", use_container_width=True,
+                       key=f"download_blueprint_{int(bundle.get('id') or 0)}")
 
 def render_outputs(project: Optional[Dict[str, Any]]) -> None:
     u = teacher_ui()
@@ -2524,42 +2493,38 @@ def render_project_publication(project: Dict[str, Any]) -> None:
 
 
 
+def _block_state_copy(lang: str) -> Dict[str, str]:
+    copies = {
+        "ar": {"approved": "معتمدة", "needs_review": "جاهزة للمراجعة", "failed": "تعذر التوليد", "running": "جارٍ التوليد", "queued": "في قائمة الانتظار", "retrying": "إعادة المحاولة", "not_started": "لم تبدأ", "locked": "تنتظر اعتماد الجزء السابق"},
+        "fr": {"approved": "Approuvé", "needs_review": "À réviser", "failed": "Échec", "running": "En cours", "queued": "En file", "retrying": "Nouvelle tentative", "not_started": "Non commencé", "locked": "Attend le bloc précédent"},
+        "en": {"approved": "Approved", "needs_review": "Ready for review", "failed": "Generation failed", "running": "Running", "queued": "Queued", "retrying": "Retrying", "not_started": "Not started", "locked": "Waiting for previous approval"},
+    }
+    return copies.get(lang, copies["en"])
+
+
+def _render_lesson_block_map(rows: List[Dict[str, Any]], lang: str) -> None:
+    status_copy = _block_state_copy(lang)
+    cards = []
+    for index, row in enumerate(rows, start=1):
+        state = "locked" if row.get("locked") else str(row.get("state") or "not_started")
+        cards.append(
+            "<article class='v6183-block-card v6183-block-%s'><div class='v6183-block-top'><span>%02d</span><i></i></div><strong>%s</strong><small>%s</small></article>"
+            % (escape(state), index, escape(str(row.get("label") or row.get("block_type"))), escape(status_copy.get(state, state)))
+        )
+    st.markdown("<div class='v6183-block-grid' dir='%s'>%s</div>" % ("rtl" if lang == "ar" else "ltr", "".join(cards)), unsafe_allow_html=True)
+
+
 def render_lesson_blocks(project: Dict[str, Any]) -> None:
-    """Render V6.16 block-level lesson generation and editing workspace."""
+    """Render a guided, sequential block-level lesson production workspace."""
     lang = i18n.current_lang(st)
     labels = {
-        "ar": {
-            "title": "بناء محتوى الدرس على مستوى الكتل",
-            "intro": "ولّد كل جزء من الدرس بصورة مستقلة، راجعه، عدّله واعتمده دون إعادة إنشاء الدرس كاملًا.",
-            "blueprint_missing": "يجب اعتماد مخطط مقرر أولًا.",
-            "lesson": "الدرس", "block": "كتلة المحتوى", "generate": "توليد هذه الكتلة بالذكاء الاصطناعي",
-            "regenerate": "إعادة توليد الكتلة", "preview": "المعاينة", "edit": "مراجعة وتحرير",
-            "versions": "الإصدارات", "audit": "سجل العمليات", "approve": "اعتماد الكتلة",
-            "approved": "تم اعتماد هذه الكتلة.", "save": "حفظ إصدار جديد", "summary": "ملخص التعديل",
-            "progress": "اكتمال الدرس", "no_output": "لم تُولّد هذه الكتلة بعد.", "download": "تنزيل الكتلة",
-            "validation": "فحص الجودة", "provider": "المزوّد والنموذج", "latency": "زمن الاستجابة",
-        },
-        "fr": {
-            "title": "Construction modulaire de la leçon", "intro": "Générez, révisez et approuvez chaque bloc séparément.",
-            "blueprint_missing": "Un plan de cours approuvé est requis.", "lesson": "Leçon", "block": "Bloc",
-            "generate": "Générer ce bloc", "regenerate": "Régénérer", "preview": "Aperçu", "edit": "Réviser",
-            "versions": "Versions", "audit": "Journal", "approve": "Approuver le bloc", "approved": "Bloc approuvé.",
-            "save": "Enregistrer une nouvelle version", "summary": "Résumé des modifications", "progress": "Achèvement",
-            "no_output": "Ce bloc n’a pas encore été généré.", "download": "Télécharger", "validation": "Validation",
-            "provider": "Fournisseur et modèle", "latency": "Latence",
-        },
-        "en": {
-            "title": "Block-level lesson production", "intro": "Generate, review, edit, version, and approve each lesson block independently.",
-            "blueprint_missing": "An approved course blueprint is required.", "lesson": "Lesson", "block": "Content block",
-            "generate": "Generate this block with AI", "regenerate": "Regenerate block", "preview": "Preview", "edit": "Review and edit",
-            "versions": "Versions", "audit": "Audit trail", "approve": "Approve block", "approved": "This block is approved.",
-            "save": "Save new version", "summary": "Change summary", "progress": "Lesson completion",
-            "no_output": "This block has not been generated yet.", "download": "Download block", "validation": "Quality validation",
-            "provider": "Provider and model", "latency": "Latency",
-        },
+        "ar": {"title": "بناء الدروس", "intro": "أنشئ أجزاء الدرس بالترتيب، راجع كل جزء واعتمده قبل الانتقال إلى الجزء التالي.", "blueprint_missing": "يجب اعتماد مخطط مقرر أولًا.", "lesson": "الدرس", "block": "جزء الدرس", "generate": "توليد هذا الجزء بالذكاء الاصطناعي", "regenerate": "إعادة توليد الجزء", "preview": "المعاينة", "edit": "مراجعة وتحرير", "versions": "الإصدارات", "audit": "سجل العمليات", "approve": "اعتماد الجزء والانتقال إلى التالي", "approved": "تم اعتماد هذا الجزء.", "save": "حفظ إصدار جديد", "summary": "ملخص التعديل", "progress": "اكتمال الدرس", "no_output": "لم يُولّد هذا الجزء بعد.", "download": "تنزيل الجزء", "validation": "فحص الجودة", "provider": "المزوّد والنموذج", "latency": "زمن الاستجابة", "locked": "اعتمد الجزء السابق أولًا للحفاظ على تسلسل الدرس.", "complete": "اكتملت جميع أجزاء هذا الدرس.", "next_lesson": "الانتقال إلى الدرس التالي"},
+        "fr": {"title": "Construction des leçons", "intro": "Créez les blocs dans l’ordre, révisez et approuvez chaque bloc avant le suivant.", "blueprint_missing": "Un plan approuvé est requis.", "lesson": "Leçon", "block": "Bloc", "generate": "Générer ce bloc", "regenerate": "Régénérer", "preview": "Aperçu", "edit": "Réviser", "versions": "Versions", "audit": "Journal", "approve": "Approuver et passer au suivant", "approved": "Bloc approuvé.", "save": "Enregistrer une version", "summary": "Résumé", "progress": "Achèvement", "no_output": "Bloc non généré.", "download": "Télécharger", "validation": "Validation", "provider": "Fournisseur / modèle", "latency": "Latence", "locked": "Approuvez le bloc précédent.", "complete": "Tous les blocs sont approuvés.", "next_lesson": "Leçon suivante"},
+        "en": {"title": "Build lessons", "intro": "Create lesson blocks in order, review each one, and approve it before moving forward.", "blueprint_missing": "An approved course blueprint is required.", "lesson": "Lesson", "block": "Lesson block", "generate": "Generate this block with AI", "regenerate": "Regenerate block", "preview": "Preview", "edit": "Review and edit", "versions": "Versions", "audit": "Audit trail", "approve": "Approve and continue to the next block", "approved": "This block is approved.", "save": "Save new version", "summary": "Change summary", "progress": "Lesson completion", "no_output": "This block has not been generated.", "download": "Download block", "validation": "Quality validation", "provider": "Provider / model", "latency": "Latency", "locked": "Approve the previous block first.", "complete": "All lesson blocks are approved.", "next_lesson": "Open next lesson"},
     }.get(lang, {})
-    st.markdown(f"## {labels['title']}")
-    st.write(labels["intro"])
+    global_ui.render_section_header(labels["title"], labels["intro"], lang=lang, eyebrow="05")
+    if not _runtime_contract_ready("lesson_blocks", lang):
+        return
     cfg = lesson_block_generation_engine.block_generation_status()
     if not cfg.get("enabled"):
         st.warning("ENABLE_LESSON_BLOCK_GENERATION is disabled.")
@@ -2567,58 +2532,86 @@ def render_lesson_blocks(project: Dict[str, Any]) -> None:
     project_id = int(project["id"])
     blueprint = db.latest_teacher_blueprint(project_id, approved_only=True)
     if not blueprint:
-        st.warning(labels["blueprint_missing"])
+        global_ui.render_inline_notice(labels["blueprint_missing"], "", lang=lang, tone="warning")
         return
     lessons = list((blueprint.get("blueprint") or {}).get("lessons") or [])
-    lesson_options = {f"{item.get('lesson_id')} - {item.get('title')}": str(item.get("lesson_id")) for item in lessons}
-    if not lesson_options:
-        st.warning(labels["blueprint_missing"])
+    if not lessons:
+        global_ui.render_inline_notice(labels["blueprint_missing"], "", lang=lang, tone="warning")
         return
-    c1, c2 = st.columns(2)
-    with c1:
-        lesson_label = st.selectbox(labels["lesson"], list(lesson_options), key=f"block_lesson_{project_id}")
-        lesson_id = lesson_options[lesson_label]
-    with c2:
-        block_options = {
-            lesson_block_generation_engine.block_label(key, "ar" if lang == "ar" else "en"): key
-            for key in lesson_block_generation_engine.BLOCK_SPECS
-        }
-        block_label = st.selectbox(labels["block"], list(block_options), key=f"block_type_{project_id}_{lesson_id}")
-        block_type = block_options[block_label]
 
+    lesson_options = {f"{item.get('lesson_id')} · {item.get('title')}": str(item.get("lesson_id")) for item in lessons}
+    lesson_key = f"block_lesson_{project_id}"
+    pending_lesson = st.session_state.pop(f"block_pending_lesson_{project_id}", None)
+    if pending_lesson and pending_lesson in lesson_options.values():
+        st.session_state[lesson_key] = next(label for label, value in lesson_options.items() if value == pending_lesson)
+    if lesson_key not in st.session_state:
+        first_incomplete = next((str(item.get("lesson_id")) for item in lessons if not lesson_block_generation_engine.lesson_completion(project_id, str(item.get("lesson_id"))).get("complete")), str(lessons[0].get("lesson_id")))
+        st.session_state[lesson_key] = next(label for label, value in lesson_options.items() if value == first_incomplete)
+    lesson_label = st.selectbox(labels["lesson"], list(lesson_options), key=lesson_key)
+    lesson_id = lesson_options[lesson_label]
+    lesson_row = next((item for item in lessons if str(item.get("lesson_id")) == lesson_id), {})
+    st.caption(f"{lesson_row.get('estimated_duration_minutes') or '-'} min · {', '.join(lesson_row.get('concept_ids') or [])}")
+
+    state_rows = lesson_block_generation_engine.lesson_block_state(project_id, lesson_id, "ar" if lang == "ar" else "en")
     completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+    metric_cols = st.columns(3)
+    with metric_cols[0]: global_ui.render_kpi_card(labels["progress"], f"{completion['approved']}/{completion['required']}", lang=lang)
+    with metric_cols[1]: global_ui.render_kpi_card({"ar": "الأجزاء المولدة", "fr": "Blocs générés", "en": "Generated blocks"}.get(lang, "Generated"), completion["available"], lang=lang)
+    with metric_cols[2]: global_ui.render_kpi_card({"ar": "نسبة الاكتمال", "fr": "Taux", "en": "Completion"}.get(lang, "Completion"), f"{completion['approved']/max(completion['required'],1):.0%}", lang=lang)
     st.progress(completion["approved"] / max(completion["required"], 1), text=f"{labels['progress']}: {completion['approved']}/{completion['required']}")
+    _render_lesson_block_map(state_rows, lang)
+
+    next_type = lesson_block_generation_engine.next_incomplete_block(project_id, lesson_id)
+    block_options = {lesson_block_generation_engine.block_label(key, "ar" if lang == "ar" else "en"): key for key in lesson_block_generation_engine.ordered_block_types()}
+    block_key = f"block_type_{project_id}_{lesson_id}"
+    pending_block = st.session_state.pop(f"block_pending_type_{project_id}_{lesson_id}", None)
+    if pending_block in block_options.values():
+        st.session_state[block_key] = next(label for label, value in block_options.items() if value == pending_block)
+    if block_key not in st.session_state:
+        preferred = next_type or next(iter(block_options.values()))
+        st.session_state[block_key] = next(label for label, value in block_options.items() if value == preferred)
+    block_label = st.selectbox(labels["block"], list(block_options), key=block_key)
+    block_type = block_options[block_label]
+    permission = lesson_block_generation_engine.can_generate_block(project_id, lesson_id, block_type)
+    if not permission.get("allowed"):
+        global_ui.render_inline_notice(labels["locked"], "", lang=lang, tone="warning")
+
     latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
     button_label = labels["regenerate"] if latest else labels["generate"]
-    if st.button(button_label, type="primary", use_container_width=True, key=f"generate_block_{project_id}_{lesson_id}_{block_type}"):
+    created = None
+    if st.button(button_label, type="primary", use_container_width=True, disabled=not bool(permission.get("allowed")), key=f"generate_block_{project_id}_{lesson_id}_{block_type}"):
         try:
-            lesson_block_generation_engine.generate_and_persist(project, _current_teacher_username(), blueprint, lesson_id, block_type)
-            st.session_state.teacher_flash_success = button_label
+            with st.spinner({"ar": "جارٍ توليد الجزء...", "fr": "Génération du bloc...", "en": "Generating block..."}.get(lang, "Generating...")):
+                created = lesson_block_generation_engine.generate_and_persist(project, _current_teacher_username(), blueprint, lesson_id, block_type)
+            st.success({"ar": "تم توليد الجزء. راجعه ثم اعتمده.", "fr": "Bloc généré. Révisez-le puis approuvez-le.", "en": "Block generated. Review and approve it."}.get(lang, "Generated."))
         except Exception as exc:
-            st.session_state.teacher_flash_error = str(exc)
-        st.rerun()
-
-    latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+            ui_stability.render_error_card(str(exc), lang=lang)
+    latest = created or db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
     if not latest:
         st.info(labels["no_output"])
         return
+
     validation = latest.get("validation") or {}
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Status", str(latest.get("status") or "unknown"))
-    m2.metric(labels["provider"], f"{latest.get('provider') or '-'} / {latest.get('model') or '-'}")
-    m3.metric(labels["latency"], f"{int(latest.get('latency_ms') or 0)/1000:.1f}s")
-    m4.metric("Words", int(latest.get("word_count") or 0))
-    if int(latest.get("approved_by_teacher") or 0) == 1:
-        st.success(labels["approved"])
+    cols = st.columns(4)
+    values = [("Status", latest.get("status") or "unknown"), (labels["provider"], f"{latest.get('provider') or '-'} / {latest.get('model') or '-'}"), (labels["latency"], f"{int(latest.get('latency_ms') or 0)/1000:.1f}s"), ("Words", int(latest.get("word_count") or 0))]
+    for col, (label, value) in zip(cols, values):
+        with col: global_ui.render_kpi_card(label, value, lang=lang)
+    approved = int(latest.get("approved_by_teacher") or 0) == 1
+    if approved:
+        global_ui.render_inline_notice(labels["approved"], "", lang=lang, tone="success")
+
     tabs = st.tabs([labels["preview"], labels["edit"], labels["versions"], labels["audit"]])
     with tabs[0]:
         _render_generation_markdown(str(latest.get("content_text") or ""), str(project.get("primary_language_code") or lang))
-        st.caption(f"{labels['validation']}: {json.dumps(validation, ensure_ascii=False)}")
+        with st.expander(labels["validation"]): st.json(validation)
         st.download_button(labels["download"], data=str(latest.get("content_text") or ""), file_name=f"{lesson_id}_{block_type}_v{latest.get('version_number')}.md", mime="text/markdown", use_container_width=True)
-        if int(latest.get("approved_by_teacher") or 0) != 1:
+        if not approved:
             if st.button(labels["approve"], type="primary", use_container_width=True, key=f"approve_block_{latest['id']}"):
                 try:
                     db.approve_teacher_lesson_block(int(latest["id"]), project_id, _current_teacher_username())
+                    new_next = lesson_block_generation_engine.next_incomplete_block(project_id, lesson_id)
+                    if new_next:
+                        st.session_state[f"block_pending_type_{project_id}_{lesson_id}"] = new_next
                     st.session_state.teacher_flash_success = labels["approved"]
                 except Exception as exc:
                     st.session_state.teacher_flash_error = str(exc)
@@ -2635,13 +2628,20 @@ def render_lesson_blocks(project: Dict[str, Any]) -> None:
             st.rerun()
     with tabs[2]:
         versions = db.teacher_lesson_block_versions_df(project_id, lesson_id, block_type)
-        if not versions.empty:
-            st.dataframe(versions, use_container_width=True, hide_index=True)
+        if not versions.empty: st.dataframe(versions, use_container_width=True, hide_index=True)
     with tabs[3]:
         audit = db.teacher_lesson_block_audit_df(project_id, lesson_id)
-        if not audit.empty:
-            st.dataframe(audit, use_container_width=True, hide_index=True)
+        if not audit.empty: st.dataframe(audit, use_container_width=True, hide_index=True)
 
+    completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+    if completion.get("complete"):
+        global_ui.render_inline_notice(labels["complete"], "", lang=lang, tone="success")
+        lesson_ids = [str(item.get("lesson_id")) for item in lessons]
+        current_index = lesson_ids.index(lesson_id)
+        if current_index + 1 < len(lesson_ids):
+            if st.button(labels["next_lesson"], type="primary", use_container_width=True, key=f"next_lesson_{project_id}_{lesson_id}"):
+                st.session_state[f"block_pending_lesson_{project_id}"] = lesson_ids[current_index + 1]
+                st.rerun()
 
 def render_project_workspace() -> None:
     project_id = st.session_state.get("teacher_active_project_id")

@@ -4061,3 +4061,84 @@ html[dir="rtl"] .v618-page-header-accent { inset:-185px auto auto -90px; }
   .st-key-teacher_studio_nav_control [role="radiogroup"] { flex-wrap:nowrap !important; overflow-x:auto !important; }
   .st-key-teacher_studio_nav_control [role="radiogroup"] > label { flex:0 0 auto !important; }
 }
+
+/* =========================================================
+   V6.18.3 — Guided blueprint approval and lesson production
+   ========================================================= */
+.v6183-stage-flow {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:.65rem;
+  margin:.8rem 0 1rem;
+}
+.v6183-flow-step {
+  display:flex;
+  align-items:flex-start;
+  gap:.65rem;
+  min-height:82px;
+  padding:.8rem .85rem;
+  border:1px solid var(--v618-border);
+  border-radius:14px;
+  background:#FFF;
+  box-shadow:var(--v618-shadow-sm);
+}
+.v6183-flow-step > span {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 30px;
+  width:30px;
+  height:30px;
+  border-radius:999px;
+  background:#EEF3FA;
+  color:#70819A;
+  font-weight:850;
+  font-size:.78rem;
+}
+.v6183-flow-step strong { display:block; color:var(--v618-midnight); font-size:.82rem; margin-bottom:.18rem; }
+.v6183-flow-step small { display:block; color:#73839B; font-size:.68rem; line-height:1.45; }
+.v6183-flow-done { border-color:#BFE6D2; background:#F7FCF9; }
+.v6183-flow-done > span { background:#DDF5E8; color:#087A48; }
+.v6183-flow-active { border-color:#AFCBF4; background:#F7FAFF; box-shadow:0 7px 18px rgba(23,105,232,.08); }
+.v6183-flow-active > span { background:linear-gradient(135deg,#0B4EB6,#2476F1); color:#FFF; }
+.v6183-flow-locked { opacity:.62; }
+
+.v6183-block-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.65rem;
+  margin:.85rem 0 1rem;
+}
+.v6183-block-card {
+  min-height:112px;
+  padding:.8rem .85rem;
+  border:1px solid var(--v618-border);
+  border-radius:14px;
+  background:#FFF;
+  box-shadow:var(--v618-shadow-sm);
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+.v6183-block-card:hover { transform:translateY(-2px); border-color:#AFCBF4; box-shadow:var(--v618-shadow-md); }
+.v6183-block-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:.55rem; }
+.v6183-block-top span { color:#8796AA; font-size:.7rem; font-weight:850; }
+.v6183-block-top i { width:8px; height:8px; border-radius:999px; background:#A7B4C5; }
+.v6183-block-card strong { display:block; color:var(--v618-midnight); font-size:.8rem; line-height:1.45; }
+.v6183-block-card small { display:block; color:#73839B; font-size:.68rem; margin-top:.45rem; }
+.v6183-block-approved { background:#F7FCF9; border-color:#C8EAD8; }
+.v6183-block-approved .v6183-block-top i { background:#16A36A; box-shadow:0 0 0 4px rgba(22,163,106,.10); }
+.v6183-block-needs_review { background:#FFFDF7; border-color:#ECDCAA; }
+.v6183-block-needs_review .v6183-block-top i { background:#D99A21; box-shadow:0 0 0 4px rgba(217,154,33,.10); }
+.v6183-block-running,.v6183-block-queued,.v6183-block-retrying { background:#F7FAFF; border-color:#BFD4F4; }
+.v6183-block-running .v6183-block-top i,.v6183-block-queued .v6183-block-top i,.v6183-block-retrying .v6183-block-top i { background:#1769E8; box-shadow:0 0 0 4px rgba(23,105,232,.10); }
+.v6183-block-failed { background:#FFF8F8; border-color:#F0C8C8; }
+.v6183-block-failed .v6183-block-top i { background:#DC4C4C; }
+.v6183-block-locked { opacity:.58; background:#F8FAFC; }
+
+@media (max-width:980px) {
+  .v6183-stage-flow { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .v6183-block-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:620px) {
+  .v6183-stage-flow,.v6183-block-grid { grid-template-columns:1fr; }
+  .v6183-flow-step,.v6183-block-card { min-height:auto; }
+}

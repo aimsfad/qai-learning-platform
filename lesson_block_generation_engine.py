@@ -43,6 +43,7 @@ def block_generation_status() -> Dict[str, Any]:
     return {
         "enabled": _as_bool("ENABLE_LESSON_BLOCK_GENERATION", True),
         "require_approval": _as_bool("REQUIRE_BLOCK_APPROVAL_FOR_LESSON_COMPLETION", True),
+        "require_sequence": _as_bool("LESSON_BLOCK_REQUIRE_SEQUENCE", True),
         "block_count": len(BLOCK_SPECS),
     }
 
@@ -50,6 +51,102 @@ def block_generation_status() -> Dict[str, Any]:
 def block_label(block_type: str, language_code: str = "ar") -> str:
     spec = BLOCK_SPECS.get(str(block_type), {})
     return str(spec.get("label_ar") if language_code == "ar" else spec.get("label_en") or block_type)
+
+
+def ordered_block_types() -> List[str]:
+    """Return the canonical lesson-block order used by UI and persistence."""
+
+    return [
+        key
+        for key, _ in sorted(
+            BLOCK_SPECS.items(),
+            key=lambda item: int(item[1].get("order") or 0),
+        )
+    ]
+
+
+def lesson_block_state(
+    project_id: int,
+    lesson_id: str,
+    language_code: str = "ar",
+) -> List[Dict[str, Any]]:
+    """Build a complete state map for the nine lesson blocks.
+
+    The UI should never infer state from the existence of a row alone: the
+    latest revision can be generated, under review, failed, or approved.  This
+    helper exposes one normalized state object per canonical block.
+    """
+
+    latest = db.latest_lesson_blocks_by_type(int(project_id), str(lesson_id))
+    require_sequence = bool(block_generation_status().get("require_sequence"))
+    rows: List[Dict[str, Any]] = []
+    prior_approved = True
+
+    for block_type in ordered_block_types():
+        spec = BLOCK_SPECS[block_type]
+        run = dict(latest.get(block_type) or {})
+        approved = bool(int(run.get("approved_by_teacher") or 0))
+        raw_status = str(run.get("status") or "").strip().lower()
+
+        if approved:
+            state = "approved"
+        elif run and raw_status in {"error", "failed"}:
+            state = "failed"
+        elif run and raw_status in {"running", "queued", "retrying"}:
+            state = raw_status
+        elif run:
+            state = "needs_review"
+        else:
+            state = "not_started"
+
+        locked = bool(require_sequence and not prior_approved and not run)
+        rows.append(
+            {
+                "block_type": block_type,
+                "order": int(spec.get("order") or 0),
+                "label": block_label(block_type, language_code),
+                "state": state,
+                "locked": locked,
+                "approved": approved,
+                "run_id": int(run.get("id") or 0) or None,
+                "version_number": int(run.get("version_number") or 0) or None,
+                "word_count": int(run.get("word_count") or 0),
+                "updated_at": run.get("created_at"),
+                "run": run,
+            }
+        )
+        prior_approved = prior_approved and approved
+
+    return rows
+
+
+def next_incomplete_block(project_id: int, lesson_id: str) -> Optional[str]:
+    for row in lesson_block_state(int(project_id), str(lesson_id), "en"):
+        if not bool(row.get("approved")):
+            return str(row.get("block_type"))
+    return None
+
+
+def can_generate_block(project_id: int, lesson_id: str, block_type: str) -> Dict[str, Any]:
+    """Return whether a block can be generated under the guided sequence."""
+
+    requested = str(block_type)
+    rows = lesson_block_state(int(project_id), str(lesson_id), "en")
+    target = next((row for row in rows if row.get("block_type") == requested), None)
+    if target is None:
+        return {"allowed": False, "reason": "unsupported_block_type"}
+    if not block_generation_status().get("require_sequence"):
+        return {"allowed": True, "reason": "sequence_disabled"}
+    if target.get("approved") or target.get("run"):
+        return {"allowed": True, "reason": "existing_block_revision"}
+    if target.get("locked"):
+        previous = next((row for row in reversed(rows[: rows.index(target)]) if not row.get("approved")), None)
+        return {
+            "allowed": False,
+            "reason": "previous_block_requires_approval",
+            "required_block_type": (previous or {}).get("block_type"),
+        }
+    return {"allowed": True, "reason": "next_block"}
 
 
 def _index_by(items: List[Dict[str, Any]], key: str) -> Dict[str, Dict[str, Any]]:
@@ -264,11 +361,13 @@ def save_teacher_revision(
 
 
 def lesson_completion(project_id: int, lesson_id: str) -> Dict[str, Any]:
-    latest = db.latest_lesson_blocks_by_type(int(project_id), str(lesson_id))
-    approved = sum(1 for item in latest.values() if int(item.get("approved_by_teacher") or 0) == 1)
+    rows = lesson_block_state(int(project_id), str(lesson_id), "en")
+    approved = sum(1 for item in rows if bool(item.get("approved")))
+    available = sum(1 for item in rows if bool(item.get("run")))
     return {
-        "required": len(BLOCK_SPECS),
-        "available": len(latest),
+        "required": len(rows),
+        "available": available,
         "approved": approved,
-        "complete": approved == len(BLOCK_SPECS),
+        "complete": bool(rows) and approved == len(rows),
+        "next_block_type": next((str(item.get("block_type")) for item in rows if not item.get("approved")), None),
     }

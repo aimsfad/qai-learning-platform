@@ -496,3 +496,16 @@
 - Refined the teacher workspace header, metadata chips, navigation control, KPI typography, and mobile behavior.
 - Added a new behavioral/static validation and updated compatibility validators through V6.18.2.
 - No database schema migration and no new Secrets are required.
+
+## V6.18.3 — Guided Blueprint & Lesson Production
+
+- Added centralized runtime contracts for blueprint and lesson-block workspaces.
+- Added a four-step blueprint build/review/approval/lesson transition.
+- Moved blueprint approval to a prominent primary action above long tabs.
+- Added a nine-card lesson-block status map with approved, review, running, failed, locked, and not-started states.
+- Added optional sequential lesson-block gating through `LESSON_BLOCK_REQUIRE_SEQUENCE`.
+- Automatically advances to the next incomplete block after teacher approval.
+- Added next-lesson navigation after all required blocks are approved.
+- Reused the global design system for blueprint and lesson-production KPIs.
+- Added V6.18.3 behavioral/static validation and updated compatibility validators.
+- No database migration is required.

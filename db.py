@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"
+APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password

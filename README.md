@@ -306,3 +306,13 @@ python validate_v615_blueprint_editor_versioning.py
 ```
 
 See `V6_18_2_BLUEPRINT_EDITOR_RUNTIME_UI_POLISH_AR.md` for deployment instructions.
+
+## V6.18.3 — Guided blueprint approval and lesson production
+
+The teacher workflow now validates runtime API contracts before rendering, exposes a four-step blueprint review/approval path, and presents the nine lesson blocks as a sequential status map. Approval automatically advances to the next incomplete block. See `V6_18_3_GUIDED_BLUEPRINT_LESSON_PRODUCTION_AR.md`.
+
+Validation:
+
+```bash
+python validate_v6183_guided_blueprint_lesson_flow.py
+```
