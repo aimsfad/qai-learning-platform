@@ -459,15 +459,24 @@ def generate_and_persist(
         diagnostic=result.diagnostic,
         latency_ms=result.latency_ms,
         is_fallback_used=result.used_fallback,
-        revision_number=1,
+        version_number=1,
         change_summary="Generated from the approved evidence bundle.",
         edited_by=owner,
-        edit_source="generated",
+        revision_type="generated",
     )
-    db.log_teacher_blueprint_change(
-        project_id=project_id, blueprint_run_id=run_id, parent_run_id=None,
-        teacher_username=owner, action="generated", entity_type="blueprint", entity_id=str(run_id),
-        before={}, after=result.blueprint, change_summary="Generated from the approved evidence bundle.",
+    db.record_teacher_blueprint_audit(
+        project_id=project_id,
+        blueprint_run_id=run_id,
+        parent_run_id=None,
+        action="generated",
+        actor_username=owner,
+        summary="Generated from the approved evidence bundle.",
+        details={
+            "entity_type": "blueprint",
+            "entity_id": str(run_id),
+            "before": {},
+            "after": result.blueprint,
+        },
     )
     return db.teacher_blueprint_bundle(run_id) or {"id": run_id, **result.blueprint, "quality": result.quality}
 
@@ -847,21 +856,39 @@ def save_manual_revision(
         project_id=project_id, evidence_run_id=int(base.get("evidence_run_id") or result.evidence_run_id or 0),
         blueprint=result.blueprint, quality=result.quality, provider=result.provider, model=result.model,
         status=result.status, diagnostic=result.diagnostic, parent_run_id=int(base_run_id),
-        change_summary=str(change_summary or "Manual blueprint revision"), edited_by=str(teacher_username or ""), edit_source="manual",
+        change_summary=str(change_summary or "Manual blueprint revision"),
+        edited_by=str(teacher_username or ""),
+        revision_type="manual",
     )
     changes = _diff_entity_sets(base.get("blueprint") or {}, result.blueprint)
-    db.log_teacher_blueprint_change(
-        project_id=project_id, blueprint_run_id=run_id, parent_run_id=int(base_run_id),
-        teacher_username=str(teacher_username or ""), action="revision_created", entity_type="blueprint",
-        entity_id=str(run_id), before=base.get("blueprint") or {}, after=result.blueprint,
-        change_summary=str(change_summary or "Manual blueprint revision"),
+    db.record_teacher_blueprint_audit(
+        project_id=project_id,
+        blueprint_run_id=run_id,
+        parent_run_id=int(base_run_id),
+        action="revision_created",
+        actor_username=str(teacher_username or ""),
+        summary=str(change_summary or "Manual blueprint revision"),
+        details={
+            "entity_type": "blueprint",
+            "entity_id": str(run_id),
+            "before": base.get("blueprint") or {},
+            "after": result.blueprint,
+        },
     )
     for change in changes:
-        db.log_teacher_blueprint_change(
-            project_id=project_id, blueprint_run_id=run_id, parent_run_id=int(base_run_id),
-            teacher_username=str(teacher_username or ""), action=change["action"],
-            entity_type=change["entity_type"], entity_id=change["entity_id"],
-            before=change["before"], after=change["after"], change_summary=str(change_summary or ""),
+        db.record_teacher_blueprint_audit(
+            project_id=project_id,
+            blueprint_run_id=run_id,
+            parent_run_id=int(base_run_id),
+            action=change["action"],
+            actor_username=str(teacher_username or ""),
+            summary=str(change_summary or ""),
+            details={
+                "entity_type": change["entity_type"],
+                "entity_id": change["entity_id"],
+                "before": change["before"],
+                "after": change["after"],
+            },
         )
     return db.teacher_blueprint_bundle(run_id) or {"id": run_id, "blueprint": result.blueprint, "quality": result.quality}
 
@@ -876,7 +903,7 @@ def restore_blueprint_as_revision(
     return save_manual_revision(
         project, teacher_username, base_run_id=int(parent_run_id),
         edited_blueprint=source.get("blueprint") or {},
-        change_summary=f"Restored blueprint revision #{source.get('revision_number') or source_run_id} as a new draft.",
+        change_summary=f"Restored blueprint revision #{source.get('version_number') or source_run_id} as a new draft.",
     )
 
 def build_blueprint_packet(bundle: Mapping[str, Any], max_chars: int = 16000) -> str:
