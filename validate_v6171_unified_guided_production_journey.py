@@ -74,7 +74,7 @@ def main() -> None:
     assert any(marker in css_source for marker in ("v6171-stage-flow", "v6172-current-stage-card"))
     assert "def approve_teacher_research_run" in db_source
     assert "approved_by_teacher INTEGER DEFAULT 0" in db_source
-    assert any(v in db_source for v in ('APP_VERSION = "v6.17.1-unified-guided-production-journey"', 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"'))
+    assert any(v in db_source for v in ('APP_VERSION = "v6.17.1-unified-guided-production-journey"', 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"'))
     assert 'vertical_alignment="stretch"' not in teacher_source
 
     print("V6.17.1 unified guided production journey validation passed.")

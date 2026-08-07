@@ -18,6 +18,7 @@ import lesson_blueprint_engine
 import lesson_block_generation_engine
 import production_pipeline
 import guided_teacher_workflow
+import simple_teacher_journey
 import gemini_file_analyzer
 import db
 import i18n
@@ -111,6 +112,8 @@ def init_teacher_state() -> None:
     st.session_state.setdefault("teacher_workspace_section", "overview")
     st.session_state.setdefault("teacher_last_prompt", "")
     st.session_state.setdefault("teacher_last_response", "")
+    st.session_state.setdefault("teacher_experience_mode", "simple" if _as_bool(_secret("TEACHER_SIMPLE_MODE_DEFAULT", "true"), True) else "advanced")
+    st.session_state.setdefault("teacher_simple_stage", None)
 
 
 def teacher_ui() -> Dict[str, str]:
@@ -118,7 +121,7 @@ def teacher_ui() -> Dict[str, str]:
     values = {
         "ar": {
             "workspace": "فضاء الأستاذ",
-            "subtitle": "أنشئ مشروعًا تعليميًا، اضبط طريقة التدريس والتقييم، ثم ولّد المواد على مراحل قابلة للمراجعة.",
+            "subtitle": "أنشئي المقرر في خمس خطوات واضحة: الإعداد، المصادر، الخطة، الدروس، ثم المراجعة والنشر.",
             "login": "حساب الأستاذ",
             "login_tab": "تسجيل الدخول",
             "register_tab": "إنشاء حساب",
@@ -2214,8 +2217,13 @@ def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
             if st.button(copy["continue"], use_container_width=True, key=f"continue_teacher_project_{project_id}"):
                 full_project = db.get_teacher_project(project_id, _current_teacher_username()) or project
                 journey = guided_teacher_workflow.load_workflow_state(full_project)
-                resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
-                _open_project(project_id, resume_section)
+                if _simple_teacher_mode():
+                    simple_state = simple_teacher_journey.build_simple_state(journey)
+                    st.session_state.teacher_simple_stage = str(simple_state.get("current_key") or "setup")
+                    _open_project(project_id, "overview")
+                else:
+                    resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
+                    _open_project(project_id, resume_section)
                 st.rerun()
 
 
@@ -2643,6 +2651,372 @@ def render_lesson_blocks(project: Dict[str, Any]) -> None:
                 st.session_state[f"block_pending_lesson_{project_id}"] = lesson_ids[current_index + 1]
                 st.rerun()
 
+
+def _simple_teacher_mode() -> bool:
+    """Return True for the default teacher-facing simplified experience."""
+    mode = str(st.session_state.get("teacher_experience_mode") or "").strip().lower()
+    if mode not in {"simple", "advanced"}:
+        mode = "simple" if _as_bool(_secret("TEACHER_SIMPLE_MODE_DEFAULT", "true"), True) else "advanced"
+        st.session_state.teacher_experience_mode = mode
+    return mode == "simple"
+
+
+def _render_teacher_mode_control() -> None:
+    lang = i18n.current_lang(st)
+    labels = {
+        "ar": ("خيارات الواجهة", "استخدمي الوضع المبسط للعمل اليومي، وافتحي الوضع المتقدم فقط عند الحاجة إلى الأدلة والإصدارات والتفاصيل التقنية.", "الوضع المتقدم"),
+        "fr": ("Options d’affichage", "Utilisez le mode simplifié au quotidien et le mode avancé pour les détails techniques.", "Mode avancé"),
+        "en": ("View options", "Use Simple mode for daily work and Advanced mode only for technical details.", "Advanced mode"),
+    }.get(lang, ("View options", "Use Simple mode for daily work.", "Advanced mode"))
+    with st.expander(labels[0], expanded=False):
+        st.caption(labels[1])
+        advanced = st.toggle(labels[2], value=not _simple_teacher_mode(), key="teacher_advanced_mode_toggle")
+        requested = "advanced" if advanced else "simple"
+        if requested != st.session_state.get("teacher_experience_mode"):
+            st.session_state.teacher_experience_mode = requested
+            st.session_state.teacher_simple_stage = None
+            st.rerun()
+
+
+def _render_simple_journey(project: Dict[str, Any], simple_state: Dict[str, Any]) -> str:
+    """Render a five-step journey and return the selected accessible stage."""
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    copy = simple_teacher_journey.copy(lang)
+    statuses = dict(simple_state.get("statuses") or {})
+    current_key = str(simple_state.get("current_key") or "setup")
+    selected = str(st.session_state.get("teacher_simple_stage") or current_key)
+    manual_history_open = bool(st.session_state.pop("teacher_simple_manual_stage_once", False))
+    if selected not in {item["key"] for item in simple_teacher_journey.SIMPLE_STEPS} or statuses.get(selected) == "locked":
+        selected = current_key
+    elif not manual_history_open and selected != current_key and statuses.get(selected) == "completed":
+        # After an approval rerun, follow the newly unlocked stage automatically.
+        selected = current_key
+    st.session_state.teacher_simple_stage = selected
+
+    global_ui.render_section_header(copy["title"], copy["help"], lang=lang, eyebrow="01–05")
+    cols = ui_stability.columns(len(simple_teacher_journey.SIMPLE_STEPS), gap="small", vertical_alignment="top")
+    icons = {"completed": "✓", "review": "!", "in_progress": "•", "available": "→", "locked": "○"}
+    for index, (col, step) in enumerate(zip(cols, simple_teacher_journey.SIMPLE_STEPS), start=1):
+        key = step["key"]
+        status = str(statuses.get(key) or "locked")
+        spec = copy["steps"][key]
+        active = key == selected
+        button_label = f"{icons.get(status, '○')} {index}. {spec['short']}"
+        with col:
+            if st.button(
+                button_label,
+                use_container_width=True,
+                type="primary" if active else "secondary",
+                disabled=status == "locked",
+                key=f"simple_stage_{int(project['id'])}_{key}",
+                help=spec["description"],
+            ):
+                st.session_state.teacher_simple_stage = key
+                st.session_state.teacher_simple_manual_stage_once = True
+                st.rerun()
+            st.caption(copy["status"].get(status, status))
+
+    if selected != current_key:
+        if st.button(copy["continue"], type="primary", use_container_width=True, key=f"simple_resume_{int(project['id'])}"):
+            st.session_state.teacher_simple_stage = current_key
+            st.rerun()
+
+    spec = copy["steps"][selected]
+    st.markdown(
+        f"<section class='v6184-current-step' dir='{direction}'><small>{escape(copy['status'].get(statuses.get(selected,'available'),''))}</small>"
+        f"<h2>{escape(spec['title'])}</h2><p>{escape(spec['description'])}</p></section>",
+        unsafe_allow_html=True,
+    )
+    return selected
+
+
+def _render_simple_sources(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    substep = simple_teacher_journey.source_substep(base_state)
+    labels = {
+        "ar": {"research": "1. جمع المصادر", "evidence": "2. التحقق من المصادر", "done": "3. المصادر جاهزة", "research_done": "تم اعتماد حزمة البحث. تتحقق المنصة الآن من المصادر وتستخرج المعلومات الأساسية.", "all_done": "تم اعتماد مصادر المقرر وأصبحت خطة المقرر جاهزة للإنشاء.", "next": "الانتقال إلى خطة المقرر"},
+        "fr": {"research": "1. Collecter les sources", "evidence": "2. Vérifier les sources", "done": "3. Sources prêtes", "research_done": "Le dossier de recherche est approuvé. Vérifiez maintenant les preuves.", "all_done": "Les sources du cours sont approuvées.", "next": "Passer au plan du cours"},
+        "en": {"research": "1. Collect sources", "evidence": "2. Verify sources", "done": "3. Sources ready", "research_done": "The research dossier is approved. The platform is now verifying sources.", "all_done": "Course sources are approved and the course plan is ready.", "next": "Go to course plan"},
+    }.get(lang)
+    steps = [labels["research"], labels["evidence"], labels["done"]]
+    active_index = {"research": 0, "evidence": 1, "complete": 2}.get(substep, 0)
+    st.markdown("<div class='v6184-mini-flow'>" + "".join(
+        f"<span class='{'done' if i < active_index else 'active' if i == active_index else ''}'>{escape(text)}</span>" for i, text in enumerate(steps)
+    ) + "</div>", unsafe_allow_html=True)
+    if substep == "research":
+        render_prompt_and_generation(project)
+    elif substep == "evidence":
+        global_ui.render_inline_notice(labels["research_done"], "", lang=lang, tone="success")
+        render_evidence_synthesis(project)
+    else:
+        global_ui.render_inline_notice(labels["all_done"], "", lang=lang, tone="success")
+        if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_sources_next_{int(project['id'])}"):
+            st.session_state.teacher_simple_stage = "plan"
+            st.rerun()
+
+
+
+def _render_simple_plan(project: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    labels = {
+        "ar": {"title": "خطة المقرر", "intro": "راجعي الوحدات والدروس فقط. يمكنك فتح التفاصيل المتقدمة عند الحاجة.", "missing": "اعتمدي مصادر المقرر أولًا.", "settings": "إعدادات إنشاء الخطة", "units": "عدد الوحدات", "lessons": "عدد الدروس", "build": "إنشاء خطة المقرر", "rebuild": "إعادة إنشاء الخطة", "plan": "الخطة المقترحة", "approve": "اعتماد الخطة وبدء إنشاء الدروس", "approved": "تم اعتماد خطة المقرر.", "next": "الانتقال إلى إنشاء الدروس", "advanced": "التعديل والتفاصيل المتقدمة", "duration": "دقيقة", "lesson": "درس"},
+        "fr": {"title": "Plan du cours", "intro": "Révisez les unités et les leçons. Les détails avancés restent facultatifs.", "missing": "Approuvez d’abord les sources du cours.", "settings": "Paramètres du plan", "units": "Unités", "lessons": "Leçons", "build": "Créer le plan", "rebuild": "Recréer le plan", "plan": "Plan proposé", "approve": "Approuver et créer les leçons", "approved": "Plan approuvé.", "next": "Créer les leçons", "advanced": "Édition et détails avancés", "duration": "min", "lesson": "leçon"},
+        "en": {"title": "Course plan", "intro": "Review the units and lessons. Advanced details stay optional.", "missing": "Approve the course sources first.", "settings": "Plan settings", "units": "Units", "lessons": "Lessons", "build": "Create course plan", "rebuild": "Recreate plan", "plan": "Proposed plan", "approve": "Approve plan and create lessons", "approved": "Course plan approved.", "next": "Continue to lesson creation", "advanced": "Editing and advanced details", "duration": "min", "lesson": "lesson"},
+    }.get(lang)
+    global_ui.render_section_header(labels["title"], labels["intro"], lang=lang, eyebrow="03")
+    if not _runtime_contract_ready("blueprint", lang):
+        return
+    cfg = lesson_blueprint_engine.blueprint_status()
+    if not cfg.get("enabled"):
+        global_ui.render_inline_notice("ENABLE_LESSON_BLUEPRINT is disabled.", "", lang=lang, tone="warning")
+        return
+    project_id = int(project["id"])
+    evidence = db.latest_teacher_evidence_for_project(project_id, approved_only=True)
+    if not evidence:
+        global_ui.render_inline_notice(labels["missing"], "", lang=lang, tone="warning")
+        return
+    bundle = db.latest_teacher_blueprint(project_id, approved_only=False)
+    with st.expander(labels["settings"], expanded=not bool(bundle)):
+        c1, c2 = st.columns(2)
+        with c1:
+            max_units = st.slider(labels["units"], 1, 10, min(int(cfg.get("max_units") or 5), 10), key=f"simple_plan_units_{project_id}")
+        with c2:
+            max_lessons = st.slider(labels["lessons"], 2, 30, min(int(cfg.get("max_lessons") or 12), 30), key=f"simple_plan_lessons_{project_id}")
+        if st.button(labels["rebuild"] if bundle else labels["build"], type="primary", use_container_width=True, key=f"simple_build_plan_{project_id}"):
+            try:
+                with st.spinner(labels["build"] + "..."):
+                    bundle = lesson_blueprint_engine.generate_and_persist(project, _current_teacher_username(), evidence_bundle=evidence, max_units=int(max_units), max_lessons=int(max_lessons))
+                st.success(labels["plan"])
+            except Exception as exc:
+                ui_stability.render_error_card(exc, lang=lang)
+                bundle = db.latest_teacher_blueprint(project_id, approved_only=False)
+    if not bundle:
+        return
+    blueprint = dict(bundle.get("blueprint") or {})
+    units = list(blueprint.get("units") or [])
+    lessons = list(blueprint.get("lessons") or [])
+    lesson_by_id = {str(item.get("lesson_id")): item for item in lessons}
+    approved = bool(int(bundle.get("approved_by_teacher") or 0))
+    m1, m2 = st.columns(2)
+    with m1: global_ui.render_kpi_card(labels["units"], len(units), lang=lang)
+    with m2: global_ui.render_kpi_card(labels["lessons"], len(lessons), lang=lang)
+    st.markdown(f"### {labels['plan']}")
+    for unit_index, unit in enumerate(units, start=1):
+        with st.container(border=True, key=f"simple_plan_unit_{project_id}_{unit_index}"):
+            st.markdown(f"#### {unit_index}. {unit.get('title')}")
+            for lesson_id in unit.get("lesson_ids") or []:
+                lesson = lesson_by_id.get(str(lesson_id), {})
+                st.markdown(f"- **{lesson.get('title') or lesson_id}** · {lesson.get('estimated_duration_minutes') or '—'} {labels['duration']}")
+    if approved:
+        global_ui.render_inline_notice(labels["approved"], "", lang=lang, tone="success")
+        if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_plan_next_{project_id}"):
+            st.session_state.teacher_simple_stage = "lessons"
+            st.rerun()
+    else:
+        if st.button(labels["approve"], type="primary", use_container_width=True, key=f"simple_approve_plan_{project_id}_{int(bundle.get('id') or 0)}"):
+            try:
+                db.approve_teacher_blueprint_run(int(bundle["id"]), project_id, _current_teacher_username())
+                st.session_state.teacher_flash_success = labels["approved"]
+                st.session_state.teacher_simple_stage = "lessons"
+                st.rerun()
+            except Exception as exc:
+                ui_stability.render_error_card(exc, lang=lang)
+    with st.expander(labels["advanced"], expanded=False):
+        render_blueprint_editor(project, bundle, lang)
+        render_blueprint_versions(project, bundle, lang)
+        st.json(bundle.get("quality") or {})
+
+
+def _lesson_simple_labels(lang: str) -> Dict[str, str]:
+    return {
+        "ar": {
+            "title": "إنشاء الدروس", "intro": "اختاري درسًا ثم أنشئيه كاملًا بزر واحد. راجعي الأقسام واعتمدي الدرس قبل الانتقال إلى التالي.",
+            "lesson": "الدرس الحالي", "course_progress": "تقدم المقرر", "lesson_progress": "تقدم الدرس", "remaining": "الدروس المتبقية",
+            "generate": "إنشاء الدرس بالكامل", "continue_generate": "إكمال إنشاء الدرس", "generating": "جارٍ إنشاء أقسام الدرس", "generated": "اكتمل إنشاء مسودة الدرس. راجعيها ثم اعتمديها.",
+            "preview": "معاينة الدرس", "empty": "لم يُنشأ هذا الدرس بعد.", "approve": "اعتماد الدرس والانتقال إلى التالي", "approved": "تم اعتماد الدرس.",
+            "next": "الانتقال إلى الدرس التالي", "download": "تنزيل الدرس", "advanced": "تعديل قسم أو عرض التفاصيل المتقدمة", "section": "قسم الدرس",
+            "regenerate": "إعادة توليد القسم", "save": "حفظ التعديل", "summary": "ملخص التعديل", "technical": "التفاصيل التقنية", "all_done": "اكتملت جميع الدروس. انتقلي إلى المراجعة والنشر.",
+        },
+        "fr": {
+            "title": "Créer les leçons", "intro": "Choisissez une leçon et générez-la entièrement en une seule action.", "lesson": "Leçon actuelle", "course_progress": "Progression du cours", "lesson_progress": "Progression de la leçon", "remaining": "Leçons restantes", "generate": "Créer la leçon complète", "continue_generate": "Terminer la leçon", "generating": "Création des sections", "generated": "Le brouillon complet est prêt.", "preview": "Aperçu de la leçon", "empty": "Cette leçon n’est pas encore créée.", "approve": "Approuver et passer à la suivante", "approved": "Leçon approuvée.", "next": "Leçon suivante", "download": "Télécharger", "advanced": "Modifier une section ou afficher les détails", "section": "Section", "regenerate": "Régénérer", "save": "Enregistrer", "summary": "Résumé des modifications", "technical": "Détails techniques", "all_done": "Toutes les leçons sont terminées."},
+        "en": {
+            "title": "Create lessons", "intro": "Choose a lesson and create the complete draft with one action. Review it, then approve and continue.", "lesson": "Current lesson", "course_progress": "Course progress", "lesson_progress": "Lesson progress", "remaining": "Lessons remaining", "generate": "Create complete lesson", "continue_generate": "Complete lesson draft", "generating": "Creating lesson sections", "generated": "The complete lesson draft is ready for review.", "preview": "Lesson preview", "empty": "This lesson has not been created yet.", "approve": "Approve lesson and continue", "approved": "Lesson approved.", "next": "Open next lesson", "download": "Download lesson", "advanced": "Edit a section or view advanced details", "section": "Lesson section", "regenerate": "Regenerate section", "save": "Save edit", "summary": "Change summary", "technical": "Technical details", "all_done": "All lessons are complete. Continue to review and publish."},
+    }.get(lang, {})
+
+
+def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    labels = _lesson_simple_labels(lang)
+    global_ui.render_section_header(labels["title"], labels["intro"], lang=lang, eyebrow="04")
+    if not _runtime_contract_ready("lesson_blocks", lang):
+        return
+    project_id = int(project["id"])
+    blueprint = db.latest_teacher_blueprint(project_id, approved_only=True)
+    if not blueprint:
+        global_ui.render_inline_notice({"ar": "اعتمدي خطة المقرر أولًا.", "fr": "Approuvez d’abord le plan du cours.", "en": "Approve the course plan first."}.get(lang), "", lang=lang, tone="warning")
+        return
+    lessons = list((blueprint.get("blueprint") or {}).get("lessons") or [])
+    if not lessons:
+        st.info(labels["empty"])
+        return
+
+    lesson_ids = [str(item.get("lesson_id")) for item in lessons]
+    incomplete_id = next((lid for lid in lesson_ids if not lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete")), lesson_ids[-1])
+    lesson_key = f"simple_lesson_{project_id}"
+    pending = st.session_state.pop(f"simple_pending_lesson_{project_id}", None)
+    default_id = pending if pending in lesson_ids else incomplete_id
+    options = {f"{idx + 1}. {item.get('title')}": str(item.get("lesson_id")) for idx, item in enumerate(lessons)}
+    if lesson_key not in st.session_state or st.session_state.get(lesson_key) not in options:
+        st.session_state[lesson_key] = next(label for label, lid in options.items() if lid == default_id)
+    lesson_label = st.selectbox(labels["lesson"], list(options), key=lesson_key)
+    lesson_id = options[lesson_label]
+    lesson_index = lesson_ids.index(lesson_id)
+    lesson_row = lessons[lesson_index]
+
+    project_progress = dict(simple_state.get("lesson_progress") or {})
+    completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+    completed_lessons = sum(1 for lid in lesson_ids if lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete"))
+    cols = st.columns(3)
+    with cols[0]: global_ui.render_kpi_card(labels["course_progress"], f"{completed_lessons}/{len(lessons)}", lang=lang)
+    with cols[1]: global_ui.render_kpi_card(labels["lesson_progress"], f"{completion['approved']}/{completion['required']}", lang=lang)
+    with cols[2]: global_ui.render_kpi_card(labels["remaining"], max(len(lessons) - completed_lessons, 0), lang=lang)
+    st.markdown(f"<div class='v6184-lesson-title'><small>{escape(str(lesson_row.get('lesson_id') or ''))}</small><h2>{escape(str(lesson_row.get('title') or lesson_label))}</h2><p>{escape(str(lesson_row.get('estimated_duration_minutes') or '—'))} min</p></div>", unsafe_allow_html=True)
+
+    assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, "ar" if lang == "ar" else "en")
+    generated_count = sum(1 for row in assembled if row.get("run"))
+    failed_count = sum(1 for row in assembled if str(row.get("status") or "").lower() in {"error", "failed"})
+    button_label = labels["generate"] if generated_count == 0 else labels["continue_generate"]
+    if not completion.get("complete") and (generated_count < len(assembled) or failed_count):
+        if st.button(button_label, type="primary", use_container_width=True, key=f"simple_generate_lesson_{project_id}_{lesson_id}"):
+            progress = st.progress(0.0, text=labels["generating"])
+            status_box = st.status(labels["generating"], expanded=True)
+            def _progress(index: int, total: int, block_type: str, state: str) -> None:
+                label = lesson_block_generation_engine.block_label(block_type, "ar" if lang == "ar" else "en")
+                progress.progress(index / max(total, 1), text=f"{index}/{total} — {label}")
+                if state in {"generated", "skipped"}:
+                    status_box.write(f"✓ {label}")
+            try:
+                lesson_block_generation_engine.generate_full_lesson(project, _current_teacher_username(), blueprint, lesson_id, progress_callback=_progress)
+                status_box.update(label=labels["generated"], state="complete", expanded=False)
+                st.success(labels["generated"])
+            except Exception as exc:
+                status_box.update(label={"ar": "تعذر إكمال إنشاء الدرس", "fr": "Création interrompue", "en": "Lesson creation stopped"}.get(lang), state="error", expanded=True)
+                ui_stability.render_error_card(exc, lang=lang)
+            assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, "ar" if lang == "ar" else "en")
+            completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+
+    generated_count = sum(1 for row in assembled if row.get("run"))
+    failed_count = sum(1 for row in assembled if str(row.get("status") or "").lower() in {"error", "failed"})
+    if not any(row.get("run") for row in assembled):
+        global_ui.render_inline_notice(labels["empty"], "", lang=lang, tone="warning")
+        return
+
+    st.markdown(f"### {labels['preview']}")
+    full_markdown_parts: List[str] = []
+    for row in assembled:
+        if not row.get("run"):
+            continue
+        full_markdown_parts.append(f"## {row['index']}. {row['label']}\n\n{row['content_text']}")
+        with st.container(border=True, key=f"simple_preview_{project_id}_{lesson_id}_{row['block_type']}"):
+            state_text = {"ar": "معتمد" if row.get("approved") else "جاهز للمراجعة", "fr": "Approuvé" if row.get("approved") else "À réviser", "en": "Approved" if row.get("approved") else "Ready for review"}.get(lang)
+            st.markdown(f"<div class='v6184-section-heading'><span>{row['index']:02d}</span><div><h3>{escape(row['label'])}</h3><small>{escape(state_text)}</small></div></div>", unsafe_allow_html=True)
+            _render_generation_markdown(row["content_text"], str(project.get("primary_language_code") or lang))
+
+    full_markdown = "\n\n---\n\n".join(full_markdown_parts)
+    st.markdown("<span class='v6184-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+    action_cols = st.columns([1, 2])
+    with action_cols[0]:
+        st.download_button(labels["download"], data=full_markdown, file_name=f"{lesson_id}_complete_lesson.md", mime="text/markdown", use_container_width=True)
+    with action_cols[1]:
+        ready_to_approve = generated_count >= len(assembled) and failed_count == 0 and not completion.get("complete")
+        if completion.get("complete"):
+            if lesson_index + 1 < len(lessons):
+                if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_next_lesson_{project_id}_{lesson_id}"):
+                    st.session_state[f"simple_pending_lesson_{project_id}"] = lesson_ids[lesson_index + 1]
+                    st.rerun()
+            else:
+                global_ui.render_inline_notice(labels["all_done"], "", lang=lang, tone="success")
+                if st.button({"ar": "الانتقال إلى المراجعة والنشر", "fr": "Passer à la révision", "en": "Continue to review and publish"}.get(lang), type="primary", use_container_width=True, key=f"simple_lessons_review_{project_id}"):
+                    st.session_state.teacher_simple_stage = "review"
+                    st.rerun()
+        else:
+            if st.button(labels["approve"], type="primary", use_container_width=True, disabled=not ready_to_approve, key=f"simple_approve_lesson_{project_id}_{lesson_id}"):
+                try:
+                    lesson_block_generation_engine.approve_full_lesson(project_id, lesson_id, _current_teacher_username())
+                    st.session_state.teacher_flash_success = labels["approved"]
+                    if lesson_index + 1 < len(lessons):
+                        st.session_state[f"simple_pending_lesson_{project_id}"] = lesson_ids[lesson_index + 1]
+                    else:
+                        st.session_state.teacher_simple_stage = "review"
+                    st.rerun()
+                except Exception as exc:
+                    ui_stability.render_error_card(exc, lang=lang)
+
+    with st.expander(labels["advanced"], expanded=False):
+        block_options = {row["label"]: row["block_type"] for row in assembled}
+        selected_label = st.selectbox(labels["section"], list(block_options), key=f"simple_edit_section_{project_id}_{lesson_id}")
+        block_type = block_options[selected_label]
+        latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+        if latest:
+            edited = st.text_area(selected_label, value=str(latest.get("content_text") or ""), height=360, key=f"simple_edit_text_{latest['id']}")
+            summary = st.text_input(labels["summary"], key=f"simple_edit_summary_{latest['id']}")
+            e1, e2 = st.columns(2)
+            with e1:
+                if st.button(labels["save"], use_container_width=True, key=f"simple_save_section_{latest['id']}"):
+                    try:
+                        lesson_block_generation_engine.save_teacher_revision(project_id=project_id, base_run_id=int(latest["id"]), teacher_username=_current_teacher_username(), content_text=edited, change_summary=summary)
+                        st.success(labels["save"])
+                        st.rerun()
+                    except Exception as exc:
+                        ui_stability.render_error_card(exc, lang=lang)
+            with e2:
+                if st.button(labels["regenerate"], use_container_width=True, key=f"simple_regenerate_{project_id}_{lesson_id}_{block_type}"):
+                    try:
+                        lesson_block_generation_engine.generate_and_persist(project, _current_teacher_username(), blueprint, lesson_id, block_type)
+                        st.success(labels["regenerate"])
+                        st.rerun()
+                    except Exception as exc:
+                        ui_stability.render_error_card(exc, lang=lang)
+            with st.expander(labels["technical"], expanded=False):
+                st.json({"provider": latest.get("provider"), "model": latest.get("model"), "status": latest.get("status"), "latency_ms": latest.get("latency_ms"), "word_count": latest.get("word_count"), "validation": latest.get("validation")})
+
+
+def _render_simple_review(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
+    lang = i18n.current_lang(st)
+    if simple_teacher_journey.review_substep(base_state) == "quality":
+        render_project_quality_summary(project)
+        lesson = dict(base_state.get("lesson_progress") or {})
+        lessons_complete = int(lesson.get("required") or 0) > 0 and int(lesson.get("approved") or 0) >= int(lesson.get("required") or 0)
+        if lessons_complete:
+            st.divider()
+            render_project_publication(project)
+    else:
+        render_project_publication(project)
+
+
+def _render_simple_project_workspace(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
+    simple_state = simple_teacher_journey.build_simple_state(base_state)
+    _project_header(project, simple_state)
+    selected = _render_simple_journey(project, simple_state)
+    st.divider()
+    try:
+        if selected == "setup":
+            render_project_overview(project)
+            with st.expander({"ar": "تعديل بيانات المقرر", "fr": "Modifier le cours", "en": "Edit course setup"}.get(i18n.current_lang(st)), expanded=False):
+                render_project_form(project)
+        elif selected == "sources":
+            _render_simple_sources(project, base_state)
+        elif selected == "plan":
+            _render_simple_plan(project)
+        elif selected == "lessons":
+            _render_simple_lesson_builder(project, simple_state)
+        else:
+            _render_simple_review(project, base_state)
+    except Exception as exc:
+        _render_workspace_exception(exc)
+
+
 def render_project_workspace() -> None:
     project_id = st.session_state.get("teacher_active_project_id")
     if not project_id:
@@ -2660,6 +3034,10 @@ def render_project_workspace() -> None:
         st.session_state.teacher_workspace_section = pending_section
 
     state = guided_teacher_workflow.load_workflow_state(project)
+    if _simple_teacher_mode():
+        _render_simple_project_workspace(project, state)
+        return
+
     _project_header(project, state)
     _render_guided_workflow(project, state)
 
@@ -2758,17 +3136,22 @@ def render_teacher_app() -> None:
     lang = i18n.current_lang(st)
     welcome_line = f"{u['welcome']}، {display_name} — {u['subtitle']}" if lang == "ar" else f"{u['welcome']}, {display_name} — {u['subtitle']}"
     st.markdown("<span class='v618-teacher-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    workspace_meta = {
-        "ar": ["رحلة موجهة من 7 مراحل", "مراجعة واعتماد بشري"],
-        "fr": ["Parcours guidé en 7 étapes", "Validation humaine"],
-        "en": ["7-stage guided workflow", "Human review and approval"],
-    }.get(lang, ["7-stage guided workflow", "Human review and approval"])
+    workspace_meta = ({
+        "ar": ["خمس خطوات واضحة", "إجراء رئيسي واحد في كل شاشة"],
+        "fr": ["Cinq étapes claires", "Une action principale par écran"],
+        "en": ["Five clear steps", "One primary action per screen"],
+    } if _simple_teacher_mode() else {
+        "ar": ["رحلة متقدمة من 7 مراحل", "تفاصيل وإصدارات كاملة"],
+        "fr": ["Parcours avancé en 7 étapes", "Détails et versions"],
+        "en": ["Advanced 7-stage workflow", "Full details and versions"],
+    }).get(lang, ["Five clear steps", "One primary action per screen"])
     global_ui.render_page_header(
         u["workspace"], welcome_line, lang=lang,
         eyebrow={"ar": "فضاء الأستاذ", "fr": "Espace enseignant", "en": "Teacher workspace"}.get(lang, "Teacher workspace"),
         status={"ar": "استوديو المحتوى", "fr": "Studio de contenu", "en": "Content Studio"}.get(lang, "Content Studio"),
         meta=workspace_meta, compact=True, icon="edit_note",
     )
+    _render_teacher_mode_control()
     flash_success = st.session_state.pop("teacher_flash_success", None)
     if flash_success:
         st.success(str(flash_success))
@@ -2778,7 +3161,7 @@ def render_teacher_app() -> None:
     flash_error = st.session_state.pop("teacher_flash_error", None)
     if flash_error:
         ui_stability.render_error_card(flash_error, lang=i18n.current_lang(st))
-    views = ["projects", "new", "workspace", "outputs"]
+    views = ["projects", "new", "workspace"] if _simple_teacher_mode() else ["projects", "new", "workspace", "outputs"]
     if st.session_state.get("teacher_studio_view") not in views:
         st.session_state.teacher_studio_view = "projects"
     view_labels = {"projects": copy["projects"], "new": copy["new"], "workspace": copy["workspace"], "outputs": copy["outputs"]}

@@ -7,7 +7,7 @@ workflow = (ROOT / "guided_teacher_workflow.py").read_text(encoding="utf-8")
 db = (ROOT / "db.py").read_text(encoding="utf-8")
 css = (ROOT / ".streamlit" / "v6_theme.css").read_text(encoding="utf-8")
 
-assert any(v in db for v in ('APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"'))
+assert any(v in db for v in ('APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"'))
 assert "v6172-research-steps" in teacher
 assert "بدء البحث وجمع المصادر" in teacher
 assert "اعتماد المصادر والانتقال إلى تركيب الأدلة" in teacher
