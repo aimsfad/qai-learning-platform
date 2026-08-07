@@ -4142,3 +4142,113 @@ html[dir="rtl"] .v618-page-header-accent { inset:-185px auto auto -90px; }
   .v6183-stage-flow,.v6183-block-grid { grid-template-columns:1fr; }
   .v6183-flow-step,.v6183-block-card { min-height:auto; }
 }
+
+/* =========================================================
+   V6.18.4 — Simple Teacher Journey
+   ========================================================= */
+.v6184-current-step {
+  margin:.9rem 0 1rem;
+  padding:1rem 1.1rem;
+  border:1px solid #CFE0F5;
+  border-radius:16px;
+  background:linear-gradient(145deg,#FFFFFF,#F7FAFF);
+  box-shadow:var(--v618-shadow-sm);
+}
+.v6184-current-step small { color:#1769E8; font-size:.72rem; font-weight:850; }
+.v6184-current-step h2 { color:var(--v618-midnight); margin:.25rem 0 .35rem; font-size:1.35rem; }
+.v6184-current-step p { color:#60728C; margin:0; font-size:.84rem; line-height:1.7; }
+
+.v6184-mini-flow {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.55rem;
+  margin:.75rem 0 1rem;
+}
+.v6184-mini-flow span {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:42px;
+  padding:.55rem .7rem;
+  border:1px solid var(--v618-border);
+  border-radius:12px;
+  background:#FFF;
+  color:#718198;
+  font-size:.75rem;
+  font-weight:760;
+}
+.v6184-mini-flow span.done { background:#F1FAF6; border-color:#C8E9D8; color:#0A7A49; }
+.v6184-mini-flow span.active { background:#EEF5FF; border-color:#B8D2F4; color:#0B4EB6; box-shadow:inset 0 -2px 0 #1769E8; }
+
+.v6184-lesson-title {
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+  padding:.8rem 1rem;
+  margin:.75rem 0;
+  border:1px solid var(--v618-border);
+  border-radius:14px;
+  background:#FFF;
+}
+.v6184-lesson-title small {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:40px; height:40px; padding:0 .5rem;
+  border-radius:10px; background:#EAF2FF; color:#1769E8;
+  font-weight:850;
+}
+.v6184-lesson-title h2 { flex:1; margin:0; color:var(--v618-midnight); font-size:1.15rem; }
+.v6184-lesson-title p { margin:0; color:#718198; font-size:.76rem; }
+
+.v6184-section-heading { display:flex; align-items:center; gap:.75rem; margin-bottom:.65rem; }
+.v6184-section-heading > span {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border-radius:10px;
+  background:#EEF5FF; color:#1769E8; font-size:.72rem; font-weight:900;
+}
+.v6184-section-heading h3 { margin:0; color:var(--v618-midnight); font-size:1rem; }
+.v6184-section-heading small { color:#6E8098; font-size:.68rem; }
+[data-testid="stVerticalBlock"]:has(.v6184-section-heading) > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius:16px !important;
+  border-color:#D8E4F2 !important;
+  box-shadow:0 4px 14px rgba(7,27,68,.035) !important;
+  padding:1rem 1.05rem !important;
+}
+
+.v6184-action-marker { display:none !important; }
+[data-testid="stVerticalBlock"]:has(.v6184-action-marker) {
+  position:sticky;
+  bottom:.45rem;
+  z-index:20;
+  padding:.65rem;
+  margin-top:1rem;
+  border:1px solid #CFE0F5;
+  border-radius:15px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 10px 28px rgba(7,27,68,.12);
+  backdrop-filter:blur(12px);
+}
+
+/* Five simple stage buttons */
+[class*="st-key-simple_stage_"] .stButton > button {
+  min-height:48px !important;
+  border-radius:12px !important;
+  font-size:.73rem !important;
+  font-weight:800 !important;
+  white-space:normal !important;
+}
+[class*="st-key-simple_stage_"] + div [data-testid="stCaptionContainer"] { text-align:center; }
+
+@media (max-width:900px) {
+  .v6184-mini-flow { grid-template-columns:1fr; }
+  .v6184-lesson-title { align-items:flex-start; flex-wrap:wrap; }
+}
+@media (max-width:760px) {
+  [data-testid="stHorizontalBlock"]:has([class*="st-key-simple_stage_"]) {
+    overflow-x:auto;
+    flex-wrap:nowrap !important;
+  }
+  [data-testid="stHorizontalBlock"]:has([class*="st-key-simple_stage_"]) > div {
+    min-width:150px !important;
+  }
+  [data-testid="stVerticalBlock"]:has(.v6184-action-marker) { bottom:.2rem; }
+}

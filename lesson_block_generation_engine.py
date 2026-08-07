@@ -285,13 +285,15 @@ def generate_and_persist(
     blueprint_bundle: Dict[str, Any],
     lesson_id: str,
     block_type: str,
+    *,
+    context_blocks: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     if not block_generation_status()["enabled"]:
         raise RuntimeError("Lesson block generation is disabled.")
     if not bool(int(blueprint_bundle.get("approved_by_teacher") or 0)):
         raise ValueError("Approve the blueprint before generating lesson blocks.")
     project_id = int(project["id"])
-    previous = db.latest_approved_lesson_blocks(project_id, str(lesson_id))
+    previous = list(context_blocks) if context_blocks is not None else db.latest_approved_lesson_blocks(project_id, str(lesson_id))
     prompt = build_block_prompt(project, blueprint_bundle, lesson_id, block_type, previous_blocks=previous)
     ctx = lesson_context(blueprint_bundle, lesson_id)
     allowed_sources = list(ctx["lesson"].get("source_ids") or [])
@@ -371,3 +373,111 @@ def lesson_completion(project_id: int, lesson_id: str) -> Dict[str, Any]:
         "complete": bool(rows) and approved == len(rows),
         "next_block_type": next((str(item.get("block_type")) for item in rows if not item.get("approved")), None),
     }
+
+
+def generate_full_lesson(
+    project: Dict[str, Any],
+    teacher_username: str,
+    blueprint_bundle: Dict[str, Any],
+    lesson_id: str,
+    *,
+    overwrite: bool = False,
+    progress_callback: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Generate every missing section of one lesson in canonical order.
+
+    The simple teacher journey uses one action to create a complete draft.
+    Existing valid sections are preserved unless ``overwrite`` is requested.
+    Generated sections are not approved automatically; the teacher reviews the
+    assembled lesson and approves it with a separate explicit action.
+    """
+    if not block_generation_status()["enabled"]:
+        raise RuntimeError("Lesson block generation is disabled.")
+    if not bool(int(blueprint_bundle.get("approved_by_teacher") or 0)):
+        raise ValueError("Approve the blueprint before generating lessons.")
+
+    project_id = int(project["id"])
+    ordered = ordered_block_types()
+    context = db.latest_approved_lesson_blocks(project_id, str(lesson_id))
+    results: List[Dict[str, Any]] = []
+    generated = 0
+    skipped = 0
+
+    for index, block_type in enumerate(ordered, start=1):
+        existing = db.latest_teacher_lesson_block(project_id, str(lesson_id), block_type, approved_only=False)
+        existing_status = str((existing or {}).get("status") or "").lower()
+        usable_existing = bool(existing and existing_status not in {"error", "failed"})
+        if usable_existing and not overwrite:
+            results.append(existing)
+            context.append(existing)
+            skipped += 1
+            if progress_callback:
+                progress_callback(index, len(ordered), block_type, "skipped")
+            continue
+
+        if progress_callback:
+            progress_callback(index, len(ordered), block_type, "generating")
+        created = generate_and_persist(
+            project,
+            teacher_username,
+            blueprint_bundle,
+            str(lesson_id),
+            block_type,
+            context_blocks=context,
+        )
+        results.append(created)
+        context.append(created)
+        generated += 1
+        if progress_callback:
+            progress_callback(index, len(ordered), block_type, "generated")
+
+    state = lesson_block_state(project_id, str(lesson_id), "en")
+    errors = [row for row in state if str(row.get("state") or "") == "failed"]
+    return {
+        "lesson_id": str(lesson_id),
+        "generated": generated,
+        "skipped": skipped,
+        "results": results,
+        "ready_for_review": len(results) == len(ordered) and not errors,
+        "error_blocks": [row.get("block_type") for row in errors],
+    }
+
+
+def approve_full_lesson(project_id: int, lesson_id: str, teacher_username: str) -> Dict[str, Any]:
+    """Approve the latest valid version of every required lesson section."""
+    missing: List[str] = []
+    invalid: List[str] = []
+    latest_rows: List[Dict[str, Any]] = []
+    for block_type in ordered_block_types():
+        run = db.latest_teacher_lesson_block(int(project_id), str(lesson_id), block_type, approved_only=False)
+        if not run:
+            missing.append(block_type)
+            continue
+        if str(run.get("status") or "").lower() in {"error", "failed"}:
+            invalid.append(block_type)
+            continue
+        latest_rows.append(run)
+    if missing:
+        raise ValueError("Generate all lesson sections before approval: " + ", ".join(missing))
+    if invalid:
+        raise ValueError("Resolve validation errors before approval: " + ", ".join(invalid))
+    for run in latest_rows:
+        db.approve_teacher_lesson_block(int(run["id"]), int(project_id), str(teacher_username))
+    return lesson_completion(int(project_id), str(lesson_id))
+
+
+def assembled_lesson(project_id: int, lesson_id: str, language_code: str = "ar") -> List[Dict[str, Any]]:
+    """Return the latest lesson sections in pedagogical display order."""
+    rows: List[Dict[str, Any]] = []
+    for index, block_type in enumerate(ordered_block_types(), start=1):
+        run = db.latest_teacher_lesson_block(int(project_id), str(lesson_id), block_type, approved_only=False)
+        rows.append({
+            "index": index,
+            "block_type": block_type,
+            "label": block_label(block_type, language_code),
+            "run": run,
+            "content_text": str((run or {}).get("content_text") or ""),
+            "approved": bool(int((run or {}).get("approved_by_teacher") or 0)),
+            "status": str((run or {}).get("status") or "not_started"),
+        })
+    return rows

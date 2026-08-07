@@ -316,3 +316,7 @@ Validation:
 ```bash
 python validate_v6183_guided_blueprint_lesson_flow.py
 ```
+
+## V6.18.4 — Simple Teacher Journey
+
+The teacher workspace now defaults to five clear decisions: course setup, sources, course plan, lesson creation, and review/publishing. A complete lesson can be generated with one action, reviewed as one coherent artifact, and approved before moving to the next lesson. The previous detailed workflow remains available through Advanced mode. See `V6_18_4_SIMPLE_TEACHER_JOURNEY_AR.md`.

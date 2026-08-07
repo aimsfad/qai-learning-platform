@@ -509,3 +509,15 @@
 - Reused the global design system for blueprint and lesson-production KPIs.
 - Added V6.18.3 behavioral/static validation and updated compatibility validators.
 - No database migration is required.
+
+## V6.18.4 — Simple Teacher Journey
+
+- Made the five-stage teacher journey the default experience.
+- Grouped research and evidence review into one teacher-facing Sources stage.
+- Added a simplified course-plan review with one prominent approval action.
+- Added one-click complete-lesson generation while preserving immutable section versions.
+- Added whole-lesson review and one-click teacher approval before moving to the next lesson.
+- Moved provider, model, latency, versions, and technical logs into optional advanced views.
+- Kept the existing seven-stage and block-level workflow available through Advanced mode.
+- Added responsive five-step navigation, complete-lesson preview cards, and a sticky action area.
+- No database migration is required.

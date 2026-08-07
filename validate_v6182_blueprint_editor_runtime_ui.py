@@ -115,7 +115,10 @@ def main() -> None:
     css = (ROOT / ".streamlit" / "v6_theme.css").read_text(encoding="utf-8")
     assert "V6.18.2 — Teacher workspace and blueprint editor polish" in css
     assert "teacher_studio_nav_control" in css
-    assert "APP_VERSION = \"v6.18.3-guided-blueprint-lesson-production\"" in (ROOT / "db.py").read_text(encoding="utf-8")
+    assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in (
+        'APP_VERSION = "v6.18.4-simple-teacher-journey"',
+        'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"',
+    ))
 
     print("V6.18.2 blueprint editor runtime and UI validation passed.")
 

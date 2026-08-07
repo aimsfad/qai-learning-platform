@@ -27,7 +27,7 @@ for forbidden in [
     if forbidden in text:
         raise AssertionError(f"Unsafe legacy state mutation still present: {forbidden}")
 
-if not any(v in db_text for v in ('APP_VERSION = "v6.10.1-ai-tutor-state-hotfix"', 'APP_VERSION = "v6.11-educational-content-builder"', 'APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"', 'APP_VERSION = "v6.12-research-augmented-content-builder"', 'APP_VERSION = "v6.13-evidence-synthesis-foundation"', 'APP_VERSION = "v6.13.1-provider-quota-resilience"', 'APP_VERSION = "v6.14-evidence-to-lesson-blueprint"', 'APP_VERSION = "v6.15-blueprint-editor-versioning"', 'APP_VERSION = "v6.16-lesson-block-generation"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"')):
+if not any(v in db_text for v in ('APP_VERSION = "v6.10.1-ai-tutor-state-hotfix"', 'APP_VERSION = "v6.11-educational-content-builder"', 'APP_VERSION = "v6.11.1-prompt-budget-rtl-hotfix"', 'APP_VERSION = "v6.12-research-augmented-content-builder"', 'APP_VERSION = "v6.13-evidence-synthesis-foundation"', 'APP_VERSION = "v6.13.1-provider-quota-resilience"', 'APP_VERSION = "v6.14-evidence-to-lesson-blueprint"', 'APP_VERSION = "v6.15-blueprint-editor-versioning"', 'APP_VERSION = "v6.16-lesson-block-generation"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"')):
     raise AssertionError("Version marker was not updated")
 
 py_compile.compile(str(MAIN), doraise=True)
