@@ -1,3 +1,14 @@
+# V6.18.6 — Unified Premium Platform Design Integration
+
+- Merged the premium SaaS visual shell into the real 3alimnIA application instead of creating a parallel app.
+- Standardized the full platform on Tajawal, Midnight/Royal Blue tokens, quiet white surfaces, compact rectangular actions, semantic status badges, and low-noise shadows.
+- Added role-scoped visual markers for public, learner, teacher, and evaluator workspaces without changing routing or business logic.
+- Preserved the learner split-pane and AI Coach while harmonizing its surfaces with the global design system.
+- Restyled the teacher five-step journey as a clear workflow while preserving all V6.18.5 pedagogical orchestration and lesson-generation logic.
+- Rebuilt the evaluator response-review screen into a true side-by-side response + LPQS rubric layout.
+- Kept research analytics on transparent Plotly surfaces and switched chart typography to Tajawal.
+- Added V6.18.6 static validation and updated backward-compatibility validators.
+
 # V6.17.1 — Unified guided production journey
 
 - Enforced one strict seven-stage teacher journey: setup → research → evidence → blueprint → lessons → quality → publish.

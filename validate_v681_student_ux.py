@@ -13,7 +13,7 @@ assert 'key="v681_chat_composer"' in main
 assert 'st.form("v681_chat_composer_form"' in main
 assert 'st.chat_input("Ask about the current module' not in main
 assert 'key="v681_roadmap"' in main
-assert any(v in db for v in ('APP_VERSION = "v6.8.1-student-ux-hotfix"', 'APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"'))
+assert any(v in db for v in ('APP_VERSION = "v6.8.1-student-ux-hotfix"', 'APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"'))
 assert '.v43-resume-card *' in css
 assert '.st-key-v681_chat_composer' in css
 assert '.st-key-v681_roadmap' in css

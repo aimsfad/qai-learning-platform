@@ -16,6 +16,14 @@ except ModuleNotFoundError:  # Static validation can still import this module.
     st = None  # type: ignore[assignment]
 
 
+ROLE_VISUALS = {
+    "public": {"icon": "auto_awesome", "class": "public"},
+    "student": {"icon": "school", "class": "student"},
+    "teacher": {"icon": "edit_note", "class": "teacher"},
+    "evaluator": {"icon": "analytics", "class": "evaluator"},
+}
+
+
 def _streamlit():
     global st
     if st is None:
@@ -38,6 +46,37 @@ def _chips_html(items: Iterable[str]) -> str:
     return "".join(chips)
 
 
+def render_role_marker(role: str) -> None:
+    """Emit a hidden role marker used only for safe, scoped CSS styling.
+
+    This does not change routing, state, database access, or business logic.
+    """
+    api = _streamlit()
+    role_key = str(role or "public").strip().lower()
+    if role_key not in ROLE_VISUALS:
+        role_key = "public"
+    api.markdown(
+        f"<span class='v6186-role-marker v6186-role-{escape(role_key)}' aria-hidden='true'></span>",
+        unsafe_allow_html=True,
+    )
+
+
+def status_badge_html(label: str, *, tone: str = "muted", icon: str = "") -> str:
+    """Return a semantic status badge that never relies on color alone."""
+    safe_tone = str(tone or "muted").strip().lower()
+    if safe_tone not in {"success", "active", "warning", "danger", "muted"}:
+        safe_tone = "muted"
+    icon_html = (
+        f"<span class='material-symbols-rounded' aria-hidden='true'>{escape(str(icon))}</span>"
+        if str(icon).strip()
+        else "<span class='v6186-status-dot' aria-hidden='true'></span>"
+    )
+    return (
+        f"<span class='v6186-status-badge v6186-status-{safe_tone}'>"
+        f"{icon_html}<span>{escape(str(label))}</span></span>"
+    )
+
+
 def render_page_header(
     title: str,
     subtitle: str = "",
@@ -48,12 +87,15 @@ def render_page_header(
     meta: Sequence[str] | None = None,
     compact: bool = False,
     icon: str = "",
+    role: str = "",
 ) -> None:
     """Render the canonical page heading used across every workspace."""
 
     api = _streamlit()
     dir_value = direction(lang)
     compact_class = " v618-page-header-compact" if compact else ""
+    role_key = str(role or "").strip().lower()
+    role_class = f" v618-role-header-{role_key}" if role_key in ROLE_VISUALS else ""
     status_html = (
         f"<span class='v618-page-status'>{escape(str(status))}</span>" if str(status).strip() else ""
     )
@@ -70,7 +112,7 @@ def render_page_header(
     # a Markdown code block after a rerun, which previously exposed ``</div>``
     # inside the teacher workspace header.
     header_html = (
-        f'<section class="qai-hero v4-page-hero v618-page-header{compact_class}" dir="{dir_value}">'
+        f'<section class="qai-hero v4-page-hero v618-page-header{compact_class}{role_class}" dir="{dir_value}">'
         '<div class="v618-page-header-accent" aria-hidden="true"></div>'
         '<div class="v618-page-header-row">'
         '<div class="v618-page-header-copy">'
@@ -158,7 +200,7 @@ def apply_plotly_theme(
     layout: dict[str, Any] = {
         "paper_bgcolor": "rgba(0,0,0,0)",
         "plot_bgcolor": "rgba(0,0,0,0)",
-        "font": {"family": "Inter, Tajawal, Arial, sans-serif", "color": "#334155"},
+        "font": {"family": "Tajawal, Arial, sans-serif", "color": "#334155"},
         "margin": {"l": 24, "r": 16, "t": 24, "b": 34},
         "hoverlabel": {"bgcolor": "#0B2F78", "font_color": "#FFFFFF", "bordercolor": "#0B2F78"},
         "showlegend": show_legend,
