@@ -320,3 +320,15 @@ python validate_v6183_guided_blueprint_lesson_flow.py
 ## V6.18.4 — Simple Teacher Journey
 
 The teacher workspace now defaults to five clear decisions: course setup, sources, course plan, lesson creation, and review/publishing. A complete lesson can be generated with one action, reviewed as one coherent artifact, and approved before moving to the next lesson. The previous detailed workflow remains available through Advanced mode. See `V6_18_4_SIMPLE_TEACHER_JOURNEY_AR.md`.
+
+## V6.18.5 — Premium Lesson Workspace & Pedagogical Orchestrator
+
+The simple teacher journey now renders generated lessons as a clean learning document instead of exposing raw generation formatting. A dedicated pedagogical orchestration module constrains each lesson section with explicit learning-science intentions (retrieval, scaffolding, worked examples, formative feedback, metacognition, and human approval). The teacher remains the final instructional decision-maker.
+
+Validation:
+
+```bash
+python validate_v6185_premium_lesson_workspace.py
+```
+
+See `V6_18_5_PREMIUM_LESSON_WORKSPACE_PEDAGOGICAL_ORCHESTRATOR_AR.md` for the research basis, deployment steps, and live-test checklist.

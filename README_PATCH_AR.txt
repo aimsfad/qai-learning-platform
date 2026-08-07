@@ -1,16 +1,10 @@
-تصحيح V3.2 - استرجاع الشعار الرسمي المتفق عليه
+3alimnIA V6.16.5 — UI Stability & Shared Design System
 
-هذا التصحيح يعيد الشعار الأزرق/السماوي/الذهبي نفسه الذي تم اعتماده، بدل الرمز المبسط الذي ظهر في V3.1.
+طبّق محتويات هذه الحزمة فوق V6.16.4 أو أحدث، مع الحفاظ على ملف الأسرار المحلي.
+لا تحتوي الحزمة على .streamlit/secrets.toml أو مفاتيح API.
+ابدأ بـ V6_16_5_UI_STABILITY_DESIGN_SYSTEM_AR.md ثم شغّل:
 
-الملفات التي يجب نسخها إلى مجلد المستودع مع الاستبدال:
-- branding.py
-- .streamlit/style.css
-- assets/branding/3alimnia_logo.png
-
-ثم نفذ:
-git add branding.py .streamlit/style.css assets/branding/3alimnia_logo.png
-git commit -m "Restore approved official 3alimnIA logo"
-git pull --rebase origin ux-improvements-v3-9
-git push origin ux-improvements-v3-9
-
-بعد إعادة نشر Streamlit Cloud استعمل Ctrl+F5.
+py -3 validate_v6165_ui_stability_design_system.py
+py -3 validate_v6164_research_export_analytics.py
+py -3 validate_v61631_frontend_runtime_hotfix.py
+py -3 -m compileall .

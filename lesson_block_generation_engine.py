@@ -14,17 +14,19 @@ import streamlit as st
 
 import content_generation_engine
 import db
+import pedagogical_orchestrator
+import lesson_content_renderer
 
 BLOCK_SPECS: Dict[str, Dict[str, Any]] = {
-    "activation": {"order": 10, "label_ar": "تنشيط المعارف السابقة", "label_en": "Prior-knowledge activation", "min_words": 45, "max_tokens": 1100},
-    "explanation": {"order": 20, "label_ar": "شرح المفهوم", "label_en": "Concept explanation", "min_words": 140, "max_tokens": 2400},
-    "worked_example": {"order": 30, "label_ar": "مثال محلول", "label_en": "Worked example", "min_words": 90, "max_tokens": 1800},
-    "guided_practice": {"order": 40, "label_ar": "تدريب موجه", "label_en": "Guided practice", "min_words": 70, "max_tokens": 1600},
-    "independent_practice": {"order": 50, "label_ar": "تدريب مستقل", "label_en": "Independent practice", "min_words": 55, "max_tokens": 1400},
-    "misconceptions": {"order": 60, "label_ar": "الأخطاء الشائعة ومعالجتها", "label_en": "Misconceptions and remediation", "min_words": 55, "max_tokens": 1400},
-    "formative_assessment": {"order": 70, "label_ar": "تقويم تكويني", "label_en": "Formative assessment", "min_words": 65, "max_tokens": 1600},
-    "summary": {"order": 80, "label_ar": "ملخص الدرس", "label_en": "Lesson summary", "min_words": 45, "max_tokens": 1000},
-    "resources": {"order": 90, "label_ar": "موارد ومتابعة", "label_en": "Resources and follow-up", "min_words": 35, "max_tokens": 900},
+    "activation": {"order": 10, "label_ar": "تنشيط المعارف السابقة", "label_fr": "Activation des acquis", "label_en": "Prior-knowledge activation", "min_words": 45, "max_tokens": 1100},
+    "explanation": {"order": 20, "label_ar": "شرح المفهوم", "label_fr": "Explication du concept", "label_en": "Concept explanation", "min_words": 140, "max_tokens": 2400},
+    "worked_example": {"order": 30, "label_ar": "مثال محلول", "label_fr": "Exemple résolu", "label_en": "Worked example", "min_words": 90, "max_tokens": 1800},
+    "guided_practice": {"order": 40, "label_ar": "تدريب موجه", "label_fr": "Pratique guidée", "label_en": "Guided practice", "min_words": 70, "max_tokens": 1600},
+    "independent_practice": {"order": 50, "label_ar": "تدريب مستقل", "label_fr": "Pratique autonome", "label_en": "Independent practice", "min_words": 55, "max_tokens": 1400},
+    "misconceptions": {"order": 60, "label_ar": "الأخطاء الشائعة ومعالجتها", "label_fr": "Erreurs fréquentes et remédiation", "label_en": "Misconceptions and remediation", "min_words": 55, "max_tokens": 1400},
+    "formative_assessment": {"order": 70, "label_ar": "تقويم تكويني", "label_fr": "Évaluation formative", "label_en": "Formative assessment", "min_words": 65, "max_tokens": 1600},
+    "summary": {"order": 80, "label_ar": "ملخص الدرس", "label_fr": "Synthèse de la leçon", "label_en": "Lesson summary", "min_words": 45, "max_tokens": 1000},
+    "resources": {"order": 90, "label_ar": "موارد ومتابعة", "label_fr": "Ressources et suivi", "label_en": "Resources and follow-up", "min_words": 35, "max_tokens": 900},
 }
 
 
@@ -50,7 +52,12 @@ def block_generation_status() -> Dict[str, Any]:
 
 def block_label(block_type: str, language_code: str = "ar") -> str:
     spec = BLOCK_SPECS.get(str(block_type), {})
-    return str(spec.get("label_ar") if language_code == "ar" else spec.get("label_en") or block_type)
+    lang = str(language_code or "en").lower()
+    if lang.startswith("ar"):
+        return str(spec.get("label_ar") or spec.get("label_en") or block_type)
+    if lang.startswith("fr"):
+        return str(spec.get("label_fr") or spec.get("label_en") or block_type)
+    return str(spec.get("label_en") or block_type)
 
 
 def ordered_block_types() -> List[str]:
@@ -194,6 +201,7 @@ def build_block_prompt(
         for c in concepts
     ) or "- No concept metadata available."
     label = BLOCK_SPECS[block_type]["label_en"]
+    pedagogy_contract = pedagogical_orchestrator.prompt_contract(block_type, language)
     return f"""# 3alimnIA lesson-block production request
 
 Generate ONE lesson block only. Do not generate the whole lesson.
@@ -229,6 +237,8 @@ Concepts:
 {previous_summary}
 </previous_approved_blocks>
 
+{pedagogy_contract}
+
 # Requested block
 - Type: {block_type}
 - Label: {label}
@@ -245,6 +255,9 @@ Concepts:
 8. Do not repeat content from earlier approved blocks.
 9. If evidence is insufficient, state the gap explicitly rather than guessing.
 10. Return the block itself; do not wrap it in JSON.
+11. Never output placeholder values such as None, null, N/A, or empty labelled fields. Omit unavailable metadata instead.
+12. If the requested output language is Arabic, use Arabic headings for learner-facing and teacher-facing prose; do not duplicate every heading in English.
+13. Keep code, commands, identifiers, API names, and source markers in their canonical technical form.
 """.strip()
 
 
@@ -268,6 +281,34 @@ def validate_block_content(block_type: str, text: str, allowed_source_ids: List[
     headings = len(re.findall(r"(?m)^#{1,4}\s+", clean))
     if headings == 0:
         warnings.append("missing_markdown_heading")
+    if lesson_content_renderer.markdown_has_unclosed_fence(clean):
+        errors.append("unclosed_code_fence")
+    if lesson_content_renderer.content_has_placeholder(clean):
+        warnings.append("placeholder_value_detected")
+
+    # Pedagogy-oriented structural checks.  They are warnings rather than hard
+    # failures because the teacher remains the final pedagogical reviewer.
+    lower = clean.lower()
+    if block_type == "worked_example":
+        attempt_signals = ("attempt", "جرّب", "محاولة", "حاول")
+        hint_signals = ("hint", "تلميح")
+        solution_signals = ("solution", "الحل", "حل نموذجي")
+        if not any(token in lower for token in attempt_signals):
+            warnings.append("worked_example_missing_attempt")
+        if not any(token in lower for token in hint_signals):
+            warnings.append("worked_example_missing_hints")
+        if not any(token in lower for token in solution_signals):
+            warnings.append("worked_example_missing_solution")
+    elif block_type == "activation":
+        if "?" not in clean and "؟" not in clean:
+            warnings.append("activation_missing_retrieval_prompt")
+    elif block_type == "formative_assessment":
+        if not any(token in lower for token in ("feedback", "تغذية راجعة", "معيار", "criterion")):
+            warnings.append("assessment_missing_feedback_or_criterion")
+    elif block_type == "summary":
+        if not any(token in lower for token in ("reflect", "reflection", "تأمل", "راجع", "قيّم")):
+            warnings.append("summary_missing_metacognitive_reflection")
+
     status = "error" if errors else ("needs_review" if warnings else "completed")
     return {
         "status": status,
@@ -276,6 +317,8 @@ def validate_block_content(block_type: str, text: str, allowed_source_ids: List[
         "errors": errors,
         "warnings": warnings,
         "completeness_score": 0.0 if errors else min(1.0, words / max(int(spec.get("min_words") or 25), 1)),
+        "pedagogical_principles": [item["key"] for item in pedagogical_orchestrator.principles_for_block(block_type)],
+        "pedagogical_rationale": pedagogical_orchestrator.pedagogical_rationale(block_type, "en"),
     }
 
 
@@ -464,6 +507,33 @@ def approve_full_lesson(project_id: int, lesson_id: str, teacher_username: str) 
     for run in latest_rows:
         db.approve_teacher_lesson_block(int(run["id"]), int(project_id), str(teacher_username))
     return lesson_completion(int(project_id), str(lesson_id))
+
+
+def lesson_quality_snapshot(project_id: int, lesson_id: str) -> Dict[str, Any]:
+    """Summarise deterministic generation and pedagogical validation for UI."""
+    warnings: List[str] = []
+    errors: List[str] = []
+    reviewed = 0
+    for block_type in ordered_block_types():
+        run = db.latest_teacher_lesson_block(int(project_id), str(lesson_id), block_type, approved_only=False)
+        if not run:
+            continue
+        reviewed += 1
+        validation = dict(run.get("validation") or {})
+        warnings.extend(str(item) for item in list(validation.get("warnings") or []))
+        errors.extend(str(item) for item in list(validation.get("errors") or []))
+    required = len(ordered_block_types())
+    score = 0.0 if required == 0 else max(0.0, min(1.0, (reviewed / required) - (0.08 * len(errors)) - (0.02 * len(warnings))))
+    return {
+        "reviewed_blocks": reviewed,
+        "required_blocks": required,
+        "warning_count": len(warnings),
+        "error_count": len(errors),
+        "warnings": sorted(set(warnings)),
+        "errors": sorted(set(errors)),
+        "quality_score": round(score, 3),
+        "ready_for_teacher_review": reviewed == required and not errors,
+    }
 
 
 def assembled_lesson(project_id: int, lesson_id: str, language_code: str = "ar") -> List[Dict[str, Any]]:
