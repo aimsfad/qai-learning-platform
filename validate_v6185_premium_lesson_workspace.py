@@ -73,7 +73,7 @@ def validate_ui_static() -> None:
         "v6185-section-purpose",
     ):
         require(token in source or token in css, f"missing UI token: {token}")
-    require('APP_VERSION = "v6.18.5-premium-lesson-workspace"' in db_source, "app version was not updated")
+    require(any(v in db_source for v in ('APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"')), "app version was not updated")
 
 
 def main() -> None:

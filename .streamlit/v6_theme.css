@@ -4479,3 +4479,211 @@ html[dir="rtl"] .v618-page-header-accent { inset:-185px auto auto -90px; }
   .v6185-section-purpose { flex-direction:column; gap:.2rem; }
 }
 .v618-inline-danger { background:#FFF5F5; border-color:#F1C5C5; color:#9F2F2F; }
+
+
+/* ==========================================================================
+   V6.18.6 — Unified Premium Platform Design Integration
+   Non-destructive visual layer: existing routing, engines, state, and data stay intact.
+   ========================================================================== */
+:root {
+  --v618-midnight:#0F172A;
+  --v618-navy:#0F2F57;
+  --v618-blue:#1D4ED8;
+  --v618-cyan:#0EA5E9;
+  --v618-green:#10B981;
+  --v618-red:#DC2626;
+  --v618-gold:#D6A51E;
+  --v618-ink:#0F172A;
+  --v618-body:#334155;
+  --v618-muted:#64748B;
+  --v618-bg:#F8FAFC;
+  --v618-surface:#FFFFFF;
+  --v618-soft:#F1F5F9;
+  --v618-border:#E2E8F0;
+  --v618-radius-sm:10px;
+  --v618-radius-md:12px;
+  --v618-radius-lg:16px;
+  --v618-shadow-sm:0 4px 6px rgba(15,23,42,.02);
+  --v618-shadow-md:0 12px 28px rgba(15,23,42,.065);
+  --v618-shadow-lg:0 24px 60px rgba(15,23,42,.10);
+}
+
+/* Tajawal is the product typeface. Keep technical content and icons isolated. */
+html,body,.stApp,[data-testid="stAppViewContainer"],
+.stApp button,.stApp input,.stApp textarea,.stApp label,.stApp select,
+.stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp h5,.stApp h6,
+.stApp p,.stApp li,.stApp [data-testid="stMarkdownContainer"] {
+  font-family:"Tajawal",Arial,sans-serif !important;
+}
+.stApp pre,.stApp code,.stApp [data-testid="stCodeBlock"],.stApp .qai-code {
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace !important;
+}
+.stApp .material-symbols-rounded { font-family:"Material Symbols Rounded" !important; }
+
+html,body,.stApp,[data-testid="stAppViewContainer"] {
+  background:#F8FAFC !important;
+}
+.block-container { max-width:1480px !important; padding-top:.65rem !important; }
+
+.v6186-role-marker,.v6186-simple-journey-marker,.v6186-student-learning-shell,
+.v6186-evaluator-review-shell { display:none !important; }
+
+/* Quiet-luxury cards: less gradient, more whitespace, softer depth. */
+.v618-page-header,
+.v618-kpi-card,
+.v6184-current-step,
+.v6185-lesson-hero,
+.v6183-flow-step,
+.v6183-block-card,
+[data-testid="stVerticalBlockBorderWrapper"] {
+  border-color:var(--v618-border) !important;
+}
+.v618-page-header {
+  border-radius:16px !important;
+  background:linear-gradient(135deg,#FFFFFF 0%,#F8FBFF 100%) !important;
+  box-shadow:var(--v618-shadow-sm) !important;
+}
+.v618-page-header::after { height:3px; background:linear-gradient(90deg,#0F172A,#1D4ED8,#0EA5E9); }
+.v618-page-status,.v618-meta-chip { border-radius:10px !important; }
+.v618-kpi-card { border-radius:14px; background:#FFFFFF; box-shadow:var(--v618-shadow-sm); }
+.v618-kpi-card:hover { transform:translateY(-2px); border-color:#BFDBFE; box-shadow:var(--v618-shadow-md); }
+.v618-kpi-value-row strong { color:#0F172A; font-weight:800; }
+
+/* Role accents are scoped to the page header only; content logic is untouched. */
+.v618-role-header-student::after { background:linear-gradient(90deg,#0F172A,#1D4ED8,#10B981); }
+.v618-role-header-teacher::after { background:linear-gradient(90deg,#0F172A,#1D4ED8,#0EA5E9); }
+.v618-role-header-evaluator::after { background:linear-gradient(90deg,#0F172A,#334155,#1D4ED8); }
+.v618-role-header-public::after { background:linear-gradient(90deg,#0F172A,#1D4ED8,#D6A51E); }
+
+/* Semantic status badges; pills are reserved for status, never for primary navigation. */
+.v6186-status-badge {
+  display:inline-flex; align-items:center; gap:.4rem; min-height:28px;
+  padding:.3rem .6rem; border:1px solid var(--v618-border); border-radius:999px;
+  background:#F8FAFC; color:#475569; font-size:.69rem; font-weight:750;
+}
+.v6186-status-dot { width:7px; height:7px; border-radius:50%; background:#94A3B8; }
+.v6186-status-success { background:#ECFDF5; border-color:#BBF7D0; color:#047857; }
+.v6186-status-success .v6186-status-dot { background:#10B981; }
+.v6186-status-active { background:#EFF6FF; border-color:#BFDBFE; color:#1D4ED8; }
+.v6186-status-active .v6186-status-dot { background:#3B82F6; }
+.v6186-status-warning { background:#FFF7ED; border-color:#FED7AA; color:#B45309; }
+.v6186-status-warning .v6186-status-dot { background:#F59E0B; }
+.v6186-status-danger { background:#FEF2F2; border-color:#FECACA; color:#B91C1C; }
+.v6186-status-danger .v6186-status-dot { background:#DC2626; }
+
+/* Internal navbar: flat, compact, one filled CTA only. */
+.st-key-v68_workspace_toolbar > [data-testid="stVerticalBlockBorderWrapper"] {
+  border:0 !important; border-bottom:1px solid var(--v618-border) !important;
+  border-radius:0 !important; background:rgba(255,255,255,.96) !important;
+  box-shadow:0 5px 16px rgba(15,23,42,.025) !important;
+  padding:.35rem .6rem !important;
+}
+.st-key-v68_workspace_toolbar .stButton > button:not([kind="primary"]) {
+  border:0 !important; border-radius:8px !important; background:transparent !important;
+  color:#475569 !important; box-shadow:none !important; min-height:40px !important;
+}
+.st-key-v68_workspace_toolbar .stButton > button:not([kind="primary"]):hover {
+  transform:none !important; color:#1D4ED8 !important; background:#F8FAFC !important;
+  box-shadow:inset 0 -2px 0 #3B82F6 !important;
+}
+.st-key-v68_workspace_toolbar .stButton > button[kind="primary"] {
+  border-radius:10px !important; background:linear-gradient(135deg,#0F2F57,#1D4ED8) !important;
+  box-shadow:0 7px 18px rgba(29,78,216,.14) !important;
+}
+
+/* Public navbar follows the same flat navigation language. */
+.st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+  background:rgba(255,255,255,.97) !important; border-bottom:1px solid var(--v618-border) !important;
+  box-shadow:0 5px 16px rgba(15,23,42,.025) !important;
+}
+.st-key-v61_public_header .stButton > button:not([kind="primary"]) { border-radius:8px !important; }
+
+/* Teacher five-stage journey: cards feel like a workflow, not radio pills. */
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [data-testid="stHorizontalBlock"] {
+  gap:.65rem !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [class*="st-key-simple_stage_"] .stButton > button {
+  min-height:62px !important; border:1px solid var(--v618-border) !important;
+  border-radius:12px !important; background:#FFFFFF !important; color:#475569 !important;
+  box-shadow:var(--v618-shadow-sm) !important; transition:all .22s ease !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [class*="st-key-simple_stage_"] .stButton > button:hover:not(:disabled) {
+  transform:translateY(-2px) !important; border-color:#93C5FD !important; box-shadow:var(--v618-shadow-md) !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [class*="st-key-simple_stage_"] .stButton > button[kind="primary"] {
+  color:#FFFFFF !important; border-color:transparent !important;
+  background:linear-gradient(135deg,#0F2F57,#1D4ED8) !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [class*="st-key-simple_stage_"] .stButton > button:disabled {
+  opacity:.62 !important; background:#F8FAFC !important; color:#94A3B8 !important;
+}
+
+/* Student learning workspace: deliberate split-pane with persistent AI coach. */
+.stApp:has(.v6186-role-student) [data-testid="stHorizontalBlock"]:has(.v68-learning-marker):has(.v68-coach-marker) {
+  gap:1rem !important; align-items:flex-start !important;
+}
+.stApp:has(.v6186-role-student) [data-testid="stVerticalBlock"]:has(.v68-learning-marker) > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v6186-role-student) [data-testid="stVerticalBlock"]:has(.v68-coach-marker) > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius:16px !important; border:1px solid var(--v618-border) !important;
+  background:#FFFFFF !important; box-shadow:var(--v618-shadow-sm) !important;
+}
+.stApp:has(.v6186-role-student) [data-testid="stVerticalBlock"]:has(.v68-coach-marker) > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-top:3px solid #1D4ED8 !important;
+}
+
+/* Research/evaluator charts and tables sit on clean white analytical surfaces. */
+.stApp:has(.v6186-role-evaluator) [data-testid="stPlotlyChart"],
+.stApp:has(.v6186-role-evaluator) [data-testid="stDataFrame"] {
+  border:1px solid var(--v618-border) !important; border-radius:14px !important;
+  background:#FFFFFF !important; box-shadow:var(--v618-shadow-sm) !important;
+}
+
+/* Evaluator: response and rubric remain visible side by side on desktop. */
+[data-testid="stHorizontalBlock"]:has(.v6186-evaluator-review-shell),
+[data-testid="stVerticalBlock"]:has(.v6186-evaluator-review-shell) { align-items:flex-start !important; }
+.st-key-v6186_eval_response_1 > [data-testid="stVerticalBlockBorderWrapper"],
+[class*="st-key-v6186_eval_response_"] > [data-testid="stVerticalBlockBorderWrapper"],
+[class*="st-key-v6186_eval_rubric_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius:16px !important; border:1px solid var(--v618-border) !important;
+  background:#FFFFFF !important; box-shadow:var(--v618-shadow-sm) !important;
+}
+[class*="st-key-v6186_eval_rubric_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  position:sticky; top:.6rem; max-height:calc(100vh - 1.2rem); overflow:auto;
+}
+.v6186-evaluator-response { min-height:320px; line-height:1.85; }
+
+/* Tabs are text navigation with an active underline. */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  gap:1.5rem !important; background:transparent !important; border-bottom:1px solid var(--v618-border) !important;
+}
+[data-testid="stTabs"] button[role="tab"] { border-radius:0 !important; background:transparent !important; }
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  color:#0F172A !important; box-shadow:inset 0 -3px 0 #1D4ED8 !important;
+}
+
+/* Buttons: no oversized pill shapes. Badges keep pills; actions stay rectangular. */
+.stApp .stButton > button,.stApp .stDownloadButton > button,.stApp [data-testid="stFormSubmitButton"] > button {
+  border-radius:10px !important; transition:all .22s ease !important;
+}
+.stApp .stButton > button:hover:not(:disabled),.stApp .stDownloadButton > button:hover:not(:disabled) {
+  transform:translateY(-2px); box-shadow:var(--v618-shadow-md);
+}
+
+/* Accessibility and reduced motion. */
+.stApp button:focus-visible,.stApp input:focus-visible,.stApp textarea:focus-visible,
+.stApp [role="tab"]:focus-visible,.stApp [role="radio"]:focus-visible {
+  outline:3px solid rgba(59,130,246,.24) !important; outline-offset:2px !important;
+}
+@media (prefers-reduced-motion:reduce) {
+  .stApp * { transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+  .stApp .stButton > button:hover:not(:disabled),.v618-kpi-card:hover,.v618-action-card:hover { transform:none !important; }
+}
+
+@media (max-width:900px) {
+  [class*="st-key-v6186_eval_rubric_"] > [data-testid="stVerticalBlockBorderWrapper"] { position:static; max-height:none; }
+}
+@media (max-width:760px) {
+  .block-container { padding-inline:.8rem !important; }
+  .v618-page-header { padding:1rem !important; }
+  [data-testid="stHorizontalBlock"]:has(.v6186-evaluator-review-shell) { flex-direction:column !important; }
+}

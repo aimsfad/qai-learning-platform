@@ -56,21 +56,25 @@ def _ensure_public(route_name: str) -> None:
 
 def _public_home() -> None:
     _ensure_public("home")
+    st.markdown("<span class='v6186-role-marker v6186-role-public' aria-hidden='true'></span>", unsafe_allow_html=True)
     ui_v6.render_home()
 
 
 def _public_programs() -> None:
     _ensure_public("programs")
+    st.markdown("<span class='v6186-role-marker v6186-role-public' aria-hidden='true'></span>", unsafe_allow_html=True)
     ui_v6.render_programs()
 
 
 def _public_ai_studio() -> None:
     _ensure_public("ai_studio")
+    st.markdown("<span class='v6186-role-marker v6186-role-public' aria-hidden='true'></span>", unsafe_allow_html=True)
     ui_v6.render_ai_studio()
 
 
 def _public_institutions() -> None:
     _ensure_public("institutions")
+    st.markdown("<span class='v6186-role-marker v6186-role-public' aria-hidden='true'></span>", unsafe_allow_html=True)
     ui_v6.render_institutions()
 
 
@@ -168,7 +172,8 @@ def _render_toolbar(current_title: str) -> None:
     workspace = copy.get(role) or getattr(branding, "BRAND_NAME_LATIN", branding.BRAND_NAME)
 
     with st.container(border=True, key="v68_workspace_toolbar"):
-        st.markdown("<span class='v5-toolbar-marker v68-toolbar-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        role_key = str(role or "public")
+        st.markdown(f"<span class='v5-toolbar-marker v68-toolbar-marker v6186-toolbar-{escape(role_key)}' aria-hidden='true'></span>", unsafe_allow_html=True)
 
         if role in {"student", "evaluator", "teacher"}:
             if lang == "ar":

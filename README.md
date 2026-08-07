@@ -1,3 +1,7 @@
+# 3alimnIA V6.18.6 — Unified Premium Platform Design
+
+This release integrates the premium SaaS design shell directly into the existing 3alimnIA application without replacing prior work. Public, learner, teacher, researcher, and evaluator experiences now share one design language while the database, AI engines, evidence pipeline, blueprint workflow, lesson generation, AI Coach, LPQS evaluation, and research exports remain intact. See `V6_18_6_UNIFIED_PREMIUM_PLATFORM_DESIGN_AR.md`.
+
 # 3alimnIA V6.17.1 — Unified Guided Production Journey
 
 This release makes the teacher workflow strictly sequential and approval-driven. It separates the seven-stage teacher journey from the eleven internal production jobs, introduces teacher approval for the canonical research dossier, fixes phase-number collisions in evidence synthesis, and automatically advances after research, evidence, and blueprint approval. See `V6_17_1_UNIFIED_GUIDED_PRODUCTION_JOURNEY_AR.md`.

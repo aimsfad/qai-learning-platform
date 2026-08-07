@@ -684,7 +684,7 @@ def hero(title: str, subtitle: str, *, localized: bool = False, compact: Optiona
         "public": {"ar": "منصة 3alimnIA", "fr": "Plateforme 3alimnIA", "en": "3alimnIA platform"},
     }.get(role, {}).get(lang, "3alimnIA")
     icon = {"student": "school", "evaluator": "analytics", "teacher": "edit_note", "public": "auto_awesome"}.get(role, "auto_awesome")
-    global_ui.render_page_header(str(safe_title), str(safe_subtitle), lang=lang, eyebrow=eyebrow, compact=bool(compact), icon=icon)
+    global_ui.render_page_header(str(safe_title), str(safe_subtitle), lang=lang, eyebrow=eyebrow, compact=bool(compact), icon=icon, role=role)
 
 
 def card(title: str, body: str, pill: Optional[str] = None) -> None:
@@ -1357,6 +1357,7 @@ def render_role_selection() -> None:
 
 
 def render_student_app() -> None:
+    global_ui.render_role_marker("student")
     reset_token = get_query_param("reset_token").strip()
     if reset_token:
         render_password_reset_form(reset_token)
@@ -3088,6 +3089,7 @@ def render_v66_lesson_content(student: Dict[str, Any], lesson: Dict[str, Any]) -
 
 
 def render_learning_module(student: Dict[str, Any]) -> None:
+    st.markdown("<span class='v6186-student-learning-shell' aria-hidden='true'></span>", unsafe_allow_html=True)
     copy = student_workspace_copy()
     if not test_is_done(student["id"], "pre"):
         st.warning("Please complete the pre-test before opening the learning path.")
@@ -3566,6 +3568,7 @@ def evaluator_filtered_progress() -> pd.DataFrame:
     return out
 
 def render_evaluator_app() -> None:
+    global_ui.render_role_marker("evaluator")
     if not st.session_state.evaluator_logged_in:
         render_evaluator_login()
         return
@@ -5075,33 +5078,39 @@ def render_llm_performance_evaluation() -> None:
     row = candidates[candidates["interaction_id"] == selected_id].iloc[0].to_dict()
 
     st.markdown(f"<div class='v45-ai-context' dir='{u['dir']}'><span>{escape(str(row.get('participant_code') or '—'))}</span><b>{escape(i18n.concept_label(str(row.get('concept') or '—'), i18n.current_lang(st)))}</b><small>{escape(str(row.get('task') or '—'))} · {escape(str(row.get('provider') or '—'))}</small></div>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        evaluator_section(u["prompt"])
-        st.markdown(f"<div class='v45-transcript learner' dir='{u['dir']}'>{escape(str(row.get('prompt') or '[No input]'))}</div>", unsafe_allow_html=True)
-    with c2:
-        evaluator_section(u["response"])
-        st.markdown(f"<div class='v45-transcript ai' dir='{u['dir']}'>{escape(str(row.get('response') or ''))}</div>", unsafe_allow_html=True)
-    if row.get("diagnostic"):
-        with st.expander(u["diagnostic"]):
-            st.code(str(row.get("diagnostic"))[:4000])
+    st.markdown("<span class='v6186-evaluator-review-shell' aria-hidden='true'></span>", unsafe_allow_html=True)
+    response_col, rubric_col = ui_stability.columns([1.08, .92], gap="large", vertical_alignment="top")
+    with response_col:
+        with st.container(border=True, key=f"v6186_eval_response_{selected_id}"):
+            evaluator_section(u["response"], u["prompt"])
+            with st.expander(u["prompt"], expanded=False):
+                st.markdown(
+                    f"<div class='v45-transcript learner' dir='{u['dir']}'>{escape(str(row.get('prompt') or '[No input]'))}</div>",
+                    unsafe_allow_html=True,
+                )
+            st.markdown(
+                f"<div class='v45-transcript ai v6186-evaluator-response' dir='{u['dir']}'>{escape(str(row.get('response') or ''))}</div>",
+                unsafe_allow_html=True,
+            )
+            if row.get("diagnostic"):
+                with st.expander(u["diagnostic"]):
+                    st.code(str(row.get("diagnostic"))[:4000])
 
-    evaluator_section(u["rubric"], u["rubric_help"])
-    with st.form(f"llm_eval_{selected_id}"):
-        c1, c2 = st.columns(2)
-        with c1:
-            conceptual_accuracy = st.slider(u["conceptual_accuracy"], 1, 5, 3)
-            answer_relevance = st.slider(u["answer_relevance"], 1, 5, 3)
-            pedagogical_clarity = st.slider(u["pedagogical_clarity"], 1, 5, 3)
-            scaffolding_quality = st.slider(u["scaffolding_quality"], 1, 5, 3)
-        with c2:
-            qiskit_alignment = st.slider(u["qiskit_alignment"], 1, 5, 3)
-            reflection_support = st.slider(u["reflection_support"], 1, 5, 3)
-            personalization = st.slider(u["personalization"], 1, 5, 3)
-            preview_score = (conceptual_accuracy + answer_relevance + pedagogical_clarity + scaffolding_quality + qiskit_alignment + reflection_support + personalization) / 7
-            st.metric("LPQS", f"{preview_score:.2f}/5")
-        overall_comment = st.text_area(u["comment"], height=110)
-        submitted = st.form_submit_button(u["save_eval"], type="primary", use_container_width=True)
+    with rubric_col:
+        with st.container(border=True, key=f"v6186_eval_rubric_{selected_id}"):
+            evaluator_section(u["rubric"], u["rubric_help"])
+            with st.form(f"llm_eval_{selected_id}"):
+                conceptual_accuracy = st.slider(u["conceptual_accuracy"], 1, 5, 3)
+                answer_relevance = st.slider(u["answer_relevance"], 1, 5, 3)
+                pedagogical_clarity = st.slider(u["pedagogical_clarity"], 1, 5, 3)
+                scaffolding_quality = st.slider(u["scaffolding_quality"], 1, 5, 3)
+                qiskit_alignment = st.slider(u["qiskit_alignment"], 1, 5, 3)
+                reflection_support = st.slider(u["reflection_support"], 1, 5, 3)
+                personalization = st.slider(u["personalization"], 1, 5, 3)
+                preview_score = (conceptual_accuracy + answer_relevance + pedagogical_clarity + scaffolding_quality + qiskit_alignment + reflection_support + personalization) / 7
+                global_ui.render_kpi_card("LPQS", f"{preview_score:.2f}", unit="/5", lang=i18n.current_lang(st), tone="gold")
+                overall_comment = st.text_area(u["comment"], height=110)
+                submitted = st.form_submit_button(u["save_eval"], type="primary", use_container_width=True)
     if submitted:
         db.save_llm_evaluation(selected_id, secret("EVALUATOR_USERNAME", "evaluator"), conceptual_accuracy, answer_relevance, pedagogical_clarity, scaffolding_quality, qiskit_alignment, reflection_support, personalization, overall_comment)
         st.success(u["saved"])

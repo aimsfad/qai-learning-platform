@@ -2682,6 +2682,7 @@ def _render_teacher_mode_control() -> None:
 
 def _render_simple_journey(project: Dict[str, Any], simple_state: Dict[str, Any]) -> str:
     """Render a five-step journey and return the selected accessible stage."""
+    st.markdown("<span class='v6186-simple-journey-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     lang = i18n.current_lang(st)
     direction = i18n.direction(lang)
     copy = simple_teacher_journey.copy(lang)
@@ -3244,6 +3245,7 @@ def render_published_course_catalog(student: Optional[Dict[str, Any]] = None) ->
 
 
 def render_teacher_app() -> None:
+    global_ui.render_role_marker("teacher")
     init_teacher_state()
     if not st.session_state.teacher_logged_in:
         render_teacher_login()
@@ -3267,7 +3269,7 @@ def render_teacher_app() -> None:
         u["workspace"], welcome_line, lang=lang,
         eyebrow={"ar": "فضاء الأستاذ", "fr": "Espace enseignant", "en": "Teacher workspace"}.get(lang, "Teacher workspace"),
         status={"ar": "استوديو المحتوى", "fr": "Studio de contenu", "en": "Content Studio"}.get(lang, "Content Studio"),
-        meta=workspace_meta, compact=True, icon="edit_note",
+        meta=workspace_meta, compact=True, icon="edit_note", role="teacher",
     )
     _render_teacher_mode_control()
     flash_success = st.session_state.pop("teacher_flash_success", None)

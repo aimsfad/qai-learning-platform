@@ -71,7 +71,7 @@ def main() -> None:
     assert any(v in read("db.py") for v in (
         'APP_VERSION = "v6.18-global-professional-design-system"',
         'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"',
-        'APP_VERSION = "v6.18.5-premium-lesson-workspace"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"',
+        'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"',
     ))
     print("V6.18 global professional design-system validation passed.")
 
