@@ -72,7 +72,10 @@ def validate_css() -> None:
 def validate_non_destructive_contract() -> None:
     db = parse_python("db.py")
     require(
-        'APP_VERSION = "v6.18.6-unified-premium-platform-design"' in db,
+        any(v in db for v in (
+            'APP_VERSION = "v6.18.7-frictionless-ui-contract"',
+            'APP_VERSION = "v6.18.6-unified-premium-platform-design"',
+        )),
         "application version was not updated",
     )
     # This release must not add a schema migration or replace generation engines.
