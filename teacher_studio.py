@@ -2867,6 +2867,8 @@ def _lesson_simple_labels(lang: str) -> Dict[str, str]:
             "approved_state": "معتمد",
             "section_purpose": "لماذا هذا القسم؟",
             "teacher_decision": "قرار الأستاذ",
+            "lesson_access": "للحفاظ على تسلسل واضح، تظهر هنا الدروس المعتمدة والدرس الحالي فقط. تفتح الدروس التالية تلقائيًا بعد اعتماد الدرس الحالي.",
+            "current_lesson": "الدرس الحالي",
         },
         "fr": {
             "title": "Créer les leçons", "intro": "Générez un brouillon complet, révisez-le pédagogiquement puis approuvez-le. Les détails techniques restent masqués par défaut.",
@@ -2874,7 +2876,7 @@ def _lesson_simple_labels(lang: str) -> Dict[str, str]:
             "generate": "Créer le brouillon de la leçon", "continue_generate": "Compléter le brouillon", "generating": "Construction pédagogique de la leçon", "generated": "Le brouillon complet est prêt pour votre révision.",
             "preview": "Réviser la leçon", "empty": "Cette leçon n’a pas encore de brouillon.", "approve": "Approuver et passer à la suivante", "approved": "Leçon approuvée.",
             "next": "Leçon suivante", "download": "Télécharger", "advanced": "Modifier une section ou afficher les détails", "section": "Section", "regenerate": "Régénérer cette section", "save": "Enregistrer", "summary": "Résumé des modifications", "technical": "Détails techniques", "all_done": "Toutes les leçons sont terminées.",
-            "design": "Conception pédagogique", "quality_ready": "Le brouillon est complet et prêt à être validé.", "quality_review": "Des remarques pédagogiques non bloquantes méritent une révision.", "quality_blocked": "Un problème doit être corrigé avant l’approbation.", "quality_details": "Remarques de qualité pédagogique", "draft_status": "État du brouillon", "ready": "À réviser", "approved_state": "Approuvé", "section_purpose": "Pourquoi cette section ?", "teacher_decision": "Décision de l’enseignant",
+            "design": "Conception pédagogique", "quality_ready": "Le brouillon est complet et prêt à être validé.", "quality_review": "Des remarques pédagogiques non bloquantes méritent une révision.", "quality_blocked": "Un problème doit être corrigé avant l’approbation.", "quality_details": "Remarques de qualité pédagogique", "draft_status": "État du brouillon", "ready": "À réviser", "approved_state": "Approuvé", "section_purpose": "Pourquoi cette section ?", "teacher_decision": "Décision de l’enseignant", "lesson_access": "Pour garder un parcours clair, seules les leçons approuvées et la leçon actuelle sont accessibles ici. Les suivantes s’ouvrent automatiquement après validation.", "current_lesson": "Leçon actuelle",
         },
         "en": {
             "title": "Create lessons", "intro": "Create a complete lesson draft, review it pedagogically, then approve it. Technical details stay out of the way unless you need them.",
@@ -2882,7 +2884,7 @@ def _lesson_simple_labels(lang: str) -> Dict[str, str]:
             "generate": "Create lesson draft", "continue_generate": "Complete lesson draft", "generating": "Building the lesson pedagogically", "generated": "The complete lesson draft is ready for your review.",
             "preview": "Review lesson", "empty": "This lesson does not have a draft yet.", "approve": "Approve lesson and continue", "approved": "Lesson approved.",
             "next": "Open next lesson", "download": "Download lesson", "advanced": "Edit a section or view advanced details", "section": "Lesson section", "regenerate": "Regenerate this section", "save": "Save edit", "summary": "Change summary", "technical": "Technical details", "all_done": "All lessons are complete. Continue to review and publish.",
-            "design": "Pedagogical design", "quality_ready": "The draft is complete and ready for review and approval.", "quality_review": "There are non-blocking pedagogical notes to review before approval.", "quality_blocked": "A blocking issue must be resolved before approval.", "quality_details": "Pedagogical quality notes", "draft_status": "Draft status", "ready": "Ready for review", "approved_state": "Approved", "section_purpose": "Why this section?", "teacher_decision": "Teacher decision",
+            "design": "Pedagogical design", "quality_ready": "The draft is complete and ready for review and approval.", "quality_review": "There are non-blocking pedagogical notes to review before approval.", "quality_blocked": "A blocking issue must be resolved before approval.", "quality_details": "Pedagogical quality notes", "draft_status": "Draft status", "ready": "Ready for review", "approved_state": "Approved", "section_purpose": "Why this section?", "teacher_decision": "Teacher decision", "lesson_access": "To keep the workflow clear, only approved lessons and the current lesson are available here. Future lessons unlock automatically after approval.", "current_lesson": "Current lesson",
         },
     }.get(lang, {})
 
@@ -2920,10 +2922,26 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
     lesson_key = f"simple_lesson_{project_id}"
     pending = st.session_state.pop(f"simple_pending_lesson_{project_id}", None)
     default_id = pending if pending in lesson_ids else incomplete_id
-    options = {f"{idx + 1}. {item.get('title')}": str(item.get("lesson_id")) for idx, item in enumerate(lessons)}
+
+    # Simple mode intentionally exposes only previously approved lessons plus
+    # the current unfinished lesson. This prevents the teacher from entering a
+    # future lesson that is not ready yet, while Advanced mode still retains
+    # full diagnostic/navigation access.
+    accessible_ids = {incomplete_id}
+    for lid in lesson_ids:
+        if lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete"):
+            accessible_ids.add(lid)
+    options = {
+        f"{idx + 1}. {item.get('title')}": str(item.get("lesson_id"))
+        for idx, item in enumerate(lessons)
+        if str(item.get("lesson_id")) in accessible_ids
+    }
+    if default_id not in accessible_ids:
+        default_id = incomplete_id
     if lesson_key not in st.session_state or st.session_state.get(lesson_key) not in options:
         st.session_state[lesson_key] = next(label for label, lid in options.items() if lid == default_id)
 
+    global_ui.render_inline_notice(labels["current_lesson"], labels["lesson_access"], lang=lang, tone="info")
     lesson_label = st.selectbox(labels["lesson"], list(options), key=lesson_key)
     lesson_id = options[lesson_label]
     lesson_index = lesson_ids.index(lesson_id)
@@ -3026,43 +3044,47 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
             _render_generation_markdown(cleaned, render_lang)
 
     full_markdown = "\n\n---\n\n".join(full_markdown_parts)
-    st.markdown("<span class='v6184-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-    action_cols = st.columns([1, 2])
-    with action_cols[0]:
-        st.download_button(
-            labels["download"], data=full_markdown, file_name=f"{lesson_id}_complete_lesson.md",
-            mime="text/markdown", use_container_width=True,
-        )
-    with action_cols[1]:
-        ready_to_approve = generated_count >= len(assembled) and failed_count == 0 and not completion.get("complete")
-        if completion.get("complete"):
-            if lesson_index + 1 < len(lessons):
-                if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_next_lesson_{project_id}_{lesson_id}"):
-                    st.session_state[f"simple_pending_lesson_{project_id}"] = lesson_ids[lesson_index + 1]
-                    st.rerun()
-            else:
-                global_ui.render_inline_notice(labels["all_done"], "", lang=lang, tone="success")
-                if st.button(
-                    {"ar": "الانتقال إلى المراجعة والنشر", "fr": "Passer à la révision", "en": "Continue to review and publish"}.get(lang),
-                    type="primary", use_container_width=True, key=f"simple_lessons_review_{project_id}",
-                ):
-                    st.session_state.teacher_simple_stage = "review"
-                    st.rerun()
-        else:
-            if st.button(
-                labels["approve"], type="primary", use_container_width=True, disabled=not ready_to_approve,
-                key=f"simple_approve_lesson_{project_id}_{lesson_id}",
-            ):
-                try:
-                    lesson_block_generation_engine.approve_full_lesson(project_id, lesson_id, _current_teacher_username())
-                    st.session_state.teacher_flash_success = labels["approved"]
-                    if lesson_index + 1 < len(lessons):
+    # A keyed action container is more reliable than styling an incidental
+    # ancestor with :has(). It keeps the teacher's next decision visible while
+    # the long lesson preview scrolls behind it.
+    with st.container(key=f"simple_lesson_action_bar_{project_id}_{lesson_id}"):
+        st.markdown("<span class='v6184-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        action_cols = st.columns([1, 2])
+        with action_cols[0]:
+            st.download_button(
+                labels["download"], data=full_markdown, file_name=f"{lesson_id}_complete_lesson.md",
+                mime="text/markdown", use_container_width=True,
+            )
+        with action_cols[1]:
+            ready_to_approve = generated_count >= len(assembled) and failed_count == 0 and not completion.get("complete")
+            if completion.get("complete"):
+                if lesson_index + 1 < len(lessons):
+                    if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_next_lesson_{project_id}_{lesson_id}"):
                         st.session_state[f"simple_pending_lesson_{project_id}"] = lesson_ids[lesson_index + 1]
-                    else:
+                        st.rerun()
+                else:
+                    global_ui.render_inline_notice(labels["all_done"], "", lang=lang, tone="success")
+                    if st.button(
+                        {"ar": "الانتقال إلى المراجعة والنشر", "fr": "Passer à la révision", "en": "Continue to review and publish"}.get(lang),
+                        type="primary", use_container_width=True, key=f"simple_lessons_review_{project_id}",
+                    ):
                         st.session_state.teacher_simple_stage = "review"
-                    st.rerun()
-                except Exception as exc:
-                    ui_stability.render_error_card(exc, lang=lang)
+                        st.rerun()
+            else:
+                if st.button(
+                    labels["approve"], type="primary", use_container_width=True, disabled=not ready_to_approve,
+                    key=f"simple_approve_lesson_{project_id}_{lesson_id}",
+                ):
+                    try:
+                        lesson_block_generation_engine.approve_full_lesson(project_id, lesson_id, _current_teacher_username())
+                        st.session_state.teacher_flash_success = labels["approved"]
+                        if lesson_index + 1 < len(lessons):
+                            st.session_state[f"simple_pending_lesson_{project_id}"] = lesson_ids[lesson_index + 1]
+                        else:
+                            st.session_state.teacher_simple_stage = "review"
+                        st.rerun()
+                    except Exception as exc:
+                        ui_stability.render_error_card(exc, lang=lang)
 
     with st.expander(labels["advanced"], expanded=False):
         block_options = {row["label"]: row["block_type"] for row in assembled}

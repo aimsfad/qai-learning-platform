@@ -4687,3 +4687,131 @@ html,body,.stApp,[data-testid="stAppViewContainer"] {
   .v618-page-header { padding:1rem !important; }
   [data-testid="stHorizontalBlock"]:has(.v6186-evaluator-review-shell) { flex-direction:column !important; }
 }
+
+
+/* ==========================================================================
+   V6.18.7 — Frictionless UI Contract & Accessibility QA
+   Final authoritative layer. No business logic or routing is modified here.
+   ========================================================================== */
+
+/* Research and evaluation are distinct visual tasks even when they share the
+   same authenticated workspace and permissions. */
+.v618-role-header-researcher::after {
+  background:linear-gradient(90deg,#0F172A,#0F766E,#1D4ED8) !important;
+}
+.stApp:has(.v6186-role-researcher) [data-testid="stPlotlyChart"],
+.stApp:has(.v6186-role-researcher) [data-testid="stDataFrame"] {
+  border:1px solid var(--v618-border) !important;
+  border-radius:14px !important;
+  background:#FFFFFF !important;
+  box-shadow:var(--v618-shadow-sm) !important;
+}
+
+/* Override older tab rules completely. Tabs are navigation labels, not pills. */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  gap:1.35rem !important;
+  padding:0 .15rem !important;
+  background:transparent !important;
+  border:0 !important;
+  border-bottom:1px solid var(--v618-border) !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  overflow-x:auto !important;
+}
+[data-testid="stTabs"] button[role="tab"] {
+  min-height:44px !important;
+  padding:.6rem .1rem .7rem !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:#64748B !important;
+  box-shadow:none !important;
+  white-space:nowrap !important;
+}
+[data-testid="stTabs"] button[role="tab"] * { color:inherit !important; }
+[data-testid="stTabs"] button[role="tab"]:hover {
+  color:#1D4ED8 !important;
+  background:transparent !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  color:#0F172A !important;
+  font-weight:800 !important;
+  background:transparent !important;
+  box-shadow:inset 0 -3px 0 #1D4ED8 !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+  color:#0F172A !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { display:none !important; }
+
+/* Minimum comfortable interaction target and visible keyboard focus. */
+.stApp .stButton > button,
+.stApp .stDownloadButton > button,
+.stApp [data-testid="stFormSubmitButton"] > button,
+.stApp [data-baseweb="select"] > div {
+  min-height:44px !important;
+}
+.stApp button:focus-visible,
+.stApp input:focus-visible,
+.stApp textarea:focus-visible,
+.stApp [role="tab"]:focus-visible,
+.stApp [role="radio"]:focus-visible,
+.stApp [data-baseweb="select"]:focus-within {
+  outline:2px solid #2563EB !important;
+  outline-offset:2px !important;
+}
+
+/* Simple teacher lesson review: keep reading width calm and the final decision
+   consistently visible. Future lessons are intentionally hidden by Python in
+   Simple mode until they unlock. */
+[class*="st-key-simple_preview_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  max-width:1120px !important;
+  margin-inline:auto !important;
+  border-radius:16px !important;
+  background:#FFFFFF !important;
+  box-shadow:0 4px 14px rgba(15,23,42,.025) !important;
+}
+[class*="st-key-simple_preview_"] [data-testid="stMarkdownContainer"] {
+  font-size:1rem !important;
+  line-height:1.9 !important;
+}
+[class*="st-key-simple_lesson_action_bar_"] {
+  position:sticky !important;
+  bottom:.45rem !important;
+  z-index:40 !important;
+  margin-top:1rem !important;
+  padding:.7rem !important;
+  border:1px solid #CBDCF1 !important;
+  border-radius:14px !important;
+  background:rgba(255,255,255,.97) !important;
+  box-shadow:0 14px 34px rgba(15,23,42,.12) !important;
+  backdrop-filter:blur(14px) !important;
+}
+[class*="st-key-simple_lesson_action_bar_"] .stButton > button[kind="primary"] {
+  background:linear-gradient(135deg,#0F2F57,#1D4ED8) !important;
+  color:#FFFFFF !important;
+}
+
+/* Five-step workflow remains horizontally scannable on narrow screens rather
+   than wrapping into a visually ambiguous two-dimensional grid. */
+@media (max-width:900px) {
+  [data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [data-testid="stHorizontalBlock"] {
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+    padding-bottom:.45rem !important;
+    scrollbar-width:thin;
+  }
+  [data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [data-testid="stHorizontalBlock"] > div {
+    min-width:155px !important;
+  }
+}
+@media (max-width:760px) {
+  [class*="st-key-simple_lesson_action_bar_"] {
+    bottom:.15rem !important;
+    padding:.55rem !important;
+  }
+  [class*="st-key-simple_preview_"] [data-testid="stMarkdownContainer"] {
+    font-size:.96rem !important;
+    line-height:1.82 !important;
+  }
+}

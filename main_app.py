@@ -3568,11 +3568,21 @@ def evaluator_filtered_progress() -> pd.DataFrame:
     return out
 
 def render_evaluator_app() -> None:
-    global_ui.render_role_marker("evaluator")
     if not st.session_state.evaluator_logged_in:
+        global_ui.render_role_marker("evaluator")
         render_evaluator_login()
         return
     page = st.session_state.evaluator_page
+    # The authenticated research/evaluation workspace contains two distinct
+    # information tasks. Analytics/export pages use the researcher visual
+    # context, while response-review and operational pages keep the evaluator
+    # context. Routing and permissions remain unchanged.
+    researcher_pages = {
+        "Evaluator Dashboard", "AI Metrics", "Exports", "Progress Monitor",
+        "Learning Analytics", "Paper-ready Analysis", "Survey Results",
+        "Event Logs", "System Readiness", "Results Export",
+    }
+    global_ui.render_role_marker("researcher" if page in researcher_pages else "evaluator")
 
     # V12.2: keep evaluator routing synchronized with the visible left menu.
     # A previous cleanup renamed menu labels but left the old route names here,

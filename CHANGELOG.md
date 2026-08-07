@@ -1,3 +1,14 @@
+# V6.18.7 — Frictionless UI Contract & Accessibility QA
+
+- Added a distinct researcher visual context inside the existing evaluator/research workspace without changing authentication or permissions.
+- Made text-and-underline tabs authoritative over legacy pill-tab CSS, including nested selected-label colors.
+- Raised core interaction targets to a 44px comfortable minimum and strengthened visible keyboard focus.
+- Limited Simple Teacher lesson navigation to approved lessons plus the current unfinished lesson; future lessons unlock automatically.
+- Replaced the incidental sticky lesson-action selector with a keyed, reliable sticky approval/download action bar.
+- Added calmer maximum reading width and mobile-safe typography for generated lesson review.
+- Preserved all AI, pedagogical, research, database, routing, and generation engines with no schema migration.
+- Added `validate_v6187_frictionless_ui_contract.py` and retained backward-compatibility tests.
+
 # V6.18.6 — Unified Premium Platform Design Integration
 
 - Merged the premium SaaS visual shell into the real 3alimnIA application instead of creating a parallel app.

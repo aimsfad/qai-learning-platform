@@ -202,7 +202,7 @@ def main() -> None:
     assert "render_blueprint_versions" in ui
     assert "محرر المخطط" in ui
     assert "الإصدارات والسجل" in ui
-    assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in ('APP_VERSION = "v6.17.1-unified-guided-production-journey"', 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"'))
+    assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in ('APP_VERSION = "v6.17.1-unified-guided-production-journey"', 'APP_VERSION = "v6.17.2-simplified-guided-research-flow"', 'APP_VERSION = "v6.17.3-blueprint-action-feedback-hotfix"', 'APP_VERSION = "v6.18-global-professional-design-system"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"', 'APP_VERSION = "v6.18.2-blueprint-editor-runtime-and-ui-polish"'))
 
     print("V6.15 blueprint editor and versioning validation passed.")
 

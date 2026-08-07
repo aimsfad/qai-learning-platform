@@ -20,7 +20,8 @@ ROLE_VISUALS = {
     "public": {"icon": "auto_awesome", "class": "public"},
     "student": {"icon": "school", "class": "student"},
     "teacher": {"icon": "edit_note", "class": "teacher"},
-    "evaluator": {"icon": "analytics", "class": "evaluator"},
+    "researcher": {"icon": "monitoring", "class": "researcher"},
+    "evaluator": {"icon": "fact_check", "class": "evaluator"},
 }
 
 
