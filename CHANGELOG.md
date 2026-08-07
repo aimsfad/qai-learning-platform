@@ -521,3 +521,15 @@
 - Kept the existing seven-stage and block-level workflow available through Advanced mode.
 - Added responsive five-step navigation, complete-lesson preview cards, and a sticky action area.
 - No database migration is required.
+
+## V6.18.5 — Premium Lesson Workspace & Pedagogical Orchestrator
+
+- Added a pedagogical orchestration layer shared by lesson prompts and validation.
+- Grounded the canonical lesson sequence in retrieval, worked examples, scaffolding, formative feedback, metacognition, and teacher oversight.
+- Added learner-agency rules that preserve attempt-first interaction before hints and full solutions.
+- Added a presentation-safe lesson renderer that removes empty `None`/`null` metadata while preserving valid programming values inside code blocks.
+- Localized duplicated generated headings in the Arabic teacher view and improved French lesson-section labels.
+- Added deterministic checks for unclosed code blocks, attempt/hint/solution structure, retrieval prompts, feedback criteria, and metacognitive reflection.
+- Rebuilt the simple lesson workspace around one compact lesson header, course/lesson progress, pedagogical design chips, section navigation, and plain-language quality notes.
+- Kept provider/model/latency and raw validation details inside the advanced view.
+- No database migration or new Secrets are required.

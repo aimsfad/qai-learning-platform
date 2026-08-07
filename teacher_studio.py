@@ -28,6 +28,8 @@ import branding
 import ui_stability
 import global_design_system as global_ui
 import workflow_runtime_contracts
+import pedagogical_orchestrator
+import lesson_content_renderer
 from security import verify_password
 
 
@@ -2831,80 +2833,159 @@ def _render_simple_plan(project: Dict[str, Any]) -> None:
 def _lesson_simple_labels(lang: str) -> Dict[str, str]:
     return {
         "ar": {
-            "title": "إنشاء الدروس", "intro": "اختاري درسًا ثم أنشئيه كاملًا بزر واحد. راجعي الأقسام واعتمدي الدرس قبل الانتقال إلى التالي.",
-            "lesson": "الدرس الحالي", "course_progress": "تقدم المقرر", "lesson_progress": "تقدم الدرس", "remaining": "الدروس المتبقية",
-            "generate": "إنشاء الدرس بالكامل", "continue_generate": "إكمال إنشاء الدرس", "generating": "جارٍ إنشاء أقسام الدرس", "generated": "اكتمل إنشاء مسودة الدرس. راجعيها ثم اعتمديها.",
-            "preview": "معاينة الدرس", "empty": "لم يُنشأ هذا الدرس بعد.", "approve": "اعتماد الدرس والانتقال إلى التالي", "approved": "تم اعتماد الدرس.",
-            "next": "الانتقال إلى الدرس التالي", "download": "تنزيل الدرس", "advanced": "تعديل قسم أو عرض التفاصيل المتقدمة", "section": "قسم الدرس",
-            "regenerate": "إعادة توليد القسم", "save": "حفظ التعديل", "summary": "ملخص التعديل", "technical": "التفاصيل التقنية", "all_done": "اكتملت جميع الدروس. انتقلي إلى المراجعة والنشر.",
+            "title": "إنشاء الدروس",
+            "intro": "أنشئي مسودة الدرس كاملة، راجعيها تربويًا، ثم اعتمديها. التفاصيل التقنية تبقى مخفية ما لم تحتاجيها.",
+            "lesson": "اختيار الدرس",
+            "course_progress": "تقدم المقرر",
+            "lesson_progress": "تقدم الدرس",
+            "remaining": "الدروس المتبقية",
+            "generate": "إنشاء مسودة الدرس",
+            "continue_generate": "إكمال مسودة الدرس",
+            "generating": "جارٍ بناء الدرس تربويًا",
+            "generated": "اكتملت مسودة الدرس وأصبحت جاهزة لمراجعتك.",
+            "preview": "مراجعة الدرس",
+            "empty": "لم تُنشأ مسودة هذا الدرس بعد.",
+            "approve": "اعتماد الدرس والانتقال إلى التالي",
+            "approved": "تم اعتماد الدرس.",
+            "next": "الانتقال إلى الدرس التالي",
+            "download": "تنزيل الدرس",
+            "advanced": "تعديل قسم أو عرض التفاصيل المتقدمة",
+            "section": "قسم الدرس",
+            "regenerate": "إعادة إنشاء هذا القسم",
+            "save": "حفظ التعديل",
+            "summary": "ملخص التعديل",
+            "technical": "التفاصيل التقنية",
+            "all_done": "اكتملت جميع الدروس. انتقلي إلى المراجعة والنشر.",
+            "design": "التصميم التربوي",
+            "quality_ready": "المسودة مكتملة وجاهزة للمراجعة والاعتماد.",
+            "quality_review": "توجد ملاحظات تربوية غير مانعة. راجعيها قبل الاعتماد.",
+            "quality_blocked": "توجد مشكلة تمنع اعتماد الدرس حتى تُعالج.",
+            "quality_details": "ملاحظات الجودة التربوية",
+            "draft_status": "حالة المسودة",
+            "ready": "جاهزة للمراجعة",
+            "approved_state": "معتمد",
+            "section_purpose": "لماذا هذا القسم؟",
+            "teacher_decision": "قرار الأستاذ",
         },
         "fr": {
-            "title": "Créer les leçons", "intro": "Choisissez une leçon et générez-la entièrement en une seule action.", "lesson": "Leçon actuelle", "course_progress": "Progression du cours", "lesson_progress": "Progression de la leçon", "remaining": "Leçons restantes", "generate": "Créer la leçon complète", "continue_generate": "Terminer la leçon", "generating": "Création des sections", "generated": "Le brouillon complet est prêt.", "preview": "Aperçu de la leçon", "empty": "Cette leçon n’est pas encore créée.", "approve": "Approuver et passer à la suivante", "approved": "Leçon approuvée.", "next": "Leçon suivante", "download": "Télécharger", "advanced": "Modifier une section ou afficher les détails", "section": "Section", "regenerate": "Régénérer", "save": "Enregistrer", "summary": "Résumé des modifications", "technical": "Détails techniques", "all_done": "Toutes les leçons sont terminées."},
+            "title": "Créer les leçons", "intro": "Générez un brouillon complet, révisez-le pédagogiquement puis approuvez-le. Les détails techniques restent masqués par défaut.",
+            "lesson": "Choisir la leçon", "course_progress": "Progression du cours", "lesson_progress": "Progression de la leçon", "remaining": "Leçons restantes",
+            "generate": "Créer le brouillon de la leçon", "continue_generate": "Compléter le brouillon", "generating": "Construction pédagogique de la leçon", "generated": "Le brouillon complet est prêt pour votre révision.",
+            "preview": "Réviser la leçon", "empty": "Cette leçon n’a pas encore de brouillon.", "approve": "Approuver et passer à la suivante", "approved": "Leçon approuvée.",
+            "next": "Leçon suivante", "download": "Télécharger", "advanced": "Modifier une section ou afficher les détails", "section": "Section", "regenerate": "Régénérer cette section", "save": "Enregistrer", "summary": "Résumé des modifications", "technical": "Détails techniques", "all_done": "Toutes les leçons sont terminées.",
+            "design": "Conception pédagogique", "quality_ready": "Le brouillon est complet et prêt à être validé.", "quality_review": "Des remarques pédagogiques non bloquantes méritent une révision.", "quality_blocked": "Un problème doit être corrigé avant l’approbation.", "quality_details": "Remarques de qualité pédagogique", "draft_status": "État du brouillon", "ready": "À réviser", "approved_state": "Approuvé", "section_purpose": "Pourquoi cette section ?", "teacher_decision": "Décision de l’enseignant",
+        },
         "en": {
-            "title": "Create lessons", "intro": "Choose a lesson and create the complete draft with one action. Review it, then approve and continue.", "lesson": "Current lesson", "course_progress": "Course progress", "lesson_progress": "Lesson progress", "remaining": "Lessons remaining", "generate": "Create complete lesson", "continue_generate": "Complete lesson draft", "generating": "Creating lesson sections", "generated": "The complete lesson draft is ready for review.", "preview": "Lesson preview", "empty": "This lesson has not been created yet.", "approve": "Approve lesson and continue", "approved": "Lesson approved.", "next": "Open next lesson", "download": "Download lesson", "advanced": "Edit a section or view advanced details", "section": "Lesson section", "regenerate": "Regenerate section", "save": "Save edit", "summary": "Change summary", "technical": "Technical details", "all_done": "All lessons are complete. Continue to review and publish."},
+            "title": "Create lessons", "intro": "Create a complete lesson draft, review it pedagogically, then approve it. Technical details stay out of the way unless you need them.",
+            "lesson": "Choose lesson", "course_progress": "Course progress", "lesson_progress": "Lesson progress", "remaining": "Lessons remaining",
+            "generate": "Create lesson draft", "continue_generate": "Complete lesson draft", "generating": "Building the lesson pedagogically", "generated": "The complete lesson draft is ready for your review.",
+            "preview": "Review lesson", "empty": "This lesson does not have a draft yet.", "approve": "Approve lesson and continue", "approved": "Lesson approved.",
+            "next": "Open next lesson", "download": "Download lesson", "advanced": "Edit a section or view advanced details", "section": "Lesson section", "regenerate": "Regenerate this section", "save": "Save edit", "summary": "Change summary", "technical": "Technical details", "all_done": "All lessons are complete. Continue to review and publish.",
+            "design": "Pedagogical design", "quality_ready": "The draft is complete and ready for review and approval.", "quality_review": "There are non-blocking pedagogical notes to review before approval.", "quality_blocked": "A blocking issue must be resolved before approval.", "quality_details": "Pedagogical quality notes", "draft_status": "Draft status", "ready": "Ready for review", "approved_state": "Approved", "section_purpose": "Why this section?", "teacher_decision": "Teacher decision",
+        },
     }.get(lang, {})
 
 
 def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[str, Any]) -> None:
     lang = i18n.current_lang(st)
     labels = _lesson_simple_labels(lang)
+    render_lang = str(project.get("primary_language_code") or lang).lower()
+    if render_lang not in {"ar", "fr", "en"}:
+        render_lang = lang if lang in {"ar", "fr", "en"} else "en"
+
     global_ui.render_section_header(labels["title"], labels["intro"], lang=lang, eyebrow="04")
     if not _runtime_contract_ready("lesson_blocks", lang):
         return
+
     project_id = int(project["id"])
     blueprint = db.latest_teacher_blueprint(project_id, approved_only=True)
     if not blueprint:
-        global_ui.render_inline_notice({"ar": "اعتمدي خطة المقرر أولًا.", "fr": "Approuvez d’abord le plan du cours.", "en": "Approve the course plan first."}.get(lang), "", lang=lang, tone="warning")
+        global_ui.render_inline_notice(
+            {"ar": "اعتمدي خطة المقرر أولًا.", "fr": "Approuvez d’abord le plan du cours.", "en": "Approve the course plan first."}.get(lang),
+            "", lang=lang, tone="warning",
+        )
         return
+
     lessons = list((blueprint.get("blueprint") or {}).get("lessons") or [])
     if not lessons:
         st.info(labels["empty"])
         return
 
     lesson_ids = [str(item.get("lesson_id")) for item in lessons]
-    incomplete_id = next((lid for lid in lesson_ids if not lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete")), lesson_ids[-1])
+    incomplete_id = next(
+        (lid for lid in lesson_ids if not lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete")),
+        lesson_ids[-1],
+    )
     lesson_key = f"simple_lesson_{project_id}"
     pending = st.session_state.pop(f"simple_pending_lesson_{project_id}", None)
     default_id = pending if pending in lesson_ids else incomplete_id
     options = {f"{idx + 1}. {item.get('title')}": str(item.get("lesson_id")) for idx, item in enumerate(lessons)}
     if lesson_key not in st.session_state or st.session_state.get(lesson_key) not in options:
         st.session_state[lesson_key] = next(label for label, lid in options.items() if lid == default_id)
+
     lesson_label = st.selectbox(labels["lesson"], list(options), key=lesson_key)
     lesson_id = options[lesson_label]
     lesson_index = lesson_ids.index(lesson_id)
     lesson_row = lessons[lesson_index]
-
-    project_progress = dict(simple_state.get("lesson_progress") or {})
     completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
     completed_lessons = sum(1 for lid in lesson_ids if lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete"))
-    cols = st.columns(3)
-    with cols[0]: global_ui.render_kpi_card(labels["course_progress"], f"{completed_lessons}/{len(lessons)}", lang=lang)
-    with cols[1]: global_ui.render_kpi_card(labels["lesson_progress"], f"{completion['approved']}/{completion['required']}", lang=lang)
-    with cols[2]: global_ui.render_kpi_card(labels["remaining"], max(len(lessons) - completed_lessons, 0), lang=lang)
-    st.markdown(f"<div class='v6184-lesson-title'><small>{escape(str(lesson_row.get('lesson_id') or ''))}</small><h2>{escape(str(lesson_row.get('title') or lesson_label))}</h2><p>{escape(str(lesson_row.get('estimated_duration_minutes') or '—'))} min</p></div>", unsafe_allow_html=True)
 
-    assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, "ar" if lang == "ar" else "en")
+    course_pct = int(round(100 * completed_lessons / max(len(lessons), 1)))
+    lesson_pct = int(round(100 * int(completion.get("approved") or 0) / max(int(completion.get("required") or 1), 1)))
+    direction = "rtl" if lang == "ar" else "ltr"
+    st.markdown(
+        f"<div class='v6185-lesson-hero' dir='{direction}'>"
+        f"<div class='v6185-lesson-heading'><span>{lesson_index + 1:02d}</span><div><small>{escape(labels['lesson'])} {lesson_index + 1} / {len(lessons)}</small>"
+        f"<h2>{escape(str(lesson_row.get('title') or lesson_label))}</h2>"
+        f"<p>{escape(str(lesson_row.get('estimated_duration_minutes') or '—'))} min</p></div></div>"
+        f"<div class='v6185-progress-cards'>"
+        f"<div><small>{escape(labels['course_progress'])}</small><b>{completed_lessons}/{len(lessons)}</b><em>{course_pct}%</em></div>"
+        f"<div><small>{escape(labels['lesson_progress'])}</small><b>{int(completion.get('approved') or 0)}/{int(completion.get('required') or 0)}</b><em>{lesson_pct}%</em></div>"
+        f"<div><small>{escape(labels['remaining'])}</small><b>{max(len(lessons)-completed_lessons,0)}</b><em>—</em></div>"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+
+    design_labels = pedagogical_orchestrator.lesson_design_summary(lang)
+    st.markdown(
+        f"<div class='v6185-design-strip' dir='{direction}'><small>{escape(labels['design'])}</small>" +
+        "".join(f"<span>{escape(item)}</span>" for item in design_labels) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, render_lang)
+    st.markdown(lesson_content_renderer.lesson_section_nav_html(assembled, render_lang), unsafe_allow_html=True)
+
     generated_count = sum(1 for row in assembled if row.get("run"))
     failed_count = sum(1 for row in assembled if str(row.get("status") or "").lower() in {"error", "failed"})
     button_label = labels["generate"] if generated_count == 0 else labels["continue_generate"]
+
     if not completion.get("complete") and (generated_count < len(assembled) or failed_count):
         if st.button(button_label, type="primary", use_container_width=True, key=f"simple_generate_lesson_{project_id}_{lesson_id}"):
             progress = st.progress(0.0, text=labels["generating"])
             status_box = st.status(labels["generating"], expanded=True)
+
             def _progress(index: int, total: int, block_type: str, state: str) -> None:
-                label = lesson_block_generation_engine.block_label(block_type, "ar" if lang == "ar" else "en")
+                label = lesson_block_generation_engine.block_label(block_type, render_lang)
                 progress.progress(index / max(total, 1), text=f"{index}/{total} — {label}")
                 if state in {"generated", "skipped"}:
                     status_box.write(f"✓ {label}")
+
             try:
-                lesson_block_generation_engine.generate_full_lesson(project, _current_teacher_username(), blueprint, lesson_id, progress_callback=_progress)
+                lesson_block_generation_engine.generate_full_lesson(
+                    project, _current_teacher_username(), blueprint, lesson_id, progress_callback=_progress
+                )
                 status_box.update(label=labels["generated"], state="complete", expanded=False)
                 st.success(labels["generated"])
             except Exception as exc:
-                status_box.update(label={"ar": "تعذر إكمال إنشاء الدرس", "fr": "Création interrompue", "en": "Lesson creation stopped"}.get(lang), state="error", expanded=True)
+                status_box.update(
+                    label={"ar": "تعذر إكمال إنشاء الدرس", "fr": "Création interrompue", "en": "Lesson creation stopped"}.get(lang),
+                    state="error", expanded=True,
+                )
                 ui_stability.render_error_card(exc, lang=lang)
-            assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, "ar" if lang == "ar" else "en")
+            assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, render_lang)
             completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+            st.markdown(lesson_content_renderer.lesson_section_nav_html(assembled, render_lang), unsafe_allow_html=True)
 
     generated_count = sum(1 for row in assembled if row.get("run"))
     failed_count = sum(1 for row in assembled if str(row.get("status") or "").lower() in {"error", "failed"})
@@ -2912,22 +2993,45 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
         global_ui.render_inline_notice(labels["empty"], "", lang=lang, tone="warning")
         return
 
+    quality = lesson_block_generation_engine.lesson_quality_snapshot(project_id, lesson_id)
+    if quality.get("error_count"):
+        global_ui.render_inline_notice(labels["quality_blocked"], "", lang=lang, tone="danger")
+    elif quality.get("warning_count"):
+        global_ui.render_inline_notice(labels["quality_review"], "", lang=lang, tone="warning")
+    elif quality.get("ready_for_teacher_review"):
+        global_ui.render_inline_notice(labels["quality_ready"], "", lang=lang, tone="success")
+
+    issues = list(quality.get("errors") or []) + list(quality.get("warnings") or [])
+    if issues:
+        with st.expander(f"{labels['quality_details']} · {len(issues)}", expanded=False):
+            for issue in issues:
+                st.markdown(f"- {lesson_content_renderer.quality_issue_label(str(issue), lang)}")
+
     st.markdown(f"### {labels['preview']}")
     full_markdown_parts: List[str] = []
     for row in assembled:
         if not row.get("run"):
             continue
-        full_markdown_parts.append(f"## {row['index']}. {row['label']}\n\n{row['content_text']}")
+        cleaned = lesson_content_renderer.normalize_generated_markdown(row["content_text"], render_lang)
+        full_markdown_parts.append(f"## {row['index']}. {row['label']}\n\n{cleaned}")
         with st.container(border=True, key=f"simple_preview_{project_id}_{lesson_id}_{row['block_type']}"):
-            state_text = {"ar": "معتمد" if row.get("approved") else "جاهز للمراجعة", "fr": "Approuvé" if row.get("approved") else "À réviser", "en": "Approved" if row.get("approved") else "Ready for review"}.get(lang)
-            st.markdown(f"<div class='v6184-section-heading'><span>{row['index']:02d}</span><div><h3>{escape(row['label'])}</h3><small>{escape(state_text)}</small></div></div>", unsafe_allow_html=True)
-            _render_generation_markdown(row["content_text"], str(project.get("primary_language_code") or lang))
+            state_text = labels["approved_state"] if row.get("approved") else labels["ready"]
+            rationale = pedagogical_orchestrator.pedagogical_rationale(row["block_type"], lang)
+            st.markdown(
+                f"<div class='v6184-section-heading'><span>{row['index']:02d}</span><div><h3>{escape(row['label'])}</h3><small>{escape(state_text)}</small></div></div>"
+                f"<div class='v6185-section-purpose' dir='{direction}'><b>{escape(labels['section_purpose'])}</b><span>{escape(rationale)}</span></div>",
+                unsafe_allow_html=True,
+            )
+            _render_generation_markdown(cleaned, render_lang)
 
     full_markdown = "\n\n---\n\n".join(full_markdown_parts)
     st.markdown("<span class='v6184-action-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
     action_cols = st.columns([1, 2])
     with action_cols[0]:
-        st.download_button(labels["download"], data=full_markdown, file_name=f"{lesson_id}_complete_lesson.md", mime="text/markdown", use_container_width=True)
+        st.download_button(
+            labels["download"], data=full_markdown, file_name=f"{lesson_id}_complete_lesson.md",
+            mime="text/markdown", use_container_width=True,
+        )
     with action_cols[1]:
         ready_to_approve = generated_count >= len(assembled) and failed_count == 0 and not completion.get("complete")
         if completion.get("complete"):
@@ -2937,11 +3041,17 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                     st.rerun()
             else:
                 global_ui.render_inline_notice(labels["all_done"], "", lang=lang, tone="success")
-                if st.button({"ar": "الانتقال إلى المراجعة والنشر", "fr": "Passer à la révision", "en": "Continue to review and publish"}.get(lang), type="primary", use_container_width=True, key=f"simple_lessons_review_{project_id}"):
+                if st.button(
+                    {"ar": "الانتقال إلى المراجعة والنشر", "fr": "Passer à la révision", "en": "Continue to review and publish"}.get(lang),
+                    type="primary", use_container_width=True, key=f"simple_lessons_review_{project_id}",
+                ):
                     st.session_state.teacher_simple_stage = "review"
                     st.rerun()
         else:
-            if st.button(labels["approve"], type="primary", use_container_width=True, disabled=not ready_to_approve, key=f"simple_approve_lesson_{project_id}_{lesson_id}"):
+            if st.button(
+                labels["approve"], type="primary", use_container_width=True, disabled=not ready_to_approve,
+                key=f"simple_approve_lesson_{project_id}_{lesson_id}",
+            ):
                 try:
                     lesson_block_generation_engine.approve_full_lesson(project_id, lesson_id, _current_teacher_username())
                     st.session_state.teacher_flash_success = labels["approved"]
@@ -2965,7 +3075,10 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
             with e1:
                 if st.button(labels["save"], use_container_width=True, key=f"simple_save_section_{latest['id']}"):
                     try:
-                        lesson_block_generation_engine.save_teacher_revision(project_id=project_id, base_run_id=int(latest["id"]), teacher_username=_current_teacher_username(), content_text=edited, change_summary=summary)
+                        lesson_block_generation_engine.save_teacher_revision(
+                            project_id=project_id, base_run_id=int(latest["id"]), teacher_username=_current_teacher_username(),
+                            content_text=edited, change_summary=summary,
+                        )
                         st.success(labels["save"])
                         st.rerun()
                     except Exception as exc:
@@ -2973,13 +3086,18 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
             with e2:
                 if st.button(labels["regenerate"], use_container_width=True, key=f"simple_regenerate_{project_id}_{lesson_id}_{block_type}"):
                     try:
-                        lesson_block_generation_engine.generate_and_persist(project, _current_teacher_username(), blueprint, lesson_id, block_type)
+                        lesson_block_generation_engine.generate_and_persist(
+                            project, _current_teacher_username(), blueprint, lesson_id, block_type
+                        )
                         st.success(labels["regenerate"])
                         st.rerun()
                     except Exception as exc:
                         ui_stability.render_error_card(exc, lang=lang)
             with st.expander(labels["technical"], expanded=False):
-                st.json({"provider": latest.get("provider"), "model": latest.get("model"), "status": latest.get("status"), "latency_ms": latest.get("latency_ms"), "word_count": latest.get("word_count"), "validation": latest.get("validation")})
+                st.json({
+                    "provider": latest.get("provider"), "model": latest.get("model"), "status": latest.get("status"),
+                    "latency_ms": latest.get("latency_ms"), "word_count": latest.get("word_count"), "validation": latest.get("validation"),
+                })
 
 
 def _render_simple_review(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
