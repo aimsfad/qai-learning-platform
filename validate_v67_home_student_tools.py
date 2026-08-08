@@ -31,7 +31,7 @@ def main() -> None:
     require("_render_student_tool_dock()" in app.split("def main()", 1)[1], "Learner dock is not mounted in the app shell.")
     require("v67-home-brand-marker" in css, "Hero styling is missing.")
     require("st-key-v67_student_tool_dock" in css, "Learner dock styling is missing.")
-    require(any(v in db for v in ('APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.7-home-hero-student-tools"')), "Application version was not updated.")
+    require(any(v in db for v in ('APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.7-home-hero-student-tools"')), "Application version was not updated.")
 
     print("V6.7 home hero and student tools validation passed.")
 

@@ -614,6 +614,80 @@ def _project_defaults(project: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     return p
 
 
+_PLACEHOLDER_TEXT = {"", "none", "null", "undefined", "untitled", "n/a", "na", "-", "—"}
+
+
+def _localized_level_text(value: Any, lang: str) -> str:
+    raw = str(value or "").strip()
+    key = raw.lower()
+    labels = {
+        "beginner": {"ar": "مبتدئ", "fr": "Débutant", "en": "Beginner"},
+        "intermediate": {"ar": "متوسط", "fr": "Intermédiaire", "en": "Intermediate"},
+        "advanced": {"ar": "متقدم", "fr": "Avancé", "en": "Advanced"},
+    }
+    return labels.get(key, {}).get(lang, raw)
+
+
+def _localized_duration_text(value: Any, lang: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    numbers = re.findall(r"\d+(?:[.,]\d+)?", raw)
+    if not numbers:
+        return raw
+    amount = numbers[0].replace(",", ".")
+    lower = raw.lower()
+    if any(token in lower for token in ("hour", "heure", "ساعة", "ساعات")):
+        unit = {"ar": "ساعة", "fr": "h", "en": "hours"}.get(lang, "hours")
+    else:
+        unit = {"ar": "دقيقة", "fr": "min", "en": "minutes"}.get(lang, "minutes")
+    return f"{amount} {unit}"
+
+
+def _clean_lesson_display_title(value: Any, *, index: int, lang: str, lesson: Optional[Dict[str, Any]] = None, blueprint: Optional[Dict[str, Any]] = None) -> str:
+    """Return a teacher-facing lesson title without placeholder artifacts.
+
+    This is presentation-only: persisted blueprint data and immutable versions
+    are never rewritten here.
+    """
+    raw = re.sub(r"\s+", " ", str(value or "").strip())
+    # Remove placeholder words that occasionally leak from incomplete concept
+    # labels while preserving the rest of a meaningful generated title.
+    raw = re.sub(r"(?i)(?:\s+(?:و|and|et)\s+)?\b(?:untitled|undefined|null|none|n/?a)\b", "", raw)
+    raw = re.sub(r"\s{2,}", " ", raw).strip(" -–—,:؛|")
+    if raw.lower() not in _PLACEHOLDER_TEXT and raw:
+        return raw
+
+    lesson = dict(lesson or {})
+    blueprint = dict(blueprint or {})
+    concepts = {str(item.get("concept_id")): item for item in (blueprint.get("concepts") or [])}
+    names: List[str] = []
+    for concept_id in lesson.get("concept_ids") or []:
+        item = concepts.get(str(concept_id), {})
+        name = str(item.get("name") or item.get("title") or "").strip()
+        if name and name.lower() not in _PLACEHOLDER_TEXT:
+            names.append(name)
+    if names:
+        joiner = " و " if lang == "ar" else (" et " if lang == "fr" else " and ")
+        core = joiner.join(names[:2])
+    else:
+        units = {str(item.get("unit_id")): item for item in (blueprint.get("units") or [])}
+        unit = units.get(str(lesson.get("unit_id") or ""), {})
+        core = str(unit.get("title") or "").strip()
+        core = re.sub(r"(?i)\b(?:untitled|undefined|null|none|n/?a)\b", "", core).strip(" -–—,:؛|")
+
+    prefix = {"ar": "الدرس", "fr": "Leçon", "en": "Lesson"}.get(lang, "Lesson")
+    return f"{prefix} {index}: {core}" if core else f"{prefix} {index}"
+
+
+def _lesson_position_text(index: int, total: int, lang: str) -> str:
+    return {
+        "ar": f"الدرس {index} من {total}",
+        "fr": f"Leçon {index} sur {total}",
+        "en": f"Lesson {index} of {total}",
+    }.get(lang, f"Lesson {index} of {total}")
+
+
 def _load_selected_project(username: str, u: Dict[str, str]) -> Optional[Dict[str, Any]]:
     projects = db.teacher_projects_df(username)
     if projects.empty:
@@ -2280,8 +2354,8 @@ def _project_header(project: Dict[str, Any], workflow_state: Optional[Dict[str, 
     languages = ", ".join(str(item) for item in (p.get("target_languages") or []) if str(item).strip())
     meta_items = [
         str(p.get("domain") or "").strip(),
-        str(p.get("learner_level") or "").strip(),
-        str(p.get("expected_duration") or "").strip(),
+        _localized_level_text(p.get("learner_level"), lang),
+        _localized_duration_text(p.get("expected_duration"), lang),
         languages,
     ]
     chips = "".join(f"<span class='v6162-meta-chip'>{escape(item)}</span>" for item in meta_items if item)
@@ -2800,6 +2874,7 @@ def _render_simple_plan(project: Dict[str, Any]) -> None:
     units = list(blueprint.get("units") or [])
     lessons = list(blueprint.get("lessons") or [])
     lesson_by_id = {str(item.get("lesson_id")): item for item in lessons}
+    lesson_position_by_id = {str(item.get("lesson_id")): idx for idx, item in enumerate(lessons, start=1)}
     approved = bool(int(bundle.get("approved_by_teacher") or 0))
     m1, m2 = st.columns(2)
     with m1: global_ui.render_kpi_card(labels["units"], len(units), lang=lang)
@@ -2810,7 +2885,14 @@ def _render_simple_plan(project: Dict[str, Any]) -> None:
             st.markdown(f"#### {unit_index}. {unit.get('title')}")
             for lesson_id in unit.get("lesson_ids") or []:
                 lesson = lesson_by_id.get(str(lesson_id), {})
-                st.markdown(f"- **{lesson.get('title') or lesson_id}** · {lesson.get('estimated_duration_minutes') or '—'} {labels['duration']}")
+                position = int(lesson_position_by_id.get(str(lesson_id)) or 1)
+                display_title = _clean_lesson_display_title(
+                    lesson.get("title"), index=position, lang=lang, lesson=lesson, blueprint=blueprint
+                )
+                display_duration = _localized_duration_text(
+                    f"{lesson.get('estimated_duration_minutes') or ''} minutes", lang
+                )
+                st.markdown(f"- **{display_title}** · {display_duration or '—'}")
     if approved:
         global_ui.render_inline_notice(labels["approved"], "", lang=lang, tone="success")
         if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_plan_next_{project_id}"):
@@ -2931,8 +3013,11 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
     for lid in lesson_ids:
         if lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete"):
             accessible_ids.add(lid)
+    blueprint_data = dict(blueprint.get("blueprint") or {})
     options = {
-        f"{idx + 1}. {item.get('title')}": str(item.get("lesson_id"))
+        _clean_lesson_display_title(
+            item.get("title"), index=idx + 1, lang=lang, lesson=item, blueprint=blueprint_data
+        ): str(item.get("lesson_id"))
         for idx, item in enumerate(lessons)
         if str(item.get("lesson_id")) in accessible_ids
     }
@@ -2952,11 +3037,18 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
     course_pct = int(round(100 * completed_lessons / max(len(lessons), 1)))
     lesson_pct = int(round(100 * int(completion.get("approved") or 0) / max(int(completion.get("required") or 1), 1)))
     direction = "rtl" if lang == "ar" else "ltr"
+    lesson_title = _clean_lesson_display_title(
+        lesson_row.get("title"), index=lesson_index + 1, lang=lang, lesson=lesson_row, blueprint=blueprint_data
+    )
+    lesson_position = _lesson_position_text(lesson_index + 1, len(lessons), lang)
+    lesson_duration = _localized_duration_text(
+        f"{lesson_row.get('estimated_duration_minutes') or ''} minutes", lang
+    )
     st.markdown(
         f"<div class='v6185-lesson-hero' dir='{direction}'>"
-        f"<div class='v6185-lesson-heading'><span>{lesson_index + 1:02d}</span><div><small>{escape(labels['lesson'])} {lesson_index + 1} / {len(lessons)}</small>"
-        f"<h2>{escape(str(lesson_row.get('title') or lesson_label))}</h2>"
-        f"<p>{escape(str(lesson_row.get('estimated_duration_minutes') or '—'))} min</p></div></div>"
+        f"<div class='v6185-lesson-heading'><span>{lesson_index + 1:02d}</span><div><small>{escape(lesson_position)}</small>"
+        f"<h2>{escape(lesson_title)}</h2>"
+        f"<p>{escape(lesson_duration or '—')}</p></div></div>"
         f"<div class='v6185-progress-cards'>"
         f"<div><small>{escape(labels['course_progress'])}</small><b>{completed_lessons}/{len(lessons)}</b><em>{course_pct}%</em></div>"
         f"<div><small>{escape(labels['lesson_progress'])}</small><b>{int(completion.get('approved') or 0)}/{int(completion.get('required') or 0)}</b><em>{lesson_pct}%</em></div>"

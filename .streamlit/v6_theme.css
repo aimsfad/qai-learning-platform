@@ -4815,3 +4815,129 @@ html,body,.stApp,[data-testid="stAppViewContainer"] {
     line-height:1.82 !important;
   }
 }
+
+/* ==========================================================================
+   V6.18.8 — Teacher Workspace Screenshot QA & Clarity Polish
+   Based on live Streamlit deployment review. Presentation-only refinements.
+   ========================================================================== */
+
+/* Project hero: remove the double legacy/keyed spacing and keep the course
+   identity, progress, and return action in one compact visual unit. */
+.st-key-v6163_project_header {
+  margin:.15rem 0 .85rem !important;
+  padding:.8rem .95rem .9rem !important;
+  border-radius:18px !important;
+  box-shadow:0 10px 28px rgba(15,35,65,.055) !important;
+}
+.st-key-v6163_project_header > [data-testid="stVerticalBlock"],
+.st-key-v6163_project_header [data-testid="stVerticalBlock"] {
+  gap:.48rem !important;
+}
+.st-key-v6163_project_header [data-testid="stHorizontalBlock"] {
+  gap:.65rem !important;
+}
+.st-key-v6163_project_header .v6163-studio-header { margin-top:.05rem !important; }
+.st-key-v6163_project_header .v6162-header-main {
+  min-height:0 !important;
+  align-items:center !important;
+  gap:.8rem !important;
+}
+.st-key-v6163_project_header .v6162-header-copy h1 {
+  font-size:clamp(1.65rem,2.5vw,2.25rem) !important;
+}
+.st-key-v6163_project_header .v6162-header-copy p {
+  margin:.22rem 0 .5rem !important;
+  font-size:.88rem !important;
+}
+.st-key-v6163_project_header .v6162-progress-stat {
+  flex:0 0 104px !important;
+  min-width:104px !important;
+  padding:.55rem .65rem !important;
+  border-radius:14px !important;
+}
+.st-key-v6163_project_header .v6162-progress-stat strong { font-size:1.65rem !important; }
+.st-key-v6163_project_header .v6162-progress-track { margin-top:.6rem !important; height:5px !important; }
+.st-key-v6163_project_header .v6162-meta-chip {
+  border-radius:10px !important;
+  padding:.25rem .52rem !important;
+  font-size:.72rem !important;
+}
+
+/* Five-step journey: retain scanability while reducing the amount of vertical
+   chrome before the teacher reaches the actual task. */
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) .v618-section-head {
+  margin:.05rem 0 .65rem !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [class*="st-key-simple_stage_"] .stButton > button {
+  min-height:54px !important;
+  padding:.55rem .65rem !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [data-testid="stCaptionContainer"] {
+  margin-top:-.18rem !important;
+  font-size:.68rem !important;
+}
+.v6184-current-step {
+  margin:.7rem 0 .8rem !important;
+  padding:.82rem .95rem !important;
+  border-radius:14px !important;
+  box-shadow:0 4px 14px rgba(15,35,65,.03) !important;
+}
+.v6184-current-step h2 { margin:.18rem 0 .25rem !important; font-size:1.23rem !important; }
+.v6184-current-step p { font-size:.8rem !important; line-height:1.6 !important; }
+
+/* Current lesson summary: clearer title hierarchy and localized metadata. */
+.v6185-lesson-hero {
+  margin:.65rem 0 .55rem !important;
+  padding:.9rem 1rem !important;
+  border-radius:16px !important;
+  box-shadow:0 6px 18px rgba(15,35,65,.04) !important;
+}
+.v6185-lesson-heading h2 { font-size:clamp(1.12rem,1.75vw,1.42rem) !important; }
+.v6185-progress-cards > div { min-height:68px !important; padding:.55rem .65rem !important; }
+.v6185-design-strip { margin:.45rem 0 .65rem !important; }
+.v6185-section-nav { margin-bottom:.2rem !important; }
+.v6185-section-chip { min-height:38px !important; }
+
+/* Keep the decision bar present without visually covering most of a lesson on
+   short laptop viewports. */
+[class*="st-key-simple_lesson_action_bar_"] {
+  width:min(1120px,calc(100% - .25rem)) !important;
+  margin: .8rem auto 0 !important;
+  bottom:.3rem !important;
+  padding:.48rem .55rem !important;
+  border-radius:12px !important;
+  box-shadow:0 10px 26px rgba(15,23,42,.10) !important;
+}
+[class*="st-key-simple_lesson_action_bar_"] .stButton > button,
+[class*="st-key-simple_lesson_action_bar_"] .stDownloadButton > button {
+  min-height:44px !important;
+}
+[class*="st-key-simple_lesson_action_bar_"] .stButton > button:disabled,
+[class*="st-key-simple_lesson_action_bar_"] .stDownloadButton > button:disabled {
+  opacity:.72 !important;
+  background:#E9EFF8 !important;
+  color:#64748B !important;
+  border-color:#D8E2EF !important;
+}
+
+/* Streamlit marks previous elements as stale during a full rerun. Preserve the
+   loading cue but avoid making long pedagogical content nearly unreadable. */
+.stApp [data-stale="true"] { opacity:.72 !important; }
+
+@media (max-width:900px) {
+  .st-key-v6163_project_header .v6162-header-main { align-items:flex-start !important; }
+  .st-key-v6163_project_header .v6162-progress-stat {
+    width:auto !important; min-width:92px !important; flex:0 0 auto !important;
+  }
+  .v6185-lesson-hero { grid-template-columns:1fr !important; }
+}
+@media (max-width:760px) {
+  .st-key-v6163_project_header { padding:.7rem !important; border-radius:15px !important; }
+  .st-key-v6163_project_header .v6162-header-main { flex-direction:column !important; }
+  .st-key-v6163_project_header .v6162-progress-stat {
+    width:100% !important; flex-direction:row !important; gap:.6rem !important; justify-content:flex-start !important;
+  }
+  [class*="st-key-simple_lesson_action_bar_"] {
+    width:100% !important; bottom:.1rem !important; padding:.4rem !important;
+  }
+}

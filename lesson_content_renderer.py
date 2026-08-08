@@ -138,7 +138,8 @@ def lesson_section_nav_html(rows: List[Dict[str, object]], language_code: str = 
         label = escape(str(row.get("label") or row.get("block_type") or ""))
         index = int(row.get("index") or 0)
         chips.append(
-            f"<span class='v6185-section-chip {state}'><b>{index:02d}</b><em>{label}</em></span>"
+            f"<span class='v6185-section-chip {state}' title='{label}' aria-label='{index:02d} {label}'>"
+            f"<b>{index:02d}</b><em>{label}</em></span>"
         )
     direction = "rtl" if str(language_code).lower().startswith("ar") else "ltr"
     return f"<div class='v6185-section-nav' dir='{direction}'>" + "".join(chips) + "</div>"

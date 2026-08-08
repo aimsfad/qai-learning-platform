@@ -1,3 +1,17 @@
+# V6.18.8 — Teacher Workspace Screenshot QA & Clarity Polish
+
+- Reviewed the live Streamlit teacher workspace screenshots after V6.18.7 deployment.
+- Compacted the project hero to remove excessive vertical whitespace while preserving status, metadata, progress, and project navigation.
+- Localized teacher-facing level and duration metadata (for example, `Beginner` → `مبتدئ`, `300 minutes` → `300 دقيقة` in Arabic).
+- Removed visible placeholder artifacts such as `Untitled`, `None`, and `null` from lesson titles without rewriting persisted blueprint versions.
+- Replaced duplicated/awkward lesson-position copy with natural localized wording such as `الدرس 2 من 4`.
+- Added accessible tooltip/ARIA labels to compact lesson-section chips.
+- Reduced the visual footprint of the five-step journey and current-stage card while retaining sequential gating.
+- Made the sticky lesson decision bar narrower and less intrusive on short laptop viewports.
+- Kept Streamlit rerun/stale content visibly distinct while preventing the lesson from becoming almost unreadable during refresh.
+- Verified protected AI, evidence, blueprint, pedagogical, and production engines are byte-for-byte unchanged from V6.18.7.
+- No database migration or new Secrets are required.
+
 # V6.18.7 — Frictionless UI Contract & Accessibility QA
 
 - Added a distinct researcher visual context inside the existing evaluator/research workspace without changing authentication or permissions.

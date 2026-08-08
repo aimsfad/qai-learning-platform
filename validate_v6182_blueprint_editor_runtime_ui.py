@@ -116,7 +116,7 @@ def main() -> None:
     assert "V6.18.2 — Teacher workspace and blueprint editor polish" in css
     assert "teacher_studio_nav_control" in css
     assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in (
-        'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"',
+        'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"', 'APP_VERSION = "v6.18.4-simple-teacher-journey"',
         'APP_VERSION = "v6.18.3-guided-blueprint-lesson-production"',
     ))
 
