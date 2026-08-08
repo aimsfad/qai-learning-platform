@@ -1,3 +1,7 @@
+# 3alimnIA V6.18.8 — Teacher Workspace Screenshot QA & Clarity Polish
+
+This release is a non-destructive visual and presentation hotfix built from the live V6.18.7 teacher-workspace screenshots. It compacts the project header, localizes teacher-facing metadata, removes `Untitled`/placeholder leakage from lesson titles, clarifies lesson-position wording, improves section-chip accessibility, and reduces the footprint of the sticky lesson action bar. Existing AI generation, evidence synthesis, lesson blueprinting, pedagogical orchestration, database schema, routing, and production engines remain intact. See `V6_18_8_TEACHER_WORKSPACE_SCREENSHOT_POLISH_AR.md`.
+
 # 3alimnIA V6.18.7 — Frictionless UI Contract
 
 This release hardens the V6.18.6 premium integration without replacing prior work. It distinguishes researcher and evaluator visual contexts, enforces a calm underlined tab pattern, strengthens keyboard focus and target sizing, restricts Simple Teacher mode to approved/current lessons, and makes the lesson approval action bar reliably sticky. AI engines, database schema, evidence synthesis, blueprints, lesson generation, pedagogical orchestration, LPQS, exports, and routing remain intact. See `V6_18_7_FRICTIONLESS_UI_CONTRACT_AR.md`.

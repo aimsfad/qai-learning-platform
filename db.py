@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.18.7-frictionless-ui-contract"
+APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
