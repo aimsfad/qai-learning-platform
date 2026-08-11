@@ -192,6 +192,7 @@ def build_prompt(
 ) -> str:
     profile_json = json.dumps(student_profile or {}, ensure_ascii=False, indent=2)
     lesson_json = json.dumps(lesson_context or {}, ensure_ascii=False, indent=2)
+    adaptive_contract = str((lesson_context or {}).get("adaptive_support_contract") or "").strip()
     response_language = resolve_response_language(student_input, student_profile, lesson_context)
     language_extra = ""
     if response_language == "Arabic":
@@ -220,10 +221,14 @@ Student profile and progress:
 Relevant lesson context:
 {lesson_json}
 
+Adaptive support contract:
+{adaptive_contract or '[No adaptive support contract supplied]'}
+
 Student input:
 {student_input or '[No free text provided]'}
 
 Response requirements:
+- If an adaptive support contract is supplied, follow its support level and directness before the generic rules below.
 - Keep the explanation suitable for an introductory learner.
 - Use a layered learning sequence inspired by high-quality quantum learning modules: intuition -> circuit model -> Qiskit line -> measurement/counts interpretation -> misconception check.
 - If pedagogical_mode or concept_flow is provided, use it explicitly and keep the response aligned with the current lesson.
@@ -237,7 +242,55 @@ Response requirements:
 """.strip()
 
 
-def local_fallback(task: str, concept: str, student_input: str = "", response_language: str = "English") -> str:
+def _adaptive_local_support(level: int, concept: str, response_language: str) -> str:
+    """Offline support that preserves the adaptive directness contract."""
+    level = max(0, min(3, int(level)))
+    if response_language == "Arabic":
+        messages = {
+            0: f"تحدٍّ قصير حول {concept}: توقّع ما الذي سيتغير إذا عدّلت عنصرًا واحدًا في الدارة، ثم فسّر توقعك قبل التشغيل.",
+            1: f"سؤال موجّه حول {concept}: ما الجزء من محاولتك الذي يحدد الحالة قبل القياس؟ اشرح هذا الجزء أولًا بكلماتك.",
+            2: f"تلميح متدرج حول {concept}: تتبّع الحالة مباشرة قبل القياس بدل البدء من counts. سؤال تحقق: ما العملية الأخيرة التي غيّرت حالة الـ qubit؟",
+            3: f"شرح مصغّر حول {concept}: في مثال مشابه بسيط، نحدد الحالة أولًا ثم نقرأ measurement ثم نفسر counts. طبّق الآن الخطوات نفسها على محاولتك أنت، ولا تنسخ مثالًا جاهزًا.",
+        }
+        return messages[level]
+    if response_language == "French":
+        messages = {
+            0: f"Défi bref sur {concept} : prédis ce qui changerait si tu modifiais un seul élément du circuit, puis justifie ta prédiction avant l’exécution.",
+            1: f"Question guidée sur {concept} : quelle partie de ta tentative détermine l’état juste avant la mesure ? Explique d’abord cette partie avec tes propres mots.",
+            2: f"Indice progressif sur {concept} : suis l’état juste avant la mesure au lieu de partir des counts. Vérification : quelle est la dernière opération qui modifie l’état du qubit ?",
+            3: f"Mini-explication sur {concept} : dans un exemple analogue simple, on identifie d’abord l’état, puis la mesure, puis on interprète les counts. Reprends maintenant ces étapes sur ta propre tentative.",
+        }
+        return messages[level]
+    messages = {
+        0: f"Short transfer challenge on {concept}: predict what would change if you modified one circuit element, and justify the prediction before running it.",
+        1: f"Guiding question on {concept}: which part of your attempt determines the state immediately before measurement? Explain that part first in your own words.",
+        2: f"Graduated hint on {concept}: trace the state immediately before measurement rather than starting from counts. Check: what is the last operation that changes the qubit state?",
+        3: f"Micro-explanation on {concept}: in a small analogous example, first identify the state, then the measurement, then interpret the counts. Apply the same steps to your own attempt now.",
+    }
+    return messages[level]
+
+
+def _fallback_notice(response_language: str) -> str:
+    if response_language == "Arabic":
+        return "خدمة الذكاء التوليدي غير متاحة مؤقتًا. سأحافظ على مستوى الدعم نفسه باستخدام توجيه محلي.\n\n"
+    if response_language == "French":
+        return "Le service d’IA générative est temporairement indisponible. Le niveau de soutien recommandé est maintenu avec un guidage local.\n\n"
+    return "The generative AI service is temporarily unavailable. The recommended support level is preserved with local guidance.\n\n"
+
+
+def local_fallback(
+    task: str,
+    concept: str,
+    student_input: str = "",
+    response_language: str = "English",
+    lesson_context: Optional[Dict[str, Any]] = None,
+) -> str:
+    adaptive_level = (lesson_context or {}).get("adaptive_support_level")
+    if adaptive_level is not None:
+        try:
+            return _adaptive_local_support(int(adaptive_level), concept, response_language)
+        except (TypeError, ValueError):
+            pass
     task_lower = task.lower()
     if response_language == "Arabic" or _contains_arabic(student_input):
         base = (
@@ -461,9 +514,8 @@ def generate_tutor_response(
             text, prov, model = call_gemini(prompt, response_language)
             return finalize(text, "llm", prov, model)
         except Exception as exc:
-            fallback = (
-                "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
-                + local_fallback(task, concept, student_input, response_language)
+            fallback = _fallback_notice(response_language) + local_fallback(
+                task, concept, student_input, response_language, lesson_context
             )
             return finalize(fallback, "llm_error", "gemini", status["model"], str(exc), _classify_error(exc), 1)
     if provider == "openai" and status["openai_key_detected"]:
@@ -471,9 +523,8 @@ def generate_tutor_response(
             text, prov, model = call_openai(prompt, response_language)
             return finalize(text, "llm", prov, model)
         except Exception as exc:
-            fallback = (
-                "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
-                + local_fallback(task, concept, student_input, response_language)
+            fallback = _fallback_notice(response_language) + local_fallback(
+                task, concept, student_input, response_language, lesson_context
             )
             return finalize(fallback, "llm_error", "openai", status["model"], str(exc), _classify_error(exc), 1)
     if provider == "groq" and status["groq_key_detected"]:
@@ -481,9 +532,8 @@ def generate_tutor_response(
             text, prov, model = call_groq(prompt, response_language)
             return finalize(text, "llm", prov, model)
         except Exception as exc:
-            fallback = (
-                "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
-                + local_fallback(task, concept, student_input, response_language)
+            fallback = _fallback_notice(response_language) + local_fallback(
+                task, concept, student_input, response_language, lesson_context
             )
             return finalize(fallback, "llm_error", "groq", status["model"], str(exc), _classify_error(exc), 1)
     if provider == "anthropic" and status["anthropic_key_detected"]:
@@ -491,14 +541,13 @@ def generate_tutor_response(
             text, prov, model = call_anthropic(prompt, response_language)
             return finalize(text, "llm", prov, model)
         except Exception as exc:
-            fallback = (
-                "The generative AI tutor is temporarily unavailable. Here is a local learning hint you can use now.\n\n"
-                + local_fallback(task, concept, student_input, response_language)
+            fallback = _fallback_notice(response_language) + local_fallback(
+                task, concept, student_input, response_language, lesson_context
             )
             return finalize(fallback, "llm_error", "anthropic", status["model"], str(exc), _classify_error(exc), 1)
 
     return finalize(
-        local_fallback(task, concept, student_input, response_language),
+        local_fallback(task, concept, student_input, response_language, lesson_context),
         "rule_based",
         "local",
         "local-fallback",

@@ -20,6 +20,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 import streamlit as st
 
 import db
+import lesson_identity
 
 
 @dataclass
@@ -86,20 +87,51 @@ def _title(text: str, fallback: str) -> str:
 
 def _concept_records(evidence_bundle: Mapping[str, Any]) -> List[Dict[str, Any]]:
     records: List[Dict[str, Any]] = []
+    source_titles = lesson_identity.source_titles_from_bundle(evidence_bundle)
     for index, raw in enumerate(evidence_bundle.get("concepts") or [], start=1):
         concept_id = str(raw.get("concept_id") or f"C{index}")
         name = _title(raw.get("name") or raw.get("concept_name"), concept_id)
+        if lesson_identity.looks_like_source_title(name, source_titles):
+            continue
+        prerequisites = [
+            str(value).strip()
+            for value in list(raw.get("prerequisites") or [])
+            if str(value).strip() and not lesson_identity.looks_like_source_title(value, source_titles)
+        ]
         records.append(
             {
                 "concept_id": concept_id,
                 "name": name,
                 "description": str(raw.get("description") or "").strip(),
-                "prerequisites": list(raw.get("prerequisites") or []),
+                "prerequisites": prerequisites,
                 "source_ids": list(raw.get("source_ids") or []),
                 "difficulty": str(raw.get("difficulty") or "introductory"),
             }
         )
     return records
+
+
+def _project_fallback_concept_records(
+    project: Mapping[str, Any], evidence_bundle: Mapping[str, Any]
+) -> List[Dict[str, Any]]:
+    source_titles = lesson_identity.source_titles_from_bundle(evidence_bundle)
+    names = lesson_identity.safe_project_concept_candidates(project, source_titles)
+    # Do not attach arbitrary approved source ids to a project-brief fallback.
+    # If every evidence concept was rejected as source metadata, the evidence-to-
+    # concept mapping is not trustworthy enough to claim traceability. The
+    # provisional outline may still help the teacher see a clean structure, but
+    # approval is blocked until evidence is rebuilt (see quality flag below).
+    return [
+        {
+            "concept_id": f"P{index}",
+            "name": name,
+            "description": "Pedagogical fallback derived from the teacher project brief after source-title concepts were rejected.",
+            "prerequisites": [],
+            "source_ids": [],
+            "difficulty": "introductory",
+        }
+        for index, name in enumerate(names[:4], start=1)
+    ]
 
 
 def build_concept_edges(concepts: Sequence[Mapping[str, Any]]) -> List[Dict[str, str]]:
@@ -244,10 +276,23 @@ def compile_deterministic_blueprint(
     cfg = blueprint_status()
     max_units = max(1, int(max_units or cfg["max_units"]))
     max_lessons = max(2, int(max_lessons or cfg["max_lessons"]))
+    raw_concept_count = len(list(evidence_bundle.get("concepts") or []))
     concepts = _concept_records(evidence_bundle)
+    safe_evidence_concept_count = len(concepts)
+    rejected_identity_count = max(0, raw_concept_count - safe_evidence_concept_count)
     evidence_run_id = int(evidence_bundle.get("id") or 0)
+    evidence_rebuild_required = bool(
+        raw_concept_count > 0
+        and safe_evidence_concept_count == 0
+        and rejected_identity_count == raw_concept_count
+    )
     if not concepts:
-        raise ValueError("The approved evidence bundle does not contain concepts for blueprint construction.")
+        concepts = _project_fallback_concept_records(project, evidence_bundle)
+    if not concepts:
+        raise ValueError(
+            "The approved evidence bundle does not contain safe teachable concepts. "
+            "Review the target concept or regenerate evidence synthesis."
+        )
 
     edges = build_concept_edges(concepts)
     order, has_cycle = _topological_order(concepts, edges)
@@ -381,11 +426,23 @@ def compile_deterministic_blueprint(
         warnings.append("At least one lesson has no linked source identifier.")
     if not all_sources:
         warnings.append("The blueprint contains no traceable source identifiers.")
+    if rejected_identity_count:
+        warnings.append(
+            f"Rejected {rejected_identity_count} source-like concept name(s) before blueprint construction."
+        )
+    if evidence_rebuild_required:
+        warnings.append(
+            "All evidence concepts were rejected as source/reference metadata. Rebuild evidence before blueprint approval."
+        )
 
     readiness = 0.35 * coverage + 0.35 * alignment_rate + 0.20 * source_traceability + 0.10 * (0.0 if has_cycle else 1.0)
     readiness = round(max(0.0, min(1.0, readiness)), 3)
     minimum = float(cfg.get("minimum_readiness") or 0.70)
-    status = "completed" if readiness >= minimum and not has_cycle else "needs_review"
+    status = (
+        "completed"
+        if readiness >= minimum and not has_cycle and not evidence_rebuild_required
+        else "needs_review"
+    )
     quality = {
         "readiness_score": readiness,
         "concept_coverage": round(coverage, 3),
@@ -397,6 +454,10 @@ def compile_deterministic_blueprint(
         "edge_count": len(edges),
         "has_prerequisite_cycle": has_cycle,
         "orphan_concepts": orphan_concepts,
+        "identity_error_count": 0,
+        "rejected_source_like_concepts": rejected_identity_count,
+        "safe_evidence_concept_count": safe_evidence_concept_count,
+        "evidence_rebuild_required": evidence_rebuild_required,
         "warnings": warnings,
     }
     blueprint = {
@@ -1185,9 +1246,22 @@ def assess_blueprint_quality(blueprint: Mapping[str, Any]) -> Dict[str, Any]:
     if dangling_outcomes: warnings.append("Outcomes reference missing lessons: " + ", ".join(dangling_outcomes))
     if duplicate_ids: warnings.append("Duplicate identifiers: " + ", ".join(sorted(set(duplicate_ids))))
     if traceability < 1.0: warnings.append("At least one lesson has no linked source identifier.")
+    identity_errors: List[str] = []
+    for item in concepts:
+        name = str(item.get("name") or "").strip()
+        if lesson_identity.is_reference_document_title(name):
+            identity_errors.append(f"source_like_concept:{item.get('concept_id')}:{name[:120]}")
+    for item in lessons:
+        title = str(item.get("title") or "").strip()
+        if lesson_identity.is_reference_document_title(title):
+            identity_errors.append(f"source_like_lesson_title:{item.get('lesson_id')}:{title[:120]}")
+    if identity_errors:
+        warnings.append("Blueprint identity contains publication/source metadata instead of teachable concepts.")
     readiness = 0.35 * coverage + 0.35 * alignment + 0.20 * traceability + 0.10 * (0.0 if has_cycle else 1.0)
     if dangling_lessons or dangling_outcomes or duplicate_ids:
         readiness *= 0.75
+    if identity_errors:
+        readiness *= 0.55
     return {
         "readiness_score": round(max(0.0, min(1.0, readiness)), 3),
         "concept_coverage": round(coverage, 3),
@@ -1196,7 +1270,10 @@ def assess_blueprint_quality(blueprint: Mapping[str, Any]) -> Dict[str, Any]:
         "unit_count": len(units), "lesson_count": len(lessons), "outcome_count": len(outcomes), "edge_count": len(edges),
         "has_prerequisite_cycle": has_cycle, "orphan_concepts": orphan,
         "dangling_lessons": dangling_lessons, "dangling_outcomes": dangling_outcomes,
-        "duplicate_ids": sorted(set(duplicate_ids)), "warnings": warnings,
+        "duplicate_ids": sorted(set(duplicate_ids)),
+        "identity_error_count": len(identity_errors),
+        "identity_errors": identity_errors,
+        "warnings": warnings,
     }
 
 

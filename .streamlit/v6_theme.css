@@ -4941,3 +4941,153 @@ html,body,.stApp,[data-testid="stAppViewContainer"] {
     width:100% !important; bottom:.1rem !important; padding:.4rem !important;
   }
 }
+
+/* =========================================================
+   V6.18.9 — Lesson Identity & Safe Content Hygiene
+   ========================================================= */
+/* Model-authored disclosure markup is converted to native Streamlit expanders
+   inside lesson preview cards. Keep them quiet and subordinate to the lesson. */
+[class*="st-key-simple_preview_"] [data-testid="stExpander"] {
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  background: #F8FAFC !important;
+  box-shadow: none !important;
+  margin-top: .55rem !important;
+  margin-bottom: .55rem !important;
+}
+[class*="st-key-simple_preview_"] [data-testid="stExpander"] summary {
+  min-height: 44px !important;
+  color: #1E3A5F !important;
+  font-weight: 700 !important;
+}
+[class*="st-key-simple_preview_"] [data-testid="stExpander"] [data-testid="stMarkdownContainer"] {
+  line-height: 1.85 !important;
+}
+.v6189-safe-content-renderer {
+  display: none !important;
+}
+
+/* =========================================================
+   V6.19.0 — Pedagogical Quality Gate + Adaptive AI Coach
+   ========================================================= */
+.v619-quality-gate {
+  display:grid;
+  grid-template-columns:auto auto;
+  align-items:center;
+  gap:.35rem 1rem;
+  margin:.65rem 0 .8rem;
+  padding:.78rem .9rem;
+  border:1px solid #D9E4F1;
+  border-radius:14px;
+  background:linear-gradient(180deg,#FFFFFF 0%,#F8FBFF 100%);
+  box-shadow:0 4px 14px rgba(15,35,65,.025);
+}
+.v619-quality-gate > div {
+  display:flex;
+  align-items:baseline;
+  gap:.7rem;
+}
+.v619-quality-gate small {
+  color:#64748B;
+  font-weight:700;
+}
+.v619-quality-gate strong {
+  color:#0F2F57;
+  font-size:1.35rem;
+  font-weight:800;
+  direction:ltr;
+  unicode-bidi:isolate;
+}
+.v619-quality-gate > span {
+  justify-self:end;
+  padding:.28rem .55rem;
+  border-radius:9px;
+  background:#EFF6FF;
+  color:#1D4ED8;
+  font-size:.75rem;
+  font-weight:800;
+}
+.v619-quality-gate p {
+  grid-column:1 / -1;
+  margin:0 !important;
+  color:#64748B !important;
+  font-size:.75rem !important;
+  line-height:1.55 !important;
+}
+.v619-quality-dimensions {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.45rem;
+  margin:.55rem 0 .8rem;
+}
+.v619-quality-dimensions > div {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.55rem;
+  padding:.48rem .58rem;
+  border:1px solid #E2E8F0;
+  border-radius:10px;
+  background:#FFFFFF;
+}
+.v619-quality-dimensions span {
+  color:#475569;
+  font-size:.77rem;
+  font-weight:600;
+}
+.v619-quality-dimensions b {
+  color:#0F2F57;
+  font-size:.78rem;
+  font-weight:800;
+  direction:ltr;
+}
+
+.v619-adaptive-support-card {
+  margin:.7rem 0 .55rem;
+  padding:.78rem .9rem;
+  border:1px solid #CFE0F5;
+  border-radius:14px;
+  background:linear-gradient(145deg,#FFFFFF 0%,#F3F8FF 100%);
+  box-shadow:0 5px 16px rgba(15,35,65,.035);
+}
+.v619-adaptive-support-card > div {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.7rem;
+}
+.v619-adaptive-support-card small {
+  color:#64748B;
+  font-weight:700;
+}
+.v619-adaptive-support-card strong {
+  color:#0F2F57;
+  font-size:.98rem;
+  font-weight:800;
+}
+.v619-adaptive-support-card p {
+  margin:.42rem 0 .35rem !important;
+  color:#475569 !important;
+  font-size:.8rem !important;
+  line-height:1.6 !important;
+}
+.v619-adaptive-support-card > span {
+  color:#64748B;
+  font-size:.7rem;
+  font-weight:600;
+}
+
+/* Keep optional coach modes secondary. The evidence-informed recommendation
+   remains the default path, reducing decision overload for learners. */
+[data-testid="stExpander"]:has(.v68-quick-grid-marker) {
+  border-color:#E2E8F0 !important;
+  background:#FFFFFF !important;
+}
+
+@media (max-width:760px) {
+  .v619-quality-gate { grid-template-columns:1fr; }
+  .v619-quality-gate > span { justify-self:start; }
+  .v619-quality-gate p { grid-column:auto; }
+  .v619-quality-dimensions { grid-template-columns:1fr; }
+  .v619-adaptive-support-card > div { align-items:flex-start; flex-direction:column; }
+}

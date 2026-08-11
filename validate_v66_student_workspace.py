@@ -28,13 +28,13 @@ def main() -> None:
         "def render_v66_stage_header(",
         "def render_v66_ai_coach(",
         "def render_v66_lesson_content(",
-        "v66_compact_coach",
         "with st.expander(",
         "render_ai_usefulness_feedback",
         "db.save_lesson_progress",
     ]
     for token in required_python:
         require(token in main_text, f"Missing V6.6 Python feature: {token}")
+    require("v66_compact_coach" in main_text or "v619-adaptive-support-card" in main_text, "Missing compact/adaptive coach presentation")
     require("v66_attempt_" in main_text or "attempt_gate.build_attempt_key" in main_text, "Missing learner attempt state key")
 
     require(
@@ -55,7 +55,7 @@ def main() -> None:
     for token in required_css:
         require(token in css_text, f"Missing V6.6 CSS feature: {token}")
 
-    require(any(v in db_text for v in ('APP_VERSION = "v6.6-student-learning-workspace"', 'APP_VERSION = "v6.7-home-hero-student-tools"', 'APP_VERSION = "v6.8-student-command-workspace"', 'APP_VERSION = "v6.8.1-student-ux-hotfix"', 'APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"')), "App version is not compatible with the V6.6+ student workspace")
+    require(any(v in db_text for v in ('APP_VERSION = "v6.6-student-learning-workspace"', 'APP_VERSION = "v6.7-home-hero-student-tools"', 'APP_VERSION = "v6.8-student-command-workspace"', 'APP_VERSION = "v6.8.1-student-ux-hotfix"', 'APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"')), "App version is not compatible with the V6.6+ student workspace")
     require(ASSET.exists() and ASSET.stat().st_size > 100_000, "Student workspace cover is missing or empty")
 
     # The old seven-tab module shell must no longer be the active module implementation.

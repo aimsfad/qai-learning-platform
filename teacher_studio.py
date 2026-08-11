@@ -6,7 +6,7 @@ import io
 import json
 import re
 from html import escape
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 import streamlit as st
@@ -29,7 +29,9 @@ import ui_stability
 import global_design_system as global_ui
 import workflow_runtime_contracts
 import pedagogical_orchestrator
+import pedagogical_quality_gate
 import lesson_content_renderer
+import lesson_identity
 from security import verify_password
 
 
@@ -644,40 +646,30 @@ def _localized_duration_text(value: Any, lang: str) -> str:
     return f"{amount} {unit}"
 
 
-def _clean_lesson_display_title(value: Any, *, index: int, lang: str, lesson: Optional[Dict[str, Any]] = None, blueprint: Optional[Dict[str, Any]] = None) -> str:
-    """Return a teacher-facing lesson title without placeholder artifacts.
+def _clean_lesson_display_title(
+    value: Any,
+    *,
+    index: int,
+    lang: str,
+    lesson: Optional[Dict[str, Any]] = None,
+    blueprint: Optional[Dict[str, Any]] = None,
+    project: Optional[Dict[str, Any]] = None,
+    source_titles: Sequence[str] = (),
+) -> str:
+    """Return a teacher-facing lesson title without source/placeholder noise.
 
-    This is presentation-only: persisted blueprint data and immutable versions
-    are never rewritten here.
+    This remains presentation-only. The immutable blueprint/version history is
+    never rewritten by this helper.
     """
-    raw = re.sub(r"\s+", " ", str(value or "").strip())
-    # Remove placeholder words that occasionally leak from incomplete concept
-    # labels while preserving the rest of a meaningful generated title.
-    raw = re.sub(r"(?i)(?:\s+(?:و|and|et)\s+)?\b(?:untitled|undefined|null|none|n/?a)\b", "", raw)
-    raw = re.sub(r"\s{2,}", " ", raw).strip(" -–—,:؛|")
-    if raw.lower() not in _PLACEHOLDER_TEXT and raw:
-        return raw
-
-    lesson = dict(lesson or {})
-    blueprint = dict(blueprint or {})
-    concepts = {str(item.get("concept_id")): item for item in (blueprint.get("concepts") or [])}
-    names: List[str] = []
-    for concept_id in lesson.get("concept_ids") or []:
-        item = concepts.get(str(concept_id), {})
-        name = str(item.get("name") or item.get("title") or "").strip()
-        if name and name.lower() not in _PLACEHOLDER_TEXT:
-            names.append(name)
-    if names:
-        joiner = " و " if lang == "ar" else (" et " if lang == "fr" else " and ")
-        core = joiner.join(names[:2])
-    else:
-        units = {str(item.get("unit_id")): item for item in (blueprint.get("units") or [])}
-        unit = units.get(str(lesson.get("unit_id") or ""), {})
-        core = str(unit.get("title") or "").strip()
-        core = re.sub(r"(?i)\b(?:untitled|undefined|null|none|n/?a)\b", "", core).strip(" -–—,:؛|")
-
-    prefix = {"ar": "الدرس", "fr": "Leçon", "en": "Lesson"}.get(lang, "Lesson")
-    return f"{prefix} {index}: {core}" if core else f"{prefix} {index}"
+    return lesson_identity.teacher_facing_lesson_title(
+        value,
+        index=int(index),
+        lang=str(lang or "en"),
+        lesson=lesson or {},
+        blueprint=blueprint or {},
+        project=project or {},
+        source_titles=source_titles,
+    )
 
 
 def _lesson_position_text(index: int, total: int, lang: str) -> str:
@@ -845,11 +837,31 @@ def render_project_form(existing: Optional[Dict[str, Any]] = None) -> None:
 
 
 def _render_generation_markdown(text: str, language_code: str) -> None:
-    """Render generated Markdown inside a scoped bidirectional container."""
+    """Render normalized generated Markdown without trusting model HTML."""
     marker_class = "v6111-generation-output-rtl" if str(language_code).lower() == "ar" else "v6111-generation-output-ltr"
+    cleaned = lesson_content_renderer.normalize_generated_markdown(text, language_code)
     with st.container():
         st.markdown(f"<span class='{marker_class}' aria-hidden='true'></span>", unsafe_allow_html=True)
-        st.markdown(str(text or ""))
+        if cleaned:
+            st.markdown(cleaned)
+
+
+def _render_teacher_lesson_markdown(text: str, language_code: str) -> None:
+    """Render lesson content with safe native disclosure controls.
+
+    LLM-produced <details>/<summary> markup is parsed as data and converted to
+    Streamlit expanders. Arbitrary model HTML is never enabled via
+    unsafe_allow_html.
+    """
+    marker_class = "v6111-generation-output-rtl" if str(language_code).lower() == "ar" else "v6111-generation-output-ltr"
+    with st.container():
+        st.markdown(f"<span class='{marker_class} v6189-safe-content-renderer' aria-hidden='true'></span>", unsafe_allow_html=True)
+        for segment in lesson_content_renderer.teacher_markdown_segments(text, language_code):
+            if segment.get("kind") == "disclosure":
+                with st.expander(str(segment.get("label") or "Details"), expanded=False):
+                    st.markdown(str(segment.get("text") or ""))
+            elif segment.get("text"):
+                st.markdown(str(segment.get("text") or ""))
 
 
 def _render_latest_generation(project_id: int, u: Dict[str, str], language_code: str = "en") -> None:
@@ -2660,7 +2672,10 @@ def render_lesson_blocks(project: Dict[str, Any]) -> None:
     if not permission.get("allowed"):
         global_ui.render_inline_notice(labels["locked"], "", lang=lang, tone="warning")
 
-    latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+    latest = db.latest_teacher_lesson_block(
+        project_id, lesson_id, block_type, approved_only=False,
+        blueprint_run_id=int(blueprint.get("id") or 0) or None,
+    )
     button_label = labels["regenerate"] if latest else labels["generate"]
     created = None
     if st.button(button_label, type="primary", use_container_width=True, disabled=not bool(permission.get("allowed")), key=f"generate_block_{project_id}_{lesson_id}_{block_type}"):
@@ -2670,7 +2685,10 @@ def render_lesson_blocks(project: Dict[str, Any]) -> None:
             st.success({"ar": "تم توليد الجزء. راجعه ثم اعتمده.", "fr": "Bloc généré. Révisez-le puis approuvez-le.", "en": "Block generated. Review and approve it."}.get(lang, "Generated."))
         except Exception as exc:
             ui_stability.render_error_card(str(exc), lang=lang)
-    latest = created or db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+    latest = created or db.latest_teacher_lesson_block(
+        project_id, lesson_id, block_type, approved_only=False,
+        blueprint_run_id=int(blueprint.get("id") or 0) or None,
+    )
     if not latest:
         st.info(labels["no_output"])
         return
@@ -2853,8 +2871,17 @@ def _render_simple_plan(project: Dict[str, Any]) -> None:
     if not evidence:
         global_ui.render_inline_notice(labels["missing"], "", lang=lang, tone="warning")
         return
+    source_titles = lesson_identity.source_titles_from_bundle(evidence)
     bundle = db.latest_teacher_blueprint(project_id, approved_only=False)
-    with st.expander(labels["settings"], expanded=not bool(bundle)):
+    force_rebuild = bool(st.session_state.pop(f"v6189_force_plan_rebuild_{project_id}", False))
+    if force_rebuild:
+        global_ui.render_inline_notice(
+            {"ar": "إعادة بناء الخطة مطلوبة", "fr": "Reconstruction du plan requise", "en": "Course-plan rebuild required"}.get(lang),
+            {"ar": "أنشئي نسخة جديدة من الخطة أدناه. ستبقى النسخ والمسودات القديمة محفوظة في السجل.", "fr": "Créez une nouvelle version du plan ci-dessous. Les versions et brouillons précédents restent conservés.", "en": "Create a new plan version below. Previous versions and drafts remain preserved in history."}.get(lang),
+            lang=lang,
+            tone="warning",
+        )
+    with st.expander(labels["settings"], expanded=(not bool(bundle)) or force_rebuild):
         c1, c2 = st.columns(2)
         with c1:
             max_units = st.slider(labels["units"], 1, 10, min(int(cfg.get("max_units") or 5), 10), key=f"simple_plan_units_{project_id}")
@@ -2876,30 +2903,75 @@ def _render_simple_plan(project: Dict[str, Any]) -> None:
     lesson_by_id = {str(item.get("lesson_id")): item for item in lessons}
     lesson_position_by_id = {str(item.get("lesson_id")): idx for idx, item in enumerate(lessons, start=1)}
     approved = bool(int(bundle.get("approved_by_teacher") or 0))
+    plan_quality = dict(bundle.get("quality") or {})
+    evidence_rebuild_required = bool(plan_quality.get("evidence_rebuild_required"))
     m1, m2 = st.columns(2)
     with m1: global_ui.render_kpi_card(labels["units"], len(units), lang=lang)
     with m2: global_ui.render_kpi_card(labels["lessons"], len(lessons), lang=lang)
     st.markdown(f"### {labels['plan']}")
     for unit_index, unit in enumerate(units, start=1):
         with st.container(border=True, key=f"simple_plan_unit_{project_id}_{unit_index}"):
-            st.markdown(f"#### {unit_index}. {unit.get('title')}")
+            raw_unit_title = str(unit.get("title") or "").strip()
+            if lesson_identity.looks_like_source_title(raw_unit_title, source_titles):
+                fallback_unit = str(project.get("unit_title") or project.get("target_concept") or "").strip()
+                raw_unit_title = fallback_unit or ({"ar": "وحدة المقرر", "fr": "Unité du cours", "en": "Course unit"}.get(lang, "Course unit"))
+            st.markdown(f"#### {unit_index}. {raw_unit_title}")
             for lesson_id in unit.get("lesson_ids") or []:
                 lesson = lesson_by_id.get(str(lesson_id), {})
                 position = int(lesson_position_by_id.get(str(lesson_id)) or 1)
                 display_title = _clean_lesson_display_title(
-                    lesson.get("title"), index=position, lang=lang, lesson=lesson, blueprint=blueprint
+                    lesson.get("title"), index=position, lang=lang, lesson=lesson, blueprint=blueprint,
+                    project=project, source_titles=source_titles,
                 )
                 display_duration = _localized_duration_text(
                     f"{lesson.get('estimated_duration_minutes') or ''} minutes", lang
                 )
                 st.markdown(f"- **{display_title}** · {display_duration or '—'}")
+
+    if evidence_rebuild_required:
+        evidence_copy = {
+            "ar": (
+                "تحتاج الأدلة إلى إعادة بناء قبل اعتماد الخطة",
+                "استبعدت المنصة جميع المفاهيم المستخرجة لأنها كانت أسماء مصادر/وثائق لا مفاهيم تعليمية. "
+                "الخطة الظاهرة الآن مخطط أولي من brief المقرر فقط ولا تدّعي ارتباطًا بمصادر؛ صححي مصادر المقرر أو أعيدي تركيب الأدلة ثم أنشئي خطة جديدة.",
+                "العودة إلى مصادر المقرر وتصحيح الأدلة",
+            ),
+            "fr": (
+                "Les preuves doivent être reconstruites avant d’approuver le plan",
+                "Tous les concepts extraits ont été rejetés car ils correspondaient à des titres de sources/documents. "
+                "Le plan affiché est uniquement une ébauche issue du brief et ne revendique aucune traçabilité aux sources.",
+                "Retourner aux sources du cours",
+            ),
+            "en": (
+                "Evidence must be rebuilt before plan approval",
+                "Every extracted concept was rejected because it matched source/document metadata. "
+                "The visible plan is only a project-brief outline and does not claim source traceability.",
+                "Return to course sources and rebuild evidence",
+            ),
+        }.get(lang)
+        global_ui.render_inline_notice(evidence_copy[0], evidence_copy[1], lang=lang, tone="danger")
+        if st.button(
+            evidence_copy[2],
+            type="primary",
+            use_container_width=True,
+            key=f"v6189_rebuild_evidence_{project_id}_{int(bundle.get('id') or 0)}",
+        ):
+            st.session_state.teacher_simple_stage = "sources"
+            st.rerun()
+
     if approved:
         global_ui.render_inline_notice(labels["approved"], "", lang=lang, tone="success")
         if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_plan_next_{project_id}"):
             st.session_state.teacher_simple_stage = "lessons"
             st.rerun()
     else:
-        if st.button(labels["approve"], type="primary", use_container_width=True, key=f"simple_approve_plan_{project_id}_{int(bundle.get('id') or 0)}"):
+        if st.button(
+            labels["approve"],
+            type="primary",
+            use_container_width=True,
+            disabled=evidence_rebuild_required,
+            key=f"simple_approve_plan_{project_id}_{int(bundle.get('id') or 0)}",
+        ):
             try:
                 db.approve_teacher_blueprint_run(int(bundle["id"]), project_id, _current_teacher_username())
                 st.session_state.teacher_flash_success = labels["approved"]
@@ -2944,6 +3016,9 @@ def _lesson_simple_labels(lang: str) -> Dict[str, str]:
             "quality_review": "توجد ملاحظات تربوية غير مانعة. راجعيها قبل الاعتماد.",
             "quality_blocked": "توجد مشكلة تمنع اعتماد الدرس حتى تُعالج.",
             "quality_details": "ملاحظات الجودة التربوية",
+            "pedagogical_quality": "بوابة الجودة التربوية",
+            "quality_dimensions": "أبعاد الجودة",
+            "quality_advisory": "الدرجة مؤشر مساعد للمراجعة، وليست بديلًا عن قرار الأستاذ.",
             "draft_status": "حالة المسودة",
             "ready": "جاهزة للمراجعة",
             "approved_state": "معتمد",
@@ -2958,7 +3033,7 @@ def _lesson_simple_labels(lang: str) -> Dict[str, str]:
             "generate": "Créer le brouillon de la leçon", "continue_generate": "Compléter le brouillon", "generating": "Construction pédagogique de la leçon", "generated": "Le brouillon complet est prêt pour votre révision.",
             "preview": "Réviser la leçon", "empty": "Cette leçon n’a pas encore de brouillon.", "approve": "Approuver et passer à la suivante", "approved": "Leçon approuvée.",
             "next": "Leçon suivante", "download": "Télécharger", "advanced": "Modifier une section ou afficher les détails", "section": "Section", "regenerate": "Régénérer cette section", "save": "Enregistrer", "summary": "Résumé des modifications", "technical": "Détails techniques", "all_done": "Toutes les leçons sont terminées.",
-            "design": "Conception pédagogique", "quality_ready": "Le brouillon est complet et prêt à être validé.", "quality_review": "Des remarques pédagogiques non bloquantes méritent une révision.", "quality_blocked": "Un problème doit être corrigé avant l’approbation.", "quality_details": "Remarques de qualité pédagogique", "draft_status": "État du brouillon", "ready": "À réviser", "approved_state": "Approuvé", "section_purpose": "Pourquoi cette section ?", "teacher_decision": "Décision de l’enseignant", "lesson_access": "Pour garder un parcours clair, seules les leçons approuvées et la leçon actuelle sont accessibles ici. Les suivantes s’ouvrent automatiquement après validation.", "current_lesson": "Leçon actuelle",
+            "design": "Conception pédagogique", "quality_ready": "Le brouillon est complet et prêt à être validé.", "quality_review": "Des remarques pédagogiques non bloquantes méritent une révision.", "quality_blocked": "Un problème doit être corrigé avant l’approbation.", "quality_details": "Remarques de qualité pédagogique", "pedagogical_quality": "Contrôle de qualité pédagogique", "quality_dimensions": "Dimensions de qualité", "quality_advisory": "Le score aide la révision et ne remplace pas la décision de l’enseignant.", "draft_status": "État du brouillon", "ready": "À réviser", "approved_state": "Approuvé", "section_purpose": "Pourquoi cette section ?", "teacher_decision": "Décision de l’enseignant", "lesson_access": "Pour garder un parcours clair, seules les leçons approuvées et la leçon actuelle sont accessibles ici. Les suivantes s’ouvrent automatiquement après validation.", "current_lesson": "Leçon actuelle",
         },
         "en": {
             "title": "Create lessons", "intro": "Create a complete lesson draft, review it pedagogically, then approve it. Technical details stay out of the way unless you need them.",
@@ -2966,7 +3041,7 @@ def _lesson_simple_labels(lang: str) -> Dict[str, str]:
             "generate": "Create lesson draft", "continue_generate": "Complete lesson draft", "generating": "Building the lesson pedagogically", "generated": "The complete lesson draft is ready for your review.",
             "preview": "Review lesson", "empty": "This lesson does not have a draft yet.", "approve": "Approve lesson and continue", "approved": "Lesson approved.",
             "next": "Open next lesson", "download": "Download lesson", "advanced": "Edit a section or view advanced details", "section": "Lesson section", "regenerate": "Regenerate this section", "save": "Save edit", "summary": "Change summary", "technical": "Technical details", "all_done": "All lessons are complete. Continue to review and publish.",
-            "design": "Pedagogical design", "quality_ready": "The draft is complete and ready for review and approval.", "quality_review": "There are non-blocking pedagogical notes to review before approval.", "quality_blocked": "A blocking issue must be resolved before approval.", "quality_details": "Pedagogical quality notes", "draft_status": "Draft status", "ready": "Ready for review", "approved_state": "Approved", "section_purpose": "Why this section?", "teacher_decision": "Teacher decision", "lesson_access": "To keep the workflow clear, only approved lessons and the current lesson are available here. Future lessons unlock automatically after approval.", "current_lesson": "Current lesson",
+            "design": "Pedagogical design", "quality_ready": "The draft is complete and ready for review and approval.", "quality_review": "There are non-blocking pedagogical notes to review before approval.", "quality_blocked": "A blocking issue must be resolved before approval.", "quality_details": "Pedagogical quality notes", "pedagogical_quality": "Pedagogical quality gate", "quality_dimensions": "Quality dimensions", "quality_advisory": "The score supports review and does not replace the teacher's decision.", "draft_status": "Draft status", "ready": "Ready for review", "approved_state": "Approved", "section_purpose": "Why this section?", "teacher_decision": "Teacher decision", "lesson_access": "To keep the workflow clear, only approved lessons and the current lesson are available here. Future lessons unlock automatically after approval.", "current_lesson": "Current lesson",
         },
     }.get(lang, {})
 
@@ -2991,6 +3066,9 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
         )
         return
 
+    evidence = db.latest_teacher_evidence_for_project(project_id, approved_only=True) or {}
+    source_titles = lesson_identity.source_titles_from_bundle(evidence)
+    blueprint_run_id = int(blueprint.get("id") or 0)
     lessons = list((blueprint.get("blueprint") or {}).get("lessons") or [])
     if not lessons:
         st.info(labels["empty"])
@@ -2998,7 +3076,7 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
 
     lesson_ids = [str(item.get("lesson_id")) for item in lessons]
     incomplete_id = next(
-        (lid for lid in lesson_ids if not lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete")),
+        (lid for lid in lesson_ids if not lesson_block_generation_engine.lesson_completion(project_id, lid, blueprint_run_id=blueprint_run_id).get("complete")),
         lesson_ids[-1],
     )
     lesson_key = f"simple_lesson_{project_id}"
@@ -3011,12 +3089,13 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
     # full diagnostic/navigation access.
     accessible_ids = {incomplete_id}
     for lid in lesson_ids:
-        if lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete"):
+        if lesson_block_generation_engine.lesson_completion(project_id, lid, blueprint_run_id=blueprint_run_id).get("complete"):
             accessible_ids.add(lid)
     blueprint_data = dict(blueprint.get("blueprint") or {})
     options = {
         _clean_lesson_display_title(
-            item.get("title"), index=idx + 1, lang=lang, lesson=item, blueprint=blueprint_data
+            item.get("title"), index=idx + 1, lang=lang, lesson=item, blueprint=blueprint_data,
+            project=project, source_titles=source_titles,
         ): str(item.get("lesson_id"))
         for idx, item in enumerate(lessons)
         if str(item.get("lesson_id")) in accessible_ids
@@ -3031,15 +3110,21 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
     lesson_id = options[lesson_label]
     lesson_index = lesson_ids.index(lesson_id)
     lesson_row = lessons[lesson_index]
-    completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
-    completed_lessons = sum(1 for lid in lesson_ids if lesson_block_generation_engine.lesson_completion(project_id, lid).get("complete"))
+    completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id, blueprint_run_id=blueprint_run_id)
+    completed_lessons = sum(1 for lid in lesson_ids if lesson_block_generation_engine.lesson_completion(project_id, lid, blueprint_run_id=blueprint_run_id).get("complete"))
 
     course_pct = int(round(100 * completed_lessons / max(len(lessons), 1)))
     lesson_pct = int(round(100 * int(completion.get("approved") or 0) / max(int(completion.get("required") or 1), 1)))
     direction = "rtl" if lang == "ar" else "ltr"
-    lesson_title = _clean_lesson_display_title(
-        lesson_row.get("title"), index=lesson_index + 1, lang=lang, lesson=lesson_row, blueprint=blueprint_data
+    identity = lesson_identity.inspect_lesson_identity(
+        lesson=lesson_row,
+        blueprint=blueprint_data,
+        project=project,
+        source_titles=source_titles,
+        index=lesson_index + 1,
+        lang=lang,
     )
+    lesson_title = str(identity.get("display_title") or "")
     lesson_position = _lesson_position_text(lesson_index + 1, len(lessons), lang)
     lesson_duration = _localized_duration_text(
         f"{lesson_row.get('estimated_duration_minutes') or ''} minutes", lang
@@ -3057,6 +3142,48 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
         unsafe_allow_html=True,
     )
 
+    if not identity.get("valid"):
+        invalid_copy = {
+            "ar": (
+                "تحتاج خطة هذا الدرس إلى إعادة بناء",
+                "اكتشفت المنصة أن عنوان الدرس أو مفاهيمه مشتقة من أسماء مراجع/وثائق، لا من مفاهيم تعليمية. "
+                "احتفظنا بالمسودات السابقة في السجل، لكن أوقفنا التوليد والاعتماد حتى لا يُبنى درس على هوية مرجعية خاطئة.",
+                "العودة إلى خطة المقرر وإعادة بنائها",
+                "تفاصيل التشخيص",
+            ),
+            "fr": (
+                "Le plan de cette leçon doit être reconstruit",
+                "L’identité de la leçon provient de titres de sources/documents plutôt que de concepts pédagogiques. "
+                "Les anciens brouillons restent dans l’historique, mais la génération et l’approbation sont bloquées.",
+                "Retourner au plan du cours et le reconstruire",
+                "Détails du diagnostic",
+            ),
+            "en": (
+                "This lesson plan needs to be rebuilt",
+                "The lesson identity is derived from source/document titles instead of teachable concepts. "
+                "Previous drafts remain in history, but generation and approval are blocked to prevent contaminated lesson content.",
+                "Return to the course plan and rebuild it",
+                "Diagnostic details",
+            ),
+        }.get(lang)
+        global_ui.render_inline_notice(invalid_copy[0], invalid_copy[1], lang=lang, tone="danger")
+        if st.button(
+            invalid_copy[2],
+            type="primary",
+            use_container_width=True,
+            key=f"v6189_rebuild_plan_{project_id}_{lesson_id}",
+        ):
+            st.session_state.teacher_simple_stage = "plan"
+            st.session_state[f"v6189_force_plan_rebuild_{project_id}"] = True
+            st.rerun()
+        with st.expander(invalid_copy[3], expanded=False):
+            for reason in identity.get("reasons") or []:
+                st.markdown(f"- `{reason}`")
+            matches = identity.get("source_title_matches") or []
+            if matches:
+                st.caption(" · ".join(str(item)[:140] for item in matches))
+        return
+
     design_labels = pedagogical_orchestrator.lesson_design_summary(lang)
     st.markdown(
         f"<div class='v6185-design-strip' dir='{direction}'><small>{escape(labels['design'])}</small>" +
@@ -3064,7 +3191,7 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
         unsafe_allow_html=True,
     )
 
-    assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, render_lang)
+    assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, render_lang, blueprint_run_id=blueprint_run_id)
     st.markdown(lesson_content_renderer.lesson_section_nav_html(assembled, render_lang), unsafe_allow_html=True)
 
     generated_count = sum(1 for row in assembled if row.get("run"))
@@ -3094,8 +3221,8 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                     state="error", expanded=True,
                 )
                 ui_stability.render_error_card(exc, lang=lang)
-            assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, render_lang)
-            completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id)
+            assembled = lesson_block_generation_engine.assembled_lesson(project_id, lesson_id, render_lang, blueprint_run_id=blueprint_run_id)
+            completion = lesson_block_generation_engine.lesson_completion(project_id, lesson_id, blueprint_run_id=blueprint_run_id)
             st.markdown(lesson_content_renderer.lesson_section_nav_html(assembled, render_lang), unsafe_allow_html=True)
 
     generated_count = sum(1 for row in assembled if row.get("run"))
@@ -3104,17 +3231,41 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
         global_ui.render_inline_notice(labels["empty"], "", lang=lang, tone="warning")
         return
 
-    quality = lesson_block_generation_engine.lesson_quality_snapshot(project_id, lesson_id)
-    if quality.get("error_count"):
+    quality = lesson_block_generation_engine.lesson_quality_snapshot(project_id, lesson_id, blueprint_run_id=blueprint_run_id)
+    gate = dict(quality.get("pedagogical_gate") or {})
+    gate_blocked = bool(gate and not gate.get("can_approve", True))
+    if quality.get("error_count") or gate_blocked:
         global_ui.render_inline_notice(labels["quality_blocked"], "", lang=lang, tone="danger")
-    elif quality.get("warning_count"):
+    elif quality.get("warning_count") or (gate and gate.get("status") == "review"):
         global_ui.render_inline_notice(labels["quality_review"], "", lang=lang, tone="warning")
     elif quality.get("ready_for_teacher_review"):
         global_ui.render_inline_notice(labels["quality_ready"], "", lang=lang, tone="success")
 
+    if gate:
+        st.markdown(
+            f"<section class='v619-quality-gate' dir='{direction}'>"
+            f"<div><small>{escape(labels['pedagogical_quality'])}</small>"
+            f"<strong>{int(gate.get('quality_score') or 0)}/100</strong></div>"
+            f"<span>{escape(str(gate.get('status_label') or ''))}</span>"
+            f"<p>{escape(labels['quality_advisory'])}</p>"
+            f"</section>",
+            unsafe_allow_html=True,
+        )
+
     issues = list(quality.get("errors") or []) + list(quality.get("warnings") or [])
-    if issues:
-        with st.expander(f"{labels['quality_details']} · {len(issues)}", expanded=False):
+    gate_issues = list(gate.get("blockers") or []) + list(gate.get("warnings") or [])
+    total_issues = len(issues) + len(gate_issues)
+    if gate or issues:
+        with st.expander(f"{labels['quality_details']} · {total_issues}", expanded=False):
+            if gate.get("dimensions"):
+                st.markdown(f"**{labels['quality_dimensions']}**")
+                dimension_html = "".join(
+                    f"<div><span>{escape(str(item.get('label') or item.get('key') or ''))}</span><b>{int(item.get('percent') or 0)}%</b></div>"
+                    for item in gate.get("dimensions") or []
+                )
+                st.markdown(f"<div class='v619-quality-dimensions' dir='{direction}'>{dimension_html}</div>", unsafe_allow_html=True)
+            for issue in gate_issues:
+                st.markdown(f"- {pedagogical_quality_gate.issue_label(str(issue), lang)}")
             for issue in issues:
                 st.markdown(f"- {lesson_content_renderer.quality_issue_label(str(issue), lang)}")
 
@@ -3133,7 +3284,7 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                 f"<div class='v6185-section-purpose' dir='{direction}'><b>{escape(labels['section_purpose'])}</b><span>{escape(rationale)}</span></div>",
                 unsafe_allow_html=True,
             )
-            _render_generation_markdown(cleaned, render_lang)
+            _render_teacher_lesson_markdown(row["content_text"], render_lang)
 
     full_markdown = "\n\n---\n\n".join(full_markdown_parts)
     # A keyed action container is more reliable than styling an incidental
@@ -3148,7 +3299,12 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                 mime="text/markdown", use_container_width=True,
             )
         with action_cols[1]:
-            ready_to_approve = generated_count >= len(assembled) and failed_count == 0 and not completion.get("complete")
+            ready_to_approve = (
+                generated_count >= len(assembled)
+                and failed_count == 0
+                and not completion.get("complete")
+                and bool((quality.get("pedagogical_gate") or {}).get("can_approve", True))
+            )
             if completion.get("complete"):
                 if lesson_index + 1 < len(lessons):
                     if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_next_lesson_{project_id}_{lesson_id}"):
@@ -3182,7 +3338,10 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
         block_options = {row["label"]: row["block_type"] for row in assembled}
         selected_label = st.selectbox(labels["section"], list(block_options), key=f"simple_edit_section_{project_id}_{lesson_id}")
         block_type = block_options[selected_label]
-        latest = db.latest_teacher_lesson_block(project_id, lesson_id, block_type, approved_only=False)
+        latest = db.latest_teacher_lesson_block(
+            project_id, lesson_id, block_type, approved_only=False,
+            blueprint_run_id=int(blueprint.get("id") or 0) or None,
+        )
         if latest:
             edited = st.text_area(selected_label, value=str(latest.get("content_text") or ""), height=360, key=f"simple_edit_text_{latest['id']}")
             summary = st.text_input(labels["summary"], key=f"simple_edit_summary_{latest['id']}")

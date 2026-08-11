@@ -23,7 +23,7 @@ checks = {
         'APP_VERSION = "v6.8-student-command-workspace"',
         'APP_VERSION = "v6.8.1-student-ux-hotfix"',
         'APP_VERSION = "v6.8.2-attempt-first-gate"',
-        'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"',
+        'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"',
         'APP_VERSION = "v6.18.6-unified-premium-platform-design"',
         'APP_VERSION = "v6.10-gemini-file-analyzer-router"',
     )),

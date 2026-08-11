@@ -1,24 +1,35 @@
 """Safe, teacher-friendly rendering helpers for generated lesson content.
 
 The LLM is allowed to generate Markdown because it is a practical interchange
-format, but the simple teacher workspace should never expose formatting noise,
-placeholder ``None`` values or mixed-language boilerplate to the teacher.
+format, but the teacher workspace must never expose formatting noise,
+placeholder ``None`` values, raw presentation HTML, or mixed-language
+boilerplate. Persisted source content remains immutable; all cleanup here is a
+presentation transformation.
 """
 from __future__ import annotations
 
 import re
-from html import escape
-from typing import Dict, List
+from html import escape, unescape
+from typing import Any, Dict, List, Sequence, Tuple
 
 
 _PLACEHOLDER_LINE = re.compile(
     r"^\s*(?:[-*+]\s*)?(?:\*\*)?[^:\n]{0,60}(?::|：)\s*(?:\*\*)?\s*(?:none|null|n/?a|—|-)?\s*$",
     re.IGNORECASE,
 )
-
 _RAW_PLACEHOLDER = re.compile(r"(?<![\w.])(?:None|null)(?![\w.])", re.IGNORECASE)
 
-# Canonical bilingual labels occasionally emitted by models.  We keep English
+# Only parse a deliberately small presentation subset. Arbitrary LLM HTML is
+# never passed to Streamlit with unsafe_allow_html=True.
+_DETAILS_RE = re.compile(
+    r"<details\b[^>]*>\s*<summary\b[^>]*>(.*?)</summary>(.*?)</details>",
+    re.IGNORECASE | re.DOTALL,
+)
+_FENCED_BLOCK_RE = re.compile(
+    r"(?ms)(^\s*```[^\n]*\n.*?^\s*```\s*$)"
+)
+
+# Canonical bilingual labels occasionally emitted by models. We keep English
 # fallbacks for non-Arabic interfaces but avoid duplicated headings in Arabic.
 _AR_HEADING_REPLACEMENTS: Dict[str, str] = {
     "prior-knowledge activation": "تنشيط المعارف السابقة",
@@ -38,6 +49,8 @@ _AR_HEADING_REPLACEMENTS: Dict[str, str] = {
     "learning objectives": "الأهداف التعليمية",
     "self-check": "تحقق ذاتي",
     "reflection": "تأمل في التعلم",
+    "case-study": "دراسة حالة",
+    "case study": "دراسة حالة",
 }
 
 
@@ -68,16 +81,94 @@ def _normalise_arabic_heading(line: str) -> str:
         if english in lower:
             arabic_present = any("\u0600" <= ch <= "\u06ff" for ch in plain)
             if arabic_present:
-                plain = re.sub(r"\s*[\(（]?\s*" + re.escape(english) + r"\s*[\)）]?", "", plain, flags=re.I).strip(" -–—")
+                plain = re.sub(
+                    r"\s*[\(（]?\s*" + re.escape(english) + r"\s*[\)）]?",
+                    "",
+                    plain,
+                    flags=re.I,
+                ).strip(" -–—")
                 return f"{hashes} {plain or arabic}"
             return f"{hashes} {arabic}"
     return f"{hashes} {plain}"
 
 
+def _split_fenced_regions(text: str) -> List[Tuple[bool, str]]:
+    """Split Markdown into fenced-code and prose regions, preserving order."""
+    regions: List[Tuple[bool, str]] = []
+    cursor = 0
+    for match in _FENCED_BLOCK_RE.finditer(str(text or "")):
+        if match.start() > cursor:
+            regions.append((False, text[cursor:match.start()]))
+        regions.append((True, match.group(0)))
+        cursor = match.end()
+    if cursor < len(text):
+        regions.append((False, text[cursor:]))
+    return regions or [(False, str(text or ""))]
+
+
+def _clean_summary_label(value: str, language_code: str) -> str:
+    label = unescape(str(value or ""))
+    label = re.sub(r"<[^>]+>", " ", label)
+    label = re.sub(r"[*_`#]+", "", label)
+    label = re.sub(r"\s+", " ", label).strip(" -–—:؛")
+    if not label:
+        return {"ar": "عرض التفاصيل", "fr": "Afficher les détails", "en": "Show details"}.get(
+            str(language_code or "en").lower(), "Show details"
+        )
+    return label[:120]
+
+
+def _flatten_details_markup(text: str, language_code: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        label = _clean_summary_label(match.group(1), language_code)
+        body = str(match.group(2) or "").strip()
+        return f"\n\n#### {label}\n\n{body}\n\n"
+
+    return _DETAILS_RE.sub(replace, str(text or ""))
+
+
+def _convert_known_html_to_markdown(text: str) -> str:
+    """Convert a conservative set of presentation tags to safe Markdown."""
+    value = str(text or "")
+    value = re.sub(r"<br\s*/?>", "\n", value, flags=re.I)
+    value = re.sub(r"</?(?:strong|b)\b[^>]*>", "**", value, flags=re.I)
+    value = re.sub(r"</?(?:em|i)\b[^>]*>", "*", value, flags=re.I)
+    value = re.sub(r"<li\b[^>]*>", "\n- ", value, flags=re.I)
+    value = re.sub(r"</li\s*>", "", value, flags=re.I)
+    value = re.sub(r"</?(?:p|div|section|article|ul|ol)\b[^>]*>", "\n", value, flags=re.I)
+    # Strip leftover presentation HTML tags, but not arbitrary angle-bracket
+    # expressions that do not look like HTML element names.
+    value = re.sub(
+        r"</?(?:details|summary|span|table|thead|tbody|tfoot|tr|td|th|blockquote)\b[^>]*>",
+        "",
+        value,
+        flags=re.I,
+    )
+    return value
+
+
+def _prepare_prose_markup(text: str, language_code: str) -> str:
+    value = _flatten_details_markup(text, language_code)
+    return _convert_known_html_to_markdown(value)
+
+
 def normalize_generated_markdown(text: str, language_code: str = "ar") -> str:
-    """Return display-safe Markdown without mutating the persisted source."""
+    """Return display-safe Markdown without mutating the persisted source.
+
+    Raw presentation HTML emitted by the model is converted to Markdown only
+    outside fenced code blocks. ``<details>`` becomes a readable subsection for
+    downloads/general previews; the simple lesson workspace may render the
+    same disclosure as a native Streamlit expander via
+    :func:`teacher_markdown_segments`.
+    """
     raw = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
     raw = raw.replace("\u200f", "").replace("\u200e", "").replace("\ufeff", "")
+
+    prepared_parts: List[str] = []
+    for is_code, region in _split_fenced_regions(raw):
+        prepared_parts.append(region if is_code else _prepare_prose_markup(region, language_code))
+    raw = "".join(prepared_parts)
+
     lines = _strip_placeholder_lines(raw.split("\n"))
     lang = str(language_code or "").lower()
     output: List[str] = []
@@ -108,10 +199,48 @@ def normalize_generated_markdown(text: str, language_code: str = "ar") -> str:
         blank_pending = False
 
     # Repair an unclosed code fence for display so the remainder of the page
-    # does not become a single code block.  Validation separately flags it.
+    # does not become a single code block. Validation separately flags it.
     if in_code:
         output.append("```")
     return "\n".join(output).strip()
+
+
+def teacher_markdown_segments(text: str, language_code: str = "ar") -> List[Dict[str, str]]:
+    """Parse model Markdown into safe teacher-display segments.
+
+    The only interactive HTML pattern recognized is ``details/summary``. It is
+    converted to a semantic ``disclosure`` segment. All content is normalized
+    before rendering, and callers should pass it to ``st.markdown`` with the
+    default ``unsafe_allow_html=False``.
+    """
+    raw = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+    raw = raw.replace("\u200f", "").replace("\u200e", "").replace("\ufeff", "")
+    segments: List[Dict[str, str]] = []
+
+    def add_markdown(value: str) -> None:
+        cleaned = normalize_generated_markdown(value, language_code)
+        if not cleaned:
+            return
+        if segments and segments[-1].get("kind") == "markdown":
+            segments[-1]["text"] = (segments[-1].get("text", "") + "\n\n" + cleaned).strip()
+        else:
+            segments.append({"kind": "markdown", "text": cleaned})
+
+    for is_code, region in _split_fenced_regions(raw):
+        if is_code:
+            add_markdown(region)
+            continue
+        cursor = 0
+        for match in _DETAILS_RE.finditer(region):
+            add_markdown(region[cursor:match.start()])
+            label = _clean_summary_label(match.group(1), language_code)
+            body = normalize_generated_markdown(match.group(2), language_code)
+            if body:
+                segments.append({"kind": "disclosure", "label": label, "text": body})
+            cursor = match.end()
+        add_markdown(region[cursor:])
+
+    return segments
 
 
 def markdown_has_unclosed_fence(text: str) -> bool:
@@ -144,6 +273,7 @@ def lesson_section_nav_html(rows: List[Dict[str, object]], language_code: str = 
     direction = "rtl" if str(language_code).lower().startswith("ar") else "ltr"
     return f"<div class='v6185-section-nav' dir='{direction}'>" + "".join(chips) + "</div>"
 
+
 _QUALITY_ISSUES: Dict[str, Dict[str, str]] = {
     "content_is_short": {"ar": "المحتوى أقصر من النطاق المقترح", "fr": "Contenu plus court que prévu", "en": "Content is shorter than the suggested range"},
     "missing_markdown_heading": {"ar": "يحتاج إلى تنظيم أوضح للعناوين", "fr": "La structure des titres peut être améliorée", "en": "Heading structure can be improved"},
@@ -156,6 +286,7 @@ _QUALITY_ISSUES: Dict[str, Dict[str, str]] = {
     "summary_missing_metacognitive_reflection": {"ar": "الملخص يحتاج تأملًا قصيرًا في التعلم", "fr": "La synthèse devrait inclure une brève réflexion métacognitive", "en": "Summary needs a short metacognitive reflection"},
     "unclosed_code_fence": {"ar": "كتلة كود غير مغلقة", "fr": "Bloc de code non fermé", "en": "Unclosed code block"},
     "empty_content": {"ar": "المحتوى فارغ", "fr": "Le contenu est vide", "en": "Content is empty"},
+    "lesson_identity_source_pollution": {"ar": "هوية الدرس مشتقة من اسم مصدر مرجعي وتحتاج إعادة بناء الخطة", "fr": "L’identité de la leçon provient d’un titre de source et le plan doit être reconstruit", "en": "Lesson identity is derived from a reference-source title and the plan must be rebuilt"},
 }
 
 

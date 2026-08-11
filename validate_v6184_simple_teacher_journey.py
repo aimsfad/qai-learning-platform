@@ -64,11 +64,14 @@ def validate_lesson_batch_contract() -> None:
     original_state = blocks.lesson_block_state
     original_approve = blocks.db.approve_teacher_lesson_block
     original_completion = blocks.lesson_completion
+    original_quality = blocks.lesson_quality_snapshot
+    original_active = blocks._active_blueprint_run_id
     try:
         stored = {}
         blocks.block_generation_status = lambda: {"enabled": True, "require_approval": True, "require_sequence": True}
-        blocks.db.latest_approved_lesson_blocks = lambda project_id, lesson_id: []
-        blocks.db.latest_teacher_lesson_block = lambda project_id, lesson_id, block_type, approved_only=False: stored.get(block_type)
+        blocks._active_blueprint_run_id = lambda project_id: 3
+        blocks.db.latest_approved_lesson_blocks = lambda project_id, lesson_id, **kwargs: []
+        blocks.db.latest_teacher_lesson_block = lambda project_id, lesson_id, block_type, approved_only=False, **kwargs: stored.get(block_type)
 
         def fake_generate(project, teacher_username, blueprint_bundle, lesson_id, block_type, *, context_blocks=None):
             run = {"id": len(stored) + 1, "project_id": project["id"], "lesson_id": lesson_id, "block_type": block_type,
@@ -77,7 +80,7 @@ def validate_lesson_batch_contract() -> None:
             return run
 
         blocks.generate_and_persist = fake_generate
-        blocks.lesson_block_state = lambda project_id, lesson_id, language_code="en": [
+        blocks.lesson_block_state = lambda project_id, lesson_id, language_code="en", **kwargs: [
             {"block_type": key, "state": "needs_review", "approved": False, "run": stored.get(key)}
             for key in blocks.ordered_block_types()
         ]
@@ -89,7 +92,8 @@ def validate_lesson_batch_contract() -> None:
 
         approved = []
         blocks.db.approve_teacher_lesson_block = lambda run_id, project_id, username: approved.append(run_id)
-        blocks.lesson_completion = lambda project_id, lesson_id: {"required": 9, "available": 9, "approved": 9, "complete": True}
+        blocks.lesson_completion = lambda project_id, lesson_id, **kwargs: {"required": 9, "available": 9, "approved": 9, "complete": True}
+        blocks.lesson_quality_snapshot = lambda project_id, lesson_id, **kwargs: {"pedagogical_gate": {"can_approve": True, "blockers": []}}
         completion = blocks.approve_full_lesson(1, "L1", "teacher")
         assert len(approved) == len(blocks.ordered_block_types())
         assert completion["complete"] is True
@@ -101,6 +105,8 @@ def validate_lesson_batch_contract() -> None:
         blocks.lesson_block_state = original_state
         blocks.db.approve_teacher_lesson_block = original_approve
         blocks.lesson_completion = original_completion
+        blocks.lesson_quality_snapshot = original_quality
+        blocks._active_blueprint_run_id = original_active
 
 
 def validate_teacher_ui_static() -> None:
@@ -116,7 +122,7 @@ def validate_teacher_ui_static() -> None:
     assert "v6184-current-step" in css
     assert "v6184-action-marker" in css
     assert 'TEACHER_SIMPLE_MODE_DEFAULT = "true"' in secrets
-    assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in ('APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"'))
+    assert any(v in (ROOT / "db.py").read_text(encoding="utf-8") for v in ('APP_VERSION = "v6.18.4-simple-teacher-journey"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.18.5-premium-lesson-workspace"'))
 
 
 def main() -> None:
