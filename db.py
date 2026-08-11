@@ -14,10 +14,11 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"
+APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
+import lesson_identity
 
 
 def utc_now() -> str:
@@ -161,6 +162,10 @@ def init_db() -> None:
             provider TEXT,
             model TEXT,
             diagnostic TEXT,
+            adaptive_support_level INTEGER,
+            adaptive_support_mode TEXT,
+            adaptive_support_confidence REAL,
+            adaptive_support_reason TEXT,
             created_at {created_default}
         )
         """,
@@ -602,6 +607,10 @@ def init_db() -> None:
     ensure_column("ai_interactions", "selected_text", "TEXT")
     ensure_column("ai_interactions", "student_usefulness_rating", "INTEGER")
     ensure_column("ai_interactions", "student_ai_feedback", "TEXT")
+    ensure_column("ai_interactions", "adaptive_support_level", "INTEGER")
+    ensure_column("ai_interactions", "adaptive_support_mode", "TEXT")
+    ensure_column("ai_interactions", "adaptive_support_confidence", "REAL")
+    ensure_column("ai_interactions", "adaptive_support_reason", "TEXT")
     ensure_column("teacher_research_runs", "approved_by_teacher", "INTEGER DEFAULT 0")
     ensure_column("teacher_research_runs", "approved_at", "TEXT")
     ensure_column("teacher_research_runs", "approved_by", "TEXT")
@@ -1088,20 +1097,26 @@ def log_ai_interaction(
     response_language: str = "",
     error_type: str = "",
     is_fallback_used: int = 0,
-    prompt_template_version: str = "qai-tutor-v5",
+    prompt_template_version: str = "qai-tutor-v6-adaptive",
     lesson_id: str = "",
     activity_id: str = "",
     selected_text: str = "",
+    adaptive_support_level: Optional[int] = None,
+    adaptive_support_mode: str = "",
+    adaptive_support_confidence: Optional[float] = None,
+    adaptive_support_reason: str = "",
 ) -> int:
     sql = """
         INSERT INTO ai_interactions
         (student_id, module, concept, task, prompt, response, mode, provider, model, diagnostic,
          latency_ms, response_word_count, student_input_language, response_language, error_type,
-         is_fallback_used, app_version, prompt_template_version, lesson_id, activity_id, selected_text, created_at)
+         is_fallback_used, app_version, prompt_template_version, lesson_id, activity_id, selected_text,
+         adaptive_support_level, adaptive_support_mode, adaptive_support_confidence, adaptive_support_reason, created_at)
         VALUES
         (:student_id, :module, :concept, :task, :prompt, :response, :mode, :provider, :model, :diagnostic,
          :latency_ms, :response_word_count, :student_input_language, :response_language, :error_type,
-         :is_fallback_used, :app_version, :prompt_template_version, :lesson_id, :activity_id, :selected_text, :created_at)
+         :is_fallback_used, :app_version, :prompt_template_version, :lesson_id, :activity_id, :selected_text,
+         :adaptive_support_level, :adaptive_support_mode, :adaptive_support_confidence, :adaptive_support_reason, :created_at)
     """ + (" RETURNING id" if dialect() != "sqlite" else "")
     return execute_returning_id(
         sql,
@@ -1127,6 +1142,10 @@ def log_ai_interaction(
             "lesson_id": lesson_id,
             "activity_id": activity_id,
             "selected_text": selected_text,
+            "adaptive_support_level": adaptive_support_level,
+            "adaptive_support_mode": str(adaptive_support_mode or ""),
+            "adaptive_support_confidence": adaptive_support_confidence,
+            "adaptive_support_reason": str(adaptive_support_reason or ""),
             "created_at": utc_now(),
         },
     )
@@ -1246,6 +1265,7 @@ def llm_candidate_interactions_df(limit: int = 100, only_unrated: bool = False, 
                a.module, a.concept, a.task, a.mode, a.provider, a.model, a.prompt, a.response,
                a.diagnostic, a.latency_ms, a.response_word_count, a.student_input_language,
                a.response_language, a.error_type, a.is_fallback_used,
+               a.adaptive_support_level, a.adaptive_support_mode, a.adaptive_support_confidence, a.adaptive_support_reason,
                e.id AS evaluation_id,
                ROUND((e.conceptual_accuracy + e.answer_relevance + e.pedagogical_clarity + e.scaffolding_quality +
                       e.qiskit_alignment + e.reflection_support + e.personalization) / 7.0, 2) AS existing_quality_score
@@ -1356,6 +1376,39 @@ def student_events_df(student_id: int, limit: int = 150) -> pd.DataFrame:
         LIMIT :limit
         """,
         {"sid": int(student_id), "limit": int(limit)},
+    )
+
+
+def student_lesson_ai_interactions_df(student_id: int, lesson_id: str, limit: int = 50) -> pd.DataFrame:
+    """Return recent AI-support interactions for one learner and lesson."""
+    return query_df(
+        """
+        SELECT id, created_at, module, task, mode, provider, model, activity_id,
+               adaptive_support_level, adaptive_support_mode, adaptive_support_confidence, adaptive_support_reason
+        FROM ai_interactions
+        WHERE student_id=:sid AND lesson_id=:lesson_id
+        ORDER BY created_at DESC, id DESC
+        LIMIT :limit
+        """,
+        {"sid": int(student_id), "lesson_id": str(lesson_id), "limit": int(limit)},
+    )
+
+
+def adaptive_support_analytics_df() -> pd.DataFrame:
+    """Research-ready distribution of adaptive support decisions."""
+    return query_df(
+        """
+        SELECT
+            COALESCE(adaptive_support_level, -1) AS support_level,
+            COALESCE(NULLIF(adaptive_support_mode,''), 'not_recorded') AS support_mode,
+            COUNT(*) AS interactions,
+            AVG(adaptive_support_confidence) AS avg_decision_confidence,
+            AVG(student_usefulness_rating) AS avg_student_usefulness
+        FROM ai_interactions
+        WHERE adaptive_support_level IS NOT NULL
+        GROUP BY COALESCE(adaptive_support_level, -1), COALESCE(NULLIF(adaptive_support_mode,''), 'not_recorded')
+        ORDER BY support_level, interactions DESC
+        """
     )
 
 
@@ -1517,7 +1570,9 @@ def ai_logs_df(
         SELECT a.id AS interaction_id, a.created_at, s.participant_code, s.full_name, a.module, a.concept, a.task,
                a.mode, a.provider, a.model, a.prompt, a.response, a.diagnostic,
                a.latency_ms, a.response_word_count, a.student_input_language, a.response_language,
-               a.error_type, a.is_fallback_used, a.app_version, a.prompt_template_version, a.lesson_id, a.activity_id, a.selected_text, a.student_usefulness_rating, a.student_ai_feedback
+               a.error_type, a.is_fallback_used, a.app_version, a.prompt_template_version, a.lesson_id, a.activity_id, a.selected_text,
+               a.adaptive_support_level, a.adaptive_support_mode, a.adaptive_support_confidence, a.adaptive_support_reason,
+               a.student_usefulness_rating, a.student_ai_feedback
         FROM ai_interactions a
         LEFT JOIN students s ON s.id=a.student_id
         {where_sql}
@@ -2687,6 +2742,20 @@ def approve_teacher_blueprint_run(run_id: int, project_id: int, teacher_username
         raise ValueError("Lesson blueprint run not found")
     if str(run.get("status") or "") == "error":
         raise ValueError("A blueprint with errors cannot be approved")
+    try:
+        quality = json.loads(run.get("quality_json") or "{}")
+    except Exception:
+        quality = {}
+    if int(quality.get("identity_error_count") or 0) > 0:
+        raise ValueError(
+            "The blueprint contains source/publication titles in lesson identity. "
+            "Review or rebuild the course plan before approval."
+        )
+    if bool(quality.get("evidence_rebuild_required")):
+        raise ValueError(
+            "Course-plan approval is blocked because every evidence concept was rejected as source/reference metadata. "
+            "Return to course sources/evidence, rebuild the evidence synthesis, then create a new plan."
+        )
     invalidate_teacher_blueprint_approvals(int(project_id))
     exec_sql(
         """
@@ -2856,22 +2925,45 @@ def teacher_lesson_block_bundle(run_id: int) -> Optional[Dict[str, Any]]:
     return run
 
 
-def latest_teacher_lesson_block(project_id: int, lesson_id: str, block_type: str, *, approved_only: bool = False) -> Optional[Dict[str, Any]]:
+def latest_teacher_lesson_block(
+    project_id: int,
+    lesson_id: str,
+    block_type: str,
+    *,
+    approved_only: bool = False,
+    blueprint_run_id: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
     sql = """SELECT id FROM teacher_lesson_block_runs
     WHERE project_id=:project_id AND lesson_id=:lesson_id AND block_type=:block_type"""
+    params: Dict[str, Any] = {
+        "project_id": int(project_id),
+        "lesson_id": str(lesson_id),
+        "block_type": str(block_type),
+    }
+    if blueprint_run_id is not None:
+        sql += " AND blueprint_run_id=:blueprint_run_id"
+        params["blueprint_run_id"] = int(blueprint_run_id)
     if approved_only:
         sql += " AND approved_by_teacher=1"
     sql += " ORDER BY id DESC LIMIT 1"
-    row = query_one(sql, {"project_id": int(project_id), "lesson_id": str(lesson_id), "block_type": str(block_type)})
+    row = query_one(sql, params)
     return teacher_lesson_block_bundle(int(row["id"])) if row else None
 
 
-def latest_lesson_blocks_by_type(project_id: int, lesson_id: str) -> Dict[str, Dict[str, Any]]:
-    rows = query_df(
-        """SELECT id, block_type FROM teacher_lesson_block_runs
-        WHERE project_id=:project_id AND lesson_id=:lesson_id ORDER BY id DESC""",
-        {"project_id": int(project_id), "lesson_id": str(lesson_id)},
-    )
+def latest_lesson_blocks_by_type(
+    project_id: int,
+    lesson_id: str,
+    *,
+    blueprint_run_id: Optional[int] = None,
+) -> Dict[str, Dict[str, Any]]:
+    sql = """SELECT id, block_type FROM teacher_lesson_block_runs
+        WHERE project_id=:project_id AND lesson_id=:lesson_id"""
+    params: Dict[str, Any] = {"project_id": int(project_id), "lesson_id": str(lesson_id)}
+    if blueprint_run_id is not None:
+        sql += " AND blueprint_run_id=:blueprint_run_id"
+        params["blueprint_run_id"] = int(blueprint_run_id)
+    sql += " ORDER BY id DESC"
+    rows = query_df(sql, params)
     rows = rows.to_dict("records") if hasattr(rows, "to_dict") else []
     result: Dict[str, Dict[str, Any]] = {}
     for row in rows:
@@ -2883,13 +2975,20 @@ def latest_lesson_blocks_by_type(project_id: int, lesson_id: str) -> Dict[str, D
     return result
 
 
-def latest_approved_lesson_blocks(project_id: int, lesson_id: str) -> List[Dict[str, Any]]:
-    rows = query_df(
-        """SELECT id FROM teacher_lesson_block_runs
-        WHERE project_id=:project_id AND lesson_id=:lesson_id AND approved_by_teacher=1
-        ORDER BY sequence_order ASC, id DESC""",
-        {"project_id": int(project_id), "lesson_id": str(lesson_id)},
-    )
+def latest_approved_lesson_blocks(
+    project_id: int,
+    lesson_id: str,
+    *,
+    blueprint_run_id: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    sql = """SELECT id FROM teacher_lesson_block_runs
+        WHERE project_id=:project_id AND lesson_id=:lesson_id AND approved_by_teacher=1"""
+    params: Dict[str, Any] = {"project_id": int(project_id), "lesson_id": str(lesson_id)}
+    if blueprint_run_id is not None:
+        sql += " AND blueprint_run_id=:blueprint_run_id"
+        params["blueprint_run_id"] = int(blueprint_run_id)
+    sql += " ORDER BY sequence_order ASC, id DESC"
+    rows = query_df(sql, params)
     rows = rows.to_dict("records") if hasattr(rows, "to_dict") else []
     seen = set()
     result = []
@@ -2906,10 +3005,47 @@ def approve_teacher_lesson_block(run_id: int, project_id: int, teacher_username:
         raise ValueError("Lesson block run not found.")
     if str(run.get("status") or "") == "error":
         raise ValueError("A block with validation errors cannot be approved.")
+
+    # Enforce lesson identity at the approval boundary as well as at generation
+    # time. This protects Advanced mode and preserves old polluted drafts as
+    # history without allowing them to become canonical lesson content.
+    blueprint_bundle = teacher_blueprint_bundle(int(run.get("blueprint_run_id") or 0)) or {}
+    blueprint = dict(blueprint_bundle.get("blueprint") or {})
+    lesson = next(
+        (
+            dict(item)
+            for item in (blueprint.get("lessons") or [])
+            if str(item.get("lesson_id")) == str(run.get("lesson_id"))
+        ),
+        {},
+    )
+    evidence = teacher_evidence_bundle(int(blueprint_bundle.get("evidence_run_id") or 0)) or {}
+    source_titles = lesson_identity.source_titles_from_bundle(evidence)
+    project_row = query_one("SELECT * FROM teacher_projects WHERE id=:id", {"id": int(project_id)}) or {}
+    identity = lesson_identity.inspect_lesson_identity(
+        lesson=lesson,
+        blueprint=blueprint,
+        project=project_row,
+        source_titles=source_titles,
+        index=int(lesson.get("sequence_order") or 1),
+        lang=str(project_row.get("primary_language_code") or "ar"),
+    )
+    if not identity.get("valid"):
+        raise ValueError(
+            "Lesson approval blocked because its identity is derived from reference-source metadata. "
+            "Rebuild and approve the course plan first."
+        )
+
     exec_sql(
         """UPDATE teacher_lesson_block_runs SET approved_by_teacher=0, approved_at=NULL
-        WHERE project_id=:project_id AND lesson_id=:lesson_id AND block_type=:block_type""",
-        {"project_id": int(project_id), "lesson_id": str(run["lesson_id"]), "block_type": str(run["block_type"])},
+        WHERE project_id=:project_id AND blueprint_run_id=:blueprint_run_id
+          AND lesson_id=:lesson_id AND block_type=:block_type""",
+        {
+            "project_id": int(project_id),
+            "blueprint_run_id": int(run.get("blueprint_run_id") or 0),
+            "lesson_id": str(run["lesson_id"]),
+            "block_type": str(run["block_type"]),
+        },
     )
     exec_sql(
         "UPDATE teacher_lesson_block_runs SET approved_by_teacher=1, approved_at=:approved_at WHERE id=:id",

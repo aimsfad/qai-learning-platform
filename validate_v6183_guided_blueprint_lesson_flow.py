@@ -39,8 +39,10 @@ def validate_contracts() -> None:
 
 def validate_block_state() -> None:
     original_latest = blocks.db.latest_lesson_blocks_by_type
+    original_active = blocks._active_blueprint_run_id
     try:
-        blocks.db.latest_lesson_blocks_by_type = lambda project_id, lesson_id: {
+        blocks._active_blueprint_run_id = lambda project_id: 77
+        blocks.db.latest_lesson_blocks_by_type = lambda project_id, lesson_id, **kwargs: {
             "activation": {
                 "id": 11,
                 "block_type": "activation",
@@ -70,6 +72,7 @@ def validate_block_state() -> None:
         require(completion["approved"] == 1 and completion["available"] == 2, "completion aggregation mismatch")
     finally:
         blocks.db.latest_lesson_blocks_by_type = original_latest
+        blocks._active_blueprint_run_id = original_active
 
 
 def validate_teacher_ui_source() -> None:

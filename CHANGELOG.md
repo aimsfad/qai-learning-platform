@@ -1,3 +1,37 @@
+# V6.19.0 — Pedagogical Quality Gate + Adaptive AI Coach
+
+- Added a deterministic `pedagogical_quality_gate.py` so the lesson is not graded by the same LLM that generated it.
+- Added eight inspectable quality dimensions: alignment, learner activation, scaffolding, practice/transfer, assessment/feedback, misconception repair, metacognition, and representation/access signals.
+- Kept pedagogical-quality scores advisory and teacher-controlled; only structural/integrity blockers prevent approval.
+- Added unsafe generated-HTML blocking outside fenced educational code while preserving legitimate code examples.
+- Added `adaptive_support_engine.py` with four transparent support levels from transfer challenge to a micro-explanation plus analogous example.
+- Preserved the V6.8.2 attempt-first gate: adaptive support is available only after a valid learner attempt.
+- Added an adaptive-support prompt contract that prioritizes one next instructional move, productive effort, diagnosis before explanation, and no answer dumping.
+- Made the offline/provider-error fallback preserve the same adaptive support level and localize the fallback notice in Arabic/French/English.
+- Logged adaptive level, mode, evidence-coverage confidence, and reason on AI interactions for later research/evaluator analysis.
+- Added `adaptive_support_analytics_df()` and lesson-level AI support-history retrieval.
+- Extended `ai_interactions` through lightweight additive migrations; existing records remain valid.
+- Added compact teacher quality-gate and learner adaptive-support UI surfaces with Arabic/French/English copy.
+- Added optional `ENABLE_PEDAGOGICAL_QUALITY_GATE` and `ENABLE_ADAPTIVE_AI_COACH` flags, both enabled by default.
+- Added `validate_v6190_pedagogical_quality_adaptive_coach.py` and updated compatibility validators.
+
+# V6.18.9 — Lesson Identity & Content Hygiene
+
+- Added `lesson_identity.py` to keep teachable concepts and lesson identity separate from bibliographic/source metadata.
+- Reject source/publication titles, file-like names, catalogues, regulations, policies, and source-registry matches when constructing evidence concepts and lesson identities.
+- Removed the evidence fallback behavior that could promote source titles into concepts; deterministic fallback now uses safe teacher project concepts only.
+- Added blueprint identity diagnostics and an approval boundary that rejects contaminated course plans.
+- When every evidence concept is rejected as source metadata, the provisional project-brief outline carries no inherited source IDs, is marked `evidence_rebuild_required`, and cannot be approved until evidence is rebuilt.
+- Added a lesson-generation and lesson-approval identity gate so legacy contaminated plans cannot silently create or approve new content.
+- Scoped lesson-block reads and approval supersession by `blueprint_run_id`, preserving historical drafts while preventing blocks from an older blueprint version from appearing in a rebuilt course plan.
+- Added safe rendering for model-generated `<details>/<summary>` markup: teacher review uses native Streamlit expanders, while general previews/download-oriented normalization uses safe Markdown.
+- Kept arbitrary model HTML disabled; HTML is parsed as content rather than rendered with `unsafe_allow_html=True`.
+- Preserved HTML/code examples inside fenced code blocks and retained legitimate Python `None` values inside code.
+- Improved Arabic heading normalization, including `Case-study` → `دراسة حالة`, without changing persisted model output.
+- Added a teacher-facing recovery path from a contaminated lesson back to course-plan rebuild while preserving prior versions in history.
+- Added `validate_v6189_lesson_identity_content_hygiene.py` and updated backward-compatibility validators.
+- No database migration or new Secrets are required.
+
 # V6.18.8 — Teacher Workspace Screenshot QA & Clarity Polish
 
 - Reviewed the live Streamlit teacher workspace screenshots after V6.18.7 deployment.

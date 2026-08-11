@@ -24,6 +24,7 @@ import content
 import db
 import feedback_engine
 import attempt_gate
+import adaptive_support_engine
 import branding
 import i18n
 import router
@@ -1049,6 +1050,8 @@ def log_tutor_interaction(
     lesson_id: str = "",
     activity_id: str = "",
     selected_text: str = "",
+    adaptive_decision: Optional[Dict[str, Any]] = None,
+    chosen_support_mode: str = "",
 ) -> Optional[int]:
     interaction_id = db.log_ai_interaction(
         student_id,
@@ -1070,6 +1073,13 @@ def log_tutor_interaction(
         lesson_id=lesson_id,
         activity_id=activity_id,
         selected_text=selected_text,
+        adaptive_support_level=(adaptive_decision or {}).get("level"),
+        adaptive_support_mode=str(chosen_support_mode or (adaptive_decision or {}).get("mode") or ""),
+        adaptive_support_confidence=(adaptive_decision or {}).get("confidence"),
+        adaptive_support_reason=(
+            f"recommended={(adaptive_decision or {}).get('mode','')}; chosen={chosen_support_mode or (adaptive_decision or {}).get('mode','')}; "
+            f"{(adaptive_decision or {}).get('reason','')}" if adaptive_decision else ""
+        ),
     )
     try:
         db.log_event(student_id, "student", "ai_response_received", f"{module}|{concept}|{task}|interaction_id={interaction_id}")
@@ -2723,6 +2733,10 @@ def student_workspace_copy() -> Dict[str, str]:
             "attempt": "محاولتك قبل طلب المساعدة",
             "attempt_ph": "اكتب توقعك، تفسيرك، أو ما فهمته من الكود في سطرين على الأقل…",
             "quick_support": "مساعدة سريعة",
+            "adaptive_support": "الدعم المقترح الآن",
+            "adaptive_support_help": "تقدير دعم مبني على الأدلة المتاحة، وليس حكمًا نهائيًا على مستوى الإتقان.",
+            "adaptive_confidence": "ثقة التقدير",
+            "other_support": "خيارات دعم أخرى",
             "hint": "تلميح واحد",
             "simplify": "اشرح ببساطة",
             "qiskit_example": "اربطه بـ Qiskit",
@@ -2764,7 +2778,7 @@ def student_workspace_copy() -> Dict[str, str]:
             "goal": "Objectif", "big_idea": "Idée centrale", "why": "Pourquoi ce concept est important", "can_do": "À la fin, vous pourrez",
             "misconception": "Erreur conceptuelle à éviter", "code_focus": "Comment lire le code", "attempt": "Votre tentative avant l’aide",
             "attempt_ph": "Écrivez votre prédiction, votre explication ou votre lecture du code en au moins deux lignes…",
-            "quick_support": "Aide rapide", "hint": "Un indice", "simplify": "Expliquer simplement", "qiskit_example": "Relier à Qiskit", "quiz": "Tester ma compréhension",
+            "quick_support": "Aide rapide", "adaptive_support": "Soutien recommandé", "adaptive_support_help": "Estimation de soutien fondée sur les indices disponibles, et non un jugement définitif de maîtrise.", "adaptive_confidence": "Confiance de l'estimation", "other_support": "Autres options de soutien", "hint": "Un indice", "simplify": "Expliquer simplement", "qiskit_example": "Relier à Qiskit", "quiz": "Tester ma compréhension",
             "send": "Demander de l’aide", "full_tutor": "Ouvrir la conversation complète", "ai_policy": "Le coach guide le raisonnement sans remplacer la tentative de l’apprenant.",
             "no_ai": "Les outils d’IA sont masqués pour ce parcours selon le protocole de l’étude.", "reflection": "Réflexion et validation du module",
             "reflection_ph": "Qu’est-ce qui est devenu clair ? Quel point doit encore être revu ?", "save_complete": "Enregistrer et terminer le module",
@@ -2790,7 +2804,7 @@ def student_workspace_copy() -> Dict[str, str]:
             "goal": "Module goal", "big_idea": "Big idea", "why": "Why this concept matters", "can_do": "By the end you can",
             "misconception": "Misconception to avoid", "code_focus": "How to read the code", "attempt": "Your attempt before support",
             "attempt_ph": "Write your prediction, explanation, or code reading in at least two lines…",
-            "quick_support": "Quick support", "hint": "One hint", "simplify": "Explain simply", "qiskit_example": "Connect to Qiskit", "quiz": "Test my understanding",
+            "quick_support": "Quick support", "adaptive_support": "Recommended support", "adaptive_support_help": "A support estimate based on available evidence, not a definitive mastery judgement.", "adaptive_confidence": "Estimate confidence", "other_support": "Other support options", "hint": "One hint", "simplify": "Explain simply", "qiskit_example": "Connect to Qiskit", "quiz": "Test my understanding",
             "send": "Ask for support", "full_tutor": "Open full conversation", "ai_policy": "The coach guides reasoning; it does not replace the learner's attempt.",
             "no_ai": "AI tools are hidden for this pathway under the study design.", "reflection": "Reflect and complete the module",
             "reflection_ph": "What became clear, and what still needs review?", "save_complete": "Save reflection and complete module",
@@ -2923,28 +2937,84 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
         st.info(validation_message, icon="💡")
 
     disable_support = not result.is_valid
-    st.markdown(f"<div class='v66-quick-label' dir='{direction}'>{escape(copy['quick_support'])}</div>", unsafe_allow_html=True)
     modes = [
         ("hint", copy["hint"], "Give one concise hint and one check question. Do not reveal a full answer."),
-        ("simplify", copy["simplify"], "Explain the current concept simply using one analogy, then ask one diagnostic question."),
+        ("simplify", copy["simplify"], "Explain one difficult step simply using one analogous example, then ask the learner to retry."),
         ("qiskit", copy["qiskit_example"], "Connect the learner's attempt to the smallest relevant Qiskit code idea. Do not solve the whole task."),
-        ("quiz", copy["quiz"], "Create one short formative question about this module and wait for the learner's answer."),
+        ("quiz", copy["quiz"], "Create one short formative or transfer question about this module and wait for the learner's answer."),
     ]
-    selected = st.session_state.get(f"v66_mode_{lesson['id']}", "hint")
-    with st.container(key=f"v68_quick_support_{lesson['id']}"):
-        st.markdown("<span class='v68-quick-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-        button_cols = st.columns(2, gap="small")
-        for idx, (mode_key, label, instruction) in enumerate(modes):
-            with button_cols[idx % 2]:
-                if st.button(
-                    label,
-                    key=f"v66_mode_btn_{lesson['id']}_{mode_key}",
-                    use_container_width=True,
-                    type="primary" if selected == mode_key else "secondary",
-                    disabled=disable_support,
-                ):
-                    st.session_state[f"v66_mode_{lesson['id']}"] = mode_key
-                    selected = mode_key
+
+    # V6.19.0 — compute an inspectable support estimate from evidence already
+    # available in the platform. This is not presented as a mastery judgement.
+    pre_attempt = db.get_test_attempt(student["id"], "pre")
+    learner_attempt = db.get_learner_attempt(student["id"], lesson["id"])
+    recent_support_df = db.student_lesson_ai_interactions_df(student["id"], lesson["id"], limit=20)
+    recent_support = recent_support_df.to_dict("records") if not recent_support_df.empty else []
+    adaptive_enabled = str(secret("ENABLE_ADAPTIVE_AI_COACH", "true")).strip().lower() in {"1", "true", "yes", "on"}
+    if adaptive_enabled:
+        adaptive_decision = adaptive_support_engine.recommend_support(
+            lesson=lesson,
+            pre_attempt=pre_attempt,
+            learner_attempt=learner_attempt,
+            recent_interactions=recent_support,
+            language_code=lang,
+        )
+    else:
+        adaptive_decision = {
+            "level": 1, "mode": "hint", "label": copy["hint"],
+            "instruction": "Give one concise hint and one check question. Do not reveal a full answer.",
+            "rationale": copy["adaptive_support_help"], "confidence": 0.0,
+            "signals": {}, "reason": "adaptive_support_disabled",
+        }
+    recommended_mode = str(adaptive_decision.get("mode") or "hint")
+    valid_mode_keys = {item[0] for item in modes}
+    if recommended_mode not in valid_mode_keys:
+        recommended_mode = "hint"
+
+    mode_key = f"v66_mode_{lesson['id']}"
+    override_key = f"v619_manual_support_override_{lesson['id']}"
+    if not st.session_state.get(override_key):
+        st.session_state[mode_key] = recommended_mode
+    selected = st.session_state.get(mode_key, recommended_mode)
+    if selected not in valid_mode_keys:
+        selected = recommended_mode
+        st.session_state[mode_key] = selected
+
+    confidence_pct = int(round(float(adaptive_decision.get("confidence") or 0) * 100))
+    st.markdown(
+        f"<section class='v619-adaptive-support-card' dir='{direction}'>"
+        f"<div><small>{escape(copy['adaptive_support'])}</small><strong>{escape(str(adaptive_decision.get('label') or ''))}</strong></div>"
+        f"<p>{escape(str(adaptive_decision.get('rationale') or copy['adaptive_support_help']))}</p>"
+        f"<span>{escape(copy['adaptive_confidence'])}: {confidence_pct}%</span>"
+        f"</section>",
+        unsafe_allow_html=True,
+    )
+
+    # Keep the default path frictionless: the recommended support is selected
+    # automatically. Alternative support remains available on demand.
+    with st.expander(copy["other_support"], expanded=False):
+        st.markdown(f"<div class='v66-quick-label' dir='{direction}'>{escape(copy['quick_support'])}</div>", unsafe_allow_html=True)
+        with st.container(key=f"v68_quick_support_{lesson['id']}"):
+            st.markdown("<span class='v68-quick-grid-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            button_cols = st.columns(2, gap="small")
+            for idx, (candidate_key, label, instruction) in enumerate(modes):
+                with button_cols[idx % 2]:
+                    if st.button(
+                        label,
+                        key=f"v66_mode_btn_{lesson['id']}_{candidate_key}",
+                        use_container_width=True,
+                        type="primary" if selected == candidate_key else "secondary",
+                        disabled=disable_support,
+                    ):
+                        st.session_state[mode_key] = candidate_key
+                        st.session_state[override_key] = candidate_key != recommended_mode
+                        selected = candidate_key
+                        st.rerun()
+            if st.session_state.get(override_key):
+                reset_label = {"ar": "العودة إلى الدعم المقترح", "fr": "Revenir au soutien recommandé", "en": "Use recommended support"}.get(lang, "Use recommended support")
+                if st.button(reset_label, key=f"v619_reset_support_{lesson['id']}", use_container_width=True):
+                    st.session_state[override_key] = False
+                    st.session_state[mode_key] = recommended_mode
                     st.rerun()
 
     selected_mode = next(item for item in modes if item[0] == selected)
@@ -2992,13 +3062,32 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
                     lesson_context={
                         **lesson,
                         "response_language": {"ar": "Arabic", "fr": "French", "en": "English"}[lang],
-                        "pedagogical_mode": "student workspace compact coach",
-                        "ai_use_policy": "Support after learner attempt. Scaffold, diagnose, and ask questions. Avoid answer dumping.",
+                        "pedagogical_mode": "adaptive student workspace coach",
+                        "ai_use_policy": "Support after learner attempt. Diagnose, scaffold, fade support, and preserve learner agency.",
+                        "adaptive_support_level": adaptive_decision.get("level"),
+                        "adaptive_support_mode": adaptive_decision.get("mode"),
+                        "adaptive_support_contract": adaptive_support_engine.prompt_contract(
+                            adaptive_decision, chosen_mode=selected_mode[0]
+                        ),
                     },
                 )
+            db.log_event(
+                student["id"],
+                "student",
+                "adaptive_support_decision",
+                json.dumps({
+                    "lesson_id": lesson["id"],
+                    "recommended_level": adaptive_decision.get("level"),
+                    "recommended_mode": adaptive_decision.get("mode"),
+                    "chosen_mode": selected_mode[0],
+                    "confidence": adaptive_decision.get("confidence"),
+                    "signals": adaptive_decision.get("signals"),
+                }, ensure_ascii=False),
+            )
             interaction_id = log_tutor_interaction(
                 student["id"], "student_workspace", ", ".join(lesson.get("concepts", [])), selected_mode[1], result.normalized_text, tutor,
-                lesson_id=lesson["id"], activity_id="v66_compact_coach", selected_text=selected_mode[2],
+                lesson_id=lesson["id"], activity_id="v619_adaptive_coach", selected_text=selected_mode[2],
+                adaptive_decision=adaptive_decision, chosen_support_mode=selected_mode[0],
             )
             st.session_state[f"v66_response_{lesson['id']}"] = {"text": tutor.response, "id": interaction_id}
 

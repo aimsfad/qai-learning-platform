@@ -32,6 +32,7 @@ import streamlit as st
 import content_generation_engine
 import db
 import web_research_engine
+import lesson_identity
 
 
 @dataclass(frozen=True)
@@ -458,6 +459,7 @@ Required JSON schema:
 Constraints:
 - Produce between 4 and {int(max_cards)} evidence cards when supported by the dossier.
 - Produce between 3 and {int(max_concepts)} concepts.
+- Concept names must name teachable domain concepts. Never use a publication title, PDF/file name, catalogue, handbook, policy, regulation, degree-requirements document, institution name, URL, citation, or source-registry title as a concept name.
 - Prefer sources marked approved and higher-scoring sources.
 - A card must cite at least one valid source identifier.
 - Use multiple sources for important claims when possible.
@@ -528,7 +530,13 @@ def _cards_from_payload(payload: Mapping[str, Any], valid_ids: set[str], max_car
     return result
 
 
-def _concepts_from_payload(payload: Mapping[str, Any], valid_ids: set[str], max_concepts: int) -> List[ConceptRecord]:
+def _concepts_from_payload(
+    payload: Mapping[str, Any],
+    valid_ids: set[str],
+    max_concepts: int,
+    *,
+    source_titles: Sequence[str] = (),
+) -> List[ConceptRecord]:
     raw_concepts = payload.get("concepts") if isinstance(payload, Mapping) else []
     if not isinstance(raw_concepts, list):
         return []
@@ -540,9 +548,18 @@ def _concepts_from_payload(payload: Mapping[str, Any], valid_ids: set[str], max_
         name = re.sub(r"\s+", " ", str(item.get("name") or "")).strip()[:300]
         if len(name) < 2 or name.lower() in seen:
             continue
+        # Concept identity must describe something teachable. Publication,
+        # catalogue, regulation, handbook, or source-registry titles are
+        # evidence metadata, not concepts to be taught.
+        if lesson_identity.looks_like_source_title(name, source_titles):
+            continue
         seen.add(name.lower())
         prerequisites = item.get("prerequisites") if isinstance(item.get("prerequisites"), list) else []
         prerequisites = [re.sub(r"\s+", " ", str(value)).strip()[:250] for value in prerequisites if str(value).strip()]
+        prerequisites = [
+            value for value in prerequisites
+            if not lesson_identity.looks_like_source_title(value, source_titles)
+        ]
         source_ids = _normalise_source_ids(item.get("source_ids"), valid_ids)
         difficulty = str(item.get("difficulty") or "introductory").strip().lower()
         if difficulty not in {"introductory", "intermediate", "advanced"}:
@@ -581,34 +598,23 @@ def _fallback_cards(sources: Sequence[ScoredSource], max_cards: int) -> List[Evi
 
 
 def _fallback_concepts(project: Mapping[str, Any], sources: Sequence[ScoredSource], max_concepts: int) -> List[ConceptRecord]:
-    candidates = [
-        str(project.get("target_concept") or "").strip(),
-        str(project.get("unit_title") or "").strip(),
-        str(project.get("domain") or "").strip(),
-    ]
-    for source in sources[:6]:
-        title = re.split(r"[|:–—-]", source.title, maxsplit=1)[0].strip()
-        if 3 <= len(title) <= 120:
-            candidates.append(title)
+    # Never use source/publication titles as deterministic concept fallbacks.
+    # This keeps bibliographic identity separate from pedagogical identity when
+    # the synthesis provider is unavailable or returns invalid JSON.
+    source_titles = [source.title for source in sources]
+    candidates = lesson_identity.safe_project_concept_candidates(project, source_titles)
     result: List[ConceptRecord] = []
-    seen = set()
-    for name in candidates:
-        key = name.lower()
-        if not name or key in seen:
-            continue
-        seen.add(key)
+    for name in candidates[:max_concepts]:
         result.append(
             ConceptRecord(
                 concept_id=f"C{len(result) + 1}",
                 name=name[:300],
-                description="Candidate concept extracted deterministically; teacher review is required.",
+                description="Candidate concept derived from the teacher project brief; teacher review is required.",
                 prerequisites=[],
                 source_ids=[sources[0].source_id] if sources else [],
                 difficulty="introductory",
             )
         )
-        if len(result) >= max_concepts:
-            break
     return result
 
 
@@ -694,7 +700,8 @@ def synthesize_evidence(
     payload = _extract_json_object(generation.response) if generation.status == "completed" else {}
     valid_ids = {item.source_id for item in sources if item.status != "rejected"}
     cards = _cards_from_payload(payload, valid_ids, max_cards)
-    concepts = _concepts_from_payload(payload, valid_ids, max_concepts)
+    source_titles = [item.title for item in sources]
+    concepts = _concepts_from_payload(payload, valid_ids, max_concepts, source_titles=source_titles)
     llm_payload_valid = bool(payload and len(cards) >= 2 and len(concepts) >= 2)
     if not cards:
         cards = _fallback_cards(sources, max_cards)

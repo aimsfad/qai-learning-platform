@@ -15,7 +15,9 @@ import streamlit as st
 import content_generation_engine
 import db
 import pedagogical_orchestrator
+import pedagogical_quality_gate
 import lesson_content_renderer
+import lesson_identity
 
 BLOCK_SPECS: Dict[str, Dict[str, Any]] = {
     "activation": {"order": 10, "label_ar": "تنشيط المعارف السابقة", "label_fr": "Activation des acquis", "label_en": "Prior-knowledge activation", "min_words": 45, "max_tokens": 1100},
@@ -72,10 +74,20 @@ def ordered_block_types() -> List[str]:
     ]
 
 
+def _active_blueprint_run_id(project_id: int) -> Optional[int]:
+    """Return the currently approved blueprint id for generation state."""
+    bundle = db.latest_teacher_blueprint(int(project_id), approved_only=True)
+    if not bundle:
+        return None
+    value = int(bundle.get("id") or 0)
+    return value or None
+
+
 def lesson_block_state(
     project_id: int,
     lesson_id: str,
     language_code: str = "ar",
+    blueprint_run_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Build a complete state map for the nine lesson blocks.
 
@@ -84,7 +96,14 @@ def lesson_block_state(
     helper exposes one normalized state object per canonical block.
     """
 
-    latest = db.latest_lesson_blocks_by_type(int(project_id), str(lesson_id))
+    active_blueprint_id = int(blueprint_run_id or 0) or _active_blueprint_run_id(int(project_id))
+    latest = (
+        db.latest_lesson_blocks_by_type(
+            int(project_id), str(lesson_id), blueprint_run_id=active_blueprint_id
+        )
+        if active_blueprint_id
+        else {}
+    )
     require_sequence = bool(block_generation_status().get("require_sequence"))
     rows: List[Dict[str, Any]] = []
     prior_approved = True
@@ -336,9 +355,31 @@ def generate_and_persist(
     if not bool(int(blueprint_bundle.get("approved_by_teacher") or 0)):
         raise ValueError("Approve the blueprint before generating lesson blocks.")
     project_id = int(project["id"])
-    previous = list(context_blocks) if context_blocks is not None else db.latest_approved_lesson_blocks(project_id, str(lesson_id))
-    prompt = build_block_prompt(project, blueprint_bundle, lesson_id, block_type, previous_blocks=previous)
+    blueprint_run_id = int(blueprint_bundle.get("id") or 0)
     ctx = lesson_context(blueprint_bundle, lesson_id)
+    evidence = db.latest_teacher_evidence_for_project(project_id, approved_only=True) or {}
+    source_titles = lesson_identity.source_titles_from_bundle(evidence)
+    identity = lesson_identity.inspect_lesson_identity(
+        lesson=ctx["lesson"],
+        blueprint=dict(blueprint_bundle.get("blueprint") or {}),
+        project=project,
+        source_titles=source_titles,
+        index=int(ctx["lesson"].get("sequence_order") or 1),
+        lang=str(project.get("primary_language_code") or "ar"),
+    )
+    if not identity.get("valid"):
+        raise ValueError(
+            "LESSON_IDENTITY_INVALID: The lesson identity is derived from reference-source metadata. "
+            "Rebuild and approve the course plan before generating lesson content."
+        )
+    previous = (
+        list(context_blocks)
+        if context_blocks is not None
+        else db.latest_approved_lesson_blocks(
+            project_id, str(lesson_id), blueprint_run_id=blueprint_run_id
+        )
+    )
+    prompt = build_block_prompt(project, blueprint_bundle, lesson_id, block_type, previous_blocks=previous)
     allowed_sources = list(ctx["lesson"].get("source_ids") or [])
     result = content_generation_engine.generate_content(
         prompt,
@@ -405,8 +446,15 @@ def save_teacher_revision(
     return db.teacher_lesson_block_bundle(run_id) or {}
 
 
-def lesson_completion(project_id: int, lesson_id: str) -> Dict[str, Any]:
-    rows = lesson_block_state(int(project_id), str(lesson_id), "en")
+def lesson_completion(
+    project_id: int,
+    lesson_id: str,
+    *,
+    blueprint_run_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    rows = lesson_block_state(
+        int(project_id), str(lesson_id), "en", blueprint_run_id=blueprint_run_id
+    )
     approved = sum(1 for item in rows if bool(item.get("approved")))
     available = sum(1 for item in rows if bool(item.get("run")))
     return {
@@ -440,14 +488,23 @@ def generate_full_lesson(
         raise ValueError("Approve the blueprint before generating lessons.")
 
     project_id = int(project["id"])
+    blueprint_run_id = int(blueprint_bundle.get("id") or 0)
     ordered = ordered_block_types()
-    context = db.latest_approved_lesson_blocks(project_id, str(lesson_id))
+    context = db.latest_approved_lesson_blocks(
+        project_id, str(lesson_id), blueprint_run_id=blueprint_run_id
+    )
     results: List[Dict[str, Any]] = []
     generated = 0
     skipped = 0
 
     for index, block_type in enumerate(ordered, start=1):
-        existing = db.latest_teacher_lesson_block(project_id, str(lesson_id), block_type, approved_only=False)
+        existing = db.latest_teacher_lesson_block(
+            project_id,
+            str(lesson_id),
+            block_type,
+            approved_only=False,
+            blueprint_run_id=blueprint_run_id,
+        )
         existing_status = str((existing or {}).get("status") or "").lower()
         usable_existing = bool(existing and existing_status not in {"error", "failed"})
         if usable_existing and not overwrite:
@@ -474,7 +531,9 @@ def generate_full_lesson(
         if progress_callback:
             progress_callback(index, len(ordered), block_type, "generated")
 
-    state = lesson_block_state(project_id, str(lesson_id), "en")
+    state = lesson_block_state(
+        project_id, str(lesson_id), "en", blueprint_run_id=blueprint_run_id
+    )
     errors = [row for row in state if str(row.get("state") or "") == "failed"]
     return {
         "lesson_id": str(lesson_id),
@@ -487,12 +546,21 @@ def generate_full_lesson(
 
 
 def approve_full_lesson(project_id: int, lesson_id: str, teacher_username: str) -> Dict[str, Any]:
-    """Approve the latest valid version of every required lesson section."""
+    """Approve the latest valid version for the currently approved blueprint."""
+    blueprint_run_id = _active_blueprint_run_id(int(project_id))
+    if not blueprint_run_id:
+        raise ValueError("Approve a course blueprint before approving lesson content.")
     missing: List[str] = []
     invalid: List[str] = []
     latest_rows: List[Dict[str, Any]] = []
     for block_type in ordered_block_types():
-        run = db.latest_teacher_lesson_block(int(project_id), str(lesson_id), block_type, approved_only=False)
+        run = db.latest_teacher_lesson_block(
+            int(project_id),
+            str(lesson_id),
+            block_type,
+            approved_only=False,
+            blueprint_run_id=blueprint_run_id,
+        )
         if not run:
             missing.append(block_type)
             continue
@@ -504,26 +572,73 @@ def approve_full_lesson(project_id: int, lesson_id: str, teacher_username: str) 
         raise ValueError("Generate all lesson sections before approval: " + ", ".join(missing))
     if invalid:
         raise ValueError("Resolve validation errors before approval: " + ", ".join(invalid))
+
+    # V6.19.0: the pedagogical quality gate is advisory for learning-design
+    # weaknesses but blocking for structural/integrity defects. The teacher
+    # remains the final pedagogical approver.
+    quality = lesson_quality_snapshot(
+        int(project_id), str(lesson_id), blueprint_run_id=blueprint_run_id
+    )
+    gate = dict(quality.get("pedagogical_gate") or {})
+    if gate and not bool(gate.get("can_approve", True)):
+        raise ValueError(
+            "Resolve blocking pedagogical-quality issues before approval: "
+            + ", ".join(str(item) for item in gate.get("blockers") or [])
+        )
+
     for run in latest_rows:
         db.approve_teacher_lesson_block(int(run["id"]), int(project_id), str(teacher_username))
-    return lesson_completion(int(project_id), str(lesson_id))
+    return lesson_completion(
+        int(project_id), str(lesson_id), blueprint_run_id=blueprint_run_id
+    )
 
 
-def lesson_quality_snapshot(project_id: int, lesson_id: str) -> Dict[str, Any]:
-    """Summarise deterministic generation and pedagogical validation for UI."""
+def lesson_quality_snapshot(
+    project_id: int,
+    lesson_id: str,
+    *,
+    blueprint_run_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Summarise structural validation plus the V6.19 pedagogical quality gate."""
     warnings: List[str] = []
     errors: List[str] = []
     reviewed = 0
+    blueprint_run_id = int(blueprint_run_id or 0) or _active_blueprint_run_id(int(project_id))
     for block_type in ordered_block_types():
-        run = db.latest_teacher_lesson_block(int(project_id), str(lesson_id), block_type, approved_only=False)
+        run = (
+            db.latest_teacher_lesson_block(
+                int(project_id),
+                str(lesson_id),
+                block_type,
+                approved_only=False,
+                blueprint_run_id=blueprint_run_id,
+            )
+            if blueprint_run_id
+            else None
+        )
         if not run:
             continue
         reviewed += 1
         validation = dict(run.get("validation") or {})
         warnings.extend(str(item) for item in list(validation.get("warnings") or []))
         errors.extend(str(item) for item in list(validation.get("errors") or []))
+
     required = len(ordered_block_types())
-    score = 0.0 if required == 0 else max(0.0, min(1.0, (reviewed / required) - (0.08 * len(errors)) - (0.02 * len(warnings))))
+    legacy_score = 0.0 if required == 0 else max(0.0, min(1.0, (reviewed / required) - (0.08 * len(errors)) - (0.02 * len(warnings))))
+
+    gate: Dict[str, Any] = {}
+    if blueprint_run_id and _as_bool("ENABLE_PEDAGOGICAL_QUALITY_GATE", True):
+        bundle = db.teacher_blueprint_bundle(int(blueprint_run_id)) or {}
+        lesson = next(
+            (dict(item) for item in list((bundle.get("blueprint") or {}).get("lessons") or []) if str(item.get("lesson_id")) == str(lesson_id)),
+            {},
+        )
+        rows = assembled_lesson(
+            int(project_id), str(lesson_id), "en", blueprint_run_id=int(blueprint_run_id)
+        )
+        if lesson:
+            gate = pedagogical_quality_gate.evaluate_lesson(lesson, rows, language_code="en")
+
     return {
         "reviewed_blocks": reviewed,
         "required_blocks": required,
@@ -531,16 +646,36 @@ def lesson_quality_snapshot(project_id: int, lesson_id: str) -> Dict[str, Any]:
         "error_count": len(errors),
         "warnings": sorted(set(warnings)),
         "errors": sorted(set(errors)),
-        "quality_score": round(score, 3),
-        "ready_for_teacher_review": reviewed == required and not errors,
+        "quality_score": round(legacy_score, 3),
+        "pedagogical_score": int(gate.get("quality_score") or 0) if gate else None,
+        "pedagogical_gate": gate,
+        "ready_for_teacher_review": reviewed == required and not errors and bool(gate.get("can_approve", True) if gate else True),
+        "blueprint_run_id": blueprint_run_id,
     }
 
 
-def assembled_lesson(project_id: int, lesson_id: str, language_code: str = "ar") -> List[Dict[str, Any]]:
-    """Return the latest lesson sections in pedagogical display order."""
+def assembled_lesson(
+    project_id: int,
+    lesson_id: str,
+    language_code: str = "ar",
+    *,
+    blueprint_run_id: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """Return selected/current-blueprint sections in pedagogical display order."""
     rows: List[Dict[str, Any]] = []
+    blueprint_run_id = int(blueprint_run_id or 0) or _active_blueprint_run_id(int(project_id))
     for index, block_type in enumerate(ordered_block_types(), start=1):
-        run = db.latest_teacher_lesson_block(int(project_id), str(lesson_id), block_type, approved_only=False)
+        run = (
+            db.latest_teacher_lesson_block(
+                int(project_id),
+                str(lesson_id),
+                block_type,
+                approved_only=False,
+                blueprint_run_id=blueprint_run_id,
+            )
+            if blueprint_run_id
+            else None
+        )
         rows.append({
             "index": index,
             "block_type": block_type,
@@ -549,5 +684,7 @@ def assembled_lesson(project_id: int, lesson_id: str, language_code: str = "ar")
             "content_text": str((run or {}).get("content_text") or ""),
             "approved": bool(int((run or {}).get("approved_by_teacher") or 0)),
             "status": str((run or {}).get("status") or "not_started"),
+            "blueprint_run_id": blueprint_run_id,
         })
     return rows
+
