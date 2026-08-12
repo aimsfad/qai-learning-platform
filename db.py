@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"
+APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -147,6 +147,22 @@ def init_db() -> None:
             created_at {created_default},
             updated_at {created_default},
             UNIQUE(student_id, lesson_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS learner_evidence_events (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            lesson_id TEXT,
+            concept TEXT,
+            evidence_kind TEXT NOT NULL,
+            outcome TEXT,
+            independence_level TEXT,
+            support_level INTEGER,
+            source_type TEXT,
+            source_ref TEXT,
+            metadata_json TEXT,
+            created_at {created_default}
         )
         """,
         f"""
@@ -596,6 +612,8 @@ def init_db() -> None:
     ensure_column("question_responses", "selected_answer", "TEXT")
     ensure_column("question_responses", "correct_answer", "TEXT")
     ensure_column("question_responses", "explanation", "TEXT")
+    ensure_column("question_responses", "misconception_code", "TEXT")
+    ensure_column("question_responses", "misconception_label", "TEXT")
     ensure_column("test_attempts", "locked", "INTEGER DEFAULT 1")
     ensure_column("test_attempts", "app_version", "TEXT")
     ensure_column("survey_responses", "locked", "INTEGER DEFAULT 1")
@@ -903,14 +921,24 @@ def save_question_responses(student_id: int, attempt_type: str, answers: Dict[st
         selected = int(answers.get(q.id, -1))
         selected_answer = q.options[selected] if 0 <= selected < len(q.options) else ""
         correct_answer = q.options[q.answer_index] if 0 <= q.answer_index < len(q.options) else ""
+        misconception_meta = {}
+        try:
+            misconception_meta = dict((getattr(q, "distractor_misconceptions", {}) or {}).get(selected, {}) or {})
+        except Exception:
+            misconception_meta = {}
+        misconception_code = str(misconception_meta.get("code") or "") if selected != q.answer_index else ""
+        misconception_label = str(misconception_meta.get("label") or "") if selected != q.answer_index else ""
+        is_correct = 1 if selected == q.answer_index else 0
         exec_sql(
             """
             INSERT INTO question_responses
             (student_id, attempt_type, question_id, concept, question_text, cognitive_level, selected_index,
-             selected_answer, correct_index, correct_answer, is_correct, explanation, created_at)
+             selected_answer, correct_index, correct_answer, is_correct, explanation, misconception_code,
+             misconception_label, created_at)
             VALUES
             (:student_id, :attempt_type, :question_id, :concept, :question_text, :cognitive_level, :selected_index,
-             :selected_answer, :correct_index, :correct_answer, :is_correct, :explanation, :created_at)
+             :selected_answer, :correct_index, :correct_answer, :is_correct, :explanation, :misconception_code,
+             :misconception_label, :created_at)
             """,
             {
                 "student_id": student_id,
@@ -923,11 +951,31 @@ def save_question_responses(student_id: int, attempt_type: str, answers: Dict[st
                 "selected_answer": selected_answer,
                 "correct_index": int(q.answer_index),
                 "correct_answer": correct_answer,
-                "is_correct": 1 if selected == q.answer_index else 0,
+                "is_correct": is_correct,
                 "explanation": q.explanation,
+                "misconception_code": misconception_code,
+                "misconception_label": misconception_label,
                 "created_at": utc_now(),
             },
         )
+        try:
+            log_learning_evidence(
+                student_id=student_id,
+                lesson_id="",
+                concept=q.concept,
+                evidence_kind="assessment_response",
+                outcome="correct" if is_correct else "incorrect",
+                independence_level="independent_assessment",
+                source_type=str(attempt_type or "assessment"),
+                source_ref=str(q.id),
+                metadata={
+                    "cognitive_level": getattr(q, "cognitive_level", "Understanding"),
+                    "misconception_code": misconception_code,
+                    "misconception_label": misconception_label,
+                },
+            )
+        except Exception:
+            pass
 
 
 def get_test_attempt(student_id: int, attempt_type: str) -> Optional[Dict[str, Any]]:
@@ -990,6 +1038,7 @@ def get_recommendation(student_id: int) -> Optional[Dict[str, Any]]:
 
 
 def save_lesson_progress(student_id: int, lesson_id: str, reflection_text: str, completed: bool = True) -> None:
+    previous = query_one("SELECT completed, reflection_text FROM lesson_progress WHERE student_id=:sid AND lesson_id=:lesson_id", {"sid": int(student_id), "lesson_id": str(lesson_id)})
     payload = {
         "student_id": student_id,
         "lesson_id": lesson_id,
@@ -1012,7 +1061,21 @@ def save_lesson_progress(student_id: int, lesson_id: str, reflection_text: str, 
         completed=EXCLUDED.completed, reflection_text=EXCLUDED.reflection_text, updated_at=EXCLUDED.updated_at
         """
     exec_sql(sql, payload)
-
+    if completed and not bool(int((previous or {}).get("completed") or 0)):
+        try:
+            log_learning_evidence(
+                student_id=student_id,
+                lesson_id=lesson_id,
+                concept="",
+                evidence_kind="lesson_completion_reflection",
+                outcome="completed",
+                independence_level="mixed_or_unknown",
+                source_type="lesson_progress",
+                source_ref=lesson_id,
+                metadata={"reflection_chars": len(reflection_text.strip())},
+            )
+        except Exception:
+            pass
 
 
 def save_learner_attempt(
@@ -1064,6 +1127,27 @@ def save_learner_attempt(
         updated_at=EXCLUDED.updated_at
         """
     exec_sql(sql, payload)
+    prior_status = str(existing.get("validation_status") or "") if existing else ""
+    if validation_status in {"submitted_for_support", "opened_full_tutor"} and prior_status != validation_status:
+        try:
+            log_learning_evidence(
+                student_id=student_id,
+                lesson_id=lesson_id,
+                concept="",
+                evidence_kind="attempt_before_support",
+                outcome="submitted",
+                independence_level="pre_support",
+                source_type="learner_attempt",
+                source_ref=lesson_id,
+                metadata={
+                    "validation_status": validation_status,
+                    "word_count": int(word_count),
+                    "unique_word_count": int(unique_word_count),
+                    "support_mode": support_mode or "",
+                },
+            )
+        except Exception:
+            pass
 
 
 def get_learner_attempt(student_id: int, lesson_id: str) -> Optional[Dict[str, Any]]:
@@ -1075,6 +1159,81 @@ def get_learner_attempt(student_id: int, lesson_id: str) -> Optional[Dict[str, A
 
 def learner_attempts_df() -> pd.DataFrame:
     return query_df("SELECT * FROM learner_attempts ORDER BY updated_at DESC, id DESC")
+
+
+def log_learning_evidence(
+    *,
+    student_id: int,
+    lesson_id: str = "",
+    concept: str = "",
+    evidence_kind: str,
+    outcome: str = "",
+    independence_level: str = "unknown",
+    support_level: Optional[int] = None,
+    source_type: str = "",
+    source_ref: str = "",
+    metadata: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Append one auditable learning-evidence event.
+
+    Events describe observations, not a mastery decision. Raw free-text learner
+    responses are intentionally not stored in metadata here.
+    """
+    exec_sql(
+        """
+        INSERT INTO learner_evidence_events
+        (student_id, lesson_id, concept, evidence_kind, outcome, independence_level,
+         support_level, source_type, source_ref, metadata_json, created_at)
+        VALUES
+        (:student_id, :lesson_id, :concept, :evidence_kind, :outcome, :independence_level,
+         :support_level, :source_type, :source_ref, :metadata_json, :created_at)
+        """,
+        {
+            "student_id": int(student_id),
+            "lesson_id": str(lesson_id or ""),
+            "concept": str(concept or ""),
+            "evidence_kind": str(evidence_kind or "observation"),
+            "outcome": str(outcome or ""),
+            "independence_level": str(independence_level or "unknown"),
+            "support_level": support_level,
+            "source_type": str(source_type or ""),
+            "source_ref": str(source_ref or ""),
+            "metadata_json": json.dumps(metadata or {}, ensure_ascii=False),
+            "created_at": utc_now(),
+        },
+    )
+
+
+def learner_evidence_events_df(student_id: Optional[int] = None, lesson_id: str = "") -> pd.DataFrame:
+    clauses: List[str] = []
+    params: Dict[str, Any] = {}
+    if student_id is not None:
+        clauses.append("e.student_id=:sid")
+        params["sid"] = int(student_id)
+    if lesson_id:
+        clauses.append("e.lesson_id=:lesson_id")
+        params["lesson_id"] = str(lesson_id)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    return query_df(
+        """
+        SELECT e.*, s.participant_code, s.full_name
+        FROM learner_evidence_events e
+        LEFT JOIN students s ON s.id=e.student_id
+        """ + where + " ORDER BY e.created_at DESC, e.id DESC",
+        params,
+    )
+
+
+def student_question_responses_df(student_id: int) -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT * FROM question_responses
+        WHERE student_id=:sid
+        ORDER BY created_at ASC, id ASC
+        """,
+        {"sid": int(student_id)},
+    )
+
 
 def get_lesson_progress(student_id: int) -> pd.DataFrame:
     return query_df("SELECT * FROM lesson_progress WHERE student_id=:sid", {"sid": student_id})
@@ -1511,7 +1670,7 @@ def students_df(limit: Optional[int] = None) -> pd.DataFrame:
 
 
 def count_rows(table: str) -> int:
-    allowed = {"students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress", "learner_attempts"}
+    allowed = {"students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress", "learner_attempts", "learner_evidence_events"}
     if table not in allowed:
         raise ValueError(f"Unsupported table for count_rows: {table}")
     row = query_one(f"SELECT COUNT(*) AS n FROM {table}")
@@ -1775,6 +1934,7 @@ def research_export_tables(
             """
         ),
         "learner_attempts": learner_attempts_df(),
+        "learner_evidence_events": learner_evidence_events_df(),
         "ai_interactions": ai_logs_df(),
         "llm_evaluations": llm_evaluations_df(),
         "llm_evaluation_summary": llm_evaluation_summary_df(),
@@ -1818,7 +1978,7 @@ def system_readiness(total_lessons: int) -> Dict[str, Any]:
         status["database_ok"] = bool(row and int(row.get("ok", 0)) == 1)
     except Exception as exc:
         status["database_error"] = str(exc)
-    for table in ["students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress", "learner_attempts"]:
+    for table in ["students", "test_attempts", "survey_responses", "ai_interactions", "events_log", "consent_records", "lesson_progress", "learner_attempts", "learner_evidence_events"]:
         try:
             status[f"n_{table}"] = count_rows(table)
         except Exception:

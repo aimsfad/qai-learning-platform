@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from typing import Dict, List
 
 
@@ -16,6 +16,7 @@ class MCQ:
     explanation: str
     cognitive_level: str = "Understanding"
     display_concept: str = ""
+    distractor_misconceptions: Dict[int, Dict[str, str]] = field(default_factory=dict)
 
 
 ASSESSMENT_BLUEPRINT: Dict[str, Dict[str, str]] = {
@@ -481,6 +482,70 @@ POST_TEST: List[MCQ] = [
         "Application",
     ),
 ]
+
+
+# Optional distractor-level diagnostic metadata. These tags are deliberately
+# conservative: a selected distractor can support a *misconception hypothesis*,
+# never a confirmed diagnosis. Untagged wrong answers remain ordinary error
+# evidence and require a follow-up diagnostic question.
+QUESTION_DISTRACTOR_MISCONCEPTIONS: Dict[str, Dict[int, Dict[str, str]]] = {
+    "pre_cb_3": {
+        0: {"code": "state_vs_classical_output", "label": "Confuses the quantum state with the classical measurement output"},
+    },
+    "pre_qm_2": {
+        0: {"code": "measurement_as_state_storage", "label": "Treats measurement as storing a quantum state rather than producing classical data"},
+        2: {"code": "measurement_creates_superposition", "label": "Treats measurement as the operation that creates superposition"},
+    },
+    "pre_h_2": {
+        0: {"code": "hadamard_as_measurement", "label": "Treats the Hadamard gate as immediate measurement"},
+    },
+    "pre_h_3": {
+        0: {"code": "hadamard_deterministic_zero", "label": "Treats Hadamard followed by measurement as deterministically zero"},
+        1: {"code": "hadamard_deterministic_one", "label": "Treats Hadamard followed by measurement as deterministically one"},
+    },
+    "pre_sc_2": {
+        1: {"code": "shots_change_gates", "label": "Treats the number of shots as changing the circuit gates"},
+        2: {"code": "small_samples_invalid", "label": "Treats small-shot counts as invalid rather than noisier samples"},
+    },
+    "pre_cnot_2": {
+        1: {"code": "cnot_control_target_reversal", "label": "Reverses the CNOT control-target rule"},
+    },
+    "pre_dbg_1": {
+        1: {"code": "constructor_second_arg_gate_count", "label": "Treats the second QuantumCircuit argument as a gate count"},
+        2: {"code": "constructor_second_arg_shots", "label": "Treats the second QuantumCircuit argument as the number of shots"},
+    },
+    "pre_dbg_2": {
+        2: {"code": "measurement_error_as_missing_h", "label": "Attributes a missing classical register error to a missing Hadamard gate"},
+    },
+    "post_cb_3": {
+        1: {"code": "classical_bit_as_quantum_state", "label": "Treats a classical measurement bit as a quantum state"},
+        2: {"code": "measurement_as_qubit_copy", "label": "Treats measurement mapping as copying a qubit"},
+    },
+    "post_qm_1": {
+        1: {"code": "measurement_reveals_full_state", "label": "Treats a single measurement as revealing the full quantum state"},
+    },
+    "post_qm_2": {
+        1: {"code": "measurement_always_balanced", "label": "Treats measurement as always producing a 50/50 distribution"},
+        3: {"code": "measurement_equals_hadamard", "label": "Confuses measurement with the Hadamard operation"},
+    },
+    "post_h_3": {
+        1: {"code": "sampling_variation_as_fault", "label": "Treats ordinary sampling variation as proof that the circuit is broken"},
+        2: {"code": "counts_imply_preexisting_value", "label": "Infers a fixed pre-measurement classical value from sampled counts"},
+    },
+    "post_sc_2": {
+        2: {"code": "raw_counts_always_wrong", "label": "Treats raw counts as intrinsically wrong rather than sample-size dependent"},
+        3: {"code": "shots_do_not_affect_counts", "label": "Treats shot count as irrelevant to raw frequency totals"},
+    },
+    "post_cnot_2": {
+        1: {"code": "correlation_as_missing_measurement", "label": "Explains correlated outcomes as skipped measurement"},
+    },
+    "post_dbg_1": {
+        1: {"code": "measure_destination_as_qubit", "label": "Treats the measurement destination index as a qubit rather than a classical bit"},
+    },
+}
+
+PRE_TEST = [replace(q, distractor_misconceptions=QUESTION_DISTRACTOR_MISCONCEPTIONS.get(q.id, {})) for q in PRE_TEST]
+POST_TEST = [replace(q, distractor_misconceptions=QUESTION_DISTRACTOR_MISCONCEPTIONS.get(q.id, {})) for q in POST_TEST]
 
 LESSONS: List[Dict] = [
     {
