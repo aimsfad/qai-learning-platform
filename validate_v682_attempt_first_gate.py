@@ -34,6 +34,6 @@ assert "attempt_first_support_request" in main
 assert "CREATE TABLE IF NOT EXISTS learner_attempts" in db
 assert '"learner_attempts": learner_attempts_df()' in db
 assert '"attempt_text"' in db and 'if strict:' in db
-assert any(v in db for v in ('APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"'))
+assert any(v in db for v in ('APP_VERSION = "v6.8.2-attempt-first-gate"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"', 'APP_VERSION = "v6.18.6-unified-premium-platform-design"', 'APP_VERSION = "v6.10-gemini-file-analyzer-router"'))
 
 print("V6.8.2 attempt-first gate validation passed.")

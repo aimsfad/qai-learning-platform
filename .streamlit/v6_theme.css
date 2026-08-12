@@ -5091,3 +5091,81 @@ html,body,.stApp,[data-testid="stAppViewContainer"] {
   .v619-quality-dimensions { grid-template-columns:1fr; }
   .v619-adaptive-support-card > div { align-items:flex-start; flex-direction:column; }
 }
+
+/* =========================================================
+   V6.19.1 — Learner evidence model
+   ========================================================= */
+.v6191-evidence-card {
+  margin: 1rem 0 0.75rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.035);
+}
+.v6191-evidence-head small {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+.v6191-evidence-head strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+.v6191-evidence-head p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+.v6191-evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+.v6191-evidence-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+.v6191-evidence-chip.is-on {
+  color: #047857;
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+.v6191-evidence-chip.is-off {
+  color: #64748b;
+  background: #f8fafc;
+}
+.v6191-next-move {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.34fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e8eef6;
+}
+.v6191-next-move span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.v6191-next-move b {
+  color: #0f3a8a;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+@media (max-width: 700px) {
+  .v6191-next-move { grid-template-columns: 1fr; }
+}

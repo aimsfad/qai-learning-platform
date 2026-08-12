@@ -25,6 +25,7 @@ import db
 import feedback_engine
 import attempt_gate
 import adaptive_support_engine
+import learner_model_engine
 import branding
 import i18n
 import router
@@ -2661,8 +2662,21 @@ def render_lesson_media(lesson_id: str, student: Optional[Dict[str, Any]] = None
     answer = st.text_area("Write one short explanation before using AI", key=response_key, height=90)
     if st.button("Save my explanation", key=f"save_v11_check_{sid}_{lesson_id}"):
         if sid:
-            try: db.log_event(sid, "student", "check_answered", json.dumps({"lesson_id": lesson_id, "answer": answer[:800]}))
-            except Exception: pass
+            try:
+                db.log_event(sid, "student", "check_answered", json.dumps({"lesson_id": lesson_id, "answer": answer[:800]}))
+                db.log_learning_evidence(
+                    student_id=sid,
+                    lesson_id=lesson_id,
+                    concept=", ".join(lesson.get("concepts", [])),
+                    evidence_kind="self_explanation_submitted",
+                    outcome="submitted",
+                    independence_level="unknown",
+                    source_type="lesson_check",
+                    source_ref=lesson_id,
+                    metadata={"answer_chars": len((answer or "").strip()), "question_present": bool(lesson.get("check_question"))},
+                )
+            except Exception:
+                pass
         st.success("Saved.")
     st.markdown("</div>", unsafe_allow_html=True)
     guardrail_copy = {
@@ -2885,6 +2899,127 @@ def _refresh_v682_attempt_validation(
         )
 
 
+
+def _assessment_concepts_for_lesson(lesson_id: str) -> List[str]:
+    return [
+        concept_name
+        for concept_name, meta in content.ASSESSMENT_BLUEPRINT.items()
+        if str((meta or {}).get("lesson_id") or "") == str(lesson_id)
+    ]
+
+
+def _v6191_learner_evidence_profile(student: Dict[str, Any], lesson: Dict[str, Any]) -> Dict[str, Any]:
+    """Build one auditable, non-high-stakes evidence profile for the current lesson."""
+    assessment_concepts = _assessment_concepts_for_lesson(str(lesson.get("id") or ""))
+    qdf = db.student_question_responses_df(student["id"])
+    attempt = db.get_learner_attempt(student["id"], lesson["id"])
+    progress_df = db.get_lesson_progress(student["id"])
+    progress_row: Dict[str, Any] = {}
+    if progress_df is not None and not progress_df.empty:
+        match = progress_df[progress_df["lesson_id"].astype(str) == str(lesson["id"])]
+        if not match.empty:
+            progress_row = match.iloc[0].to_dict()
+    interactions_df = db.student_lesson_ai_interactions_df(student["id"], lesson["id"], limit=50)
+    evidence_df = db.learner_evidence_events_df(student["id"], lesson["id"])
+    return learner_model_engine.build_learner_evidence_profile(
+        question_responses=qdf,
+        assessment_concepts=assessment_concepts,
+        learner_attempt=attempt,
+        lesson_progress=progress_row,
+        ai_interactions=interactions_df,
+        evidence_events=evidence_df,
+        language_code=i18n.current_lang(st),
+        enable_misconception_tracing=str(secret("ENABLE_MISCONCEPTION_TRACING", "true")).strip().lower() in {"1", "true", "yes", "on"},
+    )
+
+
+def render_v6191_learner_evidence_panel(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
+    enabled = str(secret("ENABLE_LEARNER_EVIDENCE_MODEL", "true")).strip().lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        return
+    lang = i18n.current_lang(st)
+    direction = i18n.direction(lang)
+    copy = {
+        "ar": {
+            "title": "أدلة تعلمي",
+            "subtitle": "ملخص بسيط لما ظهر في المحاولة والتقويم والتأمل، لا درجة إتقان آلية.",
+            "assessment": "تقويم",
+            "attempt": "محاولة مستقلة",
+            "reflection": "تأمل",
+            "transfer": "نقل التعلم",
+            "support": "سياق الدعم",
+            "next": "الخطوة التعليمية التالية",
+            "why": "لماذا هذا الاقتراح؟",
+            "pattern": "هناك نمط إجابة يحتاج سؤالًا تشخيصيًا قبل أي حكم.",
+            "yes": "متوفر",
+            "no": "لم يظهر بعد",
+        },
+        "fr": {
+            "title": "Mes preuves d'apprentissage",
+            "subtitle": "Résumé simple des traces observées; ce n'est pas une note automatique de maîtrise.",
+            "assessment": "Évaluation",
+            "attempt": "Tentative autonome",
+            "reflection": "Réflexion",
+            "transfer": "Transfert",
+            "support": "Contexte d'aide",
+            "next": "Prochaine action pédagogique",
+            "why": "Pourquoi cette suggestion ?",
+            "pattern": "Un motif de réponse mérite une question diagnostique avant toute conclusion.",
+            "yes": "Disponible",
+            "no": "Pas encore",
+        },
+        "en": {
+            "title": "My learning evidence",
+            "subtitle": "A simple summary of observed attempts, assessment, and reflection; not an automated mastery score.",
+            "assessment": "Assessment",
+            "attempt": "Independent attempt",
+            "reflection": "Reflection",
+            "transfer": "Transfer",
+            "support": "Support context",
+            "next": "Recommended next learning move",
+            "why": "Why this suggestion?",
+            "pattern": "A response pattern needs a diagnostic question before any conclusion is made.",
+            "yes": "Available",
+            "no": "Not yet",
+        },
+    }[lang]
+    profile = _v6191_learner_evidence_profile(student, lesson)
+    flags = profile.get("evidence_flags") or {}
+    items = [
+        (copy["assessment"], bool(flags.get("assessment"))),
+        (copy["attempt"], bool(flags.get("attempt_before_support"))),
+        (copy["reflection"], bool(flags.get("reflection"))),
+        (copy["transfer"], bool(flags.get("transfer_item"))),
+    ]
+    chips = "".join(
+        f"<span class='v6191-evidence-chip {'is-on' if ok else 'is-off'}'>{escape(label)} · {escape(copy['yes'] if ok else copy['no'])}</span>"
+        for label, ok in items
+    )
+    st.markdown(
+        f"<section class='v6191-evidence-card' dir='{direction}'>"
+        f"<div class='v6191-evidence-head'><div><small>{escape(copy['title'])}</small><strong>{escape(str(profile.get('stage_label') or ''))}</strong>"
+        f"<p>{escape(copy['subtitle'])}</p></div></div>"
+        f"<div class='v6191-evidence-chips'>{chips}</div>"
+        f"<div class='v6191-next-move'><span>{escape(copy['next'])}</span><b>{escape(str(profile.get('next_move_label') or ''))}</b></div>"
+        f"</section>",
+        unsafe_allow_html=True,
+    )
+    hypotheses = profile.get("misconception_hypotheses") or []
+    if hypotheses:
+        st.caption(copy["pattern"])
+    with st.expander(copy["why"], expanded=False):
+        st.caption(str(profile.get("guardrail") or ""))
+        coverage = int(round(float(profile.get("evidence_coverage") or 0) * 100))
+        observed = profile.get("observed_performance")
+        st.write({
+            "evidence_coverage": f"{coverage}%",
+            "observed_assessment_signal": None if observed is None else f"{round(float(observed) * 100)}%",
+            "assessment_source": profile.get("observed_performance_source"),
+            "support_requests": (profile.get("support_context") or {}).get("count", 0),
+            "diagnostic_patterns": len(hypotheses),
+        })
+
+
 def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None:
     copy = student_workspace_copy()
     lang = i18n.current_lang(st)
@@ -2950,6 +3085,7 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
     learner_attempt = db.get_learner_attempt(student["id"], lesson["id"])
     recent_support_df = db.student_lesson_ai_interactions_df(student["id"], lesson["id"], limit=20)
     recent_support = recent_support_df.to_dict("records") if not recent_support_df.empty else []
+    learner_evidence_profile = _v6191_learner_evidence_profile(student, lesson)
     adaptive_enabled = str(secret("ENABLE_ADAPTIVE_AI_COACH", "true")).strip().lower() in {"1", "true", "yes", "on"}
     if adaptive_enabled:
         adaptive_decision = adaptive_support_engine.recommend_support(
@@ -2957,6 +3093,7 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
             pre_attempt=pre_attempt,
             learner_attempt=learner_attempt,
             recent_interactions=recent_support,
+            learner_evidence_profile=learner_evidence_profile,
             language_code=lang,
         )
     else:
@@ -3218,6 +3355,8 @@ def render_learning_module(student: Dict[str, Any]) -> None:
         st.markdown("<span class='v66-coach-marker v68-coach-marker'></span>", unsafe_allow_html=True)
         with st.container(border=True):
             render_v66_ai_coach(student, lesson)
+
+    render_v6191_learner_evidence_panel(student, lesson)
 
     st.markdown("<span class='v66-reflection-marker v68-reflection-marker'></span>", unsafe_allow_html=True)
     with st.container(border=True):
@@ -4800,7 +4939,7 @@ def render_v125_research_dashboard() -> None:
     else:
         c4.metric("Mean seconds before AI", "—")
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Concept Builder", "Simulator journey", "AI timing", "Student summary", "Group comparison"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Concept Builder", "Simulator journey", "AI timing", "Student summary", "Group comparison", "Learner evidence"])
 
     with tab1:
         if concept_events.empty:
@@ -4899,6 +5038,31 @@ def render_v125_research_dashboard() -> None:
                 )
         except Exception as exc:
             st.warning(f"Could not build group comparison yet: {exc}")
+
+    with tab6:
+        st.markdown("#### Learner evidence and diagnostic patterns")
+        st.caption("These traces are observational evidence for research and pedagogical review. They are not automated mastery labels.")
+        evidence = db.learner_evidence_events_df()
+        qdf = db.question_responses_df()
+        if evidence.empty:
+            st.info("No learner-evidence events recorded yet. New events appear after assessment responses, attempts, lesson checks, and reflections.")
+        else:
+            by_kind = evidence.groupby(["evidence_kind", "outcome"], dropna=False).size().reset_index(name="events").sort_values("events", ascending=False)
+            st.dataframe(by_kind, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download learner evidence CSV",
+                data=db.anonymize_dataframe(evidence, strict=True).to_csv(index=False).encode("utf-8"),
+                file_name="qai_learner_evidence_events.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        if not qdf.empty and "misconception_code" in qdf.columns:
+            tagged = qdf[(qdf["is_correct"] == 0) & qdf["misconception_code"].fillna("").astype(str).str.strip().ne("")].copy()
+            if not tagged.empty:
+                st.markdown("##### Explicit misconception hypotheses from tagged distractors")
+                st.caption("A tagged distractor creates a hypothesis for follow-up diagnosis, not a confirmed learner misconception.")
+                summary = tagged.groupby(["concept", "misconception_code", "misconception_label"], dropna=False).size().reset_index(name="observations").sort_values("observations", ascending=False)
+                st.dataframe(summary, use_container_width=True, hide_index=True)
 
 def render_learning_analytics() -> None:
     u = evaluator_ui()

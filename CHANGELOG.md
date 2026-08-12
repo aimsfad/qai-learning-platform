@@ -1,3 +1,21 @@
+# V6.19.1 — Learner Evidence Model + Misconception Tracing
+
+- Added `learner_model_engine.py`, an interpretable evidence model that summarizes observed learning signals without claiming true or final mastery.
+- Separated evidence coverage from observed assessment performance so missing data is not silently converted into a low ability estimate.
+- Added six learner-evidence stages: insufficient, starting, developing, supported, demonstrated, and transfer signal.
+- Added conservative next-move recommendations: diagnose, retrieval, guided practice, fade scaffolds, independent retrieval, transfer, and misconception diagnosis.
+- Added curated distractor-level diagnostic metadata for selected Qiskit pre/post assessment items.
+- Explicit wrong-distractor tags create unconfirmed misconception hypotheses that require human review; generic repeated errors remain recurring error patterns and are never promoted automatically to misconceptions.
+- Extended `question_responses` with additive `misconception_code` and `misconception_label` columns. Existing historical responses are preserved and are not retrospectively labelled.
+- Added append-only `learner_evidence_events` for assessment responses, attempt-before-support evidence, lesson-completion reflection, and quick self-explanation events.
+- Deliberately excluded raw learner free text from learner-evidence event metadata; events store compact structural metadata such as counts, outcome, independence, and support context.
+- Connected the Adaptive AI Coach to learner-evidence stages and diagnostic hypotheses conservatively: hypotheses can increase scaffolding, while demonstrated/transfer evidence can reduce support when appropriate.
+- Added a prompt guardrail requiring the AI Coach to test a diagnostic hypothesis with a discrimination or contrast question before treating it as fact.
+- Added the student-facing “Learner evidence / أدلة تعلمي” panel with evidence chips, next move, and an explicit statement that this is not an automated mastery score.
+- Added a Researcher Analytics learner-evidence tab and anonymized strict CSV export surface.
+- Added `ENABLE_LEARNER_EVIDENCE_MODEL` and `ENABLE_MISCONCEPTION_TRACING` feature flags, enabled by default in the example Secrets file.
+- Added `validate_v6191_learner_evidence_misconception_tracing.py` and updated backward-compatibility validators.
+
 # V6.19.0 — Pedagogical Quality Gate + Adaptive AI Coach
 
 - Added a deterministic `pedagogical_quality_gate.py` so the lesson is not graded by the same LLM that generated it.

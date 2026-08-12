@@ -115,6 +115,7 @@ def recommend_support(
     pre_attempt: Optional[Mapping[str, Any]] = None,
     learner_attempt: Optional[Mapping[str, Any]] = None,
     recent_interactions: Iterable[Mapping[str, Any]] = (),
+    learner_evidence_profile: Optional[Mapping[str, Any]] = None,
     language_code: str = "ar",
 ) -> Dict[str, Any]:
     """Return an inspectable next-support decision.
@@ -150,6 +151,24 @@ def recommend_support(
     if help_count >= 5:
         level = 3
 
+    evidence_profile = dict(learner_evidence_profile or {})
+    evidence_stage = str(evidence_profile.get("stage") or "")
+    hypotheses = list(evidence_profile.get("misconception_hypotheses") or [])
+    explicit_items = [item for item in hypotheses if isinstance(item, Mapping) and str(item.get("kind") or "") == "explicit_misconception_hypothesis"]
+    explicit_hypothesis = bool(explicit_items)
+    recurring_pattern = any(str(item.get("kind") or "") == "recurring_error_pattern" for item in hypotheses if isinstance(item, Mapping))
+    diagnostic_hypothesis_label = str((explicit_items[0] if explicit_items else {}).get("label") or "")
+    if explicit_hypothesis:
+        level = max(level, 2)
+    elif recurring_pattern:
+        level = max(level, 1)
+    if evidence_stage == "transfer_signal" and help_count == 0:
+        level = min(level, 0)
+    elif evidence_stage == "demonstrated" and help_count == 0:
+        level = min(level, 1)
+    elif evidence_stage == "supported":
+        level = max(level, 1)
+
     level = int(max(0, min(3, level)))
     policy = SUPPORT_LEVELS[level]
 
@@ -163,6 +182,10 @@ def recommend_support(
         reasons.append("pretest_concept_ratio=unknown")
     reasons.append(f"attempt_strength={attempt_strength:.2f}")
     reasons.append(f"prior_support_requests={help_count}")
+    if evidence_stage:
+        reasons.append(f"learner_evidence_stage={evidence_stage}")
+    if hypotheses:
+        reasons.append(f"diagnostic_patterns={len(hypotheses)}")
 
     rationale = {
         "ar": {
@@ -196,6 +219,9 @@ def recommend_support(
             "pretest_concept_ratio": None if concept_ratio is None else round(concept_ratio, 3),
             "attempt_strength": round(attempt_strength, 3),
             "prior_support_requests": help_count,
+            "learner_evidence_stage": evidence_stage or None,
+            "diagnostic_patterns": len(hypotheses),
+            "diagnostic_hypothesis_label": diagnostic_hypothesis_label or None,
         },
         "reason": "; ".join(reasons),
     }
@@ -210,10 +236,14 @@ Support level: {level}/3
 Recommended mode: {decision.get('mode')}
 Chosen mode: {chosen}
 Instructional move: {instruction}
+Learner evidence stage: {(decision.get('signals') or {}).get('learner_evidence_stage')}
+Diagnostic patterns requiring follow-up: {(decision.get('signals') or {}).get('diagnostic_patterns', 0)}
+Unconfirmed diagnostic hypothesis: {(decision.get('signals') or {}).get('diagnostic_hypothesis_label')}
 Guardrails:
 - Treat this as an estimate of needed support, not a claim of learner mastery.
 - Preserve productive learner effort and never skip directly from attempt to answer dumping.
 - Prefer one next instructional move at a time, then ask the learner to respond.
 - If the learner's reasoning is ambiguous, diagnose before explaining more.
+- If an unconfirmed diagnostic hypothesis is present, test it with a discrimination or contrast question; never state it as a fact about the learner.
 - Do not reveal a complete solution unless the task explicitly requires a worked solution and the learner has already attempted it.
 </adaptive_support_contract>""".strip()
