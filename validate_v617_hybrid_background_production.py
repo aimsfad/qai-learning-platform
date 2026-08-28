@@ -23,5 +23,5 @@ assert 'PARALLEL_PHASES = [4, 5, 6, 7, 8, 9]' in pipe
 assert 'enqueue_parallel_batch' in pipe
 assert 'production_pipeline.enqueue_parallel_batch' in ui
 assert 'redis>=5.0' in req and 'rq>=2.0' in req
-assert 'APP_VERSION = "v6.17' in db or 'APP_VERSION = "v6.18' in db or 'APP_VERSION = "v6.19' in db
+assert 'APP_VERSION = "v6.17' in db or 'APP_VERSION = "v6.18' in db or 'APP_VERSION = "v6.19' in db or 'APP_VERSION = "v6.20' in db
 print('V6.17 hybrid background production validation passed.')

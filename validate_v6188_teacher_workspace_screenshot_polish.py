@@ -105,18 +105,19 @@ def validate_renderer_and_css() -> None:
 
 def validate_non_destructive_integration() -> None:
     db = read("db.py")
+    is_v620 = 'APP_VERSION = "v6.20.0-published-course-runtime"' in db
     is_v6191 = 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"' in db
     is_v6190 = 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"' in db
     is_v6189 = 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"' in db
     require(
-        is_v6191 or is_v6190 or is_v6189 or 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"' in db,
+        is_v620 or is_v6191 or is_v6190 or is_v6189 or 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"' in db,
         "V6.18.8+ app version missing",
     )
 
     # V6.18.8 itself was UI-only and protected these hashes. V6.18.9 is an
     # intentional follow-up that changes evidence/blueprint/block boundaries
     # to fix source-title contamination while retaining the established files.
-    if is_v6191 or is_v6190 or is_v6189:
+    if is_v620 or is_v6191 or is_v6190 or is_v6189:
         for path in (
             "lesson_block_generation_engine.py",
             "lesson_blueprint_engine.py",

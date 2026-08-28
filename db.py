@@ -8,13 +8,13 @@ import os
 import secrets as py_secrets
 import string
 from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"
+APP_VERSION = "v6.20.0-published-course-runtime"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password
@@ -574,6 +574,62 @@ def init_db() -> None:
             created_at {created_default}
         )
         """,
+        f"""
+        CREATE TABLE IF NOT EXISTS published_course_enrollments (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'active',
+            current_lesson_id TEXT,
+            started_at {created_default},
+            last_active_at {created_default},
+            completed_at {created_default},
+            UNIQUE(student_id, project_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS published_course_lesson_progress (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER NOT NULL,
+            lesson_id TEXT NOT NULL,
+            status TEXT DEFAULT 'in_progress',
+            independent_attempt_text TEXT,
+            attempt_word_count INTEGER DEFAULT 0,
+            reflection_text TEXT,
+            reflection_word_count INTEGER DEFAULT 0,
+            started_at {created_default},
+            updated_at {created_default},
+            completed_at {created_default},
+            UNIQUE(student_id, project_id, blueprint_run_id, lesson_id)
+        )
+        """,
+        f"""
+        CREATE TABLE IF NOT EXISTS published_course_ai_interactions (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER NOT NULL,
+            lesson_id TEXT NOT NULL,
+            task TEXT,
+            prompt TEXT,
+            response TEXT,
+            mode TEXT,
+            provider TEXT,
+            model TEXT,
+            diagnostic TEXT,
+            adaptive_support_level INTEGER,
+            adaptive_support_mode TEXT,
+            adaptive_support_confidence REAL,
+            adaptive_support_reason TEXT,
+            created_at {created_default}
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_course_enrollments_project ON published_course_enrollments(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_course_progress_student_project ON published_course_lesson_progress(student_id, project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_course_ai_student_project ON published_course_ai_interactions(student_id, project_id)",
         f"""
         CREATE TABLE IF NOT EXISTS adaptive_recommendations (
             id {id_col},
@@ -3313,16 +3369,23 @@ def set_teacher_project_status(project_id: int, teacher_username: str, status: s
     if not project:
         raise ValueError("Teacher project not found or access denied")
     if clean_status == "published":
-        core = query_one(
-            """
-            SELECT id FROM teacher_generation_runs
-            WHERE project_id=:project_id AND phase_number=3 AND status='completed'
-            ORDER BY id DESC LIMIT 1
-            """,
-            {"project_id": int(project_id)},
-        )
-        if not core:
-            raise ValueError("Phase 3 core educational content must be completed before publication")
+        runtime_required = str(_secret("ENABLE_PUBLISHED_COURSE_RUNTIME", "true")).strip().lower() in {"1", "true", "yes", "on"}
+        if runtime_required:
+            readiness = teacher_project_runtime_readiness(int(project_id))
+            if not readiness.get("ready"):
+                reason = str(readiness.get("reason") or "The published course runtime is not ready.")
+                raise ValueError(reason)
+        else:
+            core = query_one(
+                """
+                SELECT id FROM teacher_generation_runs
+                WHERE project_id=:project_id AND phase_number=3 AND status='completed'
+                ORDER BY id DESC LIMIT 1
+                """,
+                {"project_id": int(project_id)},
+            )
+            if not core:
+                raise ValueError("Phase 3 core educational content must be completed before publication")
     now = utc_now()
     published_at = now if clean_status == "published" else project.get("published_at")
     reviewed_at = now if clean_status in {"review", "published"} else project.get("reviewed_at")
@@ -3412,6 +3475,458 @@ def get_published_teacher_project(project_id: int) -> Optional[Dict[str, Any]]:
         "SELECT * FROM teacher_projects WHERE id=:id AND status='published'",
         {"id": int(project_id)},
     )
+
+
+def _blueprint_expected_block_types(lesson: Mapping[str, Any]) -> List[str]:
+    """Extract the block sequence declared by a lesson blueprint.
+
+    Older blueprint versions are intentionally tolerated: a sequence item may
+    be a string or a mapping using one of several historical field names.
+    """
+    sequence = list((lesson or {}).get("lesson_sequence") or [])
+    block_types: List[str] = []
+    for item in sequence:
+        if isinstance(item, Mapping):
+            value = item.get("block_type") or item.get("type") or item.get("section") or item.get("id")
+        else:
+            value = item
+        clean = str(value or "").strip()
+        if clean and clean not in block_types:
+            block_types.append(clean)
+    return block_types
+
+
+def teacher_project_runtime_readiness(project_id: int) -> Dict[str, Any]:
+    """Return an inspectable publication/runtime readiness snapshot.
+
+    V6.20 publishes the teacher-approved structured course, not a disconnected
+    legacy phase-3 text blob.  The gate therefore requires an approved
+    blueprint and approved lesson blocks for every lesson declared by that
+    blueprint.  It remains read-only and does not mutate the project.
+    """
+    project = query_one("SELECT * FROM teacher_projects WHERE id=:id", {"id": int(project_id)})
+    if not project:
+        return {
+            "ready": False,
+            "reason": "Teacher project not found.",
+            "project_id": int(project_id),
+            "blueprint_run_id": None,
+            "lesson_count": 0,
+            "ready_lesson_count": 0,
+            "missing_lessons": [],
+        }
+
+    blueprint = latest_teacher_blueprint(int(project_id), approved_only=True)
+    if not blueprint:
+        return {
+            "ready": False,
+            "reason": "Approve the course blueprint before publication.",
+            "project_id": int(project_id),
+            "blueprint_run_id": None,
+            "lesson_count": 0,
+            "ready_lesson_count": 0,
+            "missing_lessons": [],
+        }
+
+    blueprint_run_id = int(blueprint.get("id") or 0)
+    lessons = [dict(item) for item in (blueprint.get("lessons") or []) if isinstance(item, Mapping)]
+    if not lessons:
+        return {
+            "ready": False,
+            "reason": "The approved blueprint does not contain any lessons.",
+            "project_id": int(project_id),
+            "blueprint_run_id": blueprint_run_id,
+            "lesson_count": 0,
+            "ready_lesson_count": 0,
+            "missing_lessons": [],
+        }
+
+    missing_lessons: List[Dict[str, Any]] = []
+    ready_count = 0
+    for lesson in lessons:
+        lesson_id = str(lesson.get("lesson_id") or "").strip()
+        lesson_title = str(lesson.get("title") or lesson_id or "Lesson").strip()
+        expected = _blueprint_expected_block_types(lesson)
+        approved = latest_approved_lesson_blocks(
+            int(project_id), lesson_id, blueprint_run_id=blueprint_run_id
+        ) if lesson_id else []
+        approved_types = {
+            str(row.get("block_type") or "").strip()
+            for row in approved
+            if str(row.get("block_type") or "").strip()
+        }
+        if expected:
+            missing_types = [block_type for block_type in expected if block_type not in approved_types]
+            lesson_ready = not missing_types
+        else:
+            missing_types = [] if approved_types else ["approved_lesson_content"]
+            lesson_ready = bool(approved_types)
+        if lesson_ready:
+            ready_count += 1
+        else:
+            missing_lessons.append(
+                {
+                    "lesson_id": lesson_id,
+                    "title": lesson_title,
+                    "missing_block_types": missing_types,
+                    "approved_block_count": len(approved_types),
+                }
+            )
+
+    ready = ready_count == len(lessons)
+    reason = ""
+    if not ready:
+        reason = f"Complete and approve all lesson blocks before publication ({ready_count}/{len(lessons)} lessons ready)."
+    return {
+        "ready": ready,
+        "reason": reason,
+        "project_id": int(project_id),
+        "blueprint_run_id": blueprint_run_id,
+        "blueprint_version": int(blueprint.get("version_number") or 1),
+        "lesson_count": len(lessons),
+        "ready_lesson_count": ready_count,
+        "missing_lessons": missing_lessons,
+    }
+
+
+def get_published_course_enrollment(student_id: int, project_id: int) -> Optional[Dict[str, Any]]:
+    return query_one(
+        """SELECT * FROM published_course_enrollments
+        WHERE student_id=:student_id AND project_id=:project_id""",
+        {"student_id": int(student_id), "project_id": int(project_id)},
+    )
+
+
+def start_published_course_enrollment(
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+    first_lesson_id: str,
+) -> Dict[str, Any]:
+    """Start a course once and pin the learner to that approved blueprint.
+
+    Pinning protects learners from mid-course content drift if the teacher later
+    creates a new blueprint version.  A future explicit migration can move a
+    learner to a newer release; opening the course never does so implicitly.
+    """
+    existing = get_published_course_enrollment(int(student_id), int(project_id))
+    now = utc_now()
+    if existing:
+        exec_sql(
+            "UPDATE published_course_enrollments SET last_active_at=:now WHERE id=:id",
+            {"now": now, "id": int(existing["id"])},
+        )
+        return get_published_course_enrollment(int(student_id), int(project_id)) or existing
+
+    enrollment_id = execute_returning_id(
+        """INSERT INTO published_course_enrollments
+        (student_id, project_id, blueprint_run_id, status, current_lesson_id, started_at, last_active_at, completed_at)
+        VALUES (:student_id, :project_id, :blueprint_run_id, 'active', :current_lesson_id, :started_at, :last_active_at, NULL)"""
+        + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+            "current_lesson_id": str(first_lesson_id or ""),
+            "started_at": now,
+            "last_active_at": now,
+        },
+    )
+    return query_one("SELECT * FROM published_course_enrollments WHERE id=:id", {"id": int(enrollment_id)}) or {
+        "id": int(enrollment_id),
+        "student_id": int(student_id),
+        "project_id": int(project_id),
+        "blueprint_run_id": int(blueprint_run_id),
+        "status": "active",
+        "current_lesson_id": str(first_lesson_id or ""),
+    }
+
+
+def set_published_course_position(
+    student_id: int,
+    project_id: int,
+    lesson_id: str,
+    *,
+    completed: bool = False,
+) -> None:
+    """Move the learner cursor without silently reopening a completed course."""
+    now = utc_now()
+    existing = get_published_course_enrollment(int(student_id), int(project_id)) or {}
+    already_completed = str(existing.get("status") or "").lower() == "completed"
+    final_completed = bool(completed or already_completed)
+    exec_sql(
+        """UPDATE published_course_enrollments
+        SET current_lesson_id=:lesson_id,
+            status=:status,
+            last_active_at=:last_active_at,
+            completed_at=:completed_at
+        WHERE student_id=:student_id AND project_id=:project_id""",
+        {
+            "lesson_id": str(lesson_id or ""),
+            "status": "completed" if final_completed else "active",
+            "last_active_at": now,
+            "completed_at": (existing.get("completed_at") or now) if final_completed else None,
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+        },
+    )
+
+
+def get_published_course_lesson_progress(
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+    lesson_id: str,
+) -> Optional[Dict[str, Any]]:
+    return query_one(
+        """SELECT * FROM published_course_lesson_progress
+        WHERE student_id=:student_id AND project_id=:project_id
+          AND blueprint_run_id=:blueprint_run_id AND lesson_id=:lesson_id""",
+        {
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+            "lesson_id": str(lesson_id),
+        },
+    )
+
+
+def published_course_lesson_progress_df(
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: Optional[int] = None,
+) -> pd.DataFrame:
+    sql = """SELECT * FROM published_course_lesson_progress
+    WHERE student_id=:student_id AND project_id=:project_id"""
+    params: Dict[str, Any] = {"student_id": int(student_id), "project_id": int(project_id)}
+    if blueprint_run_id is not None:
+        sql += " AND blueprint_run_id=:blueprint_run_id"
+        params["blueprint_run_id"] = int(blueprint_run_id)
+    return query_df(sql + " ORDER BY updated_at ASC, id ASC", params)
+
+
+def save_published_course_attempt(
+    *,
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+    lesson_id: str,
+    attempt_text: str,
+) -> Dict[str, Any]:
+    clean = str(attempt_text or "").strip()
+    if not clean:
+        raise ValueError("A learner attempt is required.")
+    word_count = len(clean.split())
+    now = utc_now()
+    params = {
+        "student_id": int(student_id),
+        "project_id": int(project_id),
+        "blueprint_run_id": int(blueprint_run_id),
+        "lesson_id": str(lesson_id),
+        "attempt_text": clean,
+        "attempt_word_count": int(word_count),
+        "now": now,
+    }
+    if dialect() == "sqlite":
+        exec_sql(
+            """INSERT INTO published_course_lesson_progress
+            (student_id, project_id, blueprint_run_id, lesson_id, status, independent_attempt_text,
+             attempt_word_count, started_at, updated_at)
+            VALUES (:student_id, :project_id, :blueprint_run_id, :lesson_id, 'in_progress', :attempt_text,
+                    :attempt_word_count, :now, :now)
+            ON CONFLICT(student_id, project_id, blueprint_run_id, lesson_id) DO UPDATE SET
+                independent_attempt_text=excluded.independent_attempt_text,
+                attempt_word_count=excluded.attempt_word_count,
+                updated_at=excluded.updated_at""",
+            params,
+        )
+    else:
+        exec_sql(
+            """INSERT INTO published_course_lesson_progress
+            (student_id, project_id, blueprint_run_id, lesson_id, status, independent_attempt_text,
+             attempt_word_count, started_at, updated_at)
+            VALUES (:student_id, :project_id, :blueprint_run_id, :lesson_id, 'in_progress', :attempt_text,
+                    :attempt_word_count, :now, :now)
+            ON CONFLICT (student_id, project_id, blueprint_run_id, lesson_id) DO UPDATE SET
+                independent_attempt_text=EXCLUDED.independent_attempt_text,
+                attempt_word_count=EXCLUDED.attempt_word_count,
+                updated_at=EXCLUDED.updated_at""",
+            params,
+        )
+    return get_published_course_lesson_progress(
+        int(student_id), int(project_id), int(blueprint_run_id), str(lesson_id)
+    ) or {}
+
+
+def complete_published_course_lesson(
+    *,
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+    lesson_id: str,
+    reflection_text: str,
+) -> Dict[str, Any]:
+    clean = str(reflection_text or "").strip()
+    if not clean:
+        raise ValueError("A short learner reflection is required before completion.")
+    existing = get_published_course_lesson_progress(
+        int(student_id), int(project_id), int(blueprint_run_id), str(lesson_id)
+    )
+    if not existing or not str(existing.get("independent_attempt_text") or "").strip():
+        raise ValueError("Save an independent attempt before completing the lesson.")
+    now = utc_now()
+    exec_sql(
+        """UPDATE published_course_lesson_progress
+        SET status='completed', reflection_text=:reflection_text,
+            reflection_word_count=:reflection_word_count,
+            updated_at=:updated_at, completed_at=:completed_at
+        WHERE student_id=:student_id AND project_id=:project_id
+          AND blueprint_run_id=:blueprint_run_id AND lesson_id=:lesson_id""",
+        {
+            "reflection_text": clean,
+            "reflection_word_count": len(clean.split()),
+            "updated_at": now,
+            "completed_at": now,
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+            "lesson_id": str(lesson_id),
+        },
+    )
+    return get_published_course_lesson_progress(
+        int(student_id), int(project_id), int(blueprint_run_id), str(lesson_id)
+    ) or {}
+
+
+def published_course_ai_interactions_df(
+    student_id: int,
+    project_id: int,
+    lesson_id: str = "",
+    limit: int = 20,
+) -> pd.DataFrame:
+    sql = """SELECT * FROM published_course_ai_interactions
+    WHERE student_id=:student_id AND project_id=:project_id"""
+    params: Dict[str, Any] = {"student_id": int(student_id), "project_id": int(project_id)}
+    if lesson_id:
+        sql += " AND lesson_id=:lesson_id"
+        params["lesson_id"] = str(lesson_id)
+    sql += " ORDER BY created_at DESC, id DESC LIMIT :limit"
+    params["limit"] = max(1, min(int(limit or 20), 200))
+    return query_df(sql, params)
+
+
+def log_published_course_ai_interaction(
+    *,
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+    lesson_id: str,
+    task: str,
+    prompt: str,
+    response: str,
+    mode: str,
+    provider: str,
+    model: str,
+    diagnostic: str = "",
+    adaptive_support_level: Optional[int] = None,
+    adaptive_support_mode: str = "",
+    adaptive_support_confidence: Optional[float] = None,
+    adaptive_support_reason: str = "",
+) -> int:
+    return execute_returning_id(
+        """INSERT INTO published_course_ai_interactions
+        (student_id, project_id, blueprint_run_id, lesson_id, task, prompt, response, mode,
+         provider, model, diagnostic, adaptive_support_level, adaptive_support_mode,
+         adaptive_support_confidence, adaptive_support_reason, created_at)
+        VALUES (:student_id, :project_id, :blueprint_run_id, :lesson_id, :task, :prompt, :response, :mode,
+                :provider, :model, :diagnostic, :adaptive_support_level, :adaptive_support_mode,
+                :adaptive_support_confidence, :adaptive_support_reason, :created_at)"""
+        + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+            "lesson_id": str(lesson_id),
+            "task": str(task or ""),
+            "prompt": str(prompt or ""),
+            "response": str(response or ""),
+            "mode": str(mode or ""),
+            "provider": str(provider or ""),
+            "model": str(model or ""),
+            "diagnostic": str(diagnostic or ""),
+            "adaptive_support_level": adaptive_support_level,
+            "adaptive_support_mode": str(adaptive_support_mode or ""),
+            "adaptive_support_confidence": adaptive_support_confidence,
+            "adaptive_support_reason": str(adaptive_support_reason or ""),
+            "created_at": utc_now(),
+        },
+    )
+
+
+def published_course_progress_summary(student_id: int, project_id: int) -> Dict[str, Any]:
+    enrollment = get_published_course_enrollment(int(student_id), int(project_id))
+    if not enrollment:
+        readiness = teacher_project_runtime_readiness(int(project_id))
+        return {
+            "enrolled": False,
+            "status": "not_started",
+            "blueprint_run_id": readiness.get("blueprint_run_id"),
+            "lesson_count": int(readiness.get("lesson_count") or 0),
+            "completed_lessons": 0,
+            "progress": 0.0,
+            "current_lesson_id": "",
+        }
+    blueprint_run_id = int(enrollment.get("blueprint_run_id") or 0)
+    blueprint = teacher_blueprint_bundle(blueprint_run_id) or {}
+    lesson_count = len(blueprint.get("lessons") or [])
+    progress = published_course_lesson_progress_df(
+        int(student_id), int(project_id), blueprint_run_id=blueprint_run_id
+    )
+    if progress.empty:
+        completed = 0
+    else:
+        completed = int((progress["status"].astype(str).str.lower() == "completed").sum())
+    return {
+        "enrolled": True,
+        "status": str(enrollment.get("status") or "active"),
+        "blueprint_run_id": blueprint_run_id,
+        "lesson_count": int(lesson_count),
+        "completed_lessons": completed,
+        "progress": (completed / lesson_count) if lesson_count else 0.0,
+        "current_lesson_id": str(enrollment.get("current_lesson_id") or ""),
+    }
+
+
+def published_course_delivery_summary(project_id: int) -> Dict[str, Any]:
+    enrollment = query_one(
+        """SELECT COUNT(*) AS enrollments,
+                  SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed_enrollments
+        FROM published_course_enrollments WHERE project_id=:project_id""",
+        {"project_id": int(project_id)},
+    ) or {}
+    progress = query_one(
+        """SELECT COUNT(*) AS lesson_records,
+                  SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed_lesson_records
+        FROM published_course_lesson_progress WHERE project_id=:project_id""",
+        {"project_id": int(project_id)},
+    ) or {}
+    ai = query_one(
+        "SELECT COUNT(*) AS ai_interactions FROM published_course_ai_interactions WHERE project_id=:project_id",
+        {"project_id": int(project_id)},
+    ) or {}
+    enrollments = int(enrollment.get("enrollments") or 0)
+    completed_enrollments = int(enrollment.get("completed_enrollments") or 0)
+    lesson_records = int(progress.get("lesson_records") or 0)
+    completed_lesson_records = int(progress.get("completed_lesson_records") or 0)
+    return {
+        "enrollments": enrollments,
+        "completed_enrollments": completed_enrollments,
+        "course_completion_rate": (completed_enrollments / enrollments) if enrollments else 0.0,
+        "lesson_records": lesson_records,
+        "completed_lesson_records": completed_lesson_records,
+        "lesson_completion_rate": (completed_lesson_records / lesson_records) if lesson_records else 0.0,
+        "ai_interactions": int(ai.get("ai_interactions") or 0),
+    }
 
 
 def create_teacher_production_job(project_id: int, teacher_username: str, phase_number: int, *, batch_id: str = "", backend: str = "inline", parent_job_ids_json: str = "[]") -> int:

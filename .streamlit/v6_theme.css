@@ -5169,3 +5169,75 @@ html,body,.stApp,[data-testid="stAppViewContainer"] {
 @media (max-width: 700px) {
   .v6191-next-move { grid-template-columns: 1fr; }
 }
+
+/* =========================================================
+   V6.20 — Published teacher-course runtime
+   ========================================================= */
+.v620-course-card-marker {
+  display: block;
+  width: 42px;
+  height: 4px;
+  margin-bottom: 0.8rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
+}
+.v620-course-card {
+  min-height: 168px;
+}
+.v620-course-card-top,
+.v620-course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+.v620-course-card-top span,
+.v620-course-card-top b,
+.v620-course-meta span {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.v620-course-card h3 {
+  margin: 0.62rem 0 0.42rem;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+.v620-course-card p {
+  min-height: 3.1rem;
+  margin: 0 0 0.8rem;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.v620-support-card {
+  margin: 0.7rem 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+.v620-support-card small,
+.v620-support-card span {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.v620-support-card strong {
+  display: block;
+  margin-top: 0.18rem;
+  color: #0f172a;
+  font-size: 1rem;
+}
+.v620-support-card p {
+  margin: 0.5rem 0 0.35rem;
+  color: #475569;
+  line-height: 1.65;
+}
+@media (max-width: 700px) {
+  .v620-course-card { min-height: auto; }
+  .v620-course-card-top,
+  .v620-course-meta { align-items: flex-start; flex-direction: column; }
+}

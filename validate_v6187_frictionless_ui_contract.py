@@ -58,7 +58,7 @@ def validate_accessibility_css() -> None:
 
 def validate_non_destructive_release() -> None:
     db = source("db.py")
-    require(any(v in db for v in ('APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"')), "app version missing")
+    require(any(v in db for v in ('APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"')), "app version missing")
     # The release should remain UI-only; engines continue to be validated by previous suites.
     for path in (
         "lesson_block_generation_engine.py",

@@ -32,6 +32,7 @@ import pedagogical_orchestrator
 import pedagogical_quality_gate
 import lesson_content_renderer
 import lesson_identity
+import published_course_runtime
 from security import verify_password
 
 
@@ -2562,22 +2563,93 @@ def render_project_student_preview(project: Dict[str, Any], public_view: bool = 
 
 
 def render_project_publication(project: Dict[str, Any]) -> None:
+    """Review publication readiness and publish only a learner-runnable course."""
     copy = project_workspace_ui()
+    lang = i18n.current_lang(st)
+    runtime_enabled = _as_bool(_secret("ENABLE_PUBLISHED_COURSE_RUNTIME", "true"), True)
     outputs = db.teacher_project_phase_outputs(int(project["id"]))
-    core_ready = bool(outputs.get(3) and str(outputs[3].get("status")) == "completed")
-    render_project_student_preview(project, public_view=False)
+    legacy_core_ready = bool(outputs.get(3) and str(outputs[3].get("status")) == "completed")
+    readiness = db.teacher_project_runtime_readiness(int(project["id"])) if runtime_enabled else {
+        "ready": legacy_core_ready,
+        "lesson_count": 0,
+        "ready_lesson_count": 0,
+        "missing_lessons": [],
+        "reason": "" if legacy_core_ready else copy["publish_gate"],
+    }
+    publish_ready = bool(readiness.get("ready"))
+
+    labels = {
+        "ar": {
+            "title": "جاهزية النشر للمتعلمين",
+            "ready": "الحزمة التعليمية المعتمدة جاهزة للنشر والتعلّم.",
+            "blocked": "لن تُنشر الدورة حتى يكتمل المخطط المعتمد وتُعتمد جميع أجزاء الدروس المطلوبة.",
+            "lessons": "الدروس الجاهزة", "missing": "النواقص قبل النشر",
+            "delivery": "مؤشرات الاستخدام بعد النشر", "enrollments": "المسجلون",
+            "course_completion": "إكمال الدورة", "lesson_completion": "إكمال الدروس",
+            "ai": "تفاعلات المدرب الذكي", "legacy_preview": "معاينة المخرجات القديمة للتدقيق",
+        },
+        "fr": {
+            "title": "Prêt pour la publication apprenant",
+            "ready": "Le parcours approuvé est prêt à être publié et suivi par les apprenants.",
+            "blocked": "La publication reste bloquée jusqu'à l'approbation du plan et de tous les blocs requis.",
+            "lessons": "Leçons prêtes", "missing": "Éléments manquants",
+            "delivery": "Indicateurs après publication", "enrollments": "Inscriptions",
+            "course_completion": "Cours terminés", "lesson_completion": "Leçons terminées",
+            "ai": "Interactions coach IA", "legacy_preview": "Aperçu des sorties historiques",
+        },
+        "en": {
+            "title": "Learner publication readiness",
+            "ready": "The approved learning package is ready to publish and run for learners.",
+            "blocked": "Publication stays blocked until the approved blueprint and every required lesson block are complete.",
+            "lessons": "Lessons ready", "missing": "Missing before publication",
+            "delivery": "Post-publication delivery signals", "enrollments": "Enrollments",
+            "course_completion": "Course completion", "lesson_completion": "Lesson completion",
+            "ai": "AI coach interactions", "legacy_preview": "Historical output preview",
+        },
+    }.get(lang, {})
+
+    st.markdown(f"### {labels['title']}")
+    if publish_ready:
+        st.success(labels["ready"])
+    else:
+        st.warning(labels["blocked"])
+        reason = str(readiness.get("reason") or "").strip()
+        if reason:
+            st.caption(reason)
+    if runtime_enabled:
+        ready_count = int(readiness.get("ready_lesson_count") or 0)
+        lesson_count = int(readiness.get("lesson_count") or 0)
+        st.metric(labels["lessons"], f"{ready_count}/{lesson_count}")
+        missing_lessons = list(readiness.get("missing_lessons") or [])
+        if missing_lessons:
+            with st.expander(labels["missing"], expanded=True):
+                for item in missing_lessons:
+                    title = str(item.get("title") or item.get("lesson_id") or "Lesson")
+                    missing = ", ".join(str(value) for value in (item.get("missing_block_types") or [])) or "approved lesson content"
+                    st.markdown(f"- **{title}** — {missing}")
+
+    delivery = db.published_course_delivery_summary(int(project["id"]))
+    if int(delivery.get("enrollments") or 0) or str(project.get("status") or "").lower() == "published":
+        st.markdown(f"#### {labels['delivery']}")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric(labels["enrollments"], int(delivery.get("enrollments") or 0))
+        m2.metric(labels["course_completion"], f"{float(delivery.get('course_completion_rate') or 0.0) * 100:.0f}%")
+        m3.metric(labels["lesson_completion"], f"{float(delivery.get('lesson_completion_rate') or 0.0) * 100:.0f}%")
+        m4.metric(labels["ai"], int(delivery.get("ai_interactions") or 0))
+
+    with st.expander(labels["legacy_preview"], expanded=False):
+        render_project_student_preview(project, public_view=False)
+
     st.divider()
     current_status = str(project.get("status") or "draft").lower()
     st.markdown(f"### {copy['status']}: {_status_label(current_status, copy)}")
-    if not core_ready:
-        st.warning(copy["publish_gate"])
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button(copy["review_action"], use_container_width=True, disabled=current_status == "review", key="teacher_mark_review"):
             db.set_teacher_project_status(int(project["id"]), _current_teacher_username(), "review")
             st.success(copy["review_ok"]); st.rerun()
     with c2:
-        if st.button(copy["publish_action"], type="primary", use_container_width=True, disabled=(not core_ready or current_status == "published"), key="teacher_publish_project"):
+        if st.button(copy["publish_action"], type="primary", use_container_width=True, disabled=(not publish_ready or current_status == "published"), key="teacher_publish_project"):
             db.set_teacher_project_status(int(project["id"]), _current_teacher_username(), "published")
             st.success(copy["published_ok"]); st.rerun()
     with c3:
@@ -3481,40 +3553,20 @@ def render_all_outputs() -> None:
 
 
 def render_published_course_catalog(student: Optional[Dict[str, Any]] = None) -> None:
-    """Render teacher-published projects in a learner-safe, read-only catalogue."""
-    copy = project_workspace_ui()
-    selected_id = st.session_state.get("published_teacher_project_id")
-    if selected_id:
-        project = db.get_published_teacher_project(int(selected_id))
-        if project:
-            if st.button(f"← {copy['close_course']}", key="close_published_teacher_course"):
-                st.session_state.published_teacher_project_id = None
-                st.rerun()
-            render_project_student_preview(project, public_view=True)
-            return
-        st.session_state.published_teacher_project_id = None
-    projects = db.published_teacher_projects_df()
-    global_ui.render_page_header(
-        copy["public_catalog"], copy["educator_content"], lang=i18n.current_lang(st),
-        eyebrow="3alimnIA", compact=True, icon="menu_book",
-    )
-    if projects.empty:
-        st.info(copy["no_public"])
+    """Render the V6.20 learner runtime for teacher-published courses."""
+    if student and student.get("id"):
+        published_course_runtime.render_catalog(student)
         return
-    rows = projects.to_dict("records")
-    for start in range(0, len(rows), 3):
-        cols = st.columns(3, gap="large")
-        for col, project in zip(cols, rows[start:start + 3]):
-            with col:
-                with st.container(border=True):
-                    st.markdown("<span class='v692-public-course-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-                    st.caption(f"{project.get('domain','')} · {project.get('learner_level','')}")
-                    st.markdown(f"### {project.get('unit_title') or project.get('project_name')}")
-                    st.write(str(project.get("target_concept") or "")[:220])
-                    st.caption(f"{project.get('expected_duration') or ''} · {int(project.get('completed_phases') or 0)}/{len(PHASES)}")
-                    if st.button(copy["start_course"], type="primary", use_container_width=True, key=f"open_published_course_{int(project['id'])}"):
-                        st.session_state.published_teacher_project_id = int(project["id"])
-                        st.rerun()
+
+    # A signed-in learner is required for version pinning and progress tracking.
+    lang = i18n.current_lang(st)
+    message = {
+        "ar": "سجّل الدخول كمتعلم لبدء دورات الأساتذة وحفظ تقدمك.",
+        "fr": "Connectez-vous comme apprenant pour suivre les cours des enseignants et enregistrer votre progression.",
+        "en": "Sign in as a learner to start teacher courses and save your progress.",
+    }.get(lang, "Sign in as a learner to start teacher courses and save your progress.")
+    st.info(message)
+
 
 
 def render_teacher_app() -> None:
