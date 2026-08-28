@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.0-published-course-runtime"
+APP_VERSION = "v6.20.1-responsive-visual-polish"
 from sqlalchemy.engine import Engine
 
 from security import hash_password, verify_password

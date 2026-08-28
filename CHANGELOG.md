@@ -636,3 +636,11 @@
 - Rebuilt the simple lesson workspace around one compact lesson header, course/lesson progress, pedagogical design chips, section navigation, and plain-language quality notes.
 - Kept provider/model/latency and raw validation details inside the advanced view.
 - No database migration or new Secrets are required.
+
+## V6.20.1 — Responsive Typography & Device UI Polish
+
+- Added an authoritative final responsive stylesheet for desktop, laptop, tablet, phone, and very small phone widths.
+- Switched Arabic body UI typography to Noto Sans Arabic with Alexandria headings; retained Inter for Latin UI.
+- Improved Arabic line-height, reading measure, touch targets, mobile input sizing, focus visibility, table/tab overflow, and device-aware spacing.
+- Reworked the public header, internal toolbar, teacher step flow, and sidebar behavior for narrow screens without changing business logic.
+- Added reduced-motion and increased-contrast accessibility preferences.

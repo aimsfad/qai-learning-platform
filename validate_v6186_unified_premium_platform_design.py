@@ -31,7 +31,7 @@ def validate_design_system() -> None:
         "def status_badge_html",
         'role: str = ""',
         "v618-role-header-",
-        '"family": "Tajawal, Arial, sans-serif"',
+        '"family": "Inter, Noto Sans Arabic, Tajawal, Arial, sans-serif"',
     ):
         require(token in source, f"missing global design-system token: {token}")
 
@@ -73,7 +73,7 @@ def validate_non_destructive_contract() -> None:
     db = parse_python("db.py")
     require(
         any(v in db for v in (
-            'APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"',
+            'APP_VERSION = "v6.20.1-responsive-visual-polish"', 'APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"', 'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"', 'APP_VERSION = "v6.18.8-teacher-workspace-screenshot-polish"', 'APP_VERSION = "v6.18.7-frictionless-ui-contract"',
             'APP_VERSION = "v6.18.6-unified-premium-platform-design"',
         )),
         "application version was not updated",

@@ -1,3 +1,7 @@
+## V6.20.1 — Responsive visual polish
+
+The current release keeps the V6.20 published-course runtime and adds a final responsive typography/device layer for Arabic, French, and English across desktop, laptop, tablet, and phone. See `V6_20_1_RESPONSIVE_VISUAL_POLISH_AR.md`.
+
 # 3alimnIA V6.20.0 — Published Teacher-Course Runtime
 
 This release closes the gap between the teacher production pipeline and the learner experience. Published teacher projects now run from the teacher-approved blueprint and approved lesson blocks, with blueprint-version pinning, persisted enrollment/progress, an attempt-first lesson gate, end-of-lesson reflection, conservative adaptive support, and a domain-neutral AI coach grounded in approved lesson content. The native learner route for Teacher Courses is registered explicitly, teacher publication now checks runtime readiness, and post-publication delivery metrics are aggregated without exposing raw learner chats. Release packaging excludes `.streamlit/secrets.toml`, `.git`, runtime databases, and caches. See `V6_20_PUBLISHED_COURSE_RUNTIME_AR.md` and `PROJECT_AUDIT_V6_20_AR.md`.

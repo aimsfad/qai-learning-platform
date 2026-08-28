@@ -43,7 +43,7 @@ def validate_static_contracts() -> None:
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
     packager = (ROOT / "package_release.py").read_text(encoding="utf-8")
 
-    require('APP_VERSION = "v6.20.0-published-course-runtime"' in db_source, "V6.20 app version missing")
+    require(any(v in db_source for v in ('APP_VERSION = "v6.20.1-responsive-visual-polish"', 'APP_VERSION = "v6.20.0-published-course-runtime"')), "V6.20+ app version missing")
     for table in (
         "published_course_enrollments",
         "published_course_lesson_progress",
