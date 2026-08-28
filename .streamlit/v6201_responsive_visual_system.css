@@ -1,0 +1,448 @@
+/* ========================================================================== 
+   3alimnIA V6.20.1 — Responsive Typography & Device UI Polish
+   Authoritative final visual layer loaded after all legacy themes.
+   Goals: Arabic reading clarity, consistent hierarchy, touch-friendly controls,
+   and predictable desktop / laptop / tablet / phone behavior.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --v6201-font-ar-body: "Noto Sans Arabic", "Tajawal", "Segoe UI", Arial, sans-serif;
+  --v6201-font-ar-heading: "Alexandria", "Noto Sans Arabic", "Tajawal", sans-serif;
+  --v6201-font-latin: "Inter", "Segoe UI", Arial, sans-serif;
+  --v6201-text: #17243b;
+  --v6201-body: #46566f;
+  --v6201-muted: #6f7f96;
+  --v6201-border: #dbe5f1;
+  --v6201-surface: rgba(255,255,255,.97);
+  --v6201-soft: #f6f9fd;
+  --v6201-focus: #1967ff;
+  --v6201-radius: 16px;
+  --v6201-shadow: 0 8px 26px rgba(7,27,68,.055);
+  --v6201-content: 1460px;
+  --v6201-reading: 76ch;
+}
+
+/* ---------- Typography foundation ---------- */
+html { -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; }
+body, .stApp, [data-testid="stAppViewContainer"] {
+  color: var(--v6201-text) !important;
+  font-size: 16px !important;
+  font-synthesis: none;
+}
+html[dir="rtl"] body,
+html[dir="rtl"] .stApp,
+html[dir="rtl"] .stApp button,
+html[dir="rtl"] .stApp input,
+html[dir="rtl"] .stApp textarea,
+html[dir="rtl"] .stApp select,
+html[dir="rtl"] .stApp label,
+html[dir="rtl"] .stApp [data-testid="stMarkdownContainer"],
+[dir="rtl"] {
+  font-family: var(--v6201-font-ar-body) !important;
+}
+html:not([dir="rtl"]) body,
+html:not([dir="rtl"]) .stApp,
+html:not([dir="rtl"]) .stApp button,
+html:not([dir="rtl"]) .stApp input,
+html:not([dir="rtl"]) .stApp textarea,
+html:not([dir="rtl"]) .stApp select,
+html:not([dir="rtl"]) .stApp label,
+[dir="ltr"] {
+  font-family: var(--v6201-font-latin) !important;
+}
+html[dir="rtl"] h1,
+html[dir="rtl"] h2,
+html[dir="rtl"] h3,
+html[dir="rtl"] h4,
+html[dir="rtl"] h5,
+html[dir="rtl"] h6,
+html[dir="rtl"] .v618-page-header h1,
+html[dir="rtl"] .v6162-header-copy h1,
+html[dir="rtl"] .v61-hero-copy h1 {
+  font-family: var(--v6201-font-ar-heading) !important;
+  letter-spacing: 0 !important;
+}
+.stApp h1 { font-size: clamp(1.8rem, 2.7vw, 2.65rem) !important; line-height: 1.28 !important; }
+.stApp h2 { font-size: clamp(1.42rem, 2.1vw, 2rem) !important; line-height: 1.36 !important; }
+.stApp h3 { font-size: clamp(1.08rem, 1.55vw, 1.35rem) !important; line-height: 1.42 !important; }
+.stApp p,
+.stApp li,
+.stApp [data-testid="stMarkdownContainer"] {
+  color: var(--v6201-body);
+  line-height: 1.72;
+}
+html[dir="rtl"] .stApp p,
+html[dir="rtl"] .stApp li,
+html[dir="rtl"] .stApp [data-testid="stMarkdownContainer"] {
+  line-height: 1.88;
+}
+.stApp [data-testid="stMarkdownContainer"] p,
+.stApp [data-testid="stMarkdownContainer"] li,
+.v618-page-header p,
+.v6162-header-copy p,
+.v6185-lesson-heading p,
+.v620-course-card p {
+  overflow-wrap: anywhere;
+}
+/* Long lesson prose should be readable, while dashboards/tables keep their width. */
+[class*="st-key-simple_preview_"] [data-testid="stMarkdownContainer"] > p,
+.v6185-section-purpose,
+.v6191-evidence-head p,
+.v620-support-card p {
+  max-width: var(--v6201-reading);
+}
+
+/* ---------- Main canvas and overflow discipline ---------- */
+.block-container {
+  width: 100% !important;
+  max-width: var(--v6201-content) !important;
+  padding-inline: clamp(.85rem, 2.2vw, 2rem) !important;
+  padding-bottom: 5rem !important;
+}
+.stApp [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { min-width: 0 !important; }
+.stApp img, .stApp video, .stApp svg { max-width: 100%; }
+.stApp table { max-width: 100%; }
+[data-testid="stDataFrame"],
+.v6-comparison-wrap,
+[data-testid="stTable"] { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+
+/* ---------- Form and touch clarity ---------- */
+.stApp label,
+.stApp [data-testid="stWidgetLabel"] p {
+  color: #33445f !important;
+  font-size: .91rem !important;
+  font-weight: 650 !important;
+}
+[data-baseweb="input"] > div,
+[data-baseweb="select"] > div,
+[data-testid="stTextArea"] textarea,
+.stApp input,
+.stApp textarea {
+  min-height: 46px !important;
+  font-size: .96rem !important;
+  color: #15233a !important;
+}
+.stButton > button,
+.stDownloadButton > button,
+[data-testid="stFormSubmitButton"] button {
+  min-height: 46px !important;
+  padding: .58rem .9rem !important;
+  font-size: .9rem !important;
+  line-height: 1.35 !important;
+  border-radius: 12px !important;
+}
+.stButton > button:focus-visible,
+.stDownloadButton > button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role="tab"]:focus-visible,
+[role="radio"]:focus-visible {
+  outline: 3px solid rgba(25,103,255,.24) !important;
+  outline-offset: 2px !important;
+}
+
+/* ---------- Unified surface treatment ---------- */
+[data-testid="stExpander"] details,
+[data-testid="stMetric"],
+.v618-kpi-card,
+.v620-course-card,
+.v6191-evidence-card,
+.v620-support-card {
+  border-color: var(--v6201-border) !important;
+  box-shadow: var(--v6201-shadow) !important;
+}
+.v618-page-header,
+[data-testid="stVerticalBlock"]:has(.v6162-studio-header-marker),
+.st-key-v6163_project_header {
+  box-shadow: var(--v6201-shadow) !important;
+}
+
+/* ---------- Public header: desktop and laptop ---------- */
+.st-key-v61_public_header {
+  max-width: var(--v6201-content) !important;
+  margin-inline: auto !important;
+}
+.st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+  background: rgba(255,255,255,.97) !important;
+  backdrop-filter: blur(18px) saturate(130%) !important;
+}
+.st-key-v61_public_header .stButton > button {
+  font-size: .78rem !important;
+  font-weight: 700 !important;
+}
+.st-key-v61_public_header [data-baseweb="select"] > div { min-height: 42px !important; }
+
+/* ---------- Internal toolbar and sidebar ---------- */
+.st-key-v68_workspace_toolbar > [data-testid="stVerticalBlockBorderWrapper"] {
+  background: rgba(255,255,255,.97) !important;
+  backdrop-filter: blur(16px) saturate(125%) !important;
+}
+section[data-testid="stSidebar"] {
+  font-size: .94rem !important;
+}
+section[data-testid="stSidebar"] .stButton > button {
+  text-align: start !important;
+  min-height: 44px !important;
+}
+
+/* ---------- Teacher and learner workspaces ---------- */
+.v6162-header-copy h1 { font-size: clamp(1.62rem, 2.4vw, 2.25rem) !important; }
+.v6162-header-copy p { font-size: .94rem !important; line-height: 1.75 !important; }
+.v6162-meta-chip,
+.v618-meta-chip { font-size: .76rem !important; }
+.v6185-lesson-heading h2 { line-height: 1.48 !important; }
+.v6185-section-chip { min-width: 0 !important; }
+.v620-course-card h3 { font-size: 1.08rem !important; }
+.v620-course-card p { font-size: .91rem !important; line-height: 1.75 !important; }
+
+/* Tabs remain usable instead of shrinking labels into unreadable text. */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  overflow-x: auto !important;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+[data-testid="stTabs"] button[role="tab"] {
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  font-size: .86rem !important;
+}
+
+/* ---------- Tablet / small laptop ---------- */
+@media (min-width: 901px) and (max-width: 1180px) {
+  :root {
+    --v48-rail-width: 17rem;
+    --v6201-content: 1180px;
+  }
+  .block-container { padding-inline: 1.05rem !important; }
+  .st-key-v61_public_header [data-testid="stHorizontalBlock"] { gap: .28rem !important; }
+  .st-key-v61_public_header .stButton > button {
+    padding-inline: .42rem !important;
+    font-size: .7rem !important;
+  }
+  .st-key-v61_public_header [data-testid="stImage"] img { max-width: 166px !important; }
+  .v618-page-header { padding: 1.08rem 1.15rem !important; }
+  .v6183-stage-flow { gap: .45rem !important; }
+}
+
+/* ---------- Tablet / phone ---------- */
+@media (max-width: 900px) {
+  :root { --v6201-content: 100%; }
+  .block-container {
+    padding-top: .35rem !important;
+    padding-inline: clamp(.72rem, 2.8vw, 1rem) !important;
+    padding-bottom: 5.2rem !important;
+  }
+  /* Native sidebar becomes overlay navigation; the content uses full width. */
+  [data-testid="stAppViewContainer"] > .main {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+    flex: 1 1 100% !important;
+  }
+  section[data-testid="stSidebar"] {
+    width: min(88vw, 21rem) !important;
+    min-width: min(88vw, 21rem) !important;
+    max-width: min(88vw, 21rem) !important;
+  }
+  .v618-page-header { margin-bottom: .78rem !important; }
+  .v618-page-header p { font-size: .9rem !important; }
+  .v618-page-meta { gap: .32rem !important; }
+  .v6185-section-nav { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .v6185-section-chip { min-width: 124px !important; }
+  [class*="st-key-simple_lesson_action_bar_"] {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    margin-top: .7rem !important;
+  }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 700px) {
+  body, .stApp, [data-testid="stAppViewContainer"] { font-size: 16px !important; }
+  html[dir="rtl"] body, html[dir="rtl"] .stApp { font-size: 16.25px !important; }
+
+  .block-container {
+    padding-inline: .72rem !important;
+    padding-bottom: 4.5rem !important;
+  }
+  .stApp h1 { font-size: 1.65rem !important; line-height: 1.35 !important; }
+  .stApp h2 { font-size: 1.32rem !important; }
+  .stApp h3 { font-size: 1.08rem !important; }
+  .stApp p, .stApp li { font-size: .96rem !important; }
+  html[dir="rtl"] .stApp p,
+  html[dir="rtl"] .stApp li { line-height: 1.92 !important; }
+
+  /* iOS/Android: 16px inputs avoid browser zoom and improve tap accuracy. */
+  .stApp input,
+  .stApp textarea,
+  .stApp [data-baseweb="select"] input,
+  .stApp [data-baseweb="select"] > div { font-size: 16px !important; }
+  .stButton > button,
+  .stDownloadButton > button,
+  [data-testid="stFormSubmitButton"] button {
+    min-height: 48px !important;
+    font-size: .93rem !important;
+  }
+
+  /* Compact two-level public header instead of six squeezed columns. */
+  .st-key-v61_public_header {
+    position: relative !important;
+    top: auto !important;
+    margin-bottom: .55rem !important;
+  }
+  .st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+    padding: .48rem !important;
+    border: 1px solid var(--v6201-border) !important;
+    border-radius: 15px !important;
+    box-shadow: 0 7px 20px rgba(7,27,68,.055) !important;
+  }
+  .st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: .42rem !important;
+  }
+  .st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 calc(50% - .25rem) !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+  .st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child,
+  .st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+    flex-basis: 100% !important;
+  }
+  .st-key-v61_public_header [data-testid="stVerticalBlock"]:has(.v672-header-logo-marker) [data-testid="stImage"] {
+    justify-content: center !important;
+  }
+  .st-key-v61_public_header [data-testid="stImage"] img {
+    width: min(176px, 60vw) !important;
+    max-width: 176px !important;
+  }
+  .st-key-v61_public_header [data-testid="stColumn"]:nth-child(2) > div > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: .25rem !important;
+    padding-bottom: .15rem !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .st-key-v61_public_header [data-testid="stColumn"]:nth-child(2) [data-testid="stColumn"] {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+  .st-key-v61_public_header .stButton > button {
+    min-height: 42px !important;
+    padding: .45rem .62rem !important;
+    font-size: .76rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* Home hero: text first, visual second, readable measure. */
+  .st-key-v61_hero { padding: .9rem !important; border-radius: 18px !important; }
+  .v61-hero-copy { padding: .15rem 0 .35rem !important; }
+  .v61-hero-copy h1,
+  html[dir="rtl"] .v61-hero-copy h1 {
+    font-size: clamp(1.78rem, 8.6vw, 2.2rem) !important;
+    line-height: 1.42 !important;
+    margin: .65rem 0 .65rem !important;
+  }
+  .v61-hero-copy p { font-size: .96rem !important; line-height: 1.82 !important; }
+  .v61-benefit-row { gap: .34rem !important; }
+  .v61-benefit-row span { font-size: .72rem !important; }
+
+  /* Page and course cards stop feeling oversized on a phone. */
+  .v618-page-header {
+    padding: .9rem !important;
+    border-radius: 15px !important;
+  }
+  .v618-page-header h1 { font-size: 1.55rem !important; }
+  .v618-page-header p { font-size: .9rem !important; line-height: 1.75 !important; }
+  .v618-meta-chip { min-height: 27px !important; padding: .28rem .52rem !important; font-size: .71rem !important; }
+  .v618-kpi-card,
+  .v620-course-card,
+  .v6191-evidence-card,
+  .v620-support-card { border-radius: 13px !important; }
+
+  /* Teacher journey becomes a vertical touch-friendly step list. */
+  [data-testid="stHorizontalBlock"]:has(.v6162-step-node) {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: .42rem !important;
+    overflow: visible !important;
+  }
+  [data-testid="stHorizontalBlock"]:has(.v6162-step-node) > [data-testid="stColumn"] {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  [data-testid="stColumn"]:has(.v6162-step-node) {
+    display: grid !important;
+    grid-template-columns: 42px minmax(0,1fr) !important;
+    align-items: center !important;
+    column-gap: .55rem !important;
+    text-align: start !important;
+  }
+  .v6162-step-node { margin: 0 !important; }
+  [data-testid="stColumn"]:has(.v6162-step-node) [data-testid="stButton"] button {
+    min-height: 44px !important;
+    text-align: start !important;
+    justify-content: flex-start !important;
+  }
+  .v6162-header-main { gap: .65rem !important; }
+  .v6162-header-copy h1 { font-size: 1.55rem !important; }
+  .v6162-progress-stat { border-radius: 12px !important; }
+
+  /* Metrics and progress summaries should stack rather than compress. */
+  .v43-metrics,
+  .v6185-progress-cards,
+  .v619-quality-dimensions,
+  .v6172-current-stage-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .v6185-progress-cards > div:last-child { grid-column: auto !important; }
+
+  /* Internal toolbar can wrap naturally on narrow screens. */
+  .st-key-v68_workspace_toolbar [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+    gap: .35rem !important;
+  }
+  .st-key-v68_workspace_toolbar [data-testid="stColumn"] {
+    min-width: min(44vw, 160px) !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* Full-width primary actions feel intentional and are easier to tap. */
+  [data-testid="stFormSubmitButton"] button,
+  .st-key-v6163_project_header .stButton > button[kind="primary"] {
+    width: 100% !important;
+  }
+}
+
+/* ---------- Very small phone ---------- */
+@media (max-width: 420px) {
+  .block-container { padding-inline: .58rem !important; }
+  .v618-page-header { padding: .78rem !important; }
+  .v618-page-header h1 { font-size: 1.42rem !important; }
+  .st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex-basis: 100% !important;
+  }
+  .st-key-v61_public_header [data-testid="stImage"] img { width: 160px !important; }
+  .v61-hero-copy h1,
+  html[dir="rtl"] .v61-hero-copy h1 { font-size: 1.7rem !important; }
+  [data-testid="stMetric"] { padding: .62rem .7rem !important; }
+}
+
+/* ---------- Motion and contrast preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .stApp *, .stApp *::before, .stApp *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --v6201-border: #b8c7da; }
+  .stApp p, .stApp li, .stApp label { color: #2f4058 !important; }
+  .stButton > button, [data-baseweb="input"] > div, [data-baseweb="select"] > div { border-width: 2px !important; }
+}

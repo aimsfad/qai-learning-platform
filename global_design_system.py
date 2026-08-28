@@ -201,7 +201,7 @@ def apply_plotly_theme(
     layout: dict[str, Any] = {
         "paper_bgcolor": "rgba(0,0,0,0)",
         "plot_bgcolor": "rgba(0,0,0,0)",
-        "font": {"family": "Tajawal, Arial, sans-serif", "color": "#334155"},
+        "font": {"family": "Inter, Noto Sans Arabic, Tajawal, Arial, sans-serif", "color": "#334155"},
         "margin": {"l": 24, "r": 16, "t": 24, "b": 34},
         "hoverlabel": {"bgcolor": "#0B2F78", "font_color": "#FFFFFF", "bordercolor": "#0B2F78"},
         "showlegend": show_legend,

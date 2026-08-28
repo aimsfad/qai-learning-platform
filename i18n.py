@@ -974,7 +974,7 @@ def apply_language_css(st_module: Any, lang: str | None = None) -> None:
     code = normalize_lang(lang) if lang else current_lang(st_module)
     dir_value = direction(code)
     align = "right" if code == "ar" else "left"
-    font_stack = "'Alexandria','Tajawal','Noto Sans Arabic','Segoe UI',sans-serif" if code == "ar" else "'Inter','Manrope','Segoe UI',sans-serif"
+    font_stack = "'Noto Sans Arabic','Tajawal','Segoe UI',Arial,sans-serif" if code == "ar" else "'Inter','Segoe UI',Arial,sans-serif"
     # The native Streamlit rail is docked according to the reading direction.
     # This keeps Arabic navigation on the right and French/English navigation
     # on the left, while the main document retains its own independent scroll.
