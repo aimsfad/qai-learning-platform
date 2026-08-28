@@ -1,3 +1,18 @@
+# V6.20.0 — Published Teacher-Course Runtime
+
+- Connected learner-facing Teacher Courses to the teacher-approved blueprint and approved lesson blocks instead of legacy phase previews.
+- Added runtime publication readiness and blocked new-format publication until every declared lesson has its required approved blocks.
+- Added `published_course_enrollments`, `published_course_lesson_progress`, and `published_course_ai_interactions`.
+- Pinned each learner enrollment to the blueprint version active at course start to prevent silent mid-course content drift.
+- Added sequential lesson unlocking, persistent position/progress, independent attempt, reflection, and completion state.
+- Preserved the attempt-first policy before AI support and reused the transparent learner-evidence/adaptive-support engines without introducing automated mastery claims.
+- Added a separate domain-neutral course tutor contract while preserving the controlled Qiskit tutor contract.
+- Registered `Published Courses` in the native Streamlit learner router and exposed it in the persistent learner tool dock.
+- Added aggregate teacher delivery signals for enrollment, course/lesson completion, and AI-support usage.
+- Added `package_release.py`; sanitized releases now exclude local Secrets, VCS history, runtime databases, caches, and editor artifacts.
+- Removed accidental repository artifacts (`-v3-9` and malformed pager/output files) from the release.
+- Added `validate_v620_published_course_runtime.py` and `validate_current_release.py`; current supported regression suite passes 19/19 validators plus `compileall`.
+
 # V6.19.1 — Learner Evidence Model + Misconception Tracing
 
 - Added `learner_model_engine.py`, an interpretable evidence model that summarizes observed learning signals without claiming true or final mastery.

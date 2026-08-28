@@ -234,7 +234,8 @@ def _student_tool_copy() -> Dict[str, str]:
             "modules": "الوحدات وQiskit",
             "coach": "المدرّب الذكي",
             "plan": "الخطة التكيفية",
-            "more": "التقييم والبحث",
+            "courses": "دورات الأساتذة",
+            "more": "المزيد من أدوات التعلّم",
             "pre": "الاختبار القبلي",
             "post": "الاختبار البعدي",
             "survey": "الاستبيان",
@@ -247,7 +248,8 @@ def _student_tool_copy() -> Dict[str, str]:
             "modules": "Modules & Qiskit",
             "coach": "Coach IA",
             "plan": "Plan adaptatif",
-            "more": "Évaluation & recherche",
+            "courses": "Cours des enseignants",
+            "more": "Autres outils d’apprentissage",
             "pre": "Pré-test",
             "post": "Post-test",
             "survey": "Questionnaire",
@@ -260,7 +262,8 @@ def _student_tool_copy() -> Dict[str, str]:
             "modules": "Modules & Qiskit",
             "coach": "AI Coach",
             "plan": "Adaptive plan",
-            "more": "Assessment & research",
+            "courses": "Teacher courses",
+            "more": "More learning tools",
             "pre": "Pre-test",
             "post": "Post-test",
             "survey": "Survey",
@@ -300,6 +303,7 @@ def _render_student_tool_dock() -> None:
         ("Adaptive Plan", "✦", copy["plan"]),
     ]
     secondary_tools = [
+        ("Published Courses", "▤", copy["courses"]),
         ("Pre-test", "01", copy["pre"]),
         ("Post-test", "02", copy["post"]),
         ("Satisfaction Survey", "✓", copy["survey"]),
@@ -331,7 +335,7 @@ def _render_student_tool_dock() -> None:
 
         expanded = any(page == current for page, _, _ in secondary_tools)
         with st.expander(copy["more"], expanded=expanded):
-            secondary_cols = st.columns(4, gap="small")
+            secondary_cols = st.columns(len(secondary_tools), gap="small")
             for col, (page, icon, label) in zip(secondary_cols, secondary_tools):
                 with col:
                     available = page in allowed
@@ -410,6 +414,7 @@ def _build_pages() -> tuple[dict, Dict[str, object]]:
             ("Overview", "Student Home", labels["home"], ":material/dashboard:", True),
             ("Learning", "Adaptive Plan", labels["plan"], ":material/route:", False),
             ("Learning", "Learning Module", labels["modules"], ":material/menu_book:", False),
+            ("Learning", "Published Courses", i18n.page_label("Published Courses", lang), ":material/auto_stories:", False),
             ("Learning", "AI Tutor Lab", labels["tutor"], ":material/smart_toy:", False),
             ("Assessment", "Pre-test", labels["pre"], ":material/quiz:", False),
             ("Assessment", "Post-test", labels["post"], ":material/fact_check:", False),

@@ -179,7 +179,7 @@ def validate_static_integration() -> None:
     css = read(".streamlit/v6_theme.css")
     secrets = read(".streamlit/secrets_example.toml")
 
-    require(any(v in db for v in ('APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"')), "V6.19.0+ app version missing")
+    require(any(v in db for v in ('APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"')), "V6.19.0+ app version missing")
     for column in (
         "adaptive_support_level",
         "adaptive_support_mode",

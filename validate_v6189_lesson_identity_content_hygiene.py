@@ -212,7 +212,7 @@ def validate_static_integration() -> None:
     css = read(".streamlit/v6_theme.css")
 
     require(any(v in db_source for v in (
-        'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"',
+        'APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"',
         'APP_VERSION = "v6.18.9-lesson-identity-content-hygiene"',
     )), "V6.18.9+ app version missing")
     for token in (
