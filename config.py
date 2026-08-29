@@ -6,23 +6,16 @@ import streamlit as st
 APP_TITLE = "3alimnIA | علّمنيا"
 APP_ICON = "🧠"
 ROOT_DIR = Path(__file__).resolve().parent
-STYLE_PATH = ROOT_DIR / ".streamlit" / "style.css"
-V4_STYLE_PATH = ROOT_DIR / ".streamlit" / "v4_theme.css"
-V6_STYLE_PATH = ROOT_DIR / ".streamlit" / "v6_theme.css"
-V6201_STYLE_PATH = ROOT_DIR / ".streamlit" / "v6201_responsive_visual_system.css"
-V6202_STYLE_PATH = ROOT_DIR / ".streamlit" / "v6202_visual_qa_stabilization.css"
-V6203_STYLE_PATH = ROOT_DIR / ".streamlit" / "v6203_mobile_public_shell.css"
-V6204_STYLE_PATH = ROOT_DIR / ".streamlit" / "v6204_mobile_header_first_viewport.css"
-V6205_STYLE_PATH = ROOT_DIR / ".streamlit" / "v6205_mobile_header_shell.css"
+THEME_PATH = ROOT_DIR / ".streamlit" / "theme.css"
 LESSON_MEDIA_DIR = ROOT_DIR / "assets" / "lesson_media"
 
 
 def load_css() -> None:
-    """Load the external stylesheet once at app startup."""
-    loaded = False
-    for path in (STYLE_PATH, V4_STYLE_PATH, V6_STYLE_PATH, V6201_STYLE_PATH, V6202_STYLE_PATH, V6203_STYLE_PATH, V6204_STYLE_PATH, V6205_STYLE_PATH):
-        if path.exists():
-            st.markdown(f"<style>{path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
-            loaded = True
-    if not loaded:
-        st.warning("Theme styles were not found; the app will use Streamlit defaults.")
+    """Load the single unified production design system at app startup."""
+    if THEME_PATH.exists():
+        st.markdown(
+            f"<style>{THEME_PATH.read_text(encoding='utf-8')}</style>",
+            unsafe_allow_html=True,
+        )
+        return
+    st.warning("Theme stylesheet was not found; the app will use Streamlit defaults.")

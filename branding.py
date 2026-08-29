@@ -17,11 +17,7 @@ BRAND_TAGLINE_FR = "Comprendre les concepts difficiles, pas √† pas, avec l'IA g√
 DEFAULT_LOGO_VARIANT = "premium-flat"
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets" / "branding"
-LEGACY_OFFICIAL_LOGO_PATH = ASSET_DIR / "3alimnia_logo.png"
 PREMIUM_LOGO_PATH = ASSET_DIR / "3alimnia_logo_premium.png"
-# V6.9.4 adopts the approved frameless quiet-luxury logo throughout the app.
-# The legacy constants remain available as aliases so older UI components and
-# validators continue to resolve a single, consistent brand asset.
 OFFICIAL_LOGO_PATH = PREMIUM_LOGO_PATH
 HEADER_WHITE_LOGO_PATH = PREMIUM_LOGO_PATH
 

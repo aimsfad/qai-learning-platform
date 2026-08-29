@@ -201,9 +201,9 @@ def apply_plotly_theme(
     layout: dict[str, Any] = {
         "paper_bgcolor": "rgba(0,0,0,0)",
         "plot_bgcolor": "rgba(0,0,0,0)",
-        "font": {"family": "Inter, Noto Sans Arabic, Tajawal, Arial, sans-serif", "color": "#334155"},
+        "font": {"family": "Inter, Noto Sans Arabic, Tajawal, Arial, sans-serif", "color": "#33405E"},
         "margin": {"l": 24, "r": 16, "t": 24, "b": 34},
-        "hoverlabel": {"bgcolor": "#0B2F78", "font_color": "#FFFFFF", "bordercolor": "#0B2F78"},
+        "hoverlabel": {"bgcolor": "#0A1636", "font_color": "#FFFFFF", "bordercolor": "#1660FF"},
         "showlegend": show_legend,
         "legend": {"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     }
@@ -215,14 +215,14 @@ def apply_plotly_theme(
         showgrid=False,
         zeroline=False,
         showline=True,
-        linecolor="#D9E4F1",
-        tickcolor="#D9E4F1",
+        linecolor="#DCE6FA",
+        tickcolor="#DCE6FA",
         automargin=True,
     )
     fig.update_yaxes(
         title=y_title,
         showgrid=True,
-        gridcolor="rgba(148,163,184,.17)",
+        gridcolor="rgba(22,96,255,.12)",
         griddash="dot",
         zeroline=False,
         showline=False,
