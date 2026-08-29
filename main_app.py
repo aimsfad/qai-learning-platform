@@ -3409,6 +3409,7 @@ def render_ai_tutor_lab(student: Dict[str, Any]) -> None:
     hero(
         "AI Tutor Lab",
         "A continuous learning conversation with context from the current module. The tutor is designed to guide, not replace, your reasoning.",
+        compact=True,
     )
     ux_note(
         "<b>How to use the AI Tutor:</b><br>"

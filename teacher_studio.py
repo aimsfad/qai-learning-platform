@@ -847,7 +847,30 @@ def _render_generation_markdown(text: str, language_code: str) -> None:
             st.markdown(cleaned)
 
 
-def _render_teacher_lesson_markdown(text: str, language_code: str) -> None:
+def _strip_redundant_section_heading(text: str, section_label: str) -> str:
+    """Drop a generated leading Markdown heading when the UI already shows it."""
+    import re
+
+    raw = str(text or "").lstrip()
+    if not raw or not section_label:
+        return raw
+    lines = raw.splitlines()
+    if not lines:
+        return raw
+    match = re.match(r"^\s*#{1,3}\s+(.+?)\s*$", lines[0])
+    if not match:
+        return raw
+
+    def canonical(value: str) -> str:
+        value = re.sub(r"[^\w\s]+", " " , str(value).casefold(), flags=re.UNICODE)
+        return re.sub(r"\s+", " ", value).strip()
+
+    if canonical(match.group(1)) == canonical(section_label):
+        return "\n".join(lines[1:]).lstrip()
+    return raw
+
+
+def _render_teacher_lesson_markdown(text: str, language_code: str, section_label: str = "") -> None:
     """Render lesson content with safe native disclosure controls.
 
     LLM-produced <details>/<summary> markup is parsed as data and converted to
@@ -855,9 +878,10 @@ def _render_teacher_lesson_markdown(text: str, language_code: str) -> None:
     unsafe_allow_html.
     """
     marker_class = "v6111-generation-output-rtl" if str(language_code).lower() == "ar" else "v6111-generation-output-ltr"
+    cleaned_text = _strip_redundant_section_heading(text, section_label)
     with st.container():
         st.markdown(f"<span class='{marker_class} v6189-safe-content-renderer' aria-hidden='true'></span>", unsafe_allow_html=True)
-        for segment in lesson_content_renderer.teacher_markdown_segments(text, language_code):
+        for segment in lesson_content_renderer.teacher_markdown_segments(cleaned_text, language_code):
             if segment.get("kind") == "disclosure":
                 with st.expander(str(segment.get("label") or "Details"), expanded=False):
                     st.markdown(str(segment.get("text") or ""))
@@ -2339,7 +2363,7 @@ def render_projects_grid() -> None:
 
     rows = projects.to_dict("records")
     if len(rows) == 1:
-        _, center_col, _ = ui_stability.columns([1, 1.55, 1], gap="large", vertical_alignment="top")
+        _, center_col, _ = ui_stability.columns([0.55, 2.3, 0.55], gap="large", vertical_alignment="top")
         with center_col:
             _render_project_card(rows[0], copy)
         return
@@ -3356,7 +3380,7 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                 f"<div class='v6185-section-purpose' dir='{direction}'><b>{escape(labels['section_purpose'])}</b><span>{escape(rationale)}</span></div>",
                 unsafe_allow_html=True,
             )
-            _render_teacher_lesson_markdown(row["content_text"], render_lang)
+            _render_teacher_lesson_markdown(row["content_text"], render_lang, str(row.get("label") or ""))
 
     full_markdown = "\n\n---\n\n".join(full_markdown_parts)
     # A keyed action container is more reliable than styling an incidental

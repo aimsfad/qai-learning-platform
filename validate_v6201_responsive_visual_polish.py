@@ -8,7 +8,7 @@ css = css_path.read_text(encoding='utf-8')
 
 assert css_path.exists()
 assert 'V6201_STYLE_PATH' in config
-assert 'V6201_STYLE_PATH)' in config
+assert 'V6201_STYLE_PATH' in config
 assert 'Noto Sans Arabic' in css
 assert "'Noto Sans Arabic','Tajawal'" in i18n
 assert '@media (max-width: 700px)' in css

@@ -297,17 +297,17 @@ def _render_student_tool_dock() -> None:
     current = st.session_state.get("student_page", "Student Home")
 
     primary_tools = [
-        ("Student Home", "⌂", copy["dashboard"]),
-        ("Learning Module", "▦", copy["modules"]),
-        ("AI Tutor Lab", "◈", copy["coach"]),
-        ("Adaptive Plan", "✦", copy["plan"]),
+        ("Student Home", ":material/home:", copy["dashboard"]),
+        ("Learning Module", ":material/view_module:", copy["modules"]),
+        ("AI Tutor Lab", ":material/smart_toy:", copy["coach"]),
+        ("Adaptive Plan", ":material/route:", copy["plan"]),
     ]
     secondary_tools = [
-        ("Published Courses", "▤", copy["courses"]),
-        ("Pre-test", "01", copy["pre"]),
-        ("Post-test", "02", copy["post"]),
-        ("Satisfaction Survey", "✓", copy["survey"]),
-        ("Research Notice", "◎", copy["research"]),
+        ("Published Courses", ":material/library_books:", copy["courses"]),
+        ("Pre-test", ":material/quiz:", copy["pre"]),
+        ("Post-test", ":material/fact_check:", copy["post"]),
+        ("Satisfaction Survey", ":material/rate_review:", copy["survey"]),
+        ("Research Notice", ":material/science:", copy["research"]),
     ]
 
     with st.container(border=True, key="v67_student_tool_dock"):
@@ -323,7 +323,8 @@ def _render_student_tool_dock() -> None:
             with col:
                 available = page in allowed
                 st.button(
-                    f"{icon} {label}",
+                    label,
+                    icon=icon,
                     key=f"v67_student_tool_{page}",
                     type="primary" if current == page else "secondary",
                     use_container_width=True,
@@ -340,7 +341,8 @@ def _render_student_tool_dock() -> None:
                 with col:
                     available = page in allowed
                     st.button(
-                        f"{icon} {label}",
+                        label,
+                        icon=icon,
                         key=f"v67_student_secondary_{page}",
                         type="primary" if current == page else "secondary",
                         use_container_width=True,

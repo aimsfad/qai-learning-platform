@@ -29,6 +29,7 @@ VALIDATORS = [
     "validate_v6191_learner_evidence_misconception_tracing.py",
     "validate_v620_published_course_runtime.py",
     "validate_v6201_responsive_visual_polish.py",
+    "validate_v6202_visual_qa_stabilization.py",
 ]
 
 

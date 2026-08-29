@@ -1,0 +1,376 @@
+/* ========================================================================== 
+   3alimnIA V6.20.2 - Screenshot-driven visual QA stabilization
+   Loaded after V6.20.1. Focus: 1366px laptop density, stronger readability,
+   compact teacher/learner chrome, and safer responsive behavior.
+   ========================================================================== */
+
+:root {
+  --v6202-text: #13233d;
+  --v6202-body: #40516b;
+  --v6202-muted: #697a92;
+  --v6202-line: #d8e4f2;
+  --v6202-soft: #f7faff;
+  --v6202-reading: 72ch;
+}
+
+/* Reduce the blank band visible above the application shell on laptop screens. */
+.block-container {
+  padding-top: .45rem !important;
+}
+
+/* Stronger reading contrast without turning the interface visually heavy. */
+.stApp p,
+.stApp li,
+.stApp [data-testid="stMarkdownContainer"] {
+  color: var(--v6202-body) !important;
+}
+.stApp small,
+.stApp [data-testid="stCaptionContainer"],
+.stApp [data-testid="stCaptionContainer"] p {
+  color: var(--v6202-muted) !important;
+}
+html[dir="rtl"] .stApp p,
+html[dir="rtl"] .stApp li {
+  letter-spacing: 0 !important;
+}
+
+/* Public navigation: desktop labels were too small in the visual QA capture. */
+.st-key-v61_public_header {
+  margin-top: 0 !important;
+}
+.st-key-v61_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+  min-height: 66px !important;
+  padding: .42rem .62rem !important;
+}
+.st-key-v61_public_header .stButton > button {
+  min-height: 43px !important;
+  font-size: .82rem !important;
+  font-weight: 730 !important;
+}
+.st-key-v61_public_header [data-baseweb="select"] > div {
+  min-height: 43px !important;
+  font-size: .85rem !important;
+}
+.st-key-v61_public_header [data-testid="stImage"] img {
+  max-width: 184px !important;
+}
+
+/* Home hero: keep the strong identity but make the Arabic title less dominant. */
+.st-key-v61_hero {
+  margin-top: .5rem !important;
+  padding: clamp(.9rem, 1.6vw, 1.35rem) !important;
+}
+.v61-hero-copy {
+  max-width: 760px !important;
+}
+.v61-hero-copy h1,
+html[dir="rtl"] .v61-hero-copy h1 {
+  font-size: clamp(2.25rem, 3.65vw, 3.25rem) !important;
+  line-height: 1.34 !important;
+  margin-bottom: .7rem !important;
+}
+.v61-hero-copy p {
+  max-width: var(--v6202-reading) !important;
+  color: #4b5d77 !important;
+  font-size: .98rem !important;
+}
+
+/* Program catalog: reduce vertical inflation seen on 1366x768 laptops. */
+[data-testid="stHorizontalBlock"]:has(.v65-program-card) {
+  gap: .8rem !important;
+}
+[data-testid="stColumn"]:has(.v65-program-card) {
+  padding: .95rem !important;
+  border-radius: 19px !important;
+}
+.v65-program-card {
+  min-height: 310px !important;
+}
+.v65-program-head {
+  margin: .05rem 0 .62rem !important;
+}
+.v65-program-icon {
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 15px !important;
+}
+.v65-program-card h3 {
+  margin: .32rem 0 .42rem !important;
+  font-size: 1.22rem !important;
+}
+.v65-program-desc {
+  min-height: 70px !important;
+  color: #4f6078 !important;
+  font-size: .89rem !important;
+  line-height: 1.72 !important;
+}
+.v65-program-audience {
+  margin-top: .68rem !important;
+  padding: .6rem .68rem !important;
+}
+.v65-program-audience b {
+  font-size: .75rem !important;
+}
+.v65-program-meta {
+  margin-top: .68rem !important;
+  padding-top: .68rem !important;
+}
+.v65-program-meta small {
+  font-size: .61rem !important;
+}
+.v65-program-meta b {
+  font-size: .75rem !important;
+}
+[data-testid="stColumn"]:has(.v65-program-card) .stButton {
+  padding-top: .62rem !important;
+}
+
+/* Teacher shell: clearer hierarchy with less unused vertical space. */
+.v618-page-header-compact,
+.v618-teacher-shell-marker + div .v618-page-header {
+  padding: .86rem 1rem .9rem !important;
+  margin-bottom: .6rem !important;
+}
+.v618-page-header-compact h1,
+.v618-teacher-shell-marker + div .v618-page-header h1 {
+  font-size: clamp(1.55rem, 2vw, 1.92rem) !important;
+  line-height: 1.32 !important;
+}
+.v618-page-header-compact p,
+.v618-teacher-shell-marker + div .v618-page-header p {
+  max-width: 900px !important;
+  font-size: .94rem !important;
+  line-height: 1.72 !important;
+}
+.st-key-teacher_studio_nav_control [role="radiogroup"] {
+  gap: .35rem !important;
+  padding: .24rem !important;
+}
+.st-key-teacher_studio_nav_control [role="radiogroup"] > label {
+  min-height: 40px !important;
+  padding: .4rem .75rem !important;
+}
+
+/* Project cards: one project should read as a workspace card, not a tiny island. */
+[class*="st-key-v6163_project_card_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  padding: 1rem 1.05rem !important;
+}
+.v6163-project-card-copy h3 {
+  font-size: 1.3rem !important;
+}
+.v6163-project-concept {
+  min-height: 2.55rem !important;
+  color: #42536d !important;
+  font-size: .91rem !important;
+}
+.v6163-project-facts small {
+  font-size: .69rem !important;
+}
+[data-testid="stProgress"] p {
+  color: #334966 !important;
+  font-size: .79rem !important;
+  font-weight: 720 !important;
+}
+
+/* Project production header and five-stage journey: better laptop density. */
+.st-key-v6163_project_header {
+  padding: .86rem 1rem .95rem !important;
+  border-radius: 20px !important;
+}
+.v6162-header-copy h1 {
+  font-size: clamp(1.65rem, 2.5vw, 2.25rem) !important;
+  line-height: 1.28 !important;
+}
+.v6162-progress-stat {
+  min-width: 104px !important;
+  padding: .58rem .7rem !important;
+}
+.v6162-progress-stat strong {
+  font-size: 1.62rem !important;
+}
+[data-testid="stHorizontalBlock"]:has(.v6162-step-node) {
+  gap: .42rem !important;
+}
+[data-testid="stColumn"]:has(.v6162-step-node) [data-testid="stButton"] button {
+  min-height: 44px !important;
+  font-size: .79rem !important;
+}
+[data-testid="stColumn"]:has(.v6162-step-node) [data-testid="stCaptionContainer"] {
+  font-size: .68rem !important;
+}
+
+/* Lesson builder: section map stays readable and does not look compressed. */
+.v6185-section-nav {
+  gap: .38rem !important;
+  overflow-x: auto !important;
+  padding-bottom: .18rem !important;
+  scrollbar-width: thin;
+}
+.v6185-section-chip {
+  min-height: 42px !important;
+  min-width: 116px !important;
+  padding: .38rem .48rem !important;
+}
+.v6185-section-chip em {
+  font-size: .69rem !important;
+}
+.v6184-section-heading h3 {
+  font-size: 1.28rem !important;
+  line-height: 1.45 !important;
+}
+.v6185-section-purpose {
+  margin: .62rem 0 .82rem !important;
+  padding: .6rem .75rem !important;
+}
+[class*="st-key-simple_preview_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  padding: .95rem 1rem !important;
+}
+[class*="st-key-simple_preview_"] [data-testid="stMarkdownContainer"] > p,
+[class*="st-key-simple_preview_"] [data-testid="stMarkdownContainer"] > ul,
+[class*="st-key-simple_preview_"] [data-testid="stMarkdownContainer"] > ol {
+  max-width: var(--v6202-reading) !important;
+}
+
+/* Learner dock and learning chrome: get actual learning content above the fold. */
+.st-key-v67_student_tool_dock {
+  margin-top: .35rem !important;
+  padding: .52rem .6rem .46rem !important;
+  border-radius: 15px !important;
+}
+.v67-student-dock-title {
+  margin-bottom: .36rem !important;
+  font-size: .82rem !important;
+}
+.st-key-v67_student_tool_dock .stButton > button {
+  min-height: 40px !important;
+  font-size: .78rem !important;
+}
+.st-key-v67_student_tool_dock [data-testid="stExpander"] {
+  margin-top: .32rem !important;
+}
+.st-key-v67_student_tool_dock [data-testid="stExpander"] summary {
+  min-height: 34px !important;
+}
+.v43-topbar {
+  padding: .58rem .72rem !important;
+  margin-bottom: .62rem !important;
+}
+
+/* Evaluation/research dashboard: denser control cards and stronger chart text. */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) {
+  border-radius: 14px !important;
+}
+[data-testid="stPlotlyChart"] {
+  min-height: 310px;
+}
+
+/* Laptop-specific tuning based on the 1362-1365px QA captures. */
+@media (min-width: 1181px) and (max-width: 1440px) {
+  :root { --v6201-content: 1368px; }
+  .block-container {
+    padding-inline: 1.5rem !important;
+  }
+  .st-key-v61_public_header .stButton > button {
+    font-size: .8rem !important;
+    padding-inline: .6rem !important;
+  }
+  .v61-hero-copy h1,
+  html[dir="rtl"] .v61-hero-copy h1 {
+    font-size: clamp(2.25rem, 3.35vw, 3rem) !important;
+  }
+  .v618-page-header {
+    border-radius: 18px !important;
+  }
+}
+
+/* Tablet: two-column program layout, wrapped tool docks, compact page headers. */
+@media (min-width: 701px) and (max-width: 1000px) {
+  [data-testid="stHorizontalBlock"]:has(.v65-program-card) {
+    flex-wrap: wrap !important;
+  }
+  [data-testid="stHorizontalBlock"]:has(.v65-program-card) > [data-testid="stColumn"] {
+    flex: 1 1 calc(50% - .45rem) !important;
+    min-width: 285px !important;
+  }
+  .v618-page-header {
+    padding: .82rem .9rem !important;
+  }
+}
+
+/* Phone: one-column information hierarchy and no squeezed control rows. */
+@media (max-width: 700px) {
+  .block-container {
+    padding-top: .25rem !important;
+    padding-inline: .62rem !important;
+  }
+  .st-key-v61_public_header .stButton > button {
+    font-size: .82rem !important;
+  }
+  .st-key-v61_hero {
+    padding: .78rem !important;
+  }
+  .v61-hero-copy h1,
+  html[dir="rtl"] .v61-hero-copy h1 {
+    font-size: clamp(1.62rem, 8vw, 1.98rem) !important;
+    line-height: 1.45 !important;
+  }
+  .v65-program-card {
+    min-height: auto !important;
+  }
+  .v65-program-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .v65-program-meta span {
+    align-items: center !important;
+    text-align: center !important;
+    padding: .3rem .2rem !important;
+  }
+  .v65-program-meta span + span {
+    border-top: 0 !important;
+    border-inline-start: 1px solid #e5edf6 !important;
+  }
+  .v618-page-header-compact,
+  .v618-teacher-shell-marker + div .v618-page-header {
+    padding: .74rem !important;
+  }
+  .v618-page-header-compact h1,
+  .v618-teacher-shell-marker + div .v618-page-header h1 {
+    font-size: 1.4rem !important;
+  }
+  .st-key-v67_student_tool_dock [data-testid="stHorizontalBlock"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: .38rem !important;
+  }
+  .st-key-v67_student_tool_dock [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    width: 100% !important;
+  }
+  .st-key-v67_student_tool_dock .stButton > button {
+    min-height: 46px !important;
+    white-space: normal !important;
+  }
+  .v43-topbar {
+    grid-template-columns: 1fr !important;
+  }
+  .v6185-section-chip {
+    min-width: 132px !important;
+  }
+  [class*="st-key-simple_preview_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+    padding: .78rem !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .v65-program-meta {
+    grid-template-columns: 1fr !important;
+  }
+  .v65-program-meta span {
+    align-items: flex-start !important;
+    text-align: start !important;
+    padding: .42rem 0 !important;
+  }
+  .v65-program-meta span + span {
+    border-inline-start: 0 !important;
+    border-top: 1px solid #e5edf6 !important;
+  }
+}

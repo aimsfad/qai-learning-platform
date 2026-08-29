@@ -1,3 +1,7 @@
+## V6.20.2 - Screenshot-driven visual QA stabilization
+
+The current release applies a screenshot-driven laptop visual QA pass on top of V6.20.1: denser 1366px layouts, stronger text contrast, cleaner learner-tool icons, a wider single-project teacher card, a compact AI Tutor entry, duplicate section-heading cleanup, and a final isolated responsive layer. See `V6_20_2_VISUAL_QA_STABILIZATION.md`.
+
 ## V6.20.1 — Responsive visual polish
 
 The current release keeps the V6.20 published-course runtime and adds a final responsive typography/device layer for Arabic, French, and English across desktop, laptop, tablet, and phone. See `V6_20_1_RESPONSIVE_VISUAL_POLISH_AR.md`.

@@ -1,3 +1,12 @@
+# V6.20.2 - Screenshot-driven Visual QA Stabilization
+
+- Added a final screenshot-driven visual stabilization layer after V6.20.1.
+- Tightened laptop density, navigation, hero scale, program cards, teacher workspace, and lesson review.
+- Replaced learner-tool typographic glyphs with Material icons.
+- Widened the single-project state and compacted the AI Tutor entry header.
+- Prevented duplicate leading generated headings in teacher lesson preview.
+- Added and passed the V6.20.2 visual QA validator.
+
 # V6.20.0 — Published Teacher-Course Runtime
 
 - Connected learner-facing Teacher Courses to the teacher-approved blueprint and approved lesson blocks instead of legacy phase previews.
