@@ -1,3 +1,7 @@
+## V6.20.4 — Mobile header and first-viewport hotfix
+
+The current release fixes the live 390px regression observed after V6.20.3: the horizontal brand lockup was being cropped into a square and the mobile menu column was stacking below it. V6.20.4 renders the official logo as an embedded HTML data-URI, forces a compact logo+menu app-bar grid, reduces the dead band before the hero, and tightens first-screen typography without changing routing or learning logic. See `V6_20_4_MOBILE_HEADER_FIRST_VIEWPORT_AR.md`.
+
 ## V6.20.3 — Mobile public shell and first-viewport stabilization
 
 The current release replaces the compressed desktop public navigation on phones with a dedicated compact mobile app bar and native Streamlit popover menu. It also removes mobile top-chrome spacing, forces the home hero into a true single-column hierarchy, prioritizes the primary CTA, constrains the branded visual, and blocks accidental horizontal page scrolling. This pass is based on the live 390px mobile screenshot. See `V6_20_3_MOBILE_PUBLIC_SHELL_AR.md`.

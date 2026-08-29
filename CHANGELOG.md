@@ -1,3 +1,12 @@
+# V6.20.4 — Mobile Header & First-Viewport Hotfix
+
+- Replaced the mobile public-header `st.image` logo with the embedded official data-URI lockup to eliminate the 390px square crop.
+- Forced the mobile app bar into a stable logo + 48px menu grid so legacy column rules cannot stack the header.
+- Reduced the menu trigger to an icon-sized touch target while preserving accessible label content.
+- Removed residual mobile header minimum heights and tightened the gap before the home hero.
+- Refined first-viewport Arabic typography without changing public routing or learning logic.
+- Added `validate_v6204_mobile_header_first_viewport.py` to the supported regression suite.
+
 # V6.20.3 — Mobile Public Shell & First-Viewport Stabilization
 
 - Replaced the squeezed desktop public header on phones with a dedicated mobile logo + menu shell.

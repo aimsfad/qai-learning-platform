@@ -13,8 +13,8 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_OUTPUT = ROOT.parent / "3alimnIA_V6.20.3_Mobile_Public_Shell.zip"
-ARCHIVE_ROOT = "3alimnIA_V6.20.3"
+DEFAULT_OUTPUT = ROOT.parent / "3alimnIA_V6.20.4_Mobile_Header_First_Viewport.zip"
+ARCHIVE_ROOT = "3alimnIA_V6.20.4"
 
 EXCLUDED_DIRS = {
     ".git",

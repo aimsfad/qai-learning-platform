@@ -295,7 +295,14 @@ def render_public_header(current_title: str = "") -> None:
             [3.5, 1.0], gap="small", vertical_alignment="center"
         )
         with mobile_logo_col:
-            _render_official_logo(164)
+            # V6.20.4: use the embedded official lockup instead of st.image.
+            # Streamlit's image widget can inherit legacy responsive sizing and
+            # crop the horizontal logo into a square on narrow Cloud viewports.
+            st.markdown(
+                "<span class='v6204-mobile-logo-marker' aria-hidden='true'></span>"
+                + branding.logo_lockup_html(compact=True, language=lang),
+                unsafe_allow_html=True,
+            )
         with mobile_menu_col:
             with st.popover(
                 header_labels["menu"],
