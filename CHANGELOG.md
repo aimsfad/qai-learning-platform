@@ -1,3 +1,11 @@
+# V6.20.5 — Mobile Header Shell
+
+- Rebuilt the mobile public header without Streamlit columns to prevent Cloud responsive stacking.
+- Added a dedicated uncropped HTML logo class isolated from legacy brand/image CSS.
+- Pinned the native Streamlit popover menu inside the same compact app bar.
+- Reduced first-viewport header height while preserving the V6.20.2 desktop/laptop visual system.
+- Added V6.20.5 regression validation and sanitized release packaging.
+
 # V6.20.4 — Mobile Header & First-Viewport Hotfix
 
 - Replaced the mobile public-header `st.image` logo with the embedded official data-URI lockup to eliminate the 390px square crop.

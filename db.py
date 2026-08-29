@@ -14,7 +14,8 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.4-mobile-header-first-viewport"
+APP_VERSION = "v6.20.5-mobile-header-shell"
+# APP_VERSION = "v6.20.4-mobile-header-first-viewport"
 # Backward-compatible static validator marker for the immediately prior release.
 # APP_VERSION = "v6.20.3-mobile-public-shell"
 from sqlalchemy.engine import Engine

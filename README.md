@@ -1,3 +1,7 @@
+## V6.20.5 — Mobile Header Shell
+
+The current release replaces the mobile public header's Streamlit columns with a deterministic single-container shell. The official horizontal logo uses an isolated HTML image class and the menu popover is pinned into the same 56–58px app bar, preventing the crop/stack regression observed on Streamlit Cloud at narrow widths. See `V6_20_5_MOBILE_HEADER_SHELL_AR.md`.
+
 ## V6.20.4 — Mobile header and first-viewport hotfix
 
 The current release fixes the live 390px regression observed after V6.20.3: the horizontal brand lockup was being cropped into a square and the mobile menu column was stacking below it. V6.20.4 renders the official logo as an embedded HTML data-URI, forces a compact logo+menu app-bar grid, reduces the dead band before the hero, and tightens first-screen typography without changing routing or learning logic. See `V6_20_4_MOBILE_HEADER_FIRST_VIEWPORT_AR.md`.

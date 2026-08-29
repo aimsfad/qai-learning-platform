@@ -1,0 +1,168 @@
+/* ========================================================================== 
+   3alimnIA V6.20.5 - Deterministic mobile header shell
+   Screenshot-driven fix for Streamlit Cloud at 490px and below.
+   Loaded last. Avoids Streamlit columns and legacy brand classes entirely.
+   ========================================================================== */
+
+.st-key-v6205_mobile_public_header { display: none !important; }
+
+@media (max-width: 700px) {
+  /* Retire the older mobile shell if an old component remains in cached DOM. */
+  .st-key-v6203_mobile_public_header { display: none !important; }
+
+  .st-key-v6205_mobile_public_header {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    margin: 0 0 .42rem !important;
+    padding: 0 !important;
+  }
+
+  .st-key-v6205_mobile_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+    position: relative !important;
+    width: 100% !important;
+    min-height: 58px !important;
+    height: 58px !important;
+    margin: 0 !important;
+    padding: 7px 58px 7px 10px !important;
+    overflow: visible !important;
+    background: rgba(255,255,255,.985) !important;
+    border: 1px solid #d6e2f1 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 5px 16px rgba(8,34,79,.045) !important;
+  }
+
+  html[dir="rtl"] .st-key-v6205_mobile_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+    padding: 7px 10px 7px 58px !important;
+  }
+
+  /* The logo uses its own class so no historical brand/image rule can crop it. */
+  .st-key-v6205_mobile_public_header .v6205-mobile-brand {
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  html[dir="rtl"] .st-key-v6205_mobile_public_header .v6205-mobile-brand {
+    justify-content: flex-end !important;
+  }
+
+  .st-key-v6205_mobile_public_header img.v6205-mobile-logo-img {
+    display: block !important;
+    width: 148px !important;
+    min-width: 148px !important;
+    max-width: 148px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 38px !important;
+    aspect-ratio: auto !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    clip-path: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  .st-key-v6205_mobile_public_header .v6205-mobile-brand-fallback {
+    color: #0b2556 !important;
+    font: 800 1.25rem/1.1 Inter, Arial, sans-serif !important;
+  }
+
+  /* Popover is pinned into the app bar; no columns means it cannot stack. */
+  .st-key-v6205_mobile_public_header [data-testid="stPopover"] {
+    position: absolute !important;
+    top: 7px !important;
+    right: 8px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    margin: 0 !important;
+    z-index: 8 !important;
+  }
+  html[dir="rtl"] .st-key-v6205_mobile_public_header [data-testid="stPopover"] {
+    right: auto !important;
+    left: 8px !important;
+  }
+
+  .st-key-v6205_mobile_public_header [data-testid="stPopover"] > button,
+  .st-key-v6205_mobile_public_header button[aria-haspopup="dialog"] {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    color: #0b2556 !important;
+    background: #f5f8fd !important;
+    border: 1px solid #cbd9ec !important;
+    border-radius: 11px !important;
+    box-shadow: none !important;
+  }
+  .st-key-v6205_mobile_public_header [data-testid="stPopover"] > button p,
+  .st-key-v6205_mobile_public_header button[aria-haspopup="dialog"] p {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .st-key-v6205_mobile_public_header [data-testid="stPopover"] [data-testid="stIconMaterial"],
+  .st-key-v6205_mobile_public_header button[aria-haspopup="dialog"] [data-testid="stIconMaterial"] {
+    display: block !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 22px !important;
+    line-height: 22px !important;
+  }
+
+  /* Keep first viewport tight after the compact header. */
+  [data-testid="stMainBlockContainer"],
+  .stMainBlockContainer,
+  section.main > div.block-container,
+  .block-container {
+    padding-top: .12rem !important;
+  }
+  .st-key-v61_hero {
+    margin-top: .12rem !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .st-key-v6205_mobile_public_header > [data-testid="stVerticalBlockBorderWrapper"] {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .st-key-v6205_mobile_public_header img.v6205-mobile-logo-img {
+    width: 136px !important;
+    min-width: 136px !important;
+    max-width: 136px !important;
+    max-height: 36px !important;
+  }
+  .st-key-v6205_mobile_public_header [data-testid="stPopover"] {
+    top: 6px !important;
+  }
+}

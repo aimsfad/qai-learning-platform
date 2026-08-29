@@ -32,6 +32,7 @@ VALIDATORS = [
     "validate_v6202_visual_qa_stabilization.py",
     "validate_v6203_mobile_public_shell.py",
     "validate_v6204_mobile_header_first_viewport.py",
+    "validate_v6205_mobile_header_shell.py",
 ]
 
 

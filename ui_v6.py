@@ -287,38 +287,39 @@ def render_public_header(current_title: str = "") -> None:
         "en": {"home": "Home", "programs": "Programs", "ai": "AI Studio", "institutions": "Institutions", "teacher": "Teacher", "evaluator": "Evaluator", "start": "Start now", "menu": "Menu"},
     }[lang]
 
-    # V6.20.3: render a dedicated compact mobile shell instead of squeezing the
-    # desktop navigation into a narrow viewport. Both shells are rendered and
-    # CSS selects the appropriate one at the responsive breakpoint.
-    with st.container(border=False, key="v6203_mobile_public_header"):
-        mobile_logo_col, mobile_menu_col = ui_stability.columns(
-            [3.5, 1.0], gap="small", vertical_alignment="center"
-        )
-        with mobile_logo_col:
-            # V6.20.4: use the embedded official lockup instead of st.image.
-            # Streamlit's image widget can inherit legacy responsive sizing and
-            # crop the horizontal logo into a square on narrow Cloud viewports.
+    # V6.20.5: mobile header is intentionally column-free. Earlier Streamlit
+    # responsive column rules could stack the logo and menu or crop the logo.
+    # A dedicated image class plus absolutely positioned popover makes the
+    # first viewport deterministic on Streamlit Cloud.
+    with st.container(border=False, key="v6205_mobile_public_header"):
+        mobile_logo_uri = branding.official_logo_data_uri()
+        if mobile_logo_uri:
             st.markdown(
-                "<span class='v6204-mobile-logo-marker' aria-hidden='true'></span>"
-                + branding.logo_lockup_html(compact=True, language=lang),
+                "<div class='v6205-mobile-brand' dir='ltr'>"
+                f"<img class='v6205-mobile-logo-img' src='{mobile_logo_uri}' alt='3alimnIA'/>"
+                "</div>",
                 unsafe_allow_html=True,
             )
-        with mobile_menu_col:
-            with st.popover(
-                header_labels["menu"],
-                icon=":material/menu:",
-                use_container_width=True,
-            ):
-                st.markdown("<span class='v6203-mobile-menu-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-                _header_button(header_labels["start"], router.route_key("public", "student"), key="v6203_mobile_start", cta=True)
-                _header_button(header_labels["home"], router.route_key("public", "home"), key="v6203_mobile_home", active=current_title == str(c["nav_home"]))
-                _header_button(header_labels["programs"], router.route_key("public", "programs"), key="v6203_mobile_programs", active=current_title == str(c["nav_programs"]))
-                _header_button(header_labels["ai"], router.route_key("public", "ai_studio"), key="v6203_mobile_ai", active=current_title == str(c["nav_ai"]))
-                _header_button(header_labels["institutions"], router.route_key("public", "institutions"), key="v6203_mobile_institutions", active=current_title == str(c["nav_institutions"]))
-                _header_button(header_labels["teacher"], router.route_key("public", "teacher"), key="v6203_mobile_teacher")
-                _header_button(header_labels["evaluator"], router.route_key("public", "evaluator"), key="v6203_mobile_evaluator")
-                import main_app
-                main_app.render_language_selector(st, key="v6203_mobile_language", label_visibility="collapsed")
+        else:
+            st.markdown(
+                "<div class='v6205-mobile-brand v6205-mobile-brand-fallback' dir='ltr'>3alimnIA</div>",
+                unsafe_allow_html=True,
+            )
+        with st.popover(
+            header_labels["menu"],
+            icon=":material/menu:",
+            use_container_width=False,
+        ):
+            st.markdown("<span class='v6205-mobile-menu-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+            _header_button(header_labels["start"], router.route_key("public", "student"), key="v6205_mobile_start", cta=True)
+            _header_button(header_labels["home"], router.route_key("public", "home"), key="v6205_mobile_home", active=current_title == str(c["nav_home"]))
+            _header_button(header_labels["programs"], router.route_key("public", "programs"), key="v6205_mobile_programs", active=current_title == str(c["nav_programs"]))
+            _header_button(header_labels["ai"], router.route_key("public", "ai_studio"), key="v6205_mobile_ai", active=current_title == str(c["nav_ai"]))
+            _header_button(header_labels["institutions"], router.route_key("public", "institutions"), key="v6205_mobile_institutions", active=current_title == str(c["nav_institutions"]))
+            _header_button(header_labels["teacher"], router.route_key("public", "teacher"), key="v6205_mobile_teacher")
+            _header_button(header_labels["evaluator"], router.route_key("public", "evaluator"), key="v6205_mobile_evaluator")
+            import main_app
+            main_app.render_language_selector(st, key="v6205_mobile_language", label_visibility="collapsed")
 
     with st.container(border=False, key="v61_public_header"):
         st.markdown("<span class='v618-public-shell-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
