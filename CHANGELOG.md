@@ -1,3 +1,12 @@
+# V6.20.3 — Mobile Public Shell & First-Viewport Stabilization
+
+- Replaced the squeezed desktop public header on phones with a dedicated mobile logo + menu shell.
+- Added native Streamlit popover navigation and moved public routes, login routes, and language selection into the mobile menu.
+- Removed mobile top-chrome spacing across current Streamlit DOM variants.
+- Rebuilt the home hero as a true single-column mobile hierarchy with a full-width primary CTA.
+- Constrained the mobile hero visual and prevented accidental horizontal page overflow.
+- Added `validate_v6203_mobile_public_shell.py`; current regression suite passes 22/22 validators plus compileall.
+
 # V6.20.2 - Screenshot-driven Visual QA Stabilization
 
 - Added a final screenshot-driven visual stabilization layer after V6.20.1.

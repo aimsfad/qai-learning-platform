@@ -30,6 +30,7 @@ VALIDATORS = [
     "validate_v620_published_course_runtime.py",
     "validate_v6201_responsive_visual_polish.py",
     "validate_v6202_visual_qa_stabilization.py",
+    "validate_v6203_mobile_public_shell.py",
 ]
 
 

@@ -105,7 +105,7 @@ def validate_renderer_and_css() -> None:
 
 def validate_non_destructive_integration() -> None:
     db = read("db.py")
-    is_v6201 = 'APP_VERSION = "v6.20.1-responsive-visual-polish"' in db
+    is_v6201 = 'APP_VERSION = "v6.20.3-mobile-public-shell"', 'APP_VERSION = "v6.20.1-responsive-visual-polish"' in db
     is_v620 = 'APP_VERSION = "v6.20.0-published-course-runtime"' in db
     is_v6191 = 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"' in db
     is_v6190 = 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"' in db

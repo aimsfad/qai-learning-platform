@@ -1,3 +1,7 @@
+## V6.20.3 — Mobile public shell and first-viewport stabilization
+
+The current release replaces the compressed desktop public navigation on phones with a dedicated compact mobile app bar and native Streamlit popover menu. It also removes mobile top-chrome spacing, forces the home hero into a true single-column hierarchy, prioritizes the primary CTA, constrains the branded visual, and blocks accidental horizontal page scrolling. This pass is based on the live 390px mobile screenshot. See `V6_20_3_MOBILE_PUBLIC_SHELL_AR.md`.
+
 ## V6.20.2 - Screenshot-driven visual QA stabilization
 
 The current release applies a screenshot-driven laptop visual QA pass on top of V6.20.1: denser 1366px layouts, stronger text contrast, cleaner learner-tool icons, a wider single-project teacher card, a compact AI Tutor entry, duplicate section-heading cleanup, and a final isolated responsive layer. See `V6_20_2_VISUAL_QA_STABILIZATION.md`.

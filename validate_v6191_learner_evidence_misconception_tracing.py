@@ -147,7 +147,7 @@ def validate_integration_contracts() -> None:
     css = read(".streamlit/v6_theme.css")
     secrets = read(".streamlit/secrets_example.toml")
 
-    require(any(v in db for v in ('APP_VERSION = "v6.20.1-responsive-visual-polish"', 'APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"')), "V6.19.1+ app version missing")
+    require(any(v in db for v in ('APP_VERSION = "v6.20.3-mobile-public-shell"', 'APP_VERSION = "v6.20.1-responsive-visual-polish"', 'APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"')), "V6.19.1+ app version missing")
     for token in [
         "CREATE TABLE IF NOT EXISTS learner_evidence_events",
         "misconception_code",
