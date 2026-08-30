@@ -3487,7 +3487,7 @@ def _render_simple_project_workspace(project: Dict[str, Any], base_state: Dict[s
     simple_state = simple_teacher_journey.build_simple_state(base_state)
     _project_header(project, simple_state)
     selected = _render_simple_journey(project, simple_state)
-    st.divider()
+    st.markdown("<div class='v62010-stage-divider' aria-hidden='true'></div>", unsafe_allow_html=True)
     try:
         if selected == "setup":
             render_project_overview(project)

@@ -1617,7 +1617,7 @@ def render_password_reset_form(token: str) -> None:
 
 def render_student_signin() -> None:
     lang = i18n.current_lang(st)
-    hero("Student Sign in", "Access your existing participant account.")
+    hero("Student Sign in", "Access your existing participant account.", compact=True)
     _, form_col, _ = ui_stability.columns([1, 1.25, 1], gap="large", vertical_alignment="top")
     with form_col:
         with st.container(border=True, key="v618_student_auth_card"):
@@ -3893,7 +3893,7 @@ def render_evaluator_app() -> None:
 def render_evaluator_login() -> None:
     u = evaluator_ui()
     lang = i18n.current_lang(st)
-    hero(u["login_title"], u["login_sub"], localized=True)
+    hero(u["login_title"], u["login_sub"], localized=True, compact=True)
     _, form_col, _ = ui_stability.columns([1, 1.3, 1], gap="large", vertical_alignment="top")
     with form_col:
         with st.container(border=True, key="v618_evaluator_auth_card"):

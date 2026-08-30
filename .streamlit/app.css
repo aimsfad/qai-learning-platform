@@ -9442,3 +9442,107 @@ html[dir="rtl"] .v61-hero-copy h1 {
     min-width: 0 !important;
   }
 }
+
+/* ========================================================================== 
+   3alimnIA V6.20.10 — Label Candidate: final visual density and spacing polish
+   Presentation-only refinements. No learning, assessment, routing, or research
+   semantics are changed by this layer.
+   ========================================================================== */
+:root {
+  --v62010-divider: linear-gradient(90deg, rgba(11,47,120,.08), rgba(25,103,255,.46), rgba(18,197,232,.18), rgba(11,47,120,.08));
+}
+
+/* Authentication pages: title + form should both appear in the first laptop
+   viewport. The :has() scope is page-specific because each auth form emits a
+   hidden marker later in the Streamlit tree. */
+.stApp:has(.v618-auth-marker) .v618-page-header {
+  padding: .58rem .9rem .62rem !important;
+  margin: .04rem 0 .52rem !important;
+  border-radius: 15px !important;
+}
+.stApp:has(.v618-auth-marker) .v618-page-header .v618-page-eyebrow {
+  margin-bottom: .18rem !important;
+}
+.stApp:has(.v618-auth-marker) .v618-page-header h1 {
+  font-size: clamp(1.42rem,1.85vw,1.78rem) !important;
+  margin: .02rem 0 .18rem !important;
+}
+.stApp:has(.v618-auth-marker) .v618-page-header p {
+  font-size: .84rem !important;
+  line-height: 1.55 !important;
+}
+.stApp:has(.v618-auth-marker) .st-key-v618_student_auth_card,
+.stApp:has(.v618-auth-marker) .st-key-v618_evaluator_auth_card {
+  margin-top: 0 !important;
+}
+.stApp:has(.v618-auth-marker) .st-key-v618_student_auth_card > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v618-auth-marker) .st-key-v618_evaluator_auth_card > [data-testid="stVerticalBlockBorderWrapper"] {
+  padding: .8rem .88rem !important;
+}
+
+/* Teacher login already has its own branded card. Keep it compact enough for
+   a 1366x768 presentation capture. */
+.stApp:has(.v6163-login-page-marker) [data-testid="stVerticalBlock"]:has(.v6163-login-page-marker) {
+  gap: .55rem !important;
+}
+.stApp:has(.v6163-login-page-marker) .st-key-v6163_teacher_login_card > [data-testid="stVerticalBlockBorderWrapper"] {
+  padding: .86rem 1rem !important;
+}
+
+/* Internal role headers: maintain hierarchy without spending a large fraction
+   of the first viewport on decorative whitespace. */
+@media (min-width: 1100px) {
+  .stApp:has(.v6186-role-teacher) .v618-page-header,
+  .stApp:has(.v6186-role-evaluator) .v618-page-header {
+    padding: .58rem .9rem .62rem !important;
+    margin: .03rem 0 .52rem !important;
+  }
+  .stApp:has(.v6186-role-teacher) .v618-page-header h1,
+  .stApp:has(.v6186-role-evaluator) .v618-page-header h1 {
+    font-size: clamp(1.45rem,1.9vw,1.86rem) !important;
+  }
+}
+
+/* Five-step teacher journey: replace Streamlit's tall divider with a compact
+   branded separator and keep the active task visually attached to the flow. */
+.v62010-stage-divider {
+  height: 1px !important;
+  width: 100% !important;
+  margin: .18rem 0 .42rem !important;
+  border: 0 !important;
+  background: var(--v62010-divider) !important;
+}
+.stApp:has(.v6186-role-teacher) [data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) {
+  gap: .62rem !important;
+}
+.stApp:has(.v6186-role-teacher) .v6184-current-step {
+  margin: .48rem 0 .38rem !important;
+  padding: .72rem .88rem !important;
+}
+.stApp:has(.v6186-role-teacher) [data-testid="stVerticalBlock"]:has(.v6186-simple-journey-marker) [data-testid="stCaptionContainer"] {
+  color: #6B7D96 !important;
+  opacity: 1 !important;
+  font-weight: 650 !important;
+}
+
+/* Secondary labels should remain subtle, not faint, in screenshots/projectors. */
+.stApp:has(.v6186-role-teacher) .v618-section-head p,
+.stApp:has(.v6186-role-evaluator) .v618-section-head p,
+.stApp:has(.v6186-role-student) .v618-section-head p {
+  color: #586C87 !important;
+}
+.stApp:has(.v6186-role-teacher) .stCaptionContainer,
+.stApp:has(.v6186-role-evaluator) .stCaptionContainer,
+.stApp:has(.v6186-role-student) .stCaptionContainer {
+  opacity: 1 !important;
+}
+
+/* Phone: keep the final public shell intact and avoid reintroducing vertical
+   whitespace while preparing screenshots for the label dossier. */
+@media (max-width: 700px) {
+  .stApp:has(.v618-auth-marker) .v618-page-header {
+    padding: .56rem .68rem !important;
+    margin-bottom: .45rem !important;
+  }
+  .v62010-stage-divider { margin: .12rem 0 .34rem !important; }
+}
