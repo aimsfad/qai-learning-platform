@@ -3620,6 +3620,33 @@ def render_teacher_app() -> None:
         status={"ar": "استوديو المحتوى", "fr": "Studio de contenu", "en": "Content Studio"}.get(lang, "Content Studio"),
         meta=workspace_meta, compact=True, icon="edit_note", role="teacher",
     )
+
+    # V6.20.9 — give the teacher workspace the same information density as the
+    # learner/evaluator dashboards without changing any production workflow.
+    projects_summary = db.teacher_projects_with_progress_df(_current_teacher_username())
+    total_projects = int(len(projects_summary)) if projects_summary is not None else 0
+    if projects_summary is not None and not projects_summary.empty and "status" in projects_summary.columns:
+        status_series = projects_summary["status"].fillna("").astype(str).str.lower()
+        published_projects = int((status_series == "published").sum())
+        review_projects = int(status_series.isin(["review", "in_review", "ready_for_review"]).sum())
+    else:
+        published_projects = 0
+        review_projects = 0
+    generation_runs = 0
+    if projects_summary is not None and not projects_summary.empty and "generation_runs" in projects_summary.columns:
+        generation_runs = int(projects_summary["generation_runs"].fillna(0).sum())
+    summary_copy = {
+        "ar": ("المشاريع", "المنشورة", "قيد المراجعة", "عمليات التوليد"),
+        "fr": ("Projets", "Publiés", "En révision", "Générations"),
+        "en": ("Projects", "Published", "In review", "Generation runs"),
+    }.get(lang, ("Projects", "Published", "In review", "Generation runs"))
+    summary_cols = ui_stability.columns(4, gap="small", vertical_alignment="top")
+    summary_values = (total_projects, published_projects, review_projects, generation_runs)
+    summary_tones = ("primary", "success", "cyan", "gold")
+    for summary_col, label, value, tone in zip(summary_cols, summary_copy, summary_values, summary_tones):
+        with summary_col:
+            global_ui.render_kpi_card(label, value, lang=lang, tone=tone)
+
     _render_teacher_mode_control()
     flash_success = st.session_state.pop("teacher_flash_success", None)
     if flash_success:

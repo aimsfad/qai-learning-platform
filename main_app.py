@@ -118,6 +118,33 @@ def study_group_label(student: Optional[Dict[str, Any]]) -> str:
     return group
 
 
+def study_group_display_label(student: Optional[Dict[str, Any]], lang: Optional[str] = None) -> str:
+    """Return a learner-facing label without exposing internal study codes."""
+    language = i18n.normalize_lang(lang or i18n.current_lang(st))
+    group = study_group_label(student)
+    labels = {
+        "ar": {
+            "single_arm": "مسار تجريبي موحّد",
+            "experimental": "مسار مدعوم بالذكاء الاصطناعي",
+            "control": "مسار تعلّم دون دعم ذكاء اصطناعي",
+            "pending": "المسار قيد التعيين",
+        },
+        "fr": {
+            "single_arm": "Parcours pilote unique",
+            "experimental": "Parcours avec soutien IA",
+            "control": "Parcours sans soutien IA",
+            "pending": "Parcours en cours d’attribution",
+        },
+        "en": {
+            "single_arm": "Single pilot pathway",
+            "experimental": "AI-supported pathway",
+            "control": "Learning pathway without AI support",
+            "pending": "Pathway assignment pending",
+        },
+    }
+    return labels.get(language, labels["en"]).get(group, group.replace("_", " ").title())
+
+
 def is_control_student(student: Optional[Dict[str, Any]]) -> bool:
     return control_group_enabled() and study_group_label(student) == "control"
 
@@ -891,13 +918,14 @@ def render_student_top_progress(student: Dict[str, Any], page: str) -> None:
     current_id = current_or_resume_lesson_id(student["id"]) if test_is_done(student["id"], "pre") else ""
     current_title = next((x.get("short_title", x["title"]) for x in localized_lessons() if x["id"] == current_id), "—")
     items = completion_items(student)
-    study_pct = int(round(100 * sum(1 for _, ok, _ in items if ok) / max(len(items), 1)))
+    stage_done = sum(1 for _, ok, _ in items if ok)
+    study_pct = int(round(100 * stage_done / max(len(items), 1)))
     st.markdown(f"""
     <section class='v43-topbar' dir='{u['dir']}'>
       <div><span>{escape(u['journey'])}</span><b>{escape(i18n.page_label(page, i18n.current_lang(st)))}</b></div>
       <div><span>{escape(u['current'])}</span><b>{escape(str(current_title))}</b></div>
       <div class='v43-topbar-meter'><div><b>{learning_pct}%</b><span>{escape(u['modules_done'])}: {lesson_count}/{required}</span></div><i><em style='width:{learning_pct}%'></em></i></div>
-      <div class='v43-topbar-study'><b>{study_pct}%</b><span>{escape(u['overall'])}</span></div>
+      <div class='v43-topbar-study'><b>{study_pct}%</b><span>{escape(u['study_stages'])}: {stage_done}/{len(items)}</span></div>
     </section>""", unsafe_allow_html=True)
 
 def render_completion_requirements(student: Dict[str, Any], compact: bool = False) -> None:
@@ -1139,7 +1167,7 @@ def learning_ui_copy() -> Dict[str, Any]:
             "dir": "rtl", "overview": "نظرة عامة", "learning": "التعلّم", "assessment": "التقييم", "research": "البحث والموافقة",
             "home": "لوحة المتعلّم", "plan": "الخطة التكيفية", "modules": "الوحدات التعليمية", "tutor": "مدرّب الذكاء الاصطناعي",
             "pre": "الاختبار القبلي", "post": "الاختبار البعدي", "survey": "الاستبيان الختامي", "notice": "إشعار البحث",
-            "resume": "متابعة التعلّم", "journey": "رحلة التعلّم", "overall": "التقدّم العام", "modules_done": "الوحدات المكتملة",
+            "resume": "متابعة التعلّم", "journey": "رحلة التعلّم", "overall": "التقدّم العام", "study_stages": "مراحل الدراسة المطلوبة", "modules_done": "الوحدات المكتملة",
             "ai_uses": "تفاعلات المدرّب", "pre_score": "نتيجة الاختبار القبلي", "post_score": "نتيجة الاختبار البعدي",
             "current": "الوحدة الحالية", "next_action": "الخطوة التالية", "continue": "متابعة الخطوة المقترحة",
             "open_path": "فتح المسار", "open_tutor": "فتح المدرّب الذكي", "dashboard_sub": "تابع تقدمك، استأنف وحدتك الحالية، وانتقل إلى الخطوة الصحيحة دون تشتّت.",
@@ -1153,7 +1181,7 @@ def learning_ui_copy() -> Dict[str, Any]:
             "dir": "ltr", "overview": "Vue d’ensemble", "learning": "Apprentissage", "assessment": "Évaluation", "research": "Recherche et consentement",
             "home": "Tableau apprenant", "plan": "Plan adaptatif", "modules": "Modules", "tutor": "Coach IA", "pre": "Pré-test", "post": "Post-test",
             "survey": "Questionnaire final", "notice": "Notice de recherche", "resume": "Reprendre l’apprentissage", "journey": "Parcours d’apprentissage",
-            "overall": "Progression globale", "modules_done": "Modules terminés", "ai_uses": "Interactions IA", "pre_score": "Score pré-test",
+            "overall": "Progression globale", "study_stages": "Étapes requises de l’étude", "modules_done": "Modules terminés", "ai_uses": "Interactions IA", "pre_score": "Score pré-test",
             "post_score": "Score post-test", "current": "Module actuel", "next_action": "Prochaine étape", "continue": "Continuer l’étape recommandée",
             "open_path": "Ouvrir le parcours", "open_tutor": "Ouvrir le Coach IA", "dashboard_sub": "Suivez votre progression, reprenez le module actuel et avancez sans vous disperser.",
             "test_intro": "Répondez individuellement. Cette évaluation mesure les progrès de compréhension et ne constitue pas une note académique.",
@@ -1166,7 +1194,7 @@ def learning_ui_copy() -> Dict[str, Any]:
             "dir": "ltr", "overview": "Overview", "learning": "Learning", "assessment": "Assessment", "research": "Research & consent",
             "home": "Learner dashboard", "plan": "Adaptive plan", "modules": "Learning modules", "tutor": "AI Coach", "pre": "Pre-test", "post": "Post-test",
             "survey": "Final survey", "notice": "Research notice", "resume": "Resume learning", "journey": "Learning journey",
-            "overall": "Overall progress", "modules_done": "Modules completed", "ai_uses": "AI interactions", "pre_score": "Pre-test score",
+            "overall": "Overall progress", "study_stages": "Required study stages", "modules_done": "Modules completed", "ai_uses": "AI interactions", "pre_score": "Pre-test score",
             "post_score": "Post-test score", "current": "Current module", "next_action": "Next action", "continue": "Continue recommended step",
             "open_path": "Open learning path", "open_tutor": "Open AI Coach", "dashboard_sub": "Track progress, resume the current module, and move to the right next step without distraction.",
             "test_intro": "Answer individually. This assessment measures learning progress and is not an academic grade.",
@@ -1452,7 +1480,7 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
       <article><span>{escape(u['overall'])}</span><strong>{progress_pct:.0f}%</strong><i><em style='width:{progress_pct:.0f}%'></em></i></article>
       <article><span>{escape(u['modules_done'])}</span><strong>{modules_done}<small> / {len(content.LESSONS)}</small></strong><i><em style='width:{100*modules_done/max(len(content.LESSONS),1):.0f}%'></em></i></article>
       <article><span>{escape(u['pre_score'])}</span><strong>{f"{pre['score']:.0f}%" if pre else '—'}</strong><small>{escape(u['post_score'])}: {f"{post['score']:.0f}%" if post else '—'}</small></article>
-      <article><span>{escape(u['ai_uses'])}</span><strong>{ai_count}</strong><small>{escape(study_group_label(student))}</small></article>
+      <article><span>{escape(u['ai_uses'])}</span><strong>{ai_count}</strong><small>{escape(study_group_display_label(student, lang))}</small></article>
     </section>
     <section class='v43-resume-card' dir='{u['dir']}'>
       <div class='v43-resume-index'>{current_index:02d}</div>
@@ -3062,7 +3090,11 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
         words=result.word_count,
         min_words=attempt_gate.MIN_ATTEMPT_WORDS,
     )
-    st.progress(result.readiness, text=progress_text)
+    st.markdown(
+        f"<div class='v6209-attempt-progress-label' dir='{direction}'>{escape(progress_text)}</div>",
+        unsafe_allow_html=True,
+    )
+    st.progress(result.readiness)
     validation_message = _v682_validation_message(copy, result)
     if result.is_valid:
         st.success(validation_message, icon="✅")

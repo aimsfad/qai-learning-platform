@@ -9118,3 +9118,327 @@ html[dir="rtl"] .v61-hero-copy h1 {
     top: 6px !important;
   }
 }
+
+/* ==========================================================================
+   3alimnIA V6.20.9 — Role Workspace Visual Consistency
+   Screenshot-driven polish for learner, teacher, and evaluator workspaces.
+   This layer changes presentation only; routing and learning logic stay intact.
+   ========================================================================== */
+
+:root {
+  --v6209-surface-soft: #F7FAFE;
+  --v6209-surface-blue: #EEF5FF;
+  --v6209-ink-strong: #071B44;
+  --v6209-ink: #243A5A;
+  --v6209-muted: #657792;
+}
+
+/* Internal workspaces should feel rich but compact: the first viewport must
+   contain useful content rather than a large decorative header. */
+.stApp:has(.v6186-role-student) .v618-page-header,
+.stApp:has(.v6186-role-teacher) .v618-page-header,
+.stApp:has(.v6186-role-evaluator) .v618-page-header {
+  padding: .78rem 1.05rem .82rem !important;
+  margin: .08rem 0 .72rem !important;
+  border-radius: 17px !important;
+  min-height: 0 !important;
+  box-shadow: 0 7px 20px rgba(7,27,68,.045) !important;
+}
+.stApp:has(.v6186-role-student) .v618-page-header h1,
+.stApp:has(.v6186-role-teacher) .v618-page-header h1,
+.stApp:has(.v6186-role-evaluator) .v618-page-header h1 {
+  font-size: clamp(1.58rem, 2vw, 2.05rem) !important;
+  line-height: 1.28 !important;
+  margin: .04rem 0 .24rem !important;
+}
+.stApp:has(.v6186-role-student) .v618-page-header p,
+.stApp:has(.v6186-role-teacher) .v618-page-header p,
+.stApp:has(.v6186-role-evaluator) .v618-page-header p {
+  color: #566A86 !important;
+  font-size: .9rem !important;
+  line-height: 1.65 !important;
+  max-width: 920px !important;
+}
+.stApp:has(.v6186-role-student) .v618-page-eyebrow,
+.stApp:has(.v6186-role-teacher) .v618-page-eyebrow,
+.stApp:has(.v6186-role-evaluator) .v618-page-eyebrow {
+  margin-bottom: .32rem !important;
+}
+.stApp:has(.v6186-role-student) .v618-page-meta,
+.stApp:has(.v6186-role-teacher) .v618-page-meta,
+.stApp:has(.v6186-role-evaluator) .v618-page-meta {
+  margin-top: .48rem !important;
+}
+
+/* Internal toolbar: retain the premium shell but reduce dead space. */
+.stApp:has(.v6186-role-student) .st-key-v68_workspace_toolbar,
+.stApp:has(.v6186-role-teacher) .st-key-v68_workspace_toolbar,
+.stApp:has(.v6186-role-evaluator) .st-key-v68_workspace_toolbar {
+  margin-bottom: .65rem !important;
+}
+.stApp:has(.v6186-role-student) .st-key-v68_workspace_toolbar > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v6186-role-teacher) .st-key-v68_workspace_toolbar > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v6186-role-evaluator) .st-key-v68_workspace_toolbar > [data-testid="stVerticalBlockBorderWrapper"] {
+  border: 1px solid rgba(205,220,238,.9) !important;
+  border-radius: 15px !important;
+  padding: .36rem .62rem !important;
+  background: rgba(255,255,255,.965) !important;
+  box-shadow: 0 7px 22px rgba(7,27,68,.045) !important;
+}
+
+/* Learner dashboard — make the hierarchy unmistakable and improve contrast. */
+.stApp:has(.v6186-role-student) .v43-metrics {
+  gap: .72rem !important;
+  margin: .35rem 0 .78rem !important;
+}
+.stApp:has(.v6186-role-student) .v43-metrics article {
+  min-height: 106px !important;
+  padding: .82rem .9rem !important;
+  border-radius: 16px !important;
+  background: linear-gradient(145deg,#FFFFFF,#F8FBFF) !important;
+}
+.stApp:has(.v6186-role-student) .v43-metrics span {
+  color: #536783 !important;
+  font-size: .74rem !important;
+}
+.stApp:has(.v6186-role-student) .v43-metrics strong {
+  margin: .22rem 0 !important;
+  font-size: 1.72rem !important;
+}
+.stApp:has(.v6186-role-student) .v43-metrics small {
+  color: #677A95 !important;
+  font-size: .7rem !important;
+}
+.stApp:has(.v6186-role-student) .v43-resume-card {
+  padding: 1rem 1.08rem !important;
+  background:
+    radial-gradient(circle at 92% 18%,rgba(18,197,232,.24),transparent 13rem),
+    linear-gradient(122deg,#061A42 0%,#0B2F78 50%,#1258B9 100%) !important;
+  box-shadow: 0 15px 36px rgba(7,35,93,.2) !important;
+}
+.stApp:has(.v6186-role-student) .v43-resume-card p {
+  color: #E4EEFC !important;
+  opacity: 1 !important;
+  font-size: .82rem !important;
+  line-height: 1.62 !important;
+}
+.stApp:has(.v6186-role-student) .v43-resume-card span {
+  color: #C7DAF4 !important;
+  opacity: 1 !important;
+}
+.stApp:has(.v6186-role-student) .v43-next-action b {
+  color: #FFFFFF !important;
+  font-size: .87rem !important;
+  line-height: 1.55 !important;
+}
+
+/* Top progress has two different concepts. Give the study-stage metric its own
+   surface so it cannot be confused with module completion. */
+.stApp:has(.v6186-role-student) .v43-topbar {
+  gap: .72rem !important;
+  padding: .58rem .7rem !important;
+  border-radius: 15px !important;
+  background: rgba(255,255,255,.97) !important;
+}
+.stApp:has(.v6186-role-student) .v43-topbar span {
+  color: #6A7B94 !important;
+  font-size: .68rem !important;
+}
+.stApp:has(.v6186-role-student) .v43-topbar b {
+  color: #0B2447 !important;
+  font-size: .82rem !important;
+}
+.stApp:has(.v6186-role-student) .v43-topbar-study {
+  min-width: 138px;
+  padding: .42rem .62rem !important;
+  border: 1px solid #DCE8F7 !important;
+  border-radius: 12px !important;
+  background: #F5F9FF !important;
+}
+.stApp:has(.v6186-role-student) .v43-topbar-study b {
+  color: #1761D8 !important;
+  font-size: 1.02rem !important;
+}
+
+/* Student learning workspace: stronger reading contrast and stable two-pane
+   surfaces without making the coach visually heavier than the lesson. */
+.stApp:has(.v6186-role-student) [data-testid="stVerticalBlock"]:has(.v68-learning-marker) > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-top: 3px solid #0B2F78 !important;
+  box-shadow: 0 10px 26px rgba(7,27,68,.06) !important;
+}
+.stApp:has(.v6186-role-student) [data-testid="stVerticalBlock"]:has(.v68-coach-marker) > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-top: 3px solid #1967FF !important;
+  background: linear-gradient(180deg,#FFFFFF,#FBFDFF) !important;
+  box-shadow: 0 10px 26px rgba(25,103,255,.07) !important;
+}
+.stApp:has(.v6186-role-student) .v66-panel-heading p,
+.stApp:has(.v6186-role-student) .v66-stage-copy p,
+.stApp:has(.v6186-role-student) .v619-adaptive-support-card p {
+  color: #566B87 !important;
+  font-size: .82rem !important;
+  line-height: 1.68 !important;
+}
+.stApp:has(.v6186-role-student) .v66-ai-policy {
+  border-color: #C9DDF8 !important;
+  background: #F4F8FE !important;
+  color: #123D79 !important;
+  font-weight: 760 !important;
+}
+.v6209-attempt-progress-label {
+  margin: .12rem 0 .32rem !important;
+  color: #49617F !important;
+  font-size: .72rem !important;
+  font-weight: 760 !important;
+  line-height: 1.45 !important;
+}
+.stApp:has(.v6186-role-student) [data-testid="stProgress"] {
+  margin-top: 0 !important;
+}
+.stApp:has(.v6186-role-student) [data-testid="stProgress"] p {
+  background: transparent !important;
+  color: #425A79 !important;
+}
+
+/* Teacher workspace — dashboard-like density, not a large empty canvas. */
+.stApp:has(.v6186-role-teacher) .v618-kpi-card {
+  min-height: 92px !important;
+  padding: .68rem .78rem !important;
+  border-radius: 14px !important;
+}
+.stApp:has(.v6186-role-teacher) .v618-kpi-card::before {
+  width: 34px !important;
+  margin-bottom: .32rem !important;
+}
+.stApp:has(.v6186-role-teacher) .v618-kpi-label {
+  font-size: .7rem !important;
+}
+.stApp:has(.v6186-role-teacher) .v618-kpi-value-row {
+  margin: .14rem 0 0 !important;
+}
+.stApp:has(.v6186-role-teacher) .v618-kpi-value-row strong {
+  font-size: 1.55rem !important;
+}
+.stApp:has(.v6186-role-teacher) .st-key-teacher_studio_nav_control [role="radiogroup"] {
+  margin-top: .12rem !important;
+  background: #F7FAFE !important;
+  border: 1px solid #DCE7F5 !important;
+  border-radius: 13px !important;
+}
+.stApp:has(.v6186-role-teacher) [class*="st-key-v6163_project_card_"] > [data-testid="stVerticalBlockBorderWrapper"] {
+  background: linear-gradient(145deg,#FFFFFF,#F8FBFF) !important;
+  border-color: #D6E3F2 !important;
+  box-shadow: 0 9px 24px rgba(7,27,68,.055) !important;
+}
+
+/* Auth screens: keep the form prominent and eliminate the impression of a
+   mostly empty page. */
+.stApp:has(.v6186-role-evaluator) .st-key-v618_evaluator_auth_card > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v6186-role-student) .st-key-v618_student_auth_card > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v6186-role-student) .st-key-v618_student_registration_card > [data-testid="stVerticalBlockBorderWrapper"],
+.stApp:has(.v6186-role-teacher) .st-key-v6163_teacher_login_card > [data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius: 18px !important;
+  border-color: #D3E1F1 !important;
+  box-shadow: 0 16px 42px rgba(7,27,68,.09) !important;
+  background:
+    radial-gradient(circle at 100% 0%,rgba(18,197,232,.07),transparent 14rem),
+    #FFFFFF !important;
+}
+.stApp:has(.v6186-role-evaluator) .v618-auth-brand {
+  padding: .78rem .9rem !important;
+  background: linear-gradient(135deg,#071B44,#0E4A9D) !important;
+}
+[data-testid="stVerticalBlock"]:has(.v6163-login-page-marker) {
+  padding-top: .35rem !important;
+  min-height: auto !important;
+}
+.st-key-v6163_teacher_login_card [data-testid="stImage"] img {
+  max-height: 54px !important;
+  object-fit: contain !important;
+}
+.v6163-login-copy {
+  margin: .12rem 0 .75rem !important;
+}
+.v6163-login-copy h2 {
+  font-size: 1.58rem !important;
+  margin: .42rem 0 .25rem !important;
+}
+.v6163-login-copy p {
+  color: #5C6E88 !important;
+  font-size: .86rem !important;
+}
+
+/* Evaluator dashboard: keep analytical density while improving visual grouping. */
+.stApp:has(.v6186-role-evaluator) [data-testid="stVerticalBlockBorderWrapper"]:has(.v49-command-center-marker) {
+  padding: .9rem 1rem !important;
+  border-color: #D7E4F3 !important;
+  border-radius: 17px !important;
+  background: linear-gradient(145deg,#FFFFFF,#F8FBFF) !important;
+  box-shadow: 0 9px 24px rgba(7,27,68,.05) !important;
+}
+.stApp:has(.v6186-role-evaluator) .v49-action-card {
+  min-height: 124px !important;
+  border-radius: 14px !important;
+}
+.stApp:has(.v6186-role-evaluator) .v618-kpi-card {
+  min-height: 106px !important;
+  padding: .78rem .88rem !important;
+}
+.stApp:has(.v6186-role-evaluator) [data-testid="stPlotlyChart"] {
+  border-radius: 12px !important;
+}
+
+/* General readable secondary text across internal workspaces. */
+.stApp:has(.v6186-role-student) .stCaptionContainer,
+.stApp:has(.v6186-role-teacher) .stCaptionContainer,
+.stApp:has(.v6186-role-evaluator) .stCaptionContainer {
+  color: #667A95 !important;
+}
+
+/* Laptop QA: the common 1366x768 viewport should show header + controls +
+   meaningful content without requiring an immediate scroll. */
+@media (min-width: 1100px) and (max-width: 1440px) {
+  .stApp:has(.v6186-role-student) .block-container,
+  .stApp:has(.v6186-role-teacher) .block-container,
+  .stApp:has(.v6186-role-evaluator) .block-container {
+    padding-top: .28rem !important;
+  }
+  .stApp:has(.v6186-role-student) .v618-page-header,
+  .stApp:has(.v6186-role-teacher) .v618-page-header,
+  .stApp:has(.v6186-role-evaluator) .v618-page-header {
+    padding: .7rem .95rem .74rem !important;
+  }
+}
+
+/* Tablet and phone remain single-column and touch friendly. */
+@media (max-width: 900px) {
+  .stApp:has(.v6186-role-student) .v618-page-header,
+  .stApp:has(.v6186-role-teacher) .v618-page-header,
+  .stApp:has(.v6186-role-evaluator) .v618-page-header {
+    padding: .72rem .78rem !important;
+    margin-bottom: .58rem !important;
+  }
+  .stApp:has(.v6186-role-student) .v43-topbar-study {
+    min-width: 0 !important;
+  }
+  .stApp:has(.v6186-role-teacher) .v618-kpi-card,
+  .stApp:has(.v6186-role-evaluator) .v618-kpi-card {
+    min-height: 96px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .stApp:has(.v6186-role-student) .v43-resume-card {
+    padding: .86rem !important;
+  }
+  .stApp:has(.v6186-role-student) .v43-resume-card p {
+    font-size: .8rem !important;
+  }
+  .stApp:has(.v6186-role-student) [data-testid="stHorizontalBlock"]:has(.v68-learning-marker):has(.v68-coach-marker) {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .stApp:has(.v6186-role-student) [data-testid="stHorizontalBlock"]:has(.v68-learning-marker):has(.v68-coach-marker) > [data-testid="stColumn"] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
