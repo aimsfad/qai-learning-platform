@@ -6,17 +6,17 @@ gatherUsageStats = false
 
 [theme]
 base = "light"
-primaryColor = "#1660FF"
-backgroundColor = "#F8FBFF"
+primaryColor = "#1967FF"
+backgroundColor = "#F5F8FC"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#0A1730"
+textColor = "#111B35"
 font = "sans-serif"
-baseRadius = "1rem"
-buttonRadius = "0.85rem"
+baseRadius = "0.9rem"
+buttonRadius = "0.8rem"
 showWidgetBorder = true
 showSidebarBorder = true
-borderColor = "#DCE6FA"
-dataframeBorderColor = "#DCE6FA"
-dataframeHeaderBackgroundColor = "#EEF3FC"
-chartCategoricalColors = ["#1660FF", "#12C8E6", "#F0A825", "#12B981", "#7C6CF2", "#F0475E"]
-chartSequentialColors = ["#EEF3FC", "#CFE1FF", "#A6C8FF", "#5B93FF", "#1660FF", "#0B4CD1", "#0A1636"]
+borderColor = "#D9E4F1"
+dataframeBorderColor = "#D9E4F1"
+dataframeHeaderBackgroundColor = "#EDF4FF"
+chartCategoricalColors = ["#1967FF", "#12C5E8", "#F3B326", "#079A87", "#7C6CF2", "#E85D75"]
+chartSequentialColors = ["#EAF2FF", "#CFE1FF", "#A6C8FF", "#73A8FF", "#3D83F6", "#1967FF", "#0B2F78"]

@@ -1,17 +1,13 @@
-# 3alimnIA — V6.20.7 Unified Design Merge
+# 3alimnIA — V6.20.8 Visual Restoration
 
 3alimnIA is a multilingual Streamlit learning platform for teacher-authored courses, learner-first attempts, structured learning evidence, adaptive support, AI coaching, evaluator analytics, and research export.
 
-This release merges the colleague redesign into the current functional codebase without regressing the V6.20.2–V6.20.6 runtime fixes. It keeps the current mobile public header, Material icons, compact AI Tutor, teacher lesson-review hygiene, published-course runtime, and the cleaned Python core while adopting the unified navy/digital-blue visual system, native Streamlit palette, documentation organization, and Windows launch helpers.
-
-## Preserved educational media
-
-The complete Quantum/Qiskit lesson-media library is retained under `assets/lesson_media/`, including animations, interactive simulators, clean visuals, four-frame concept sequences, legacy segments, professional visuals, and microvideos. These assets are educational content and are not treated as disposable UI files.
+V6.20.8 restores the complete pre-V6.20.7 visual system after screenshot QA detected a major visual regression in the unified redesign. The runtime and pedagogical code remain current, while the full Quantum/Qiskit educational media library is preserved.
 
 ## Run locally
 
 ```bash
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
@@ -28,6 +24,6 @@ Copy `.streamlit/secrets_example.toml` to `.streamlit/secrets.toml` for local cr
 - `ui_v6.py` — public product shell and current mobile header.
 - `lesson_*`, `pedagogical_*`, `learner_model_engine.py`, `adaptive_support_engine.py` — pedagogical runtime.
 - `published_course_runtime.py` — runtime for teacher-published courses.
-- `.streamlit/theme.css` — single unified production design system.
-- `assets/lesson_media/` — preserved Quantum/Qiskit educational media.
-- `docs/DESIGN_SYSTEM_AR.md` — design-system rationale and tokens.
+- `.streamlit/app.css` — single production stylesheet, preserving the complete V6.20.5 visual cascade.
+- `assets/lesson_media/` — complete Quantum/Qiskit educational media library.
+- `docs/V6_20_8_VISUAL_RESTORATION_AR.md` — release rationale and restoration details.
