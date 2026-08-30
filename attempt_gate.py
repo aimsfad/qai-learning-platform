@@ -14,6 +14,33 @@ MIN_ATTEMPT_CHARS = 40
 MIN_ATTEMPT_WORDS = 6
 MIN_UNIQUE_WORDS = 4
 
+# V6.20.11 label-demo switch.
+# Temporary: AI support can be opened without satisfying the attempt-first gate.
+# Set this back to False after the label/demo recording to restore the research policy.
+DEMO_BYPASS_ATTEMPT_GATE = True
+
+
+def support_access_allowed(validation: "AttemptValidation") -> bool:
+    """Return whether AI support controls may be used.
+
+    The validation rules remain intact for evidence collection and course completion;
+    this switch only relaxes access to the AI coach for the temporary demo build.
+    """
+    return bool(DEMO_BYPASS_ATTEMPT_GATE or validation.is_valid)
+
+
+def demo_bypass_active(validation: "AttemptValidation") -> bool:
+    return bool(DEMO_BYPASS_ATTEMPT_GATE and not validation.is_valid)
+
+
+def demo_fallback_input(language: str = "en") -> str:
+    """Neutral prompt context used only when demo support is requested with no attempt."""
+    return {
+        "ar": "لم يقدّم المتعلم محاولة بعد. قدّم مساعدة تكوينية قصيرة وموجّهة، ثم ادعه إلى صياغة محاولته بنفسه دون إعطاء الحل الكامل.",
+        "fr": "L’apprenant n’a pas encore fourni de tentative. Donnez une aide formative brève et guidée, puis invitez-le à formuler sa propre tentative sans révéler la solution complète.",
+        "en": "The learner has not submitted an attempt yet. Give brief formative guidance, then invite the learner to make their own attempt without revealing the full solution.",
+    }.get(language, "The learner has not submitted an attempt yet. Give brief formative guidance and invite an attempt.")
+
 
 @dataclass(frozen=True)
 class AttemptValidation:

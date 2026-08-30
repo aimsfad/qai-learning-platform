@@ -624,28 +624,30 @@ def _render_attempt_and_coach(
         format_func=lambda key: mode_options[key][0],
         horizontal=True,
         key=mode_key,
-        disabled=not valid_saved_attempt.is_valid,
+        disabled=not attempt_gate.support_access_allowed(valid_saved_attempt),
     )
     question_key = f"v620_question_{student_id}_{project_id}_{lesson_id}"
-    st.text_area(copy["ask"], key=question_key, placeholder=copy["ask_ph"], height=105, disabled=not valid_saved_attempt.is_valid)
+    st.text_area(copy["ask"], key=question_key, placeholder=copy["ask_ph"], height=105, disabled=not attempt_gate.support_access_allowed(valid_saved_attempt))
 
     if st.button(
         copy["send"], type="primary", use_container_width=True,
         key=f"v620_send_{student_id}_{project_id}_{lesson_id}",
-        disabled=not valid_saved_attempt.is_valid,
+        disabled=not attempt_gate.support_access_allowed(valid_saved_attempt),
     ):
-        # Server-side attempt-first gate.
+        # Server-side attempt gate; temporarily bypassed in the label-demo build.
         progress = db.get_published_course_lesson_progress(student_id, project_id, blueprint_run_id, lesson_id) or {}
         saved_attempt = str(progress.get("independent_attempt_text") or "")
         valid_saved_attempt = attempt_gate.validate_attempt_text(saved_attempt, lang)
-        if not valid_saved_attempt.is_valid:
+        if not attempt_gate.support_access_allowed(valid_saved_attempt):
             st.warning(copy["attempt_needed"])
         else:
+            bypassed = attempt_gate.demo_bypass_active(valid_saved_attempt)
             chosen_label, instruction = mode_options[selected_mode]
-            learner_text = saved_attempt
+            draft_attempt = str(st.session_state.get(attempt_key) or "").strip()
+            learner_text = saved_attempt or draft_attempt or attempt_gate.demo_fallback_input(lang)
             extra_question = str(st.session_state.get(question_key) or "").strip()
             if extra_question:
-                learner_text = f"{saved_attempt}\n\nLearner question: {extra_question}"
+                learner_text = f"{learner_text}\n\nLearner question: {extra_question}"
             excerpt = _approved_excerpt(blocks, lang)
             lesson_context = {
                 "response_language": _response_language(lang),
@@ -659,6 +661,7 @@ def _render_attempt_and_coach(
                 "adaptive_support_level": adaptive.get("level"),
                 "adaptive_support_mode": adaptive.get("mode"),
                 "adaptive_support_contract": adaptive_support_engine.prompt_contract(adaptive, chosen_mode=selected_mode),
+                "demo_attempt_gate_bypass": bypassed,
             }
             task = f"{chosen_label}: {instruction}"
             prompt = feedback_engine.build_course_prompt(

@@ -32,3 +32,8 @@ No routing, database schema, assessment rule, publication gate, learner-evidence
 - `docs/V6_20_10_LABEL_CANDIDATE_AR.md` — release summary.
 - `docs/LABEL_DEMO_CHECKLIST_AR.md` — recommended presentation/demo sequence.
 - `docs/VALIDATION_V6_20_10_AR.md` — technical validation summary.
+
+
+## V6.20.11 — Demo Coach Unlock
+
+For the label/demo recording, AI Coach access is temporarily available even when the learner has not yet satisfied the attempt-first threshold. The validation rules, evidence model, attempt saving rules, and course-completion requirements remain intact. Restore the original policy by setting `DEMO_BYPASS_ATTEMPT_GATE = False` in `attempt_gate.py`.

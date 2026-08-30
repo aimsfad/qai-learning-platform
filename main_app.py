@@ -3103,7 +3103,7 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
     else:
         st.info(validation_message, icon="💡")
 
-    disable_support = not result.is_valid
+    disable_support = not attempt_gate.support_access_allowed(result)
     modes = [
         ("hint", copy["hint"], "Give one concise hint and one check question. Do not reveal a full answer."),
         ("simplify", copy["simplify"], "Explain one difficult step simply using one analogous example, then ask the learner to retry."),
@@ -3194,45 +3194,55 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
         use_container_width=True,
         disabled=disable_support,
     ):
-        # Never trust only the disabled UI state: validate again before any AI request.
+        # Server-side gate. In the temporary label-demo build AI support is
+        # unlocked, while the original attempt validation remains available.
         result = attempt_gate.validate_attempt_text(st.session_state.get(attempt_key, ""), lang)
-        if not result.is_valid:
+        if not attempt_gate.support_access_allowed(result):
             st.warning(_v682_validation_message(copy, result))
         else:
-            db.save_learner_attempt(
-                student_id=student["id"],
-                lesson_id=lesson["id"],
-                attempt_text=result.normalized_text,
-                support_mode=selected_mode[0],
-                validation_status="submitted_for_support",
-                char_count=result.char_count,
-                word_count=result.word_count,
-                unique_word_count=result.unique_word_count,
-            )
+            bypassed = attempt_gate.demo_bypass_active(result)
+            if result.normalized_text:
+                db.save_learner_attempt(
+                    student_id=student["id"],
+                    lesson_id=lesson["id"],
+                    attempt_text=result.normalized_text,
+                    support_mode=selected_mode[0],
+                    validation_status="submitted_for_support" if result.is_valid else "demo_bypass_support",
+                    char_count=result.char_count,
+                    word_count=result.word_count,
+                    unique_word_count=result.unique_word_count,
+                )
             db.log_event(
                 student["id"],
                 "student",
-                "attempt_first_support_request",
+                "demo_support_request_without_attempt" if bypassed else "attempt_first_support_request",
                 json.dumps({
                     "lesson_id": lesson["id"],
                     "support_mode": selected_mode[0],
                     "char_count": result.char_count,
                     "word_count": result.word_count,
                     "unique_word_count": result.unique_word_count,
+                    "demo_bypass": bypassed,
                 }, ensure_ascii=False),
             )
+            learner_input = result.normalized_text or attempt_gate.demo_fallback_input(lang)
             log_ai_request_timing(student["id"], lesson["id"], "v66_student_workspace", task=selected_mode[1], step="workspace")
             with st.spinner("…"):
                 tutor = feedback_engine.generate_tutor_response(
                     task=f"{selected_mode[1]}: {selected_mode[2]}",
                     concept=", ".join(lesson.get("concepts", [])),
-                    student_input=result.normalized_text,
+                    student_input=learner_input,
                     student_profile=student_profile(student),
                     lesson_context={
                         **lesson,
                         "response_language": {"ar": "Arabic", "fr": "French", "en": "English"}[lang],
                         "pedagogical_mode": "adaptive student workspace coach",
-                        "ai_use_policy": "Support after learner attempt. Diagnose, scaffold, fade support, and preserve learner agency.",
+                        "ai_use_policy": (
+                            "Temporary label-demo mode: support may be requested before an attempt. "
+                            "Keep the response formative, preserve learner agency, and invite a learner attempt."
+                            if bypassed else
+                            "Support after learner attempt. Diagnose, scaffold, fade support, and preserve learner agency."
+                        ),
                         "adaptive_support_level": adaptive_decision.get("level"),
                         "adaptive_support_mode": adaptive_decision.get("mode"),
                         "adaptive_support_contract": adaptive_support_engine.prompt_contract(
@@ -3251,6 +3261,7 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
                     "chosen_mode": selected_mode[0],
                     "confidence": adaptive_decision.get("confidence"),
                     "signals": adaptive_decision.get("signals"),
+                    "demo_bypass": bypassed,
                 }, ensure_ascii=False),
             )
             interaction_id = log_tutor_interaction(
@@ -3275,17 +3286,21 @@ def render_v66_ai_coach(student: Dict[str, Any], lesson: Dict[str, Any]) -> None
         disabled=disable_support,
     ):
         result = attempt_gate.validate_attempt_text(st.session_state.get(attempt_key, ""), lang)
-        if result.is_valid:
-            db.save_learner_attempt(
-                student_id=student["id"],
-                lesson_id=lesson["id"],
-                attempt_text=result.normalized_text,
-                support_mode="full_tutor",
-                validation_status="opened_full_tutor",
-                char_count=result.char_count,
-                word_count=result.word_count,
-                unique_word_count=result.unique_word_count,
-            )
+        if attempt_gate.support_access_allowed(result):
+            bypassed = attempt_gate.demo_bypass_active(result)
+            if result.normalized_text:
+                db.save_learner_attempt(
+                    student_id=student["id"],
+                    lesson_id=lesson["id"],
+                    attempt_text=result.normalized_text,
+                    support_mode="full_tutor",
+                    validation_status="opened_full_tutor" if result.is_valid else "demo_bypass_full_tutor",
+                    char_count=result.char_count,
+                    word_count=result.word_count,
+                    unique_word_count=result.unique_word_count,
+                )
+            if bypassed:
+                db.log_event(student["id"], "student", "demo_full_tutor_without_attempt", str(lesson["id"]))
             st.session_state.current_lesson_id = lesson["id"]
             set_student_page("AI Tutor Lab")
 
