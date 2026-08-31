@@ -235,9 +235,12 @@ def _localized_activity(lang: str, lesson_id: str, outcome_id: str, concept_name
 
 
 def _lesson_sequence(lang: str) -> List[str]:
+    # Use the same canonical id as the lesson-block engine. Older approved
+    # blueprints that contain ``concept_explanation`` remain supported by the
+    # runtime compatibility mapping in db.py.
     return [
         "activation",
-        "concept_explanation",
+        "explanation",
         "worked_example",
         "guided_practice",
         "independent_practice",

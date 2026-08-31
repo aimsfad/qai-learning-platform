@@ -2372,7 +2372,7 @@ def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
             f"<p class='v6163-project-concept'>{concept or '—'}</p></div>",
             unsafe_allow_html=True,
         )
-        st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{len(PHASES)}")
+        st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{total_steps}")
         st.markdown(
             f"<div class='v6163-project-facts'>"
             f"<span><b>{completed}/{total_steps}</b><small>{escape(copy['phases'])}</small></span>"
@@ -2704,6 +2704,7 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             "preview_title": "3. معاينة تجربة المتعلم", "preview_help": "راجعي ما سيراه المتعلم قبل تثبيت قرار الاعتماد النهائي.",
             "approval_title": "4. اعتماد الأستاذ للنسخة النهائية", "approval_help": "الاعتماد هنا قرار الأستاذ نفسه؛ لا يرسل المقرر إلى مراجع خارجي أو إلى حساب المقيّم البحثي.",
             "approval_blocked": "أكملي الدروس الناقصة أولًا؛ بعد ذلك يصبح زر الاعتماد متاحًا.",
+            "return_lessons": "العودة إلى إنشاء الدروس ومراجعتها",
             "approval_stale": "تم تعديل المقرر بعد آخر مراجعة نهائية. أعيدي اعتماد النسخة الحالية قبل النشر.",
             "approval_ok": "تم اعتماد النسخة النهائية من طرف الأستاذ. أصبح المقرر جاهزًا للنشر.",
             "approval_action": "اعتماد النسخة النهائية للمقرر",
@@ -2724,7 +2725,7 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             "lesson_ready": "Prête", "lesson_missing": "À compléter", "missing_sections": "Blocs manquants",
             "preview_title": "3. Aperçu apprenant", "preview_help": "Vérifiez ce que verra l’apprenant avant la validation finale.",
             "approval_title": "4. Validation finale de l’enseignant", "approval_help": "Cette validation appartient à l’enseignant; elle n’envoie pas le cours à l’espace évaluateur de recherche.",
-            "approval_blocked": "Terminez d’abord les leçons manquantes.", "approval_stale": "Le cours a changé depuis la dernière validation; validez à nouveau la version actuelle.",
+            "approval_blocked": "Terminez d’abord les leçons manquantes.", "return_lessons": "Retourner aux leçons à compléter", "approval_stale": "Le cours a changé depuis la dernière validation; validez à nouveau la version actuelle.",
             "approval_ok": "Version finale validée par l’enseignant. Le cours est prêt à publier.", "approval_action": "Valider la version finale du cours",
             "publish_title": "5. Publier dans l’espace apprenant", "publish_help": "La publication devient disponible après la validation finale.",
             "publish_action": "Publier dans l’espace apprenant", "published_ok": "Cours publié dans l’espace apprenant.",
@@ -2743,7 +2744,7 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             "lesson_ready": "Ready", "lesson_missing": "Needs completion", "missing_sections": "Missing sections",
             "preview_title": "3. Preview learner experience", "preview_help": "Review what learners will see before final teacher approval.",
             "approval_title": "4. Teacher final approval", "approval_help": "This is the teacher's own approval; it does not send the course to the research evaluator workspace.",
-            "approval_blocked": "Complete the missing lessons first.", "approval_stale": "The course changed after the last final review. Approve the current version again before publishing.",
+            "approval_blocked": "Complete the missing lessons first.", "return_lessons": "Return to lesson creation and review", "approval_stale": "The course changed after the last final review. Approve the current version again before publishing.",
             "approval_ok": "The teacher approved the final version. The course is ready to publish.", "approval_action": "Approve final course version",
             "publish_title": "5. Publish to learner workspace", "publish_help": "Publishing becomes available after final teacher approval.",
             "publish_action": "Publish to learner workspace", "published_ok": "Course published to the learner workspace.",
@@ -2828,6 +2829,21 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             st.warning(labels["approval_stale"])
         elif not publish_ready:
             st.info(labels["approval_blocked"])
+            # Never leave the teacher trapped in the final-review page. If a
+            # real lesson requirement is missing, provide a deterministic path
+            # back to the lesson builder even when the current workflow state
+            # was computed from older cached/project data.
+            if blueprint and st.button(
+                labels["return_lessons"],
+                use_container_width=True,
+                key="teacher_return_to_incomplete_lessons",
+            ):
+                if _simple_teacher_mode():
+                    st.session_state.teacher_simple_stage = "lessons"
+                    st.session_state.teacher_simple_manual_stage_once = True
+                    st.rerun()
+                else:
+                    _set_workspace_section("blocks")
         if st.button(
             labels["approval_action"],
             type="primary",

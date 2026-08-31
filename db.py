@@ -14,7 +14,9 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
+APP_VERSION = "v6.20.16-final-publish-consistency-fix"
+# APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
+# APP_VERSION = "v6.20.14-final-review-publish-workflow"
 # APP_VERSION = "v6.20.4-mobile-header-first-viewport"
 # Backward-compatible static validator marker for the immediately prior release.
 # APP_VERSION = "v6.20.3-mobile-public-shell"
@@ -3591,23 +3593,70 @@ def get_published_teacher_project(project_id: int) -> Optional[Dict[str, Any]]:
     )
 
 
-def _blueprint_expected_block_types(lesson: Mapping[str, Any]) -> List[str]:
-    """Extract the block sequence declared by a lesson blueprint.
+# V6.20.16 — one publication contract for the lesson builder and runtime.
+#
+# The historical blueprint compiler used ``concept_explanation`` while the
+# lesson-block engine persisted the same section as ``explanation``.  The
+# teacher journey therefore saw a fully approved lesson (9/9), while the
+# publication gate looked for a block id that could never exist and reported
+# every lesson as incomplete (0/N).  Keep a canonical nine-block runtime
+# contract and normalize legacy blueprint ids before checking readiness.
+_RUNTIME_REQUIRED_LESSON_BLOCK_TYPES: Tuple[str, ...] = (
+    "activation",
+    "explanation",
+    "worked_example",
+    "guided_practice",
+    "independent_practice",
+    "misconceptions",
+    "formative_assessment",
+    "summary",
+    "resources",
+)
 
-    Older blueprint versions are intentionally tolerated: a sequence item may
-    be a string or a mapping using one of several historical field names.
+_LEGACY_BLUEPRINT_BLOCK_ALIASES: Dict[str, str] = {
+    "concept_explanation": "explanation",
+    "conceptual_explanation": "explanation",
+    "misconception_remediation": "misconceptions",
+    "misconceptions_and_remediation": "misconceptions",
+    "resources_followup": "resources",
+    "resources_and_followup": "resources",
+}
+
+
+def _normalize_blueprint_block_type(value: Any) -> str:
+    clean = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return _LEGACY_BLUEPRINT_BLOCK_ALIASES.get(clean, clean)
+
+
+def _blueprint_expected_block_types(lesson: Mapping[str, Any]) -> List[str]:
+    """Return the canonical publishable lesson-block contract.
+
+    The current teacher lesson builder, pedagogical quality gate, and full
+    lesson approval all operate on nine canonical blocks. Publication must use
+    the same contract; otherwise the UI can claim a lesson is complete while
+    the runtime gate rejects it. Legacy sequence ids are normalized and any
+    genuinely unknown declared block remains a blocker instead of being
+    silently ignored.
     """
     sequence = list((lesson or {}).get("lesson_sequence") or [])
-    block_types: List[str] = []
+    declared: List[str] = []
     for item in sequence:
         if isinstance(item, Mapping):
             value = item.get("block_type") or item.get("type") or item.get("section") or item.get("id")
         else:
             value = item
-        clean = str(value or "").strip()
-        if clean and clean not in block_types:
-            block_types.append(clean)
-    return block_types
+        clean = _normalize_blueprint_block_type(value)
+        if clean and clean not in declared:
+            declared.append(clean)
+
+    expected = list(_RUNTIME_REQUIRED_LESSON_BLOCK_TYPES)
+    # Preserve forward safety: a future blueprint may declare a new mandatory
+    # block. If this runtime does not know it yet, keep it visible as missing
+    # rather than publishing a course that cannot render that requirement.
+    for block_type in declared:
+        if block_type not in expected:
+            expected.append(block_type)
+    return expected
 
 
 def teacher_project_runtime_readiness(project_id: int) -> Dict[str, Any]:

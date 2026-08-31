@@ -1,4 +1,4 @@
-> Current release: **V6.20.15 — Teacher Resume & State Hotfix**
+> Current release: **V6.20.16 — Final Publish Consistency Fix**
 
 # 3alimnIA V6.20.14 — Final Review & Publish Workflow
 
