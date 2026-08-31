@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.13-lesson-approval-hotfix"
+APP_VERSION = "v6.20.14-final-review-publish-workflow"
 # APP_VERSION = "v6.20.4-mobile-header-first-viewport"
 # Backward-compatible static validator marker for the immediately prior release.
 # APP_VERSION = "v6.20.3-mobile-public-shell"
@@ -3460,14 +3460,24 @@ def set_teacher_project_status(project_id: int, teacher_username: str, status: s
     project = get_teacher_project(int(project_id), str(teacher_username))
     if not project:
         raise ValueError("Teacher project not found or access denied")
+    runtime_required = str(_secret("ENABLE_PUBLISHED_COURSE_RUNTIME", "true")).strip().lower() in {"1", "true", "yes", "on"}
+    if clean_status in {"review", "published"} and runtime_required:
+        readiness = teacher_project_runtime_readiness(int(project_id))
+        if not readiness.get("ready"):
+            reason = str(readiness.get("reason") or "The published course runtime is not ready.")
+            raise ValueError(reason)
+
     if clean_status == "published":
-        runtime_required = str(_secret("ENABLE_PUBLISHED_COURSE_RUNTIME", "true")).strip().lower() in {"1", "true", "yes", "on"}
-        if runtime_required:
-            readiness = teacher_project_runtime_readiness(int(project_id))
-            if not readiness.get("ready"):
-                reason = str(readiness.get("reason") or "The published course runtime is not ready.")
-                raise ValueError(reason)
-        else:
+        # Publishing is deliberately two-step: the teacher first approves the
+        # final course version (status=review), then explicitly publishes it.
+        current_status = str(project.get("status") or "draft").strip().lower()
+        reviewed_at = str(project.get("reviewed_at") or "").strip()
+        updated_at = str(project.get("updated_at") or "").strip()
+        if current_status not in {"review", "published"}:
+            raise ValueError("Approve the final course version before publication.")
+        if current_status == "review" and (not reviewed_at or (updated_at and reviewed_at < updated_at)):
+            raise ValueError("The course changed after final review. Approve the current version again before publication.")
+        if not runtime_required:
             core = query_one(
                 """
                 SELECT id FROM teacher_generation_runs

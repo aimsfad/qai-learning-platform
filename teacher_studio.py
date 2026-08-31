@@ -2013,15 +2013,15 @@ def project_workspace_ui() -> Dict[str, str]:
             "new": "مشروع جديد", "projects": "مشاريعي التعليمية", "workspace": "واجهة المشروع", "outputs": "كل المخرجات",
             "open": "فتح المشروع", "continue": "متابعة الإنتاج", "preview": "معاينة كمتعلم", "back": "العودة إلى المشاريع",
             "overview": "نظرة عامة", "production": "الإنتاج والتحرير", "evidence": "تركيب الأدلة", "blueprint": "مخطط المقرر", "blocks": "بناء الدروس", "assets": "المحتوى والمخرجات", "publish": "المعاينة والنشر",
-            "draft": "مسودة", "review": "قيد المراجعة", "published": "منشور", "archived": "مؤرشف",
+            "draft": "مسودة", "review": "معتمد للنشر", "published": "منشور", "archived": "مؤرشف",
             "progress": "تقدم الإنتاج", "phases": "المراحل المنجزة", "runs": "عمليات التوليد", "updated": "آخر تحديث",
             "empty_title": "ابدأ أول مشروع تعليمي", "empty_body": "أنشئ مشروعًا، أضف محتوى المادة وطريقة التدريس والتقييم، ثم أنتج موارده على مراحل.",
             "create": "إنشاء مشروع تعليمي", "project_center": "مركز المشروع التعليمي", "project_id": "رقم المشروع",
             "status": "حالة المشروع", "course_identity": "هوية المقرر", "learning_design": "التصميم التعليمي",
             "phase_map": "خريطة مراحل الإنتاج", "ready": "جاهز", "not_ready": "لم يبدأ", "needs_review": "تحتاج مراجعة", "failed": "تعذر التوليد", "running": "جارٍ التوليد",
-            "student_preview": "معاينة واجهة المتعلم", "publish_action": "نشر في فضاء المتعلم", "review_action": "إرسال للمراجعة",
+            "student_preview": "معاينة واجهة المتعلم", "publish_action": "نشر في فضاء المتعلم", "review_action": "اعتماد النسخة النهائية للمقرر",
             "draft_action": "إرجاع إلى المسودة", "archive_action": "أرشفة المشروع", "published_ok": "تم نشر المشروع في فضاء المتعلم.",
-            "review_ok": "أصبح المشروع قيد المراجعة.", "draft_ok": "أُعيد المشروع إلى حالة المسودة.", "archive_ok": "تمت أرشفة المشروع.",
+            "review_ok": "تم اعتماد النسخة النهائية للمقرر وأصبح جاهزًا للنشر.", "draft_ok": "أُعيد المشروع إلى حالة المسودة.", "archive_ok": "تمت أرشفة المشروع.",
             "publish_gate": "يجب إكمال المرحلة الثالثة: المحتوى التعليمي الأساسي قبل النشر.",
             "public_catalog": "المقررات المنشورة من الأساتذة", "no_public": "لا توجد مقررات منشورة حاليًا.",
             "start_course": "فتح المقرر", "close_course": "العودة إلى قائمة المقررات", "educator_content": "محتوى أعدّه أستاذ عبر 3alimnIA",
@@ -2032,15 +2032,15 @@ def project_workspace_ui() -> Dict[str, str]:
             "new": "Nouveau projet", "projects": "Mes projets pédagogiques", "workspace": "Espace projet", "outputs": "Toutes les productions",
             "open": "Ouvrir le projet", "continue": "Continuer la production", "preview": "Aperçu apprenant", "back": "Retour aux projets",
             "overview": "Vue d’ensemble", "production": "Production et édition", "evidence": "Synthèse des preuves", "blueprint": "Plan du cours", "blocks": "Construction des leçons", "assets": "Contenus et productions", "publish": "Aperçu et publication",
-            "draft": "Brouillon", "review": "En révision", "published": "Publié", "archived": "Archivé",
+            "draft": "Brouillon", "review": "Validé pour publication", "published": "Publié", "archived": "Archivé",
             "progress": "Progression de production", "phases": "Phases terminées", "runs": "Générations", "updated": "Dernière mise à jour",
             "empty_title": "Commencez votre premier projet", "empty_body": "Définissez le contenu, la pédagogie et l’évaluation, puis produisez les ressources par étapes.",
             "create": "Créer un projet pédagogique", "project_center": "Centre du projet", "project_id": "Projet",
             "status": "Statut", "course_identity": "Identité du cours", "learning_design": "Conception pédagogique",
             "phase_map": "Carte des phases", "ready": "Prêt", "not_ready": "Non démarré", "needs_review": "À réviser", "failed": "Échec", "running": "Génération",
-            "student_preview": "Aperçu de l’espace apprenant", "publish_action": "Publier dans l’espace apprenant", "review_action": "Envoyer en révision",
+            "student_preview": "Aperçu de l’espace apprenant", "publish_action": "Publier dans l’espace apprenant", "review_action": "Valider la version finale du cours",
             "draft_action": "Repasser en brouillon", "archive_action": "Archiver", "published_ok": "Projet publié dans l’espace apprenant.",
-            "review_ok": "Projet envoyé en révision.", "draft_ok": "Projet repassé en brouillon.", "archive_ok": "Projet archivé.",
+            "review_ok": "Version finale validée par l’enseignant et prête à publier.", "draft_ok": "Projet repassé en brouillon.", "archive_ok": "Projet archivé.",
             "publish_gate": "La phase 3 — contenu pédagogique principal — doit être terminée avant publication.",
             "public_catalog": "Cours publiés par les enseignants", "no_public": "Aucun cours publié pour le moment.",
             "start_course": "Ouvrir le cours", "close_course": "Retour au catalogue", "educator_content": "Contenu créé par un enseignant avec 3alimnIA",
@@ -2051,15 +2051,15 @@ def project_workspace_ui() -> Dict[str, str]:
             "new": "New project", "projects": "My educational projects", "workspace": "Project workspace", "outputs": "All outputs",
             "open": "Open project", "continue": "Continue production", "preview": "Preview as learner", "back": "Back to projects",
             "overview": "Overview", "production": "Production and editing", "evidence": "Evidence synthesis", "blueprint": "Lesson blueprint", "blocks": "Lesson blocks", "assets": "Content and outputs", "publish": "Preview and publish",
-            "draft": "Draft", "review": "In review", "published": "Published", "archived": "Archived",
+            "draft": "Draft", "review": "Approved for publishing", "published": "Published", "archived": "Archived",
             "progress": "Production progress", "phases": "Completed phases", "runs": "Generation runs", "updated": "Last updated",
             "empty_title": "Start your first educational project", "empty_body": "Define the subject, pedagogy, and assessment, then produce the assets phase by phase.",
             "create": "Create educational project", "project_center": "Educational project center", "project_id": "Project",
             "status": "Status", "course_identity": "Course identity", "learning_design": "Learning design",
             "phase_map": "Production phase map", "ready": "Ready", "not_ready": "Not started", "needs_review": "Needs review", "failed": "Generation failed", "running": "Generating",
-            "student_preview": "Learner workspace preview", "publish_action": "Publish to learner workspace", "review_action": "Send for review",
+            "student_preview": "Learner workspace preview", "publish_action": "Publish to learner workspace", "review_action": "Approve final course version",
             "draft_action": "Return to draft", "archive_action": "Archive project", "published_ok": "Project published to the learner workspace.",
-            "review_ok": "Project moved to review.", "draft_ok": "Project returned to draft.", "archive_ok": "Project archived.",
+            "review_ok": "Final course version approved by the teacher and ready to publish.", "draft_ok": "Project returned to draft.", "archive_ok": "Project archived.",
             "publish_gate": "Phase 3 — core educational content — must be completed before publishing.",
             "public_catalog": "Teacher-published courses", "no_public": "No published courses are available yet.",
             "start_course": "Open course", "close_course": "Back to course catalogue", "educator_content": "Educator-authored content created with 3alimnIA",
@@ -2587,13 +2587,14 @@ def render_project_student_preview(project: Dict[str, Any], public_view: bool = 
 
 
 def render_project_publication(project: Dict[str, Any]) -> None:
-    """Review publication readiness and publish only a learner-runnable course."""
+    """Render a real teacher-owned final review, preview, approval and publication workflow."""
     copy = project_workspace_ui()
     lang = i18n.current_lang(st)
     runtime_enabled = _as_bool(_secret("ENABLE_PUBLISHED_COURSE_RUNTIME", "true"), True)
-    outputs = db.teacher_project_phase_outputs(int(project["id"]))
+    project_id = int(project["id"])
+    outputs = db.teacher_project_phase_outputs(project_id)
     legacy_core_ready = bool(outputs.get(3) and str(outputs[3].get("status")) == "completed")
-    readiness = db.teacher_project_runtime_readiness(int(project["id"])) if runtime_enabled else {
+    readiness = db.teacher_project_runtime_readiness(project_id) if runtime_enabled else {
         "ready": legacy_core_ready,
         "lesson_count": 0,
         "ready_lesson_count": 0,
@@ -2601,59 +2602,199 @@ def render_project_publication(project: Dict[str, Any]) -> None:
         "reason": "" if legacy_core_ready else copy["publish_gate"],
     }
     publish_ready = bool(readiness.get("ready"))
+    current_status = str(project.get("status") or "draft").lower()
+    reviewed_at = str(project.get("reviewed_at") or "").strip()
+    updated_at = str(project.get("updated_at") or "").strip()
+    final_review_fresh = bool(
+        current_status == "published"
+        or (
+            current_status == "review"
+            and publish_ready
+            and reviewed_at
+            and (not updated_at or reviewed_at >= updated_at)
+        )
+    )
+
+    evidence = db.latest_teacher_evidence_for_project(project_id, approved_only=True) or {}
+    blueprint = db.latest_teacher_blueprint(project_id, approved_only=True) or {}
+    lessons = list(blueprint.get("lessons") or [])
+    sources = list(evidence.get("sources") or [])
+    missing_lessons = list(readiness.get("missing_lessons") or [])
+    missing_by_id = {str(item.get("lesson_id") or ""): item for item in missing_lessons}
 
     labels = {
         "ar": {
-            "title": "جاهزية النشر للمتعلمين",
-            "ready": "الحزمة التعليمية المعتمدة جاهزة للنشر والتعلّم.",
-            "blocked": "لن تُنشر الدورة حتى يكتمل المخطط المعتمد وتُعتمد جميع أجزاء الدروس المطلوبة.",
-            "lessons": "الدروس الجاهزة", "missing": "النواقص قبل النشر",
-            "delivery": "مؤشرات الاستخدام بعد النشر", "enrollments": "المسجلون",
-            "course_completion": "إكمال الدورة", "lesson_completion": "إكمال الدروس",
-            "ai": "تفاعلات المدرب الذكي", "legacy_preview": "معاينة المخرجات القديمة للتدقيق",
+            "title": "المراجعة النهائية والاعتماد والنشر",
+            "intro": "هذه المرحلة هي بوابة الأستاذ قبل وصول المقرر إلى المتعلمين: افحصي الجاهزية، راجعي الدروس والمصادر، عايني تجربة المتعلم، ثم اعتمدي النسخة النهائية وانشريها.",
+            "step1": "فحص الجاهزية", "step2": "مراجعة الدروس والمصادر", "step3": "معاينة كمتعلم", "step4": "اعتماد الأستاذ", "step5": "النشر",
+            "done": "مكتمل", "ready": "جاهز", "pending": "غير مكتمل", "available": "متاح", "approved": "معتمد",
+            "readiness_title": "1. فحص جاهزية المقرر", "ready_msg": "المخطط المعتمد وجميع الدروس المطلوبة جاهزة للمراجعة النهائية.",
+            "blocked_msg": "لا يمكن اعتماد النسخة النهائية قبل إكمال واعتماد جميع الدروس المطلوبة.",
+            "lessons_ready": "الدروس الجاهزة", "missing": "النواقص التي تمنع الاعتماد", "course_sources": "المصادر المعتمدة",
+            "course_lessons": "حالة الدروس", "no_sources": "لا توجد مصادر معتمدة ظاهرة في حزمة الأدلة.",
+            "lesson_ready": "جاهز", "lesson_missing": "يحتاج إكمال", "missing_sections": "الأقسام الناقصة",
+            "preview_title": "3. معاينة تجربة المتعلم", "preview_help": "راجعي ما سيراه المتعلم قبل تثبيت قرار الاعتماد النهائي.",
+            "approval_title": "4. اعتماد الأستاذ للنسخة النهائية", "approval_help": "الاعتماد هنا قرار الأستاذ نفسه؛ لا يرسل المقرر إلى مراجع خارجي أو إلى حساب المقيّم البحثي.",
+            "approval_blocked": "أكملي الدروس الناقصة أولًا؛ بعد ذلك يصبح زر الاعتماد متاحًا.",
+            "approval_stale": "تم تعديل المقرر بعد آخر مراجعة نهائية. أعيدي اعتماد النسخة الحالية قبل النشر.",
+            "approval_ok": "تم اعتماد النسخة النهائية من طرف الأستاذ. أصبح المقرر جاهزًا للنشر.",
+            "approval_action": "اعتماد النسخة النهائية للمقرر",
+            "publish_title": "5. النشر في فضاء المتعلم", "publish_help": "بعد اعتماد النسخة النهائية يمكن نشر المقرر ليظهر في فضاء المتعلم.",
+            "publish_action": "نشر في فضاء المتعلم", "published_ok": "تم نشر المقرر في فضاء المتعلم.",
+            "published": "المقرر منشور الآن.", "return_draft": "إرجاع إلى المسودة", "archive": "أرشفة المشروع",
+            "delivery": "مؤشرات الاستخدام بعد النشر", "enrollments": "المسجلون", "course_completion": "إكمال الدورة", "lesson_completion": "إكمال الدروس", "ai": "تفاعلات المدرب الذكي",
         },
         "fr": {
-            "title": "Prêt pour la publication apprenant",
-            "ready": "Le parcours approuvé est prêt à être publié et suivi par les apprenants.",
-            "blocked": "La publication reste bloquée jusqu'à l'approbation du plan et de tous les blocs requis.",
-            "lessons": "Leçons prêtes", "missing": "Éléments manquants",
-            "delivery": "Indicateurs après publication", "enrollments": "Inscriptions",
-            "course_completion": "Cours terminés", "lesson_completion": "Leçons terminées",
-            "ai": "Interactions coach IA", "legacy_preview": "Aperçu des sorties historiques",
+            "title": "Révision finale, validation et publication",
+            "intro": "Contrôlez la préparation, révisez les leçons et les sources, prévisualisez l’expérience apprenant, puis validez et publiez.",
+            "step1": "Préparation", "step2": "Leçons et sources", "step3": "Aperçu apprenant", "step4": "Validation enseignant", "step5": "Publication",
+            "done": "Terminé", "ready": "Prêt", "pending": "Incomplet", "available": "Disponible", "approved": "Validé",
+            "readiness_title": "1. Vérifier la préparation", "ready_msg": "Le plan approuvé et toutes les leçons requises sont prêts.",
+            "blocked_msg": "La validation finale est bloquée tant que toutes les leçons requises ne sont pas approuvées.",
+            "lessons_ready": "Leçons prêtes", "missing": "Éléments bloquants", "course_sources": "Sources approuvées",
+            "course_lessons": "État des leçons", "no_sources": "Aucune source approuvée visible.",
+            "lesson_ready": "Prête", "lesson_missing": "À compléter", "missing_sections": "Blocs manquants",
+            "preview_title": "3. Aperçu apprenant", "preview_help": "Vérifiez ce que verra l’apprenant avant la validation finale.",
+            "approval_title": "4. Validation finale de l’enseignant", "approval_help": "Cette validation appartient à l’enseignant; elle n’envoie pas le cours à l’espace évaluateur de recherche.",
+            "approval_blocked": "Terminez d’abord les leçons manquantes.", "approval_stale": "Le cours a changé depuis la dernière validation; validez à nouveau la version actuelle.",
+            "approval_ok": "Version finale validée par l’enseignant. Le cours est prêt à publier.", "approval_action": "Valider la version finale du cours",
+            "publish_title": "5. Publier dans l’espace apprenant", "publish_help": "La publication devient disponible après la validation finale.",
+            "publish_action": "Publier dans l’espace apprenant", "published_ok": "Cours publié dans l’espace apprenant.",
+            "published": "Le cours est publié.", "return_draft": "Repasser en brouillon", "archive": "Archiver le projet",
+            "delivery": "Indicateurs après publication", "enrollments": "Inscriptions", "course_completion": "Cours terminés", "lesson_completion": "Leçons terminées", "ai": "Interactions coach IA",
         },
         "en": {
-            "title": "Learner publication readiness",
-            "ready": "The approved learning package is ready to publish and run for learners.",
-            "blocked": "Publication stays blocked until the approved blueprint and every required lesson block are complete.",
-            "lessons": "Lessons ready", "missing": "Missing before publication",
-            "delivery": "Post-publication delivery signals", "enrollments": "Enrollments",
-            "course_completion": "Course completion", "lesson_completion": "Lesson completion",
-            "ai": "AI coach interactions", "legacy_preview": "Historical output preview",
+            "title": "Final review, teacher approval, and publication",
+            "intro": "Check readiness, review lessons and sources, preview the learner experience, then approve the final version and publish it.",
+            "step1": "Readiness", "step2": "Lessons & sources", "step3": "Learner preview", "step4": "Teacher approval", "step5": "Publish",
+            "done": "Complete", "ready": "Ready", "pending": "Incomplete", "available": "Available", "approved": "Approved",
+            "readiness_title": "1. Check course readiness", "ready_msg": "The approved blueprint and every required lesson are ready for final review.",
+            "blocked_msg": "Final approval stays blocked until every required lesson is complete and approved.",
+            "lessons_ready": "Lessons ready", "missing": "Blocking items", "course_sources": "Approved sources",
+            "course_lessons": "Lesson status", "no_sources": "No approved sources are visible in the evidence bundle.",
+            "lesson_ready": "Ready", "lesson_missing": "Needs completion", "missing_sections": "Missing sections",
+            "preview_title": "3. Preview learner experience", "preview_help": "Review what learners will see before final teacher approval.",
+            "approval_title": "4. Teacher final approval", "approval_help": "This is the teacher's own approval; it does not send the course to the research evaluator workspace.",
+            "approval_blocked": "Complete the missing lessons first.", "approval_stale": "The course changed after the last final review. Approve the current version again before publishing.",
+            "approval_ok": "The teacher approved the final version. The course is ready to publish.", "approval_action": "Approve final course version",
+            "publish_title": "5. Publish to learner workspace", "publish_help": "Publishing becomes available after final teacher approval.",
+            "publish_action": "Publish to learner workspace", "published_ok": "Course published to the learner workspace.",
+            "published": "The course is published.", "return_draft": "Return to draft", "archive": "Archive project",
+            "delivery": "Post-publication delivery signals", "enrollments": "Enrollments", "course_completion": "Course completion", "lesson_completion": "Lesson completion", "ai": "AI coach interactions",
         },
     }.get(lang, {})
 
-    st.markdown(f"### {labels['title']}")
+    global_ui.render_section_header(labels["title"], labels["intro"], lang=lang, eyebrow="05")
+
+    # A visible five-part final-review map replaces the former ambiguous "send for review" action.
+    step_states = [
+        (labels["step1"], bool(blueprint) and publish_ready, labels["done"] if publish_ready else labels["pending"]),
+        (labels["step2"], publish_ready, labels["done"] if publish_ready else labels["pending"]),
+        (labels["step3"], True, labels["available"]),
+        (labels["step4"], final_review_fresh, labels["approved"] if final_review_fresh else labels["pending"]),
+        (labels["step5"], current_status == "published", labels["done"] if current_status == "published" else labels["pending"]),
+    ]
+    cols = ui_stability.columns(5, gap="small", vertical_alignment="top")
+    for index, (col, (title, complete, state_label)) in enumerate(zip(cols, step_states), start=1):
+        with col:
+            with st.container(border=True):
+                st.caption(f"{index:02d}")
+                st.markdown(f"**{'✓' if complete else '○'} {title}**")
+                st.caption(state_label)
+
+    st.markdown(f"### {labels['readiness_title']}")
     if publish_ready:
-        st.success(labels["ready"])
+        st.success(labels["ready_msg"])
     else:
-        st.warning(labels["blocked"])
+        st.warning(labels["blocked_msg"])
         reason = str(readiness.get("reason") or "").strip()
         if reason:
             st.caption(reason)
     if runtime_enabled:
         ready_count = int(readiness.get("ready_lesson_count") or 0)
         lesson_count = int(readiness.get("lesson_count") or 0)
-        st.metric(labels["lessons"], f"{ready_count}/{lesson_count}")
-        missing_lessons = list(readiness.get("missing_lessons") or [])
+        st.metric(labels["lessons_ready"], f"{ready_count}/{lesson_count}")
         if missing_lessons:
             with st.expander(labels["missing"], expanded=True):
                 for item in missing_lessons:
                     title = str(item.get("title") or item.get("lesson_id") or "Lesson")
-                    missing = ", ".join(str(value) for value in (item.get("missing_block_types") or [])) or "approved lesson content"
-                    st.markdown(f"- **{title}** — {missing}")
+                    missing_types = list(item.get("missing_block_types") or [])
+                    missing_labels = [lesson_block_generation_engine.block_label(value, lang) for value in missing_types]
+                    missing = ", ".join(missing_labels) or labels["lesson_missing"]
+                    st.markdown(f"- **{title}** — {labels['missing_sections']}: {missing}")
 
-    delivery = db.published_course_delivery_summary(int(project["id"]))
-    if int(delivery.get("enrollments") or 0) or str(project.get("status") or "").lower() == "published":
+    with st.expander(f"2. {labels['step2']}", expanded=not publish_ready):
+        st.markdown(f"#### {labels['course_lessons']}")
+        if lessons:
+            for lesson in lessons:
+                lesson_id = str(lesson.get("lesson_id") or "")
+                title = str(lesson.get("title") or lesson_id or "Lesson")
+                missing = missing_by_id.get(lesson_id)
+                if missing:
+                    missing_types = [lesson_block_generation_engine.block_label(value, lang) for value in (missing.get("missing_block_types") or [])]
+                    detail = ", ".join(missing_types) or labels["lesson_missing"]
+                    st.markdown(f"- ○ **{title}** — {labels['lesson_missing']}: {detail}")
+                else:
+                    st.markdown(f"- ✓ **{title}** — {labels['lesson_ready']}")
+        else:
+            st.caption(labels["lesson_missing"])
+        st.markdown(f"#### {labels['course_sources']}")
+        if sources:
+            for source in sources[:12]:
+                title = str(source.get("title") or source.get("source_id") or "Source")
+                domain = str(source.get("domain") or "").strip()
+                st.markdown(f"- **{title}**{f' — {domain}' if domain else ''}")
+        else:
+            st.caption(labels["no_sources"])
+
+    with st.expander(labels["preview_title"], expanded=False):
+        st.caption(labels["preview_help"])
+        render_project_student_preview(project, public_view=False)
+
+    st.markdown(f"### {labels['approval_title']}")
+    st.caption(labels["approval_help"])
+    if final_review_fresh:
+        st.success(labels["approval_ok"])
+    else:
+        if current_status == "review" and publish_ready:
+            st.warning(labels["approval_stale"])
+        elif not publish_ready:
+            st.info(labels["approval_blocked"])
+        if st.button(
+            labels["approval_action"],
+            type="primary",
+            use_container_width=True,
+            disabled=not publish_ready,
+            key="teacher_final_approve_project",
+        ):
+            try:
+                db.set_teacher_project_status(project_id, _current_teacher_username(), "review")
+                st.session_state.teacher_flash_success = labels["approval_ok"]
+                st.rerun()
+            except Exception as exc:
+                ui_stability.render_error_card(exc, lang=lang)
+
+    st.markdown(f"### {labels['publish_title']}")
+    st.caption(labels["publish_help"])
+    if current_status == "published":
+        st.success(labels["published"])
+    else:
+        if st.button(
+            labels["publish_action"],
+            type="primary",
+            use_container_width=True,
+            disabled=(not publish_ready or not final_review_fresh),
+            key="teacher_publish_project",
+        ):
+            try:
+                db.set_teacher_project_status(project_id, _current_teacher_username(), "published")
+                st.session_state.teacher_flash_success = labels["published_ok"]
+                st.rerun()
+            except Exception as exc:
+                ui_stability.render_error_card(exc, lang=lang)
+
+    delivery = db.published_course_delivery_summary(project_id)
+    if int(delivery.get("enrollments") or 0) or current_status == "published":
         st.markdown(f"#### {labels['delivery']}")
         m1, m2, m3, m4 = st.columns(4)
         m1.metric(labels["enrollments"], int(delivery.get("enrollments") or 0))
@@ -2661,27 +2802,12 @@ def render_project_publication(project: Dict[str, Any]) -> None:
         m3.metric(labels["lesson_completion"], f"{float(delivery.get('lesson_completion_rate') or 0.0) * 100:.0f}%")
         m4.metric(labels["ai"], int(delivery.get("ai_interactions") or 0))
 
-    with st.expander(labels["legacy_preview"], expanded=False):
-        render_project_student_preview(project, public_view=False)
-
     st.divider()
-    current_status = str(project.get("status") or "draft").lower()
-    st.markdown(f"### {copy['status']}: {_status_label(current_status, copy)}")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button(copy["review_action"], use_container_width=True, disabled=current_status == "review", key="teacher_mark_review"):
-            db.set_teacher_project_status(int(project["id"]), _current_teacher_username(), "review")
-            st.success(copy["review_ok"]); st.rerun()
-    with c2:
-        if st.button(copy["publish_action"], type="primary", use_container_width=True, disabled=(not publish_ready or current_status == "published"), key="teacher_publish_project"):
-            db.set_teacher_project_status(int(project["id"]), _current_teacher_username(), "published")
-            st.success(copy["published_ok"]); st.rerun()
-    with c3:
-        action = "draft" if current_status != "draft" else "archived"
-        label = copy["draft_action"] if action == "draft" else copy["archive_action"]
-        if st.button(label, use_container_width=True, key="teacher_unpublish_or_archive"):
-            db.set_teacher_project_status(int(project["id"]), _current_teacher_username(), action)
-            st.success(copy["draft_ok"] if action == "draft" else copy["archive_ok"]); st.rerun()
+    action = "draft" if current_status != "draft" else "archived"
+    secondary_label = labels["return_draft"] if action == "draft" else labels["archive"]
+    if st.button(secondary_label, use_container_width=True, key="teacher_unpublish_or_archive"):
+        db.set_teacher_project_status(project_id, _current_teacher_username(), action)
+        st.rerun()
 
 
 
@@ -3502,16 +3628,15 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
 
 
 def _render_simple_review(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
-    lang = i18n.current_lang(st)
-    if simple_teacher_journey.review_substep(base_state) == "quality":
-        render_project_quality_summary(project)
-        lesson = dict(base_state.get("lesson_progress") or {})
-        lessons_complete = int(lesson.get("required") or 0) > 0 and int(lesson.get("approved") or 0) >= int(lesson.get("required") or 0)
-        if lessons_complete:
-            st.divider()
-            render_project_publication(project)
-    else:
-        render_project_publication(project)
+    """Render one explicit final-review workspace in Simple mode.
+
+    The former implementation stacked a legacy quality summary above the
+    publication controls.  Teachers could see an ambiguous "send for review"
+    action without a corresponding review workspace.  V6.20.14 consolidates
+    readiness, content review, learner preview, teacher approval and publish
+    into the single interface below.
+    """
+    render_project_publication(project)
 
 
 def _render_simple_project_workspace(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
@@ -3667,9 +3792,9 @@ def render_teacher_app() -> None:
     if projects_summary is not None and not projects_summary.empty and "generation_runs" in projects_summary.columns:
         generation_runs = int(projects_summary["generation_runs"].fillna(0).sum())
     summary_copy = {
-        "ar": ("المشاريع", "المنشورة", "قيد المراجعة", "عمليات التوليد"),
-        "fr": ("Projets", "Publiés", "En révision", "Générations"),
-        "en": ("Projects", "Published", "In review", "Generation runs"),
+        "ar": ("المشاريع", "المنشورة", "معتمدة للنشر", "عمليات التوليد"),
+        "fr": ("Projets", "Publiés", "Validés", "Générations"),
+        "en": ("Projects", "Published", "Approved to publish", "Generation runs"),
     }.get(lang, ("Projects", "Published", "In review", "Generation runs"))
     summary_cols = ui_stability.columns(4, gap="small", vertical_alignment="top")
     summary_values = (total_projects, published_projects, review_projects, generation_runs)

@@ -33,7 +33,7 @@ COPY: Dict[str, Dict[str, Any]] = {
         "status": {
             "completed": "مكتملة",
             "in_progress": "قيد الإنجاز",
-            "review": "تحتاج مراجعة",
+            "review": "معتمد للنشر",
             "available": "جاهزة للبدء",
             "locked": "غير متاحة",
         },
@@ -83,7 +83,7 @@ COPY: Dict[str, Dict[str, Any]] = {
             "publish": {
                 "title": "المعاينة والنشر",
                 "short": "النشر",
-                "description": "عاين تجربة المتعلم ثم أرسل المشروع للمراجعة أو انشره.",
+                "description": "افحص الجاهزية، عاين تجربة المتعلم، اعتمد النسخة النهائية ثم انشرها.",
                 "outcome": "مقرر منشور أو جاهز للنشر.",
                 "action": "معاينة المقرر والنشر",
             },
@@ -98,7 +98,7 @@ COPY: Dict[str, Dict[str, Any]] = {
         "lesson_progress": "Progression des leçons",
         "advanced_nav": "Navigation avancée",
         "locked_help": "Cette étape est verrouillée jusqu’à la fin de l’étape précédente.",
-        "status": {"completed": "Terminée", "in_progress": "En cours", "review": "À réviser", "available": "Prête", "locked": "Verrouillée"},
+        "status": {"completed": "Terminée", "in_progress": "En cours", "review": "Validé pour publication", "available": "Prête", "locked": "Verrouillée"},
         "steps": {
             "setup": {"title": "Configurer le projet", "short": "Projet", "description": "Définissez le cours, le public, le niveau, les langues et la durée.", "outcome": "Fiche projet complète.", "action": "Vérifier le projet"},
             "resources": {"title": "Sources et recherche", "short": "Sources", "description": "Ajoutez les fichiers et recherchez des ressources pédagogiques.", "outcome": "Dossier de sources exploitable.", "action": "Ouvrir les sources"},
@@ -106,7 +106,7 @@ COPY: Dict[str, Dict[str, Any]] = {
             "blueprint": {"title": "Plan du cours", "short": "Plan", "description": "Organisez concepts, unités, leçons, objectifs, activités et évaluations.", "outcome": "Plan approuvé.", "action": "Créer ou réviser le plan"},
             "lessons": {"title": "Construire les leçons", "short": "Leçons", "description": "Générez et approuvez chaque bloc de leçon séparément.", "outcome": "Leçons complètes.", "action": "Continuer les leçons"},
             "quality": {"title": "Révision et qualité", "short": "Qualité", "description": "Contrôlez la cohérence, les citations, l’alignement et les répétitions.", "outcome": "Cours prêt pour l’aperçu.", "action": "Contrôler la qualité"},
-            "publish": {"title": "Aperçu et publication", "short": "Publier", "description": "Prévisualisez l’expérience apprenant puis publiez.", "outcome": "Cours publié ou prêt.", "action": "Prévisualiser et publier"},
+            "publish": {"title": "Aperçu et publication", "short": "Publier", "description": "Vérifiez la préparation, prévisualisez, validez la version finale puis publiez.", "outcome": "Cours publié ou prêt.", "action": "Prévisualiser et publier"},
         },
     },
     "en": {
@@ -118,7 +118,7 @@ COPY: Dict[str, Dict[str, Any]] = {
         "lesson_progress": "Lesson-building progress",
         "advanced_nav": "Advanced section navigation",
         "locked_help": "This stage is locked until the previous stage is complete.",
-        "status": {"completed": "Completed", "in_progress": "In progress", "review": "Needs review", "available": "Ready", "locked": "Locked"},
+        "status": {"completed": "Completed", "in_progress": "In progress", "review": "Approved to publish", "available": "Ready", "locked": "Locked"},
         "steps": {
             "setup": {"title": "Set up project", "short": "Setup", "description": "Define the course, learners, level, languages, and duration.", "outcome": "Complete project brief.", "action": "Review project setup"},
             "resources": {"title": "Sources and research", "short": "Sources", "description": "Add teacher files and search for suitable learning resources.", "outcome": "Usable research dossier.", "action": "Open sources and research"},
@@ -126,7 +126,7 @@ COPY: Dict[str, Dict[str, Any]] = {
             "blueprint": {"title": "Course blueprint", "short": "Blueprint", "description": "Organize concepts, units, lessons, outcomes, activities, and assessments.", "outcome": "Approved course blueprint.", "action": "Create or review blueprint"},
             "lessons": {"title": "Build lessons", "short": "Lessons", "description": "Generate, edit, and approve each lesson block independently.", "outcome": "Complete approved lessons.", "action": "Continue lesson building"},
             "quality": {"title": "Review and quality", "short": "Quality", "description": "Check completeness, citations, alignment, consistency, and duplication.", "outcome": "Course ready for final preview.", "action": "Review quality and outputs"},
-            "publish": {"title": "Preview and publish", "short": "Publish", "description": "Preview the learner experience, review, and publish.", "outcome": "Published or publication-ready course.", "action": "Preview and publish"},
+            "publish": {"title": "Preview and publish", "short": "Publish", "description": "Check readiness, preview the learner experience, approve the final version, then publish.", "outcome": "Published or publication-ready course.", "action": "Preview and publish"},
         },
     },
 }

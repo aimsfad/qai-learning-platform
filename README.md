@@ -1,6 +1,17 @@
-# 3alimnIA V6.20.13 — Lesson Approval Hotfix
+# 3alimnIA V6.20.14 — Final Review & Publish Workflow
 
-This release fixes the teacher full-lesson approval path on remote databases by batching approval writes into a single transaction and making blocking reasons explicit in the UI. It preserves the V6.20.12 navigation fix and the V6.20.11 temporary demo AI-Coach unlock.
+V6.20.14 turns the fifth teacher stage into a real, teacher-owned final-review workflow. The former ambiguous **Send for review** state change is replaced by an explicit sequence: readiness check → lesson/source review → learner preview → teacher final approval → publication.
+
+## V6.20.14 highlights
+
+- real final-review workspace instead of a silent status change;
+- approved sources and per-lesson readiness are visible in the same screen;
+- missing lesson sections are shown with pedagogical labels rather than internal block codes;
+- learner preview is embedded before final approval;
+- final approval is explicitly the teacher's decision and is not sent to the research evaluator account;
+- publication is blocked until the course is runtime-ready **and** the teacher has approved the final version;
+- if the course changes after final review, approval becomes stale and must be renewed;
+- preserves the V6.20.13 lesson-approval hotfix, V6.20.12 navigation fix, and V6.20.11 temporary demo AI-Coach unlock.
 
 # 3alimnIA — V6.20.10 Label Candidate
 

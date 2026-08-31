@@ -30,9 +30,9 @@ COPY: Dict[str, Dict[str, Any]] = {
             "sources": {"short": "مصادر المقرر", "title": "إضافة المصادر والتحقق منها", "description": "ارفعي الملفات أو شغلي البحث، ثم راجعي المصادر واعتمديها."},
             "plan": {"short": "خطة المقرر", "title": "مراجعة خطة المقرر", "description": "راجعي الوحدات والدروس، عدّليها عند الحاجة، ثم اعتمدي الخطة."},
             "lessons": {"short": "إنشاء الدروس", "title": "إنشاء الدروس", "description": "أنشئي كل درس كاملًا، راجعي أقسامه، ثم اعتمديه وانتقلي إلى التالي."},
-            "review": {"short": "المراجعة والنشر", "title": "المراجعة والنشر", "description": "راجعي جودة المقرر، عايني نسخة المتعلم، ثم انشريه."},
+            "review": {"short": "المراجعة والاعتماد والنشر", "title": "المراجعة والاعتماد والنشر", "description": "افحصي الجاهزية، راجعي الدروس والمصادر، عايني نسخة المتعلم، ثم اعتمدي النسخة النهائية وانشريها."},
         },
-        "status": {"completed": "مكتملة", "in_progress": "قيد الإنجاز", "review": "تحتاج مراجعة", "available": "جاهزة", "locked": "غير متاحة"},
+        "status": {"completed": "مكتملة", "in_progress": "قيد الإنجاز", "review": "معتمد للنشر", "available": "جاهزة", "locked": "غير متاحة"},
     },
     "fr": {
         "title": "Créer le cours en cinq étapes",
@@ -45,9 +45,9 @@ COPY: Dict[str, Dict[str, Any]] = {
             "sources": {"short": "Sources", "title": "Ajouter et vérifier les sources", "description": "Ajoutez les fichiers ou lancez la recherche, puis approuvez les sources."},
             "plan": {"short": "Plan", "title": "Valider le plan du cours", "description": "Révisez les unités et les leçons, puis approuvez le plan."},
             "lessons": {"short": "Leçons", "title": "Créer les leçons", "description": "Générez chaque leçon complète, révisez-la et approuvez-la."},
-            "review": {"short": "Réviser et publier", "title": "Réviser et publier", "description": "Contrôlez la qualité, prévisualisez puis publiez."},
+            "review": {"short": "Réviser, valider et publier", "title": "Réviser, valider et publier", "description": "Vérifiez la préparation, révisez, prévisualisez, validez la version finale puis publiez."},
         },
-        "status": {"completed": "Terminée", "in_progress": "En cours", "review": "À réviser", "available": "Prête", "locked": "Verrouillée"},
+        "status": {"completed": "Terminée", "in_progress": "En cours", "review": "Validé pour publication", "available": "Prête", "locked": "Verrouillée"},
     },
     "en": {
         "title": "Create the course in five steps",
@@ -60,9 +60,9 @@ COPY: Dict[str, Dict[str, Any]] = {
             "sources": {"short": "Course sources", "title": "Add and verify sources", "description": "Upload files or run research, then review and approve the sources."},
             "plan": {"short": "Course plan", "title": "Review the course plan", "description": "Review units and lessons, edit if needed, then approve the plan."},
             "lessons": {"short": "Create lessons", "title": "Create lessons", "description": "Generate each complete lesson, review its sections, then approve it."},
-            "review": {"short": "Review and publish", "title": "Review and publish", "description": "Check quality, preview the learner view, and publish."},
+            "review": {"short": "Review, approve & publish", "title": "Review, approve and publish", "description": "Check readiness, review lessons and sources, preview the learner view, approve the final version, then publish."},
         },
-        "status": {"completed": "Completed", "in_progress": "In progress", "review": "Needs review", "available": "Ready", "locked": "Locked"},
+        "status": {"completed": "Completed", "in_progress": "In progress", "review": "Approved to publish", "available": "Ready", "locked": "Locked"},
     },
 }
 
