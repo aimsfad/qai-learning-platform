@@ -586,8 +586,38 @@ def approve_full_lesson(project_id: int, lesson_id: str, teacher_username: str) 
             + ", ".join(str(item) for item in gate.get("blockers") or [])
         )
 
-    for run in latest_rows:
-        db.approve_teacher_lesson_block(int(run["id"]), int(project_id), str(teacher_username))
+    # Validate lesson identity once at the lesson boundary.  The legacy path
+    # repeated this same evidence/blueprint/project lookup for every one of the
+    # nine lesson blocks, which is unnecessarily expensive on remote databases.
+    blueprint_data = dict(blueprint_bundle.get("blueprint") or {})
+    lesson_row = next(
+        (dict(item) for item in (blueprint_data.get("lessons") or []) if str(item.get("lesson_id")) == str(lesson_id)),
+        {},
+    )
+    evidence = db.teacher_evidence_bundle(int(blueprint_bundle.get("evidence_run_id") or 0)) or {}
+    source_titles = lesson_identity.source_titles_from_bundle(evidence)
+    project = db.query_one("SELECT * FROM teacher_projects WHERE id=:id", {"id": int(project_id)}) or {}
+    identity = lesson_identity.inspect_lesson_identity(
+        lesson=lesson_row,
+        blueprint=blueprint_data,
+        project=project,
+        source_titles=source_titles,
+        index=int(lesson_row.get("sequence_order") or 1),
+        lang=str(project.get("primary_language_code") or "ar"),
+    )
+    if not identity.get("valid"):
+        raise ValueError(
+            "Lesson approval blocked because its identity is derived from reference-source metadata. "
+            "Rebuild and approve the course plan first."
+        )
+
+    db.approve_teacher_full_lesson_blocks(
+        project_id=int(project_id),
+        blueprint_run_id=int(blueprint_run_id),
+        lesson_id=str(lesson_id),
+        run_rows=latest_rows,
+        teacher_username=str(teacher_username),
+    )
     return lesson_completion(
         int(project_id), str(lesson_id), blueprint_run_id=blueprint_run_id
     )

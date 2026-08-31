@@ -3395,12 +3395,27 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                 mime="text/markdown", use_container_width=True,
             )
         with action_cols[1]:
-            ready_to_approve = (
-                generated_count >= len(assembled)
-                and failed_count == 0
-                and not completion.get("complete")
-                and bool((quality.get("pedagogical_gate") or {}).get("can_approve", True))
-            )
+            approval_blockers: List[str] = []
+            if generated_count < len(assembled):
+                approval_blockers.append(
+                    {"ar": f"لم تُنشأ كل أقسام الدرس بعد ({generated_count}/{len(assembled)}).",
+                     "fr": f"Toutes les sections ne sont pas encore générées ({generated_count}/{len(assembled)}).",
+                     "en": f"Not all lesson sections are generated yet ({generated_count}/{len(assembled)})."}.get(lang)
+                )
+            if failed_count:
+                approval_blockers.append(
+                    {"ar": f"يوجد {failed_count} قسم به خطأ توليد أو تحقق.",
+                     "fr": f"{failed_count} section(s) comportent une erreur de génération ou de validation.",
+                     "en": f"{failed_count} section(s) have a generation or validation error."}.get(lang)
+                )
+            gate_blockers = list((quality.get("pedagogical_gate") or {}).get("blockers") or [])
+            if gate_blockers:
+                approval_blockers.append(
+                    {"ar": "توجد مشكلة جودة مانعة يجب إصلاحها قبل الاعتماد.",
+                     "fr": "Un problème de qualité bloquant doit être corrigé avant l’approbation.",
+                     "en": "A blocking quality issue must be fixed before approval."}.get(lang)
+                )
+            ready_to_approve = (not approval_blockers) and not completion.get("complete")
             if completion.get("complete"):
                 if lesson_index + 1 < len(lessons):
                     if st.button(labels["next"], type="primary", use_container_width=True, key=f"simple_next_lesson_{project_id}_{lesson_id}"):
@@ -3415,12 +3430,28 @@ def _render_simple_lesson_builder(project: Dict[str, Any], simple_state: Dict[st
                         st.session_state.teacher_simple_stage = "review"
                         st.rerun()
             else:
+                if approval_blockers:
+                    global_ui.render_inline_notice(
+                        {"ar": "لماذا الاعتماد غير متاح؟", "fr": "Pourquoi l’approbation est-elle indisponible ?", "en": "Why is approval unavailable?"}.get(lang),
+                        " ".join(str(item) for item in approval_blockers if item),
+                        lang=lang, tone="warning",
+                    )
                 if st.button(
                     labels["approve"], type="primary", use_container_width=True, disabled=not ready_to_approve,
                     key=f"simple_approve_lesson_{project_id}_{lesson_id}",
                 ):
+                    status_label = {
+                        "ar": "جاري اعتماد الدرس وحفظ الأقسام التسعة…",
+                        "fr": "Approbation de la leçon et enregistrement des sections…",
+                        "en": "Approving the lesson and saving all sections…",
+                    }.get(lang)
                     try:
-                        lesson_block_generation_engine.approve_full_lesson(project_id, lesson_id, _current_teacher_username())
+                        with st.status(status_label, expanded=False) as approval_status:
+                            lesson_block_generation_engine.approve_full_lesson(project_id, lesson_id, _current_teacher_username())
+                            approval_status.update(
+                                label={"ar": "تم اعتماد الدرس.", "fr": "Leçon approuvée.", "en": "Lesson approved."}.get(lang),
+                                state="complete", expanded=False,
+                            )
                         st.session_state.teacher_flash_success = labels["approved"]
                         if lesson_index + 1 < len(lessons):
                             st.session_state[f"simple_pending_lesson_{project_id}"] = lesson_ids[lesson_index + 1]
@@ -3663,15 +3694,24 @@ def render_teacher_app() -> None:
     view_labels = {"projects": copy["projects"], "new": copy["new"], "workspace": copy["workspace"], "outputs": copy["outputs"]}
     nav_key = "teacher_studio_nav_control"
     desired_view = st.session_state.teacher_studio_view
+
+    # V6.20.12 — keep user navigation and programmatic navigation in sync.
+    # The previous implementation rewrote the radio widget value from
+    # ``teacher_studio_view`` before Streamlit could process a user's click.
+    # As a result, selecting “New project” or “Project workspace” snapped back
+    # to the previous tab.  The callback updates the canonical view first;
+    # programmatic actions (Open/Continue/Back) still sync the widget below.
+    def _apply_teacher_studio_nav() -> None:
+        selected = st.session_state.get(nav_key)
+        if selected in views:
+            st.session_state.teacher_studio_view = str(selected)
+
     if st.session_state.get(nav_key) != desired_view:
         st.session_state[nav_key] = desired_view
     view = st.radio(
         "Teacher studio view", views, format_func=lambda x: view_labels[x], horizontal=True,
-        label_visibility="collapsed", key=nav_key,
+        label_visibility="collapsed", key=nav_key, on_change=_apply_teacher_studio_nav,
     )
-    if view != st.session_state.teacher_studio_view:
-        st.session_state.teacher_studio_view = view
-        st.rerun()
     st.divider()
     if view == "new":
         render_project_form(None)

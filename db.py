@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.11-demo-coach-unlock"
+APP_VERSION = "v6.20.13-lesson-approval-hotfix"
 # APP_VERSION = "v6.20.4-mobile-header-first-viewport"
 # Backward-compatible static validator marker for the immediately prior release.
 # APP_VERSION = "v6.20.3-mobile-public-shell"
@@ -3275,6 +3275,95 @@ def approve_teacher_lesson_block(run_id: int, project_id: int, teacher_username:
         block_type=str(run["block_type"]), action="approved", actor_username=str(teacher_username),
         summary="Teacher approved lesson block for lesson assembly.",
     )
+
+
+def approve_teacher_full_lesson_blocks(
+    *,
+    project_id: int,
+    blueprint_run_id: int,
+    lesson_id: str,
+    run_rows: Sequence[Mapping[str, Any]],
+    teacher_username: str,
+) -> None:
+    """Approve the latest block versions for one lesson in a single transaction.
+
+    The older per-block approval path performs many round trips against a remote
+    PostgreSQL/Neon database.  A full lesson contains nine blocks, so that path
+    can leave Streamlit in a stale/rerunning state long enough to look as if the
+    approval button is disabled.  This batched path preserves the same approval
+    semantics while making the operation atomic and substantially cheaper.
+    """
+    rows = [dict(row or {}) for row in (run_rows or [])]
+    run_ids = [int(row.get("id") or 0) for row in rows if int(row.get("id") or 0) > 0]
+    if not run_ids:
+        raise ValueError("No lesson blocks are available for approval.")
+    if len(run_ids) != len(rows):
+        raise ValueError("One or more lesson blocks do not have a valid run id.")
+
+    now = utc_now()
+    run_stmt = text(
+        """SELECT id, project_id, blueprint_run_id, lesson_id, block_type, status
+        FROM teacher_lesson_block_runs WHERE id IN :run_ids"""
+    ).bindparams(bindparam("run_ids", expanding=True))
+    approve_stmt = text(
+        """UPDATE teacher_lesson_block_runs
+        SET approved_by_teacher=1, approved_at=:approved_at
+        WHERE id IN :run_ids"""
+    ).bindparams(bindparam("run_ids", expanding=True))
+    audit_sql = text(
+        """INSERT INTO teacher_lesson_block_audit_events
+        (project_id, block_run_id, lesson_id, block_type, action, actor_username, summary, details_json, created_at)
+        VALUES (:project_id, :block_run_id, :lesson_id, :block_type, :action, :actor_username, :summary, :details_json, :created_at)"""
+    )
+
+    with get_engine().begin() as conn:
+        stored = [dict(row) for row in conn.execute(run_stmt, {"run_ids": run_ids}).mappings().all()]
+        if len(stored) != len(run_ids):
+            raise ValueError("One or more lesson block runs could not be found.")
+        for row in stored:
+            if int(row.get("project_id") or 0) != int(project_id):
+                raise ValueError("Lesson block run belongs to another project.")
+            if int(row.get("blueprint_run_id") or 0) != int(blueprint_run_id):
+                raise ValueError("Lesson block run belongs to another blueprint version.")
+            if str(row.get("lesson_id") or "") != str(lesson_id):
+                raise ValueError("Lesson block run belongs to another lesson.")
+            if str(row.get("status") or "").lower() in {"error", "failed"}:
+                raise ValueError("A lesson block with validation errors cannot be approved.")
+
+        # Revoke only the previous canonical versions for this lesson/blueprint.
+        conn.execute(
+            text(
+                """UPDATE teacher_lesson_block_runs
+                SET approved_by_teacher=0, approved_at=NULL
+                WHERE project_id=:project_id AND blueprint_run_id=:blueprint_run_id
+                  AND lesson_id=:lesson_id"""
+            ),
+            {
+                "project_id": int(project_id),
+                "blueprint_run_id": int(blueprint_run_id),
+                "lesson_id": str(lesson_id),
+            },
+        )
+        conn.execute(approve_stmt, {"approved_at": now, "run_ids": run_ids})
+
+        by_id = {int(row["id"]): row for row in stored}
+        audit_rows = []
+        for run_id in run_ids:
+            row = by_id[run_id]
+            audit_rows.append(
+                {
+                    "project_id": int(project_id),
+                    "block_run_id": int(run_id),
+                    "lesson_id": str(lesson_id),
+                    "block_type": str(row.get("block_type") or ""),
+                    "action": "approved",
+                    "actor_username": str(teacher_username or ""),
+                    "summary": "Teacher approved lesson block as part of full lesson approval.",
+                    "details_json": json.dumps({"batched_full_lesson_approval": True}, ensure_ascii=False),
+                    "created_at": now,
+                }
+            )
+        conn.execute(audit_sql, audit_rows)
 
 
 def teacher_lesson_block_versions_df(project_id: int, lesson_id: str, block_type: str) -> pd.DataFrame:

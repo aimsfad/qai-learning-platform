@@ -1,3 +1,7 @@
+# 3alimnIA V6.20.13 — Lesson Approval Hotfix
+
+This release fixes the teacher full-lesson approval path on remote databases by batching approval writes into a single transaction and making blocking reasons explicit in the UI. It preserves the V6.20.12 navigation fix and the V6.20.11 temporary demo AI-Coach unlock.
+
 # 3alimnIA — V6.20.10 Label Candidate
 
 V6.20.10 is the presentation and project-label candidate built on the stable V6.20.9 role-polish release. It freezes the current learning, teacher-production, evaluator-research, publication, evidence, and AI-support logic and applies only final screenshot-driven density and spacing corrections.
@@ -33,6 +37,14 @@ No routing, database schema, assessment rule, publication gate, learner-evidence
 - `docs/LABEL_DEMO_CHECKLIST_AR.md` — recommended presentation/demo sequence.
 - `docs/VALIDATION_V6_20_10_AR.md` — technical validation summary.
 
+
+
+## V6.20.12 — Teacher Navigation Hotfix
+
+- Fixed teacher top navigation so **New project** and **Project workspace** can be selected normally.
+- Preserved programmatic Open / Continue / Back navigation for existing projects.
+- Preserved the V6.20.11 temporary AI Coach demo unlock.
+- No database schema, pedagogical workflow, or media changes.
 
 ## V6.20.11 — Demo Coach Unlock
 
