@@ -1,3 +1,5 @@
+> Current release: **V6.20.15 — Teacher Resume & State Hotfix**
+
 # 3alimnIA V6.20.14 — Final Review & Publish Workflow
 
 V6.20.14 turns the fifth teacher stage into a real, teacher-owned final-review workflow. The former ambiguous **Send for review** state change is replaced by an explicit sequence: readiness check → lesson/source review → learner preview → teacher final approval → publication.

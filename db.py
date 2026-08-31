@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.14-final-review-publish-workflow"
+APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
 # APP_VERSION = "v6.20.4-mobile-header-first-viewport"
 # Backward-compatible static validator marker for the immediately prior release.
 # APP_VERSION = "v6.20.3-mobile-public-shell"
@@ -3266,9 +3266,14 @@ def approve_teacher_lesson_block(run_id: int, project_id: int, teacher_username:
             "block_type": str(run["block_type"]),
         },
     )
+    approved_at = utc_now()
     exec_sql(
         "UPDATE teacher_lesson_block_runs SET approved_by_teacher=1, approved_at=:approved_at WHERE id=:id",
-        {"id": int(run_id), "approved_at": utc_now()},
+        {"id": int(run_id), "approved_at": approved_at},
+    )
+    exec_sql(
+        "UPDATE teacher_projects SET updated_at=:updated_at WHERE id=:id AND teacher_username=:username",
+        {"updated_at": approved_at, "id": int(project_id), "username": str(teacher_username)},
     )
     record_teacher_lesson_block_audit(
         project_id=int(project_id), block_run_id=int(run_id), lesson_id=str(run["lesson_id"]),
@@ -3345,6 +3350,13 @@ def approve_teacher_full_lesson_blocks(
             },
         )
         conn.execute(approve_stmt, {"approved_at": now, "run_ids": run_ids})
+        # Any lesson-content approval changes the publishable course version.
+        # Touch the project so a previous final-review timestamp can no longer
+        # be treated as current after lesson edits/approvals.
+        conn.execute(
+            text("UPDATE teacher_projects SET updated_at=:updated_at WHERE id=:id AND teacher_username=:username"),
+            {"updated_at": now, "id": int(project_id), "username": str(teacher_username)},
+        )
 
         by_id = {int(row["id"]): row for row in stored}
         audit_rows = []

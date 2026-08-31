@@ -2281,31 +2281,91 @@ def _status_label(status: str, copy: Dict[str, str]) -> str:
     return copy.get(clean, clean.title())
 
 
-def _project_progress_values(project: Dict[str, Any]) -> tuple[int, int, int]:
-    completed = int(project.get("completed_phases") or 0)
+def _project_progress_values(project: Dict[str, Any]) -> tuple[int, int, int, int, Dict[str, Any]]:
+    """Return progress that matches the teacher-facing journey.
+
+    The project grid previously displayed the legacy 11-phase engine progress
+    even when the default teacher UI used the simplified five-stage journey.
+    This could show 3/11 on the card while the project workspace showed 4/5.
+    Keep the generation-run counter, but use the same journey state as the
+    workspace whenever simple mode is active.
+    """
     runs = int(project.get("generation_runs") or 0)
-    return completed, runs, int(round(100 * completed / max(len(PHASES), 1)))
+    if _simple_teacher_mode():
+        base_state = guided_teacher_workflow.load_workflow_state(project)
+        simple_state = simple_teacher_journey.build_simple_state(base_state)
+        completed = int(simple_state.get("completed_count") or 0)
+        total = int(simple_state.get("total_steps") or len(simple_teacher_journey.SIMPLE_STEPS))
+        pct = int(simple_state.get("progress_pct") or round(100 * completed / max(total, 1)))
+        return completed, runs, pct, total, simple_state
+    completed = int(project.get("completed_phases") or 0)
+    total = len(PHASES)
+    return completed, runs, int(round(100 * completed / max(total, 1))), total, {}
+
+
+def _final_review_display(project: Dict[str, Any]) -> tuple[str, bool]:
+    """Return a truthful display status for legacy and current projects.
+
+    Before V6.20.14, status=review meant "sent for review". V6.20.14
+    repurposed it to mean teacher final approval. Old rows can therefore carry
+    status=review even when lessons are incomplete. Never present those rows as
+    "approved to publish" unless runtime readiness and the review timestamp
+    both confirm a current final approval.
+    """
+    raw = str(project.get("status") or "draft").strip().lower()
+    if raw != "review":
+        return raw, True
+    try:
+        readiness = db.teacher_project_runtime_readiness(int(project.get("id") or 0))
+    except Exception:
+        return "review", False
+    ready = bool(readiness.get("ready"))
+    reviewed_at = str(project.get("reviewed_at") or "").strip()
+    updated_at = str(project.get("updated_at") or "").strip()
+    fresh = bool(ready and reviewed_at and (not updated_at or reviewed_at >= updated_at))
+    return "review", fresh
+
+
+def _queue_project_open(project_id: int, section: str = "overview", simple_stage: str | None = None) -> None:
+    """Queue project navigation so it is applied before nav widgets render.
+
+    Project-card buttons are rendered after the Teacher Studio radio. Updating
+    route state directly from the button body can leave the current run on the
+    projects tab. A widget callback stores a pending route; render_teacher_app
+    consumes it at the beginning of the next run, before the radio is built.
+    """
+    st.session_state.teacher_pending_project_open = {
+        "project_id": int(project_id),
+        "section": str(section or "overview"),
+        "simple_stage": str(simple_stage or "").strip() or None,
+    }
 
 
 def _open_project(project_id: int, section: str = "overview") -> None:
     st.session_state.teacher_active_project_id = int(project_id)
-    st.session_state.teacher_workspace_section = section
+    st.session_state.teacher_workspace_section_pending = str(section or "overview")
     st.session_state.teacher_studio_view = "workspace"
 
 
 def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
-    completed, runs, pct = _project_progress_values(project)
+    completed, runs, pct, total_steps, simple_state = _project_progress_values(project)
     status = str(project.get("status") or "draft").lower()
     project_id = int(project["id"])
+    display_status, final_review_fresh = _final_review_display(project)
     title = escape(str(project.get("project_name") or project.get("unit_title") or ""))
     domain = escape(str(project.get("domain") or ""))
     program = escape(str(project.get("program_name") or project.get("unit_title") or ""))
     concept = escape(str(project.get("target_concept") or "")[:220])
 
+    if display_status == "review" and not final_review_fresh:
+        status_text = {"ar": "يحتاج إكمال/إعادة اعتماد", "fr": "À compléter / revalider", "en": "Needs completion / re-approval"}.get(i18n.current_lang(st), "Needs completion / re-approval")
+    else:
+        status_text = _status_label(display_status, copy)
+
     with st.container(border=True, key=f"v6163_project_card_{project_id}"):
         st.markdown(
             f"<span class='v692-project-card-marker v6163-project-card-marker v618-project-card-marker' aria-hidden='true'></span>"
-            f"<div class='v692-project-card-head'><span>{escape(_status_label(status, copy))}</span>"
+            f"<div class='v692-project-card-head'><span>{escape(status_text)}</span>"
             f"<small>#{project_id}</small></div>"
             f"<div class='v6163-project-card-copy'><h3>{title}</h3>"
             f"<p class='v6163-project-taxonomy'>{domain}{' · ' if domain and program else ''}{program}</p>"
@@ -2315,29 +2375,37 @@ def _render_project_card(project: Dict[str, Any], copy: Dict[str, str]) -> None:
         st.progress(pct / 100, text=f"{copy['progress']}: {pct}% — {completed}/{len(PHASES)}")
         st.markdown(
             f"<div class='v6163-project-facts'>"
-            f"<span><b>{completed}/{len(PHASES)}</b><small>{escape(copy['phases'])}</small></span>"
+            f"<span><b>{completed}/{total_steps}</b><small>{escape(copy['phases'])}</small></span>"
             f"<span><b>{runs}</b><small>{escape(copy['runs'])}</small></span>"
-            f"<span><b>{escape(_status_label(status, copy))}</b><small>{escape(copy['status'])}</small></span>"
+            f"<span><b>{escape(status_text)}</b><small>{escape(copy['status'])}</small></span>"
             f"</div>",
             unsafe_allow_html=True,
         )
+        full_project = db.get_teacher_project(project_id, _current_teacher_username()) or project
+        journey = guided_teacher_workflow.load_workflow_state(full_project)
+        if _simple_teacher_mode():
+            resume_simple = simple_state or simple_teacher_journey.build_simple_state(journey)
+            resume_stage = str(resume_simple.get("current_key") or "setup")
+            resume_section = "overview"
+            open_stage = "setup"
+        else:
+            resume_stage = None
+            resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
+            open_stage = None
+
         b1, b2 = ui_stability.columns(2, gap="small", vertical_alignment="center")
         with b1:
-            if st.button(copy["open"], type="primary", use_container_width=True, key=f"open_teacher_project_{project_id}"):
-                _open_project(project_id, "overview")
-                st.rerun()
+            st.button(
+                copy["open"], type="primary", use_container_width=True,
+                key=f"open_teacher_project_{project_id}",
+                on_click=_queue_project_open, args=(project_id, "overview", open_stage),
+            )
         with b2:
-            if st.button(copy["continue"], use_container_width=True, key=f"continue_teacher_project_{project_id}"):
-                full_project = db.get_teacher_project(project_id, _current_teacher_username()) or project
-                journey = guided_teacher_workflow.load_workflow_state(full_project)
-                if _simple_teacher_mode():
-                    simple_state = simple_teacher_journey.build_simple_state(journey)
-                    st.session_state.teacher_simple_stage = str(simple_state.get("current_key") or "setup")
-                    _open_project(project_id, "overview")
-                else:
-                    resume_section = guided_teacher_workflow.section_for_step(str(journey.get("current_key") or "setup"))
-                    _open_project(project_id, resume_section)
-                st.rerun()
+            st.button(
+                copy["continue"], use_container_width=True,
+                key=f"continue_teacher_project_{project_id}",
+                on_click=_queue_project_open, args=(project_id, resume_section, resume_stage),
+            )
 
 
 def render_projects_grid() -> None:
@@ -3755,6 +3823,18 @@ def render_teacher_app() -> None:
     if not st.session_state.teacher_logged_in:
         render_teacher_login()
         return
+
+    # V6.20.15 — consume project-card navigation before the Teacher Studio
+    # navigation widget is created. This makes Open/Continue deterministic on
+    # Streamlit Cloud and preserves the exact resume stage.
+    pending_open = st.session_state.pop("teacher_pending_project_open", None)
+    if isinstance(pending_open, dict) and pending_open.get("project_id"):
+        st.session_state.teacher_active_project_id = int(pending_open["project_id"])
+        st.session_state.teacher_studio_view = "workspace"
+        st.session_state.teacher_workspace_section_pending = str(pending_open.get("section") or "overview")
+        if pending_open.get("simple_stage"):
+            st.session_state.teacher_simple_stage = str(pending_open["simple_stage"])
+
     u = teacher_ui()
     copy = project_workspace_ui()
     display_name = str(st.session_state.get("teacher_display_name") or _current_teacher_username()).strip()
@@ -3784,7 +3864,13 @@ def render_teacher_app() -> None:
     if projects_summary is not None and not projects_summary.empty and "status" in projects_summary.columns:
         status_series = projects_summary["status"].fillna("").astype(str).str.lower()
         published_projects = int((status_series == "published").sum())
-        review_projects = int(status_series.isin(["review", "in_review", "ready_for_review"]).sum())
+        review_projects = 0
+        for summary_project in projects_summary.to_dict("records"):
+            raw_status = str(summary_project.get("status") or "").strip().lower()
+            if raw_status in {"review", "in_review", "ready_for_review"}:
+                _, fresh_review = _final_review_display(summary_project)
+                if fresh_review:
+                    review_projects += 1
     else:
         published_projects = 0
         review_projects = 0
