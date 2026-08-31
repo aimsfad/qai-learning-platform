@@ -291,6 +291,8 @@ def init_state() -> None:
         "last_ai_interaction_id": None,
         "landing_track": "quantum",
         "selected_track": "quantum",
+        "published_course_project_id": None,
+        "pending_published_course_project_id": None,
         "ui_language": "العربية",
         "ui_language_code": "ar",
     }
@@ -1345,6 +1347,143 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
 # Landing and access
 # -----------------------------------------------------------------------------
 
+def _public_catalog_copy(lang: str) -> Dict[str, str]:
+    return {
+        "ar": {
+            "kicker": "مقررات منشورة من الأساتذة",
+            "title": "مقررات متاحة الآن داخل 3alimnIA",
+            "body": "أي مقرر يعتمد الأستاذ نسخته النهائية وينشره يظهر هنا تلقائيًا للمتعلمين، من دون تعديل يدوي للصفحة الرئيسية.",
+            "teacher": "محتوى منشور من الأستاذ",
+            "available": "متاح الآن",
+            "lessons": "دروس",
+            "open": "استكشف المقرر",
+            "signin": "اخترت هذا المقرر. سجّل الدخول أو أنشئ حسابًا للبدء.",
+            "track_open": "ابدأ المقرر المنشور",
+        },
+        "fr": {
+            "kicker": "COURS PUBLIÉS PAR LES ENSEIGNANTS",
+            "title": "Cours disponibles maintenant dans 3alimnIA",
+            "body": "Tout cours validé puis publié par un enseignant apparaît automatiquement ici, sans modification manuelle de l'accueil.",
+            "teacher": "Contenu publié par un enseignant",
+            "available": "Disponible",
+            "lessons": "leçons",
+            "open": "Découvrir le cours",
+            "signin": "Vous avez choisi ce cours. Connectez-vous ou créez un compte pour commencer.",
+            "track_open": "Ouvrir le cours publié",
+        },
+        "en": {
+            "kicker": "TEACHER-PUBLISHED COURSES",
+            "title": "Courses available now in 3alimnIA",
+            "body": "Any course that a teacher finally approves and publishes appears here automatically, with no manual home-page edit.",
+            "teacher": "Teacher-published content",
+            "available": "Available now",
+            "lessons": "lessons",
+            "open": "Explore course",
+            "signin": "You selected this course. Sign in or create an account to start.",
+            "track_open": "Open published course",
+        },
+    }.get(lang, {})
+
+
+def _published_project_matches_track(project: Dict[str, Any], track_id: str) -> bool:
+    text = " ".join(
+        str(project.get(key) or "")
+        for key in ("project_name", "domain", "program_name", "unit_title", "target_concept")
+    ).lower()
+    if track_id == "quantum":
+        return any(token in text for token in ("quantum", "qiskit", "كوانت", "كمومي"))
+    if track_id == "ml":
+        return any(token in text for token in ("machine learning", "تعلم الآلة", "التعلم الآلي", "apprentissage automatique"))
+    if track_id == "ai":
+        return any(token in text for token in ("artificial intelligence", "الذكاء الاصطناعي", "intelligence artificielle", "ai foundations"))
+    return False
+
+
+def _public_ready_projects() -> List[Dict[str, Any]]:
+    projects = db.published_teacher_projects_df()
+    if projects.empty:
+        return []
+    ready: List[Dict[str, Any]] = []
+    for row in projects.to_dict("records"):
+        try:
+            readiness = db.teacher_project_runtime_readiness(int(row["id"]))
+        except Exception:
+            continue
+        if not readiness.get("ready"):
+            continue
+        item = dict(row)
+        item["_lesson_count"] = int(readiness.get("lesson_count") or 0)
+        ready.append(item)
+    return ready
+
+
+def _open_public_published_course(project_id: int) -> None:
+    project_id = int(project_id)
+    st.session_state.pending_published_course_project_id = project_id
+    student = current_student()
+    if student:
+        st.session_state.published_course_project_id = project_id
+        st.session_state.pending_published_course_project_id = None
+        st.session_state.role = "student"
+        st.session_state.student_page = "Published Courses"
+        request_scroll_top()
+        router.queue(router.route_key("student", "Published Courses"))
+        st.rerun()
+    switch_role("student")
+
+
+def _student_destination_after_auth(student: Dict[str, Any]) -> str:
+    pending = st.session_state.get("pending_published_course_project_id")
+    if pending:
+        try:
+            project = db.get_published_teacher_project(int(pending))
+        except Exception:
+            project = None
+        if project:
+            st.session_state.published_course_project_id = int(pending)
+            st.session_state.pending_published_course_project_id = None
+            return "Published Courses"
+        st.session_state.pending_published_course_project_id = None
+    return next_student_page(student)
+
+
+def _render_public_published_courses(lang: str, projects: List[Dict[str, Any]]) -> None:
+    if not projects:
+        return
+    copy = _public_catalog_copy(lang)
+    direction = "rtl" if lang == "ar" else "ltr"
+    st.markdown(
+        branding.section_heading_html(copy["kicker"], copy["title"], copy["body"], lang),
+        unsafe_allow_html=True,
+    )
+    for start in range(0, len(projects), 3):
+        cols = st.columns(3, gap="large")
+        for col, project in zip(cols, projects[start:start + 3]):
+            with col:
+                title = str(project.get("unit_title") or project.get("project_name") or "Course")
+                domain = str(project.get("domain") or project.get("program_name") or "")
+                concept = str(project.get("target_concept") or "")
+                level = str(project.get("learner_level") or project.get("target_learners") or "")
+                duration = str(project.get("expected_duration") or "")
+                lesson_count = int(project.get("_lesson_count") or 0)
+                with st.container(border=True):
+                    st.markdown(
+                        f"<div dir='{direction}' style='min-height:220px'>"
+                        f"<div style='display:flex;justify-content:space-between;gap:.75rem;align-items:center;margin-bottom:.65rem'>"
+                        f"<span style='font-size:.78rem;font-weight:700;color:#1260d6'>{escape(copy['teacher'])}</span>"
+                        f"<span style='font-size:.76rem;font-weight:700;background:#e9f9f2;color:#087a58;border-radius:999px;padding:.25rem .55rem'>{escape(copy['available'])}</span>"
+                        f"</div><h3 style='margin:.2rem 0 .55rem'>{escape(title)}</h3>"
+                        f"<p style='min-height:3.2rem'>{escape(concept)}</p>"
+                        f"<div style='font-size:.82rem;opacity:.78'>{escape(domain)}</div>"
+                        f"<div style='font-size:.8rem;opacity:.72;margin-top:.45rem'>{escape(level)}"
+                        f"{' · ' + escape(duration) if duration else ''} · {lesson_count} {escape(copy['lessons'])}</div>"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(copy["open"], key=f"public_teacher_course_{int(project['id'])}", type="primary", use_container_width=True):
+                        _open_public_published_course(int(project["id"]))
+
+
 def render_role_selection() -> None:
     """Render the V4 premium multilingual startup landing page."""
     lang = i18n.current_lang(st)
@@ -1372,23 +1511,43 @@ def render_role_selection() -> None:
 
     st.markdown(branding.section_heading_html(t["paths_kicker"], t["paths_title"], t["paths_body"], lang), unsafe_allow_html=True)
 
+    public_projects = _public_ready_projects()
+    track_projects: Dict[str, Dict[str, Any]] = {}
+    for track_id in ("ml", "ai"):
+        for project in public_projects:
+            if _published_project_matches_track(project, track_id):
+                track_projects[track_id] = project
+                break
+
     selected = st.session_state.get("landing_track", "quantum")
     cols = st.columns(3, gap="large")
     track_order = ["quantum", "ml", "ai"]
     labels = {"quantum": t["start_quantum"], "ml": t["preview_ml"], "ai": t["preview_ai"]}
+    public_copy = _public_catalog_copy(lang)
     for col, track_id in zip(cols, track_order):
         with col:
-            st.markdown(branding.track_card_html(track_id, lang, selected == track_id), unsafe_allow_html=True)
-            if st.button(labels[track_id], key=f"landing_track_{track_id}", type="primary" if track_id == "quantum" else "secondary", use_container_width=True):
+            matched_project = track_projects.get(track_id)
+            status_override = public_copy["available"] if matched_project else None
+            st.markdown(
+                branding.track_card_html(track_id, lang, selected == track_id, status_override=status_override),
+                unsafe_allow_html=True,
+            )
+            button_label = public_copy["track_open"] if matched_project else labels[track_id]
+            button_type = "primary" if track_id == "quantum" or matched_project else "secondary"
+            if st.button(button_label, key=f"landing_track_{track_id}", type=button_type, use_container_width=True):
                 st.session_state.landing_track = track_id
                 st.session_state.selected_track = track_id
+                if matched_project:
+                    _open_public_published_course(int(matched_project["id"]))
                 if track_id == "quantum":
                     switch_role("student")
                 st.rerun()
 
-    if selected in {"ml", "ai"}:
+    if selected in {"ml", "ai"} and selected not in track_projects:
         track = branding.TRACKS[selected]
         st.markdown(branding.preview_panel_html(track, lang), unsafe_allow_html=True)
+
+    _render_public_published_courses(lang, public_projects)
 
     st.markdown(branding.section_heading_html(t["how_kicker"], t["how_title"], "", lang, extra_class="brand-how-heading"), unsafe_allow_html=True)
     st.markdown(branding.how_grid_html(lang), unsafe_allow_html=True)
@@ -1447,7 +1606,19 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     u = learning_ui_copy()
     lang = i18n.current_lang(st)
     if not student:
-        hero("3alimnIA Quantum", branding.TEXT[lang]["subheadline"])
+        pending_id = st.session_state.get("pending_published_course_project_id")
+        pending_project = None
+        if pending_id:
+            try:
+                pending_project = db.get_published_teacher_project(int(pending_id))
+            except Exception:
+                pending_project = None
+        if pending_project:
+            public_copy = _public_catalog_copy(lang)
+            pending_title = str(pending_project.get("unit_title") or pending_project.get("project_name") or "3alimnIA")
+            hero(pending_title, public_copy["signin"])
+        else:
+            hero("3alimnIA Quantum", branding.TEXT[lang]["subheadline"])
         st.markdown(f"<div class='v43-guest-intro' dir='{u['dir']}'><b>{escape(u['path_title'])}</b><span>{escape(u['path_sub'])}</span></div>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
@@ -1462,7 +1633,7 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         render_participant_code_box(st.session_state["new_participant_code"])
         if st.button(i18n.tr("I saved my participant code"), type="primary"):
             st.session_state.new_participant_code = None
-            set_student_page(next_student_page(student))
+            set_student_page(_student_destination_after_auth(student))
         return
     summary = db.progress_summary_df(len(content.LESSONS))
     row = summary[summary["student_id"] == student["id"]] if not summary.empty and "student_id" in summary.columns else pd.DataFrame()
@@ -1643,7 +1814,7 @@ def render_student_signin() -> None:
             st.session_state.student_id = student["id"]
             st.session_state.current_lesson_id = db.get_last_open_lesson(student["id"]) or first_incomplete_lesson_id(student["id"])
             st.success("Signed in successfully.")
-            set_student_page(next_student_page(student))
+            set_student_page(_student_destination_after_auth(student))
         else:
             st.error("Invalid identifier or password.")
 

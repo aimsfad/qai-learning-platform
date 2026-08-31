@@ -1,0 +1,24 @@
+ README.md                               |   2 [32m+[m[31m-[m
+ branding.py                             |  10 [32m+[m[31m-[m
+ db.py                                   |   2 [32m+[m[31m-[m
+ docs/V6_20_17_PUBLIC_CATALOG_SYNC_AR.md |  17 [32m++[m
+ docs/VALIDATION_V6_20_17_AR.md          |  13 [32m++[m
+ main_app.py                             | 183 [32m+++++++++++++++++[m[31m-[m
+ tatus                                   |   8 [32m+[m
+ treamlitsecrets.toml                    | 324 [32m++++++++++++++++++++++++++++++++[m
+ ui_v6.py                                | 139 [32m+++++++++++++[m[31m-[m
+ validate_v62017_public_catalog_sync.py  |  45 [32m+++++[m
+ 10 files changed, 728 insertions(+), 15 deletions(-)
+ README.md                                    |   2 [32m+[m[31m-[m
+ branding.py                                  |  10 [32m+[m[31m-[m
+ db.py                                        |   2 [32m+[m[31m-[m
+ docs/V6_20_17_PUBLIC_CATALOG_SYNC_AR.md      |  17 [32m++[m
+ docs/VALIDATION_V6_20_17_AR.md               |  13 [32m++[m
+ "e v6.20.17 public catalog sync\357\200\242" |  11 [32m+[m
+ h origin v6.20.17                            | 324 [32m+++++++++++++++++++++++++++[m
+ main_app.py                                  | 183 [32m++++++++++++++[m[31m-[m
+ tatus                                        |   8 [32m+[m
+ treamlitsecrets.toml                         | 324 [32m+++++++++++++++++++++++++++[m
+ ui_v6.py                                     | 139 [32m+++++++++++[m[31m-[m
+ validate_v62017_public_catalog_sync.py       |  45 [32m++++[m
+ 12 files changed, 1063 insertions(+), 15 deletions(-)

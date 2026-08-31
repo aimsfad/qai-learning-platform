@@ -1,4 +1,4 @@
-> Current release: **V6.20.16 — Final Publish Consistency Fix**
+> Current release: **V6.20.17 — Public Catalog Sync**
 
 # 3alimnIA V6.20.14 — Final Review & Publish Workflow
 

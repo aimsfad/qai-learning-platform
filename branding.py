@@ -301,14 +301,20 @@ def research_strip_html(language: str = "ar") -> str:
     ).strip()
 
 
-def track_card_html(track_id: str, language: str = "ar", selected: bool = False) -> str:
+def track_card_html(
+    track_id: str,
+    language: str = "ar",
+    selected: bool = False,
+    status_override: str | None = None,
+) -> str:
     track = TRACKS[track_id]
     selected_class = " brand-track-selected" if selected else ""
+    status = str(status_override or track['status'][language])
     return (
         f"<article class='brand-track-card brand-accent-{escape(track['accent'])}{selected_class}' dir='{TEXT[language]['direction']}'>"
         "<div class='brand-track-topline'>"
         f"<span class='brand-track-icon'>{escape(track['icon'])}</span>"
-        f"<span class='brand-track-status'>{escape(track['status'][language])}</span>"
+        f"<span class='brand-track-status'>{escape(status)}</span>"
         "</div>"
         f"<h3>{escape(track['name'][language])}</h3>"
         f"<p>{escape(track['description'][language])}</p>"

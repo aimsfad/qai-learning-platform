@@ -7,6 +7,7 @@ import streamlit as st
 
 import branding
 import content
+import db
 import i18n
 import router
 import ui_stability
@@ -414,6 +415,7 @@ def render_home() -> None:
     _render_stats_grid(direction, context="home")
     _section_heading(str(c["programs_kicker"]), str(c["programs_title"]), str(c["programs_body"]), direction)
     _program_cards(direction, compact=True)
+    _render_teacher_published_courses(direction, compact=True)
     _section_heading(str(c["engine_kicker"]), str(c["engine_title"]), str(c["engine_body"]), direction)
     st.markdown(
         f"<section class='v6-engine-grid' dir='{direction}'>" + "".join(
@@ -511,18 +513,139 @@ def _render_ai_studio_banner(c: Dict[str, object], direction: str) -> None:
     )
 
 
+def _teacher_catalog_copy(lang: str) -> Dict[str, str]:
+    return {
+        "ar": {
+            "kicker": "مقررات منشورة من الأساتذة",
+            "title": "مقررات متاحة الآن",
+            "body": "المقرر الذي يعتمد الأستاذ نسخته النهائية وينشره يظهر تلقائيًا هنا للمتعلمين.",
+            "teacher": "منشور من الأستاذ",
+            "available": "متاح الآن",
+            "lessons": "دروس",
+            "open": "استكشف المقرر",
+            "track_open": "ابدأ المقرر",
+        },
+        "fr": {
+            "kicker": "COURS PUBLIÉS PAR LES ENSEIGNANTS",
+            "title": "Cours disponibles maintenant",
+            "body": "Tout cours validé puis publié par un enseignant apparaît automatiquement ici pour les apprenants.",
+            "teacher": "Publié par un enseignant",
+            "available": "Disponible",
+            "lessons": "leçons",
+            "open": "Découvrir le cours",
+            "track_open": "Commencer le cours",
+        },
+        "en": {
+            "kicker": "TEACHER-PUBLISHED COURSES",
+            "title": "Courses available now",
+            "body": "Any course finally approved and published by a teacher appears here automatically for learners.",
+            "teacher": "Teacher-published",
+            "available": "Available now",
+            "lessons": "lessons",
+            "open": "Explore course",
+            "track_open": "Start course",
+        },
+    }.get(lang, {})
+
+
+def _public_ready_teacher_courses() -> List[Dict[str, object]]:
+    projects = db.published_teacher_projects_df()
+    if projects.empty:
+        return []
+    rows: List[Dict[str, object]] = []
+    for project in projects.to_dict("records"):
+        try:
+            readiness = db.teacher_project_runtime_readiness(int(project["id"]))
+        except Exception:
+            continue
+        if not readiness.get("ready"):
+            continue
+        item = dict(project)
+        item["_lesson_count"] = int(readiness.get("lesson_count") or 0)
+        rows.append(item)
+    return rows
+
+
+def _teacher_course_matches_track(project: Dict[str, object], track_id: str) -> bool:
+    text = " ".join(
+        str(project.get(key) or "")
+        for key in ("project_name", "domain", "program_name", "unit_title", "target_concept")
+    ).lower()
+    if track_id == "ml":
+        return any(token in text for token in ("machine learning", "تعلم الآلة", "التعلم الآلي", "apprentissage automatique"))
+    if track_id == "ai":
+        return any(token in text for token in ("artificial intelligence", "الذكاء الاصطناعي", "intelligence artificielle", "ai foundations"))
+    return False
+
+
+def _queue_teacher_course(project_id: int) -> None:
+    st.session_state.pending_published_course_project_id = int(project_id)
+    router.navigate(router.route_key("public", "student"))
+
+
+def _render_teacher_published_courses(direction: str, *, compact: bool = False) -> None:
+    projects = _public_ready_teacher_courses()
+    if not projects:
+        return
+    lang = i18n.current_lang(st)
+    copy = _teacher_catalog_copy(lang)
+    _section_heading(copy["kicker"], copy["title"], copy["body"], direction)
+    rows = projects[:3] if compact else projects
+    for start in range(0, len(rows), 3):
+        cols = st.columns(3, gap="large")
+        for col, project in zip(cols, rows[start:start + 3]):
+            with col:
+                title = str(project.get("unit_title") or project.get("project_name") or "Course")
+                domain = str(project.get("domain") or project.get("program_name") or "")
+                concept = str(project.get("target_concept") or "")
+                level = str(project.get("learner_level") or project.get("target_learners") or "")
+                duration = str(project.get("expected_duration") or "")
+                lesson_count = int(project.get("_lesson_count") or 0)
+                with st.container(border=True):
+                    st.markdown(
+                        f"<article class='v65-program-card featured' dir='{direction}' style='min-height:250px'>"
+                        f"<div class='v65-program-head'><div class='v65-program-icon'>EDU</div>"
+                        f"<div class='v65-program-status available'>{escape(copy['available'])}</div></div>"
+                        f"<span class='v65-path-label'>{escape(copy['teacher'])}</span>"
+                        f"<h3>{escape(title)}</h3><p class='v65-program-desc'>{escape(concept)}</p>"
+                        f"<div class='v65-program-audience'><span class='material-symbols-rounded'>school</span>"
+                        f"<small>{escape(domain)}</small><b>{escape(level)}</b></div>"
+                        f"<div class='v65-program-meta'><span><small>{escape(str(copy['lessons']))}</small><b>{lesson_count}</b></span>"
+                        f"<span><small>{escape(str(copy['teacher']))}</small><b>3alimnIA</b></span>"
+                        f"<span><small>{escape(str(copy['available']))}</small><b>{escape(duration or '—')}</b></span></div>"
+                        f"</article>",
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(copy["open"], key=f"v62017_public_course_{int(project['id'])}_{'home' if compact else 'programs'}", type="primary", use_container_width=True):
+                        _queue_teacher_course(int(project["id"]))
+
+
 def _program_cards(direction: str, compact: bool = False, track_ids: List[str] | None = None) -> None:
     c = copy()
     lang = i18n.current_lang(st)
     track_order = track_ids or ["quantum", "ml", "ai"]
+    published = _public_ready_teacher_courses()
+    track_projects: Dict[str, Dict[str, object]] = {}
+    for candidate_track in ("ml", "ai"):
+        for project in published:
+            if _teacher_course_matches_track(project, candidate_track):
+                track_projects[candidate_track] = project
+                break
     cols = st.columns(len(track_order), gap="large")
     path_labels = {"ar": "مسار تعلّم", "fr": "Parcours", "en": "Learning path"}
+    teacher_copy = _teacher_catalog_copy(lang)
     for index, (col, track_id) in enumerate(zip(cols, track_order), start=1):
         track = branding.TRACKS[track_id]
-        is_available = track_id == "quantum"
+        matched_project = track_projects.get(track_id)
+        is_available = track_id == "quantum" or matched_project is not None
         status = c["available"] if is_available else c["coming"]
         status_class = "available" if is_available else "coming"
-        modules_value = len(content.LESSONS) if is_available else "—"
+        if track_id == "quantum":
+            modules_value = len(content.LESSONS)
+        elif matched_project:
+            modules_value = int(matched_project.get("_lesson_count") or 0)
+        else:
+            modules_value = "—"
         feature_class = " featured" if is_available else ""
         with col:
             st.markdown(
@@ -549,19 +672,23 @@ def _program_cards(direction: str, compact: bool = False, track_ids: List[str] |
                 """,
                 unsafe_allow_html=True,
             )
-            label = c["start_program"] if is_available else c["view_program"]
+            if matched_project:
+                label = teacher_copy["track_open"]
+            else:
+                label = c["start_program"] if is_available else c["view_program"]
             if st.button(
                 str(label),
                 key=f"v65_program_{track_id}_{'compact' if compact else 'full'}",
                 type="primary" if is_available else "secondary",
                 use_container_width=True,
             ):
-                if is_available:
+                if matched_project:
+                    _queue_teacher_course(int(matched_project["id"]))
+                elif track_id == "quantum":
                     router.navigate(router.route_key("public", "student"))
                 else:
                     st.session_state["v6_preview_track"] = track_id
                     st.info(track["audience"][lang])
-
 
 def render_programs() -> None:
     c = copy(); direction = str(c["dir"])
@@ -578,6 +705,8 @@ def render_programs() -> None:
             st.rerun()
     visible = ["quantum", "ml", "ai"] if current == "all" else [current]
     _program_cards(direction, track_ids=visible)
+    if current == "all":
+        _render_teacher_published_courses(direction, compact=False)
     st.markdown("<div class='v6-program-detail-spacer'></div>", unsafe_allow_html=True)
     _section_heading(str(c["engine_kicker"]), str(c["engine_title"]), str(c["engine_body"]), direction)
     st.markdown(
