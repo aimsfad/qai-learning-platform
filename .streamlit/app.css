@@ -10343,3 +10343,220 @@ div[data-testid="stDownloadButton"] > button {
   }
 }
 
+/* ============================================================================
+   V6.20.23 — UI DENSITY + HEADER ACCENT SAFETY
+   Keeps the glass visual identity while preventing decorative blue accents from
+   colliding with headings in RTL/LTR and bringing learner content above fold.
+   ============================================================================ */
+
+/* Page-header decorative accent: use the header's own dir attribute rather than
+   relying on html[dir], because Streamlit reruns can leave the root direction
+   stale while an individual page is already RTL/LTR. */
+.v618-page-header .v618-page-header-accent {
+  width: 168px !important;
+  height: 168px !important;
+  top: -82px !important;
+  bottom: auto !important;
+  border-radius: 50% !important;
+  background: linear-gradient(145deg, #11bfd0 0%, #1767ff 78%) !important;
+  opacity: .96 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+.v618-page-header[dir="ltr"] .v618-page-header-accent {
+  right: -48px !important;
+  left: auto !important;
+}
+.v618-page-header[dir="rtl"] .v618-page-header-accent {
+  left: -48px !important;
+  right: auto !important;
+}
+.v618-page-header[dir="ltr"] .v618-page-header-copy {
+  padding-right: 92px !important;
+  padding-left: 0 !important;
+}
+.v618-page-header[dir="rtl"] .v618-page-header-copy {
+  padding-left: 92px !important;
+  padding-right: 0 !important;
+}
+.v618-page-header .v618-page-header-row,
+.v618-page-header .v618-page-header-copy,
+.v618-page-header h1,
+.v618-page-header p,
+.v618-page-header .v618-page-meta,
+.v618-page-header .v618-page-eyebrow {
+  position: relative !important;
+  z-index: 2 !important;
+}
+.v618-page-header-compact {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 10px !important;
+}
+.v618-page-header-compact h1 {
+  font-size: clamp(1.38rem, 1.9vw, 1.82rem) !important;
+  line-height: 1.18 !important;
+  margin: 3px 0 4px !important;
+}
+.v618-page-header-compact p {
+  font-size: .86rem !important;
+  line-height: 1.48 !important;
+}
+.v618-page-header-compact .v618-page-meta {
+  margin-top: 7px !important;
+}
+
+/* Learner tool dock: keep destinations available without letting navigation
+   dominate the viewport. Secondary tools stay collapsed until requested. */
+.st-key-v67_student_tool_dock {
+  margin-top: .22rem !important;
+  margin-bottom: .55rem !important;
+}
+.st-key-v67_student_tool_dock > [data-testid="stVerticalBlockBorderWrapper"] {
+  padding: .44rem .58rem !important;
+  border-radius: 14px !important;
+}
+.st-key-v67_student_tool_dock [data-testid="stVerticalBlock"] {
+  gap: .34rem !important;
+}
+.v67-student-dock-title {
+  min-height: 24px !important;
+  margin-bottom: .18rem !important;
+  font-size: .78rem !important;
+}
+.st-key-v67_student_tool_dock .stButton > button {
+  min-height: 36px !important;
+  padding: .28rem .48rem !important;
+  font-size: .74rem !important;
+  border-radius: 10px !important;
+}
+.st-key-v67_student_tool_dock [data-testid="stExpander"] {
+  margin-top: .08rem !important;
+}
+.st-key-v67_student_tool_dock [data-testid="stExpander"] summary {
+  min-height: 30px !important;
+  padding-top: .22rem !important;
+  padding-bottom: .22rem !important;
+  font-size: .75rem !important;
+}
+
+/* Published-course onboarding strip. */
+.v62019-course-flow {
+  gap: 7px !important;
+  margin: .28rem 0 .7rem !important;
+}
+.v62019-course-step {
+  min-height: 40px !important;
+  padding: .38rem .55rem !important;
+  border-radius: 13px !important;
+}
+.v62019-course-step span {
+  flex-basis: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  font-size: .70rem !important;
+}
+.v62019-course-step b {
+  font-size: .73rem !important;
+}
+
+/* Course-specific pre-test: compact question blocks with visible progress and
+   direction-safe technical text. */
+[data-testid="stForm"]:has(.v62023-pretest-marker) {
+  padding: .72rem .88rem .82rem !important;
+  border-radius: 16px !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker) > div,
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stVerticalBlock"] {
+  gap: .26rem !important;
+}
+.v62023-pretest-marker { display: none !important; }
+.v62023-pretest-question {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  align-items: start;
+  gap: .55rem;
+  margin: .28rem 0 .08rem !important;
+  padding-top: .44rem;
+  border-top: 1px solid rgba(148,163,184,.18);
+  color: #14233b;
+  unicode-bidi: plaintext;
+}
+.v62023-pretest-question:first-of-type { border-top: 0; padding-top: .12rem; }
+.v62023-pretest-question strong {
+  min-width: 0;
+  font-size: .94rem !important;
+  line-height: 1.5 !important;
+  font-weight: 760 !important;
+  unicode-bidi: plaintext;
+}
+.v62023-pretest-progress {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef5ff;
+  border: 1px solid #d3e2fb;
+  color: #1756b8;
+  font-size: .68rem;
+  font-weight: 800;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stRadio"] {
+  margin: 0 0 .34rem !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stRadio"] [role="radiogroup"] {
+  gap: .34rem !important;
+  flex-wrap: wrap !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stRadio"] [role="radiogroup"] > label {
+  min-height: 34px !important;
+  padding: .34rem .62rem !important;
+  border-radius: 10px !important;
+  font-size: .80rem !important;
+  line-height: 1.35 !important;
+}
+.v62023-pretest-question code,
+[data-testid="stForm"]:has(.v62023-pretest-marker) code,
+[data-testid="stForm"]:has(.v62023-pretest-marker) pre {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stFormSubmitButton"] {
+  margin-top: .30rem !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stFormSubmitButton"] button {
+  min-height: 40px !important;
+}
+
+@media (max-width: 760px) {
+  .v618-page-header .v618-page-header-accent {
+    width: 118px !important;
+    height: 118px !important;
+    top: -58px !important;
+  }
+  .v618-page-header[dir="ltr"] .v618-page-header-accent { right: -38px !important; }
+  .v618-page-header[dir="rtl"] .v618-page-header-accent { left: -38px !important; }
+  .v618-page-header[dir="ltr"] .v618-page-header-copy { padding-right: 52px !important; }
+  .v618-page-header[dir="rtl"] .v618-page-header-copy { padding-left: 52px !important; }
+  .v618-page-header-compact h1 { font-size: 1.34rem !important; }
+  .v62019-course-flow { grid-template-columns: 1fr 1fr !important; }
+  .v62023-pretest-question {
+    grid-template-columns: 1fr;
+    gap: .25rem;
+  }
+  .v62023-pretest-progress { justify-self: start; }
+  [data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stRadio"] [role="radiogroup"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+}
+
+/* ============================================================================
+   END V6.20.23
+   ============================================================================ */

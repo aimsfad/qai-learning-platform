@@ -486,9 +486,17 @@ def _render_course_pretest(
         st.info(copy["baseline_fallback"])
     answers: Dict[str, Any] = {}
     with st.form(f"v62019_course_pretest_{project_id}_{blueprint_run_id}"):
+        st.markdown("<span class='v62023-pretest-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
+        total_questions = len(questions)
         for idx, item in enumerate(questions, start=1):
             qid = str(item.get("id") or f"Q{idx}")
-            st.markdown(f"**{idx}. {escape(str(item.get('question') or ''))}**")
+            question_text = escape(str(item.get("question") or ""))
+            st.markdown(
+                f"<div class='v62023-pretest-question' dir='{_direction(lang)}'>"
+                f"<span class='v62023-pretest-progress'>{idx}/{total_questions}</span>"
+                f"<strong>{question_text}</strong></div>",
+                unsafe_allow_html=True,
+            )
             options = list(item.get("options") or [])
             if source_type == "self_report_baseline":
                 options = list(copy["baseline_levels"])

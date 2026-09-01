@@ -1,3 +1,12 @@
+# V6.20.23 — UI Density & Header Accent Safety
+
+- Prevented the blue decorative header accent from colliding with page titles by binding its side to each header's own RTL/LTR direction.
+- Reserved a safe inline gutter for headings and metadata around the decorative accent.
+- Reduced learner navigation height by keeping secondary learning tools collapsed until requested.
+- Compacted published-course workflow and course pre-test spacing.
+- Added visible per-question progress and direction-safe question rendering for technical/code content.
+- No enrollment, authentication, pre-test scoring, course identity, or lesson-progress logic changed.
+
 # V6.20.21 — Published course entry routing
 
 - Fixed the public teacher-course entry path so a selected course survives sign-in/account creation and opens the teacher-published runtime instead of the controlled Qiskit study.

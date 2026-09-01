@@ -334,8 +334,9 @@ def _render_student_tool_dock() -> None:
                     args=(page,) if available else (),
                 )
 
-        expanded = any(page == current for page, _, _ in secondary_tools)
-        with st.expander(copy["more"], expanded=expanded):
+        # V6.20.23: secondary learner tools remain available but collapsed by default
+        # so navigation does not consume most of the first viewport.
+        with st.expander(copy["more"], expanded=False):
             secondary_cols = st.columns(len(secondary_tools), gap="small")
             for col, (page, icon, label) in zip(secondary_cols, secondary_tools):
                 with col:
