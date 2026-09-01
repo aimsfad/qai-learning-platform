@@ -9546,3 +9546,536 @@ html[dir="rtl"] .v61-hero-copy h1 {
   }
   .v62010-stage-divider { margin: .12rem 0 .34rem !important; }
 }
+
+/* ============================================================================
+   3alimnIA — V14.0 PURE GLASS PREMIUM REDESIGN
+   ----------------------------------------------------------------------------
+   A total visual re-skin of the platform into a luxurious, bright, pure-white
+   glassmorphism language: frosted translucent surfaces, soft blue/turquoise
+   ambient light, and an electric-blue → pure-blue → turquoise brand gradient.
+
+   HOW THIS WORKS
+   - This section is appended AFTER every legacy stylesheet rule already in
+     this file, so it wins the cascade (plus !important where the legacy
+     rules also used !important, which is common in this codebase).
+   - Layer 1 redefines every legacy design-token (--qai-*, --v4-*, --v5-*,
+     --v6-*, --v61-*, --v618-*, --v620x-*, --brand-*) so anything already
+     written with var(...) instantly re-themes correctly.
+   - Layer 2 adds the ambient glass atmosphere (pure white base + soft blurred
+     color blobs, needed so frosted glass panels have something to "frost").
+   - Layer 3 applies glass styling to explicit high-value component families.
+     Broad class-substring descendant selectors are intentionally avoided so
+     nested content never becomes accidental cards.
+   - Layer 4 gives small "accent" elements (badges, chips, pills, tags,
+     buttons, CTAs, progress, icon dots) the brand gradient treatment.
+   - Layer 5 restyles native Streamlit widgets explicitly.
+   - Layer 6 polishes the specific, most-used component families by name.
+   The visual layer preserves existing layout and RTL logic. V6.20.18 adds only
+   a small mobile performance guard for blur/shadow intensity.
+   ============================================================================ */
+
+/* ---------- LAYER 0 · Fonts ---------- */
+/* Font imports remain at the top of the consolidated stylesheet. */
+
+/* ---------- LAYER 1 · Brand palette + full legacy token remap ---------- */
+:root{
+  /* --- new brand tokens --- */
+  --glass-white:#ffffff;
+  --glass-app-bg:#f6fbff;
+  --glass-surface:rgba(255,255,255,.60);
+  --glass-surface-strong:rgba(255,255,255,.82);
+  --glass-surface-soft:rgba(255,255,255,.40);
+  --glass-surface-frost:rgba(255,255,255,.70);
+  --glass-border:rgba(255,255,255,.65);
+  --glass-border-tint:rgba(13,92,255,.16);
+  --glass-border-strong:rgba(13,92,255,.26);
+  --glass-ink:#0a1830;
+  --glass-ink-soft:#3a4b6b;
+  --glass-muted:#5c6c88;
+  --glass-faint:#8b9ab4;
+
+  --turquoise:#04d9c7;
+  --turquoise-2:#22e8d4;
+  --turquoise-soft:#c8fdf6;
+  --blue-pure:#0a66ff;
+  --blue-pure-2:#2f7bff;
+  --blue-electric:#1f3dff;
+  --blue-electric-2:#0026e0;
+  --blue-deep:#001a8f;
+
+  --brand-gradient:linear-gradient(120deg,var(--turquoise) 0%,var(--blue-pure) 55%,var(--blue-electric) 100%);
+  --brand-gradient-soft:linear-gradient(120deg,rgba(4,217,199,.14) 0%,rgba(10,102,255,.14) 55%,rgba(31,61,255,.14) 100%);
+  --brand-gradient-text:linear-gradient(100deg,#049e91 0%,var(--blue-pure) 48%,var(--blue-electric) 100%);
+  --brand-gradient-ring:linear-gradient(135deg,var(--turquoise),var(--blue-electric));
+
+  --shadow-glass-xs:0 2px 10px rgba(10,40,110,.06);
+  --shadow-glass-sm:0 8px 24px rgba(10,60,150,.09);
+  --shadow-glass-md:0 16px 44px -8px rgba(10,60,150,.16);
+  --shadow-glass-lg:0 28px 74px -14px rgba(10,60,150,.22);
+  --shadow-glow-blue:0 10px 30px -6px rgba(15,70,255,.38);
+  --shadow-glow-turquoise:0 10px 26px -6px rgba(4,217,199,.35);
+  --shadow-inset-glass:inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(255,255,255,.28);
+
+  --radius-glass-sm:14px;
+  --radius-glass-md:20px;
+  --radius-glass-lg:28px;
+  --radius-glass-xl:34px;
+  --radius-glass-pill:999px;
+  --blur-glass:22px;
+  --blur-glass-lg:34px;
+
+  /* --- functional semantic (kept distinguishable) --- */
+  --state-success:#0aa06f;
+  --state-success-bg:rgba(10,160,111,.10);
+  --state-warning:#c9820a;
+  --state-warning-bg:rgba(201,130,10,.10);
+  --state-danger:#e0335a;
+  --state-danger-bg:rgba(224,51,90,.10);
+  --state-info:var(--blue-pure);
+  --state-info-bg:rgba(10,102,255,.10);
+}
+
+/* Remap every legacy token family so pre-existing var(--x) rules re-theme. */
+:root{
+  /* qai- family */
+  --qai-bg:var(--glass-app-bg); --qai-surface:var(--glass-surface-strong); --qai-surface-2:var(--glass-surface);
+  --qai-border:var(--glass-border-tint); --qai-text:var(--glass-ink); --qai-ink:var(--glass-ink);
+  --qai-muted:var(--glass-muted); --qai-body:var(--glass-ink-soft);
+  --qai-blue:var(--blue-pure); --qai-teal:var(--turquoise); --qai-accent:var(--blue-electric);
+  --qai-primary:var(--blue-pure); --qai-primary-dark:var(--blue-electric-2);
+  --qai-soft:var(--brand-gradient-soft); --qai-soft-blue:rgba(10,102,255,.08);
+  --qai-red:var(--state-danger); --qai-danger:var(--state-danger); --qai-success:var(--state-success);
+  --qai-warning:var(--state-warning); --qai-info:var(--state-info);
+  --qai-shadow-sm:var(--shadow-glass-xs); --qai-shadow-md:var(--shadow-glass-md);
+  --qai-radius-sm:var(--radius-glass-sm); --qai-radius-md:var(--radius-glass-md); --qai-radius-lg:var(--radius-glass-lg);
+
+  /* brand- family */
+  --brand-blue:var(--blue-pure); --brand-cyan:var(--turquoise); --brand-navy:var(--blue-electric-2);
+  --brand-ink:var(--glass-ink); --brand-muted:var(--glass-muted); --brand-border:var(--glass-border-tint);
+  --brand-gold:var(--turquoise-2); --brand-soft:var(--brand-gradient-soft);
+
+  /* v4- family */
+  --v4-bg:var(--glass-app-bg); --v4-bg-2:var(--glass-surface); --v4-surface:var(--glass-surface-strong);
+  --v4-surface-soft:var(--glass-surface); --v4-blue:var(--blue-pure); --v4-blue-2:var(--blue-electric);
+  --v4-cyan:var(--turquoise); --v4-gold:var(--turquoise-2); --v4-gold-soft:var(--turquoise-soft);
+  --v4-navy:var(--blue-electric-2); --v4-navy-2:var(--blue-deep); --v4-ink:var(--glass-ink);
+  --v4-body:var(--glass-ink-soft); --v4-muted:var(--glass-muted);
+  --v4-border:var(--glass-border-tint); --v4-border-strong:var(--glass-border-strong);
+  --v4-danger:var(--state-danger); --v4-success:var(--state-success); --v4-warning:var(--state-warning);
+  --v4-radius:var(--radius-glass-md); --v4-radius-lg:var(--radius-glass-lg); --v4-radius-sm:var(--radius-glass-sm);
+  --v4-shadow-sm:var(--shadow-glass-xs); --v4-shadow-md:var(--shadow-glass-md); --v4-shadow-lg:var(--shadow-glass-lg);
+
+  /* v5- family */
+  --v5-navy:var(--blue-electric-2); --v5-blue:var(--blue-pure); --v5-cyan:var(--turquoise); --v5-gold:var(--turquoise-2);
+  --v5-ink:var(--glass-ink); --v5-muted:var(--glass-muted); --v5-line:var(--glass-border-tint); --v5-surface:var(--glass-surface-strong);
+
+  /* v6- family */
+  --v6-bg:var(--glass-app-bg); --v6-surface:var(--glass-surface-strong); --v6-navy:var(--blue-electric-2);
+  --v6-navy-2:var(--blue-deep); --v6-blue:var(--blue-pure); --v6-blue-2:var(--blue-electric);
+  --v6-cyan:var(--turquoise); --v6-gold:var(--turquoise-2); --v6-ink:var(--glass-ink);
+  --v6-body:var(--glass-ink-soft); --v6-muted:var(--glass-muted);
+  --v6-border:var(--glass-border-tint); --v6-border-strong:var(--glass-border-strong);
+  --v6-soft:var(--brand-gradient-soft); --v6-success:var(--state-success);
+  --v6-radius:var(--radius-glass-md); --v6-radius-lg:var(--radius-glass-lg); --v6-radius-sm:var(--radius-glass-sm);
+  --v6-shadow:var(--shadow-glass-sm); --v6-shadow-lg:var(--shadow-glass-lg); --v6-shadow-sm:var(--shadow-glass-xs);
+
+  /* v61- family */
+  --v61-card:var(--glass-surface-strong); --v61-ice:var(--turquoise-soft); --v61-indigo:var(--blue-electric);
+  --v61-line:var(--glass-border-tint); --v61-purple:var(--blue-electric); --v61-shadow:var(--shadow-glass-sm); --v61-sky:var(--turquoise);
+
+  /* v618- family (already the "modern" light system — sharpen into glass) */
+  --v618-bg:var(--glass-app-bg); --v618-surface:var(--glass-surface-strong); --v618-blue:var(--blue-pure);
+  --v618-cyan:var(--turquoise); --v618-gold:var(--turquoise-2); --v618-green:var(--state-success);
+  --v618-red:var(--state-danger); --v618-navy:var(--blue-electric-2); --v618-midnight:var(--glass-ink);
+  --v618-ink:var(--glass-ink); --v618-body:var(--glass-ink-soft); --v618-muted:var(--glass-muted);
+  --v618-border:var(--glass-border-tint); --v618-soft:var(--brand-gradient-soft);
+  --v618-radius-sm:var(--radius-glass-sm); --v618-radius-md:var(--radius-glass-md); --v618-radius-lg:var(--radius-glass-lg);
+  --v618-shadow-sm:var(--shadow-glass-xs); --v618-shadow-md:var(--shadow-glass-md); --v618-shadow-lg:var(--shadow-glass-lg);
+
+  /* v6201 / v6202 / v6203 / v6204 / v6209 / v62010 families */
+  --v6201-surface:var(--glass-surface-strong); --v6201-border:var(--glass-border-tint);
+  --v6201-content:var(--glass-ink); --v6201-text:var(--glass-ink); --v6201-muted:var(--glass-muted);
+  --v6201-reading:var(--glass-ink-soft); --v6201-soft:var(--brand-gradient-soft);
+  --v6201-radius:var(--radius-glass-md); --v6201-shadow:var(--shadow-glass-sm); --v6201-focus:var(--blue-electric);
+  --v6202-body:var(--glass-ink-soft); --v6202-line:var(--glass-border-tint); --v6202-muted:var(--glass-muted);
+  --v6202-reading:var(--glass-ink-soft); --v6202-soft:var(--brand-gradient-soft); --v6202-text:var(--glass-ink);
+  --v6203-mobile-ink:var(--glass-ink); --v6203-mobile-line:var(--glass-border-tint);
+  --v6203-mobile-muted:var(--glass-muted); --v6203-mobile-soft:var(--brand-gradient-soft);
+  --v6204-mobile-bg:var(--glass-app-bg); --v6204-mobile-ink:var(--glass-ink); --v6204-mobile-line:var(--glass-border-tint);
+  --v6209-ink:var(--glass-ink); --v6209-ink-strong:var(--glass-ink); --v6209-muted:var(--glass-muted);
+  --v6209-surface-blue:rgba(10,102,255,.08); --v6209-surface-soft:var(--glass-surface);
+  --v62010-divider:var(--glass-border-tint);
+}
+
+/* ---------- LAYER 2 · Ambient glass atmosphere ---------- */
+html, body, .stApp{
+  background:var(--glass-app-bg) !important;
+}
+[data-testid="stAppViewContainer"]{
+  position:relative !important;
+  background:transparent !important;
+}
+[data-testid="stAppViewContainer"]::before{
+  content:"" !important;
+  position:fixed !important;
+  inset:-10% !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+  background:
+    radial-gradient(38rem 26rem at 8% -6%, rgba(4,217,199,.16), transparent 60%),
+    radial-gradient(42rem 30rem at 108% 6%, rgba(10,102,255,.15), transparent 62%),
+    radial-gradient(34rem 30rem at 18% 108%, rgba(31,61,255,.11), transparent 60%),
+    radial-gradient(30rem 26rem at 96% 96%, rgba(4,217,199,.12), transparent 60%),
+    #ffffff !important;
+}
+[data-testid="stAppViewContainer"] > .main{ position:relative !important; z-index:1 !important; }
+section[data-testid="stSidebar"]{ z-index:2 !important; }
+
+::selection{ background:rgba(10,102,255,.22) !important; color:var(--glass-ink) !important; }
+
+*{ scrollbar-width:thin; scrollbar-color:rgba(10,102,255,.35) transparent; }
+*::-webkit-scrollbar{ width:9px; height:9px; }
+*::-webkit-scrollbar-track{ background:transparent; }
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, rgba(4,217,199,.55), rgba(10,102,255,.6)) !important;
+  border-radius:999px !important;
+}
+
+:focus-visible{
+  outline:2px solid var(--blue-electric) !important;
+  outline-offset:2px !important;
+  box-shadow:0 0 0 5px rgba(31,61,255,.16) !important;
+  border-radius:8px;
+}
+
+/* ---------- LAYER 3 · Typography polish ---------- */
+h1,h2,h3,h4,h5,h6{ letter-spacing:-0.01em !important; color:var(--glass-ink) !important; }
+p, li, label, span, div{ color:inherit; }
+a{ color:var(--blue-pure) !important; }
+a:hover{ color:var(--blue-electric) !important; }
+
+.qai-hero h1, .v4-page-hero h1, .v618-page-header h1, [class*="page-hero"] h1,
+h1.qai-v11-title, .qai-v11-title, .qai-v101-title, [class*="hero"] > h1{
+  background:var(--brand-gradient-text) !important;
+  -webkit-background-clip:text !important;
+  background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
+  color:transparent !important;
+  font-weight:900 !important;
+}
+
+/* ---------- LAYER 4 · Safe glass surfaces ----------
+   V6.20.18 integration note:
+   The redesign source used a very broad class-substring descendant selector.
+   That could turn nested children into independent glass cards. We intentionally
+   target only high-value container families here; token remapping and the named
+   component rules below handle the rest without altering layout semantics.
+   -------------------------------------------------------------------------- */
+:is(
+  .qai-hero,.v4-page-hero,.v618-page-header,.qai-v11-preview,.qai-v101-map-hero,
+  .qai-v11-section,.qai-v11-side,.qai-v11-check,.qai-v11-no-legacy,
+  .v618-kpi-card,.v618-action-card,.v618-inline-notice,
+  .brand-panel,[class*="brand-panel"],
+  [class*="v6162-"][class*="card"],[class*="v6163-"][class*="card"]
+){
+  background:var(--glass-surface) !important;
+  border:1px solid var(--glass-border) !important;
+  outline:1px solid var(--glass-border-tint) !important;
+  outline-offset:-1px !important;
+  box-shadow:var(--shadow-glass-md),var(--shadow-inset-glass) !important;
+  backdrop-filter:blur(var(--blur-glass)) saturate(170%) !important;
+  -webkit-backdrop-filter:blur(var(--blur-glass)) saturate(170%) !important;
+  border-radius:var(--radius-glass-lg) !important;
+}
+
+:is(
+  .qai-hero,.v4-page-hero,.v618-page-header,.qai-v11-preview,.qai-v101-map-hero,
+  .qai-v11-section,.qai-v11-side,.v618-kpi-card,.v618-action-card,.v618-inline-notice
+) :is(h1,h2,h3,h4,h5,h6,p,span,strong,b,em,small,li,label,dt,dd){
+  color:var(--glass-ink);
+}
+
+/* ---------- LAYER 5 · Accent / gradient elements (buttons, badges, chips) --- */
+:is(
+  [class*="badge"],[class*="chip"],[class*="pill"],[class*="tag"],
+  [class*="cta"],[class*="index"],[class*="step-value"],[class*="node"]
+):not(input):not(select){
+  background:var(--brand-gradient-soft) !important;
+  color:var(--blue-electric-2) !important;
+  border:1px solid var(--glass-border-strong) !important;
+  border-radius:var(--radius-glass-pill) !important;
+  font-weight:700 !important;
+  box-shadow:none !important;
+}
+[class*="badge-active"],[class*="status-active"],[class*="v6186-status-success"],
+[class*="status-success"],.qai-ok{
+  background:var(--brand-gradient) !important; color:#ffffff !important; border-color:transparent !important;
+  box-shadow:var(--shadow-glow-blue) !important;
+}
+.qai-warn,[class*="status-warning"]{ background:var(--state-warning-bg) !important; color:#8a5a06 !important; border-color:rgba(201,130,10,.28) !important; }
+[class*="status-danger"],[class*="error-icon"]{ background:var(--state-danger-bg) !important; color:var(--state-danger) !important; border-color:rgba(224,51,90,.28) !important; }
+
+/* ---------- LAYER 6 · Native Streamlit widgets ---------- */
+
+/* Buttons */
+div.stButton > button, div.stDownloadButton > button, div.stLinkButton > a,
+[data-testid="stFormSubmitButton"] button, [data-testid^="stBaseButton"]{
+  background:var(--glass-surface-strong) !important;
+  color:var(--blue-pure) !important;
+  border:1.5px solid var(--glass-border-strong) !important;
+  border-radius:var(--radius-glass-pill) !important;
+  font-weight:700 !important;
+  box-shadow:var(--shadow-glass-xs) !important;
+  backdrop-filter:blur(14px) !important;
+  -webkit-backdrop-filter:blur(14px) !important;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease !important;
+}
+div.stButton > button:hover, div.stDownloadButton > button:hover, div.stLinkButton > a:hover,
+[data-testid="stFormSubmitButton"] button:hover{
+  transform:translateY(-1px) !important;
+  border-color:var(--blue-electric) !important;
+  box-shadow:var(--shadow-glow-blue) !important;
+  color:var(--blue-electric-2) !important;
+  background:#ffffff !important;
+}
+div.stButton > button[kind="primary"], button[kind="primary"],
+[data-testid="stBaseButton-primary"], [data-testid="stFormSubmitButton"] button[kind="primary"]{
+  background:var(--brand-gradient) !important;
+  color:#ffffff !important;
+  border:none !important;
+  box-shadow:var(--shadow-glow-blue) !important;
+}
+div.stButton > button[kind="primary"] *, button[kind="primary"] *,
+[data-testid="stBaseButton-primary"] *{ color:#ffffff !important; }
+div.stButton > button[kind="primary"]:hover, button[kind="primary"]:hover{
+  filter:brightness(1.07) !important; transform:translateY(-1px) !important;
+  box-shadow:0 16px 40px -8px rgba(15,70,255,.5) !important;
+}
+
+/* Text / number / textarea / select / date inputs */
+[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea, [data-testid="stDateInput"] input,
+[data-testid="stChatInput"] textarea, .stSelectbox [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div{
+  background:rgba(255,255,255,.72) !important;
+  border:1.5px solid var(--glass-border-tint) !important;
+  border-radius:var(--radius-glass-md) !important;
+  color:var(--glass-ink) !important;
+  box-shadow:var(--shadow-inset-glass) !important;
+  backdrop-filter:blur(10px) !important;
+}
+[data-testid="stTextInput"] input:focus, [data-testid="stNumberInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus, [data-testid="stChatInput"] textarea:focus{
+  border-color:var(--blue-electric) !important;
+  box-shadow:0 0 0 4px rgba(31,61,255,.14) !important;
+}
+
+/* Tabs */
+[data-testid="stTabs"]{ border-bottom:1px solid var(--glass-border-tint) !important; }
+[data-testid="stTabs"] button[role="tab"]{
+  color:var(--glass-muted) !important; font-weight:700 !important; background:transparent !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{
+  color:var(--blue-electric-2) !important;
+  box-shadow:inset 0 -3px 0 var(--blue-pure) !important;
+  background:linear-gradient(180deg, rgba(10,102,255,.08), transparent) !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *{ color:var(--blue-electric-2) !important; }
+
+/* Expander */
+[data-testid="stExpander"]{
+  background:var(--glass-surface) !important;
+  border:1px solid var(--glass-border) !important;
+  border-radius:var(--radius-glass-md) !important;
+  box-shadow:var(--shadow-glass-xs) !important;
+  backdrop-filter:blur(var(--blur-glass)) !important;
+  overflow:hidden !important;
+}
+[data-testid="stExpander"] summary{ color:var(--glass-ink) !important; font-weight:700 !important; }
+
+/* Sidebar / native rail */
+section[data-testid="stSidebar"]{
+  background:
+    radial-gradient(30rem 20rem at 15% -10%, rgba(4,217,199,.14), transparent 60%),
+    radial-gradient(26rem 22rem at 100% 100%, rgba(10,102,255,.12), transparent 60%),
+    rgba(255,255,255,.66) !important;
+  backdrop-filter:blur(var(--blur-glass-lg)) saturate(180%) !important;
+  -webkit-backdrop-filter:blur(var(--blur-glass-lg)) saturate(180%) !important;
+  border-inline-end:1px solid var(--glass-border) !important;
+  box-shadow:var(--shadow-glass-lg) !important;
+}
+section[data-testid="stSidebar"] *{ color:var(--glass-ink); }
+section[data-testid="stSidebar"] .stButton > button{
+  background:rgba(255,255,255,.55) !important;
+  border:1px solid var(--glass-border-tint) !important;
+}
+section[data-testid="stSidebar"] .stButton > button[kind="primary"]{
+  background:var(--brand-gradient) !important; color:#fff !important;
+}
+
+/* DataFrame / tables */
+[data-testid="stDataFrame"], [data-testid="stTable"]{
+  border-radius:var(--radius-glass-md) !important;
+  overflow:hidden !important;
+  border:1px solid var(--glass-border) !important;
+  box-shadow:var(--shadow-glass-sm) !important;
+}
+[data-testid="stDataFrame"] [role="columnheader"]{
+  background:linear-gradient(180deg, rgba(10,102,255,.10), rgba(4,217,199,.06)) !important;
+  color:var(--glass-ink) !important; font-weight:800 !important;
+}
+
+/* Metric */
+[data-testid="stMetric"]{
+  background:var(--glass-surface) !important;
+  border:1px solid var(--glass-border) !important;
+  border-radius:var(--radius-glass-lg) !important;
+  padding:1rem 1.1rem !important;
+  box-shadow:var(--shadow-glass-sm) !important;
+  backdrop-filter:blur(var(--blur-glass)) !important;
+}
+[data-testid="stMetricValue"]{
+  background:var(--brand-gradient-text) !important;
+  -webkit-background-clip:text !important; background-clip:text !important;
+  -webkit-text-fill-color:transparent !important; color:transparent !important;
+  font-weight:900 !important;
+}
+[data-testid="stMetricLabel"]{ color:var(--glass-muted) !important; font-weight:700 !important; }
+
+/* Alerts */
+[data-testid="stAlertContainer"]{
+  border-radius:var(--radius-glass-md) !important;
+  backdrop-filter:blur(14px) !important;
+  border:1px solid var(--glass-border) !important;
+  box-shadow:var(--shadow-glass-xs) !important;
+}
+[data-testid="stAlertContainer"][data-baseweb="notification"]{ background:var(--glass-surface) !important; }
+div[data-testid="stAlertContainer"]:has([data-testid="stAlertContentSuccess"]){ background:var(--state-success-bg) !important; border-color:rgba(10,160,111,.3) !important; }
+div[data-testid="stAlertContainer"]:has([data-testid="stAlertContentInfo"]){ background:var(--state-info-bg) !important; border-color:rgba(10,102,255,.3) !important; }
+div[data-testid="stAlertContainer"]:has([data-testid="stAlertContentWarning"]){ background:var(--state-warning-bg) !important; border-color:rgba(201,130,10,.3) !important; }
+div[data-testid="stAlertContainer"]:has([data-testid="stAlertContentError"]){ background:var(--state-danger-bg) !important; border-color:rgba(224,51,90,.3) !important; }
+
+/* Checkbox / radio / toggle / slider */
+[data-testid="stCheckbox"] span[data-checked="true"], [data-testid="stRadio"] label div:first-child[aria-checked="true"]{
+  background:var(--brand-gradient) !important; border-color:transparent !important;
+}
+[data-baseweb="slider"] div[role="slider"]{ background:var(--blue-electric) !important; box-shadow:0 0 0 6px rgba(31,61,255,.16) !important; }
+[data-baseweb="slider"] > div > div:nth-child(2){ background:var(--brand-gradient) !important; }
+[data-testid="stToggle"] div[aria-checked="true"]{ background:var(--brand-gradient) !important; }
+
+/* Progress bar */
+[data-testid="stProgress"] > div > div{ background:rgba(10,102,255,.10) !important; border-radius:999px !important; }
+[data-testid="stProgress"] > div > div > div{ background:var(--brand-gradient) !important; border-radius:999px !important; }
+
+/* File uploader */
+[data-testid="stFileUploaderDropzone"]{
+  background:var(--glass-surface) !important;
+  border:1.5px dashed var(--glass-border-strong) !important;
+  border-radius:var(--radius-glass-md) !important;
+  backdrop-filter:blur(var(--blur-glass)) !important;
+}
+
+/* Columns-with-border wrapper used across the app as a generic card */
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"] > [style]){
+  border-radius:var(--radius-glass-lg) !important;
+}
+div[data-testid="stVerticalBlockBorderWrapper"]{
+  border-color:var(--glass-border) !important;
+}
+
+/* ---------- LAYER 7 · Known high-value families, named explicitly ---------- */
+.qai-hero, .v4-page-hero, .qai-v11-preview, .qai-v101-map-hero{
+  background:var(--glass-surface-strong) !important;
+  border:1px solid var(--glass-border) !important;
+  box-shadow:var(--shadow-glass-lg) !important;
+  backdrop-filter:blur(var(--blur-glass-lg)) saturate(180%) !important;
+  border-radius:var(--radius-glass-xl) !important;
+}
+.v618-page-header-accent{ background:var(--brand-gradient) !important; }
+.v618-kpi-card{
+  background:var(--glass-surface) !important; border:1px solid var(--glass-border) !important;
+  border-radius:var(--radius-glass-lg) !important; box-shadow:var(--shadow-glass-sm) !important;
+  backdrop-filter:blur(var(--blur-glass)) !important;
+}
+.v618-action-card{
+  background:var(--glass-surface) !important; border:1px solid var(--glass-border) !important;
+  border-radius:var(--radius-glass-lg) !important; transition:transform .2s ease, box-shadow .2s ease !important;
+}
+.v618-action-card:hover{ transform:translateY(-3px) !important; box-shadow:var(--shadow-glow-blue) !important; }
+.v618-action-index{
+  background:var(--brand-gradient) !important; color:#fff !important;
+  border-radius:999px !important; box-shadow:var(--shadow-glow-blue) !important;
+}
+.v618-status-badge{ border-radius:999px !important; }
+.v618-inline-notice{
+  background:var(--glass-surface) !important; border-inline-start:4px solid var(--blue-pure) !important;
+  border-radius:var(--radius-glass-md) !important; backdrop-filter:blur(var(--blur-glass)) !important;
+}
+.qai-pill, .qai-stage-chip, .qai-concept-pill{
+  background:var(--brand-gradient-soft) !important; border:1px solid var(--glass-border-strong) !important;
+  color:var(--blue-electric-2) !important; border-radius:999px !important; font-weight:700 !important;
+}
+.qai-code-badge{ background:var(--glass-ink) !important; color:#eaf3ff !important; border-radius:10px !important; }
+.qai-node{ background:var(--glass-surface-strong) !important; border:1px solid var(--glass-border) !important; box-shadow:var(--shadow-glass-xs) !important; }
+.qai-node-blue{ border-color:var(--blue-pure) !important; }
+.qai-node-teal{ border-color:var(--turquoise) !important; }
+.qai-node-indigo{ border-color:var(--blue-electric) !important; }
+.brand-panel, [class*="brand-panel"]{
+  background:var(--glass-surface-strong) !important; border:1px solid var(--glass-border) !important;
+  border-radius:var(--radius-glass-lg) !important; box-shadow:var(--shadow-glass-md) !important;
+  backdrop-filter:blur(var(--blur-glass)) !important;
+}
+.qai-logo-badge{ background:var(--brand-gradient) !important; box-shadow:var(--shadow-glow-blue) !important; }
+
+/* Teacher studio (v6162 / v6163) + evaluator/status glass polish */
+[class*="v6162-"], [class*="v6163-"]{ --local-glass:1; }
+[class*="v6162-"][class*="card"], [class*="v6163-"][class*="card"]{
+  background:var(--glass-surface) !important; border:1px solid var(--glass-border) !important;
+  border-radius:var(--radius-glass-lg) !important; backdrop-filter:blur(var(--blur-glass)) !important;
+}
+
+/* ---------- V6.20.18 · Responsive glass performance guard ---------- */
+@media (max-width:760px){
+  :root{
+    --blur-glass:12px;
+    --blur-glass-lg:16px;
+    --radius-glass-lg:22px;
+    --radius-glass-xl:26px;
+    --shadow-glass-md:0 10px 28px -8px rgba(10,60,150,.14);
+    --shadow-glass-lg:0 16px 40px -12px rgba(10,60,150,.18);
+  }
+  [data-testid="stAppViewContainer"]::before{
+    inset:-4% !important;
+    background:
+      radial-gradient(24rem 18rem at 0% 0%, rgba(4,217,199,.11), transparent 62%),
+      radial-gradient(26rem 20rem at 100% 4%, rgba(10,102,255,.10), transparent 64%),
+      #ffffff !important;
+  }
+  [data-testid="stMetric"],[data-testid="stExpander"],[data-testid="stFileUploaderDropzone"],
+  .qai-hero,.v4-page-hero,.v618-page-header,.v618-kpi-card,.v618-action-card,
+  .qai-v11-preview,.qai-v11-section,.qai-v11-side{
+    backdrop-filter:blur(9px) saturate(145%) !important;
+    -webkit-backdrop-filter:blur(9px) saturate(145%) !important;
+  }
+  section[data-testid="stSidebar"]{
+    backdrop-filter:blur(12px) saturate(150%) !important;
+    -webkit-backdrop-filter:blur(12px) saturate(150%) !important;
+  }
+}
+
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .qai-hero,.v4-page-hero,.v618-page-header,.qai-v11-preview,.qai-v101-map-hero,
+  .qai-v11-section,.qai-v11-side,.v618-kpi-card,.v618-action-card,.v618-inline-notice,
+  [data-testid="stMetric"],[data-testid="stExpander"],[data-testid="stFileUploaderDropzone"]{
+    background:rgba(255,255,255,.94) !important;
+  }
+}
+
+/* ---------- LAYER 8 · Motion & accessibility courtesy ---------- */
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; }
+}
+
+/* ============================================================================
+   END V14.0 PURE GLASS PREMIUM REDESIGN
+   ============================================================================ */

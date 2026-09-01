@@ -14,7 +14,8 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.17-public-catalog-sync"
+APP_VERSION = "v6.20.18-glass-ui-integration"
+# APP_VERSION = "v6.20.17-public-catalog-sync"
 # APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
 # APP_VERSION = "v6.20.14-final-review-publish-workflow"
 # APP_VERSION = "v6.20.4-mobile-header-first-viewport"

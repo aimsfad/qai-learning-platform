@@ -1,4 +1,4 @@
-> Current release: **V6.20.17 — Public Catalog Sync**
+> Current release: **V6.20.18 — Glass UI Integration**
 
 # 3alimnIA V6.20.14 — Final Review & Publish Workflow
 
