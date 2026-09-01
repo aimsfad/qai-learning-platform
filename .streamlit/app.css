@@ -10598,3 +10598,98 @@ div[data-testid="stDownloadButton"] > button {
 /* ============================================================================
    END V6.20.24 CURRENT-MAIN COMPAT
    ============================================================================ */
+
+/* ============================================================================
+   V6.20.25.1 — CURRENT-MAIN PRE-TEST CARD LAYOUT STABILITY
+   ============================================================================ */
+.v62025-pretest-card-marker { display: none !important; }
+
+[data-testid="stForm"]:has(.v62023-pretest-marker)
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker) {
+  margin: .46rem 0 .58rem !important;
+  padding: .68rem .76rem .74rem !important;
+  border: 1px solid #d8e5f8 !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.96) !important;
+  box-shadow: 0 4px 14px rgba(26,75,140,.035) !important;
+  overflow: visible !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker)
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+  [data-testid="stVerticalBlock"] {
+  gap: .48rem !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker)
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+  .v62023-pretest-question {
+  margin: 0 !important;
+  padding: 0 0 .18rem !important;
+  border: 0 !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0,1fr) !important;
+  align-items: start !important;
+  gap: .5rem !important;
+  width: 100% !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker)
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+  .v62023-pretest-question strong {
+  min-width: 0 !important;
+  font-size: .91rem !important;
+  line-height: 1.55 !important;
+  overflow-wrap: anywhere !important;
+}
+[data-testid="stForm"]:has(.v62023-pretest-marker)
+  [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+  [data-testid="stRadio"] {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+@media (min-width: 761px) {
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+    [data-testid="stRadio"] [role="radiogroup"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    gap: .46rem .52rem !important;
+    align-items: stretch !important;
+  }
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+    [data-testid="stRadio"] [role="radiogroup"] > label {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: .42rem .62rem !important;
+    display: flex !important;
+    align-items: center !important;
+    white-space: normal !important;
+  }
+}
+
+@media (max-width: 760px) {
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+    .v62023-pretest-question {
+    grid-template-columns: 1fr !important;
+    gap: .28rem !important;
+  }
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.v62025-pretest-card-marker)
+    [data-testid="stRadio"] [role="radiogroup"] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: .38rem !important;
+  }
+}
+
+[data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stFormSubmitButton"] {
+  margin-top: .58rem !important;
+}
+/* ============================================================================
+   END V6.20.25.1
+   ============================================================================ */

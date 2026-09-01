@@ -440,7 +440,13 @@ def _markdown_diagnostic_questions(text: str) -> List[Dict[str, Any]]:
 
 
 def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> List[Dict[str, Any]]:
-    """Create a transparent duplicate-resistant self-report baseline."""
+    """Create a duplicate-resistant self-report baseline from instructional concepts.
+
+    V6.20.25.1 prefers explicit blueprint concepts, then outcome objects, then
+    learner-facing lesson titles. Broad course labels are intentionally avoided
+    here so a Python course does not ask the same idea three times under slightly
+    different titles.
+    """
     concepts: List[str] = []
     concept_keys: List[str] = []
 
@@ -449,6 +455,8 @@ def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> Lis
         if not clean:
             return
         key = _baseline_key(clean) or clean.casefold()
+        if not key:
+            return
         if any(key == existing or key in existing or existing in key for existing in concept_keys):
             return
         concepts.append(clean)
@@ -458,10 +466,20 @@ def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> Lis
         add(name)
         if len(concepts) >= 3:
             break
+
     if len(concepts) < 3:
-        for lesson in blueprint.get("lessons") or []:
+        for item in blueprint.get("outcomes") or []:
+            if isinstance(item, Mapping):
+                add(item.get("object") or item.get("object_text") or item.get("statement"))
+            else:
+                add(item)
+            if len(concepts) >= 3:
+                break
+
+    if len(concepts) < 3:
+        for index, lesson in enumerate(blueprint.get("lessons") or [], start=1):
             if isinstance(lesson, Mapping):
-                add(lesson.get("title"))
+                add(_display_lesson_title(lesson.get("title"), index))
             if len(concepts) >= 3:
                 break
 
@@ -524,23 +542,25 @@ def _render_course_pretest(
         for idx, item in enumerate(questions, start=1):
             qid = str(item.get("id") or f"Q{idx}")
             question_text = escape(str(item.get("question") or ""))
-            st.markdown(
-                f"<div class='v62023-pretest-question' dir='{_direction(lang)}'>"
-                f"<span class='v62023-pretest-progress'>{idx}/{total_questions}</span>"
-                f"<strong>{question_text}</strong></div>",
-                unsafe_allow_html=True,
-            )
             options = list(item.get("options") or [])
             if source_type == "self_report_baseline":
                 options = list(copy["baseline_levels"])
-            answers[qid] = st.radio(
-                str(item.get("question") or qid),
-                options=list(range(len(options))),
-                format_func=lambda pos, opts=options: opts[pos],
-                index=None,
-                key=f"v62019_pre_{project_id}_{blueprint_run_id}_{qid}",
-                label_visibility="collapsed",
-            )
+            with st.container(border=True):
+                st.markdown(
+                    f"<span class='v62025-pretest-card-marker' aria-hidden='true'></span>"
+                    f"<div class='v62023-pretest-question' dir='{_direction(lang)}'>"
+                    f"<span class='v62023-pretest-progress'>{idx}/{total_questions}</span>"
+                    f"<strong>{question_text}</strong></div>",
+                    unsafe_allow_html=True,
+                )
+                answers[qid] = st.radio(
+                    str(item.get("question") or qid),
+                    options=list(range(len(options))),
+                    format_func=lambda pos, opts=options: opts[pos],
+                    index=None,
+                    key=f"v62019_pre_{project_id}_{blueprint_run_id}_{qid}",
+                    label_visibility="collapsed",
+                )
         submitted = st.form_submit_button(copy["submit_course_pretest"], type="primary", use_container_width=True)
     if submitted:
         if len(answers) != len(questions) or any(value is None for value in answers.values()):

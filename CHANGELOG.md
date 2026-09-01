@@ -1,3 +1,11 @@
+# V6.20.25.1 — Current-main pre-test layout stability
+
+- Fixes the V6.20.24 desktop pre-test overlap using isolated question cards and a responsive 2×2 answer grid.
+- Uses structural anchors compatible with commit `5b02285` instead of requiring a project-aware fallback signature.
+- Improves fallback diagnostic diversity by preferring blueprint concepts, then outcome objects, then cleaned lesson titles.
+- Preserves the V6.20.23 blue-accent safety and V6.20.24 lesson-title cleanup.
+- No authentication, enrollment, scoring, database schema, version pinning, or learner-progress changes.
+
 # V6.20.24 — Final learner polish
 
 - Kept the V6.20.23 blue-accent collision fix and tightened the compact course header slightly.
