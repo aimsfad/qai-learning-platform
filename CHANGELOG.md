@@ -1,3 +1,9 @@
+# V6.20.20.1 — Security import compatibility hotfix
+
+- Restored `password_policy_error` and `password_is_strong` in `security.py` so the V6.20.20 `db.py` import contract is valid in production.
+- Unified new/reset password validation at 8+ characters with at least one letter and one digit while preserving verification of existing password hashes.
+- No database schema, learner enrollment, course progress, or published-course data is changed.
+
 # V6.20.20 - Learner account compatibility and UI density
 
 - Kept learner accounts global while preserving per-course enrollment and per-version course baselines.
