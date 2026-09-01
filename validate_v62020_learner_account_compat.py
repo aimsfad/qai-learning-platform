@@ -13,7 +13,7 @@ css_text = (ROOT / ".streamlit" / "app.css").read_text(encoding="utf-8")
 runtime_text = (ROOT / "published_course_runtime.py").read_text(encoding="utf-8")
 
 checks = {
-    "version": 'APP_VERSION = "v6.20.20-learner-account-compat-ui-density"' in db_text,
+    "version": ('APP_VERSION = "v6.20.21-published-course-entry-routing"' in db_text or 'APP_VERSION = "v6.20.20-learner-account-compat-ui-density"' in db_text),
     "global_student_auth": "def authenticate_student" in db_text and "published_course_enrollments" not in db_text[db_text.find("def authenticate_student"):db_text.find("def get_student_by_email")],
     "identifier_normalization": "def normalize_student_identifier" in db_text,
     "safe_auth_diagnostic": "def student_auth_diagnostic" in db_text,

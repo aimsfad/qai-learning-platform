@@ -107,6 +107,10 @@ def study_group_label(student: Optional[Dict[str, Any]]) -> str:
     if not student:
         return "single_arm"
     group = str(student.get("study_group") or "single_arm").strip().lower()
+    # General teacher-course accounts are not research-study participants and
+    # must never be auto-assigned to the Qiskit control/experimental arms.
+    if group == "general_course":
+        return group
     if control_group_enabled() and group not in {"control", "experimental"}:
         try:
             group = db.assign_study_group(int(student["id"]))
@@ -1327,6 +1331,11 @@ def student_pages_allowed(student: Optional[Dict[str, Any]]) -> List[str]:
     if not student:
         return ["Student Home", "Sign in", "Create account"]
     pages = ["Student Home", "Published Courses"]
+    # Accounts created from a teacher-published course are general platform
+    # learner accounts. They must not be forced into the controlled Qiskit
+    # research workflow merely because they opened the learner workspace.
+    if _is_general_course_account(student):
+        return pages
     if not has_research_consent(student["id"]):
         pages.append("Research Notice")
         return pages
@@ -1432,18 +1441,87 @@ def _open_public_published_course(project_id: int) -> None:
     switch_role("student")
 
 
-def _student_destination_after_auth(student: Dict[str, Any]) -> str:
+def _pending_published_project() -> Optional[Dict[str, Any]]:
+    """Return the teacher-published course selected before authentication.
+
+    The pending course is deliberately independent from the controlled Qiskit
+    pilot route.  It survives the public -> learner authentication transition
+    and is cleared only when the project no longer exists or when the learner
+    is successfully routed into that course.
+    """
     pending = st.session_state.get("pending_published_course_project_id")
-    if pending:
-        try:
-            project = db.get_published_teacher_project(int(pending))
-        except Exception:
-            project = None
-        if project:
-            st.session_state.published_course_project_id = int(pending)
-            st.session_state.pending_published_course_project_id = None
-            return "Published Courses"
+    if not pending:
+        return None
+    try:
+        project = db.get_published_teacher_project(int(pending))
+    except Exception:
+        project = None
+    if not project:
         st.session_state.pending_published_course_project_id = None
+        return None
+    return dict(project)
+
+
+def _is_general_course_account(student: Optional[Dict[str, Any]]) -> bool:
+    """Identify accounts created for teacher-published courses, not the pilot."""
+    if not student:
+        return False
+    return str(student.get("study_group") or "").strip().lower() == "general_course"
+
+
+def _published_course_access_copy(lang: str) -> Dict[str, str]:
+    return {
+        "ar": {
+            "guest_label": "مقرر منشور من الأستاذ",
+            "guest_help": "سجّل بحسابك الحالي أو أنشئ حسابًا واحدًا فقط. بعد الدخول ستعود مباشرة إلى هذا المقرر.",
+            "signin_title": "تسجيل الدخول إلى المقرر",
+            "signin_help": "استخدم حسابك الحالي في 3alimnIA؛ لا تنشئ حسابًا جديدًا لكل مقرر.",
+            "register_title": "إنشاء حساب متعلم",
+            "register_help": "هذا الحساب صالح لكل مقررات 3alimnIA. سيُقاس المستوى القبلي داخل كل مقرر عند الحاجة.",
+            "account_notice": "إذا كان لديك حساب سابق بهذا البريد، استخدم تسجيل الدخول بدل إنشاء حساب ثانٍ.",
+            "existing_account": "يوجد حساب نشط بهذا البريد بالفعل. سجّل الدخول بالحساب الموجود ثم عد إلى المقرر.",
+            "home_title": "فضاء المتعلم",
+            "home_help": "تابع مقررات الأساتذة التي التحقت بها من مكان واحد.",
+            "open_courses": "فتح مقرراتي",
+        },
+        "fr": {
+            "guest_label": "Cours publié par un enseignant",
+            "guest_help": "Connectez-vous avec votre compte existant ou créez un seul compte. Vous reviendrez ensuite directement à ce cours.",
+            "signin_title": "Connexion au cours",
+            "signin_help": "Utilisez votre compte 3alimnIA existant; ne créez pas un nouveau compte pour chaque cours.",
+            "register_title": "Créer un compte apprenant",
+            "register_help": "Ce compte fonctionne pour tous les cours 3alimnIA. Le diagnostic initial est propre à chaque cours lorsqu'il est requis.",
+            "account_notice": "Si vous avez déjà un compte avec cet e-mail, connectez-vous au lieu d'en créer un deuxième.",
+            "existing_account": "Un compte actif existe déjà avec cet e-mail. Connectez-vous avec ce compte puis revenez au cours.",
+            "home_title": "Espace apprenant",
+            "home_help": "Reprenez les cours enseignants auxquels vous êtes inscrit depuis un seul espace.",
+            "open_courses": "Ouvrir mes cours",
+        },
+        "en": {
+            "guest_label": "Teacher-published course",
+            "guest_help": "Sign in with your existing account or create one account only. After authentication you will return directly to this course.",
+            "signin_title": "Sign in to the course",
+            "signin_help": "Use your existing 3alimnIA account; do not create a new account for each course.",
+            "register_title": "Create learner account",
+            "register_help": "This account works across all 3alimnIA courses. Any baseline check is course-specific when required.",
+            "account_notice": "If you already have an account with this email, sign in instead of creating a second account.",
+            "existing_account": "An active account already exists with this email. Sign in with that account and return to the course.",
+            "home_title": "Learner workspace",
+            "home_help": "Resume the teacher-published courses you joined from one place.",
+            "open_courses": "Open my courses",
+        },
+    }.get(lang, {})
+
+
+def _student_destination_after_auth(student: Dict[str, Any]) -> str:
+    project = _pending_published_project()
+    if project:
+        project_id = int(project["id"])
+        st.session_state.published_course_project_id = project_id
+        st.session_state.pending_published_course_project_id = None
+        return "Published Courses"
+    if _is_general_course_account(student):
+        return "Published Courses"
     return next_student_page(student)
 
 
@@ -1565,7 +1643,11 @@ def render_student_app() -> None:
     if page not in student_pages_allowed(student):
         st.session_state.student_page = "Student Home"
         page = "Student Home"
-    if student and page not in {"Sign in", "Create account"}:
+    if (
+        student
+        and page not in {"Sign in", "Create account", "Published Courses"}
+        and not _is_general_course_account(student)
+    ):
         render_student_top_progress(student, page)
     if page == "Student Home":
         render_student_home(student)
@@ -1606,20 +1688,22 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
     u = learning_ui_copy()
     lang = i18n.current_lang(st)
     if not student:
-        pending_id = st.session_state.get("pending_published_course_project_id")
-        pending_project = None
-        if pending_id:
-            try:
-                pending_project = db.get_published_teacher_project(int(pending_id))
-            except Exception:
-                pending_project = None
+        pending_project = _pending_published_project()
         if pending_project:
             public_copy = _public_catalog_copy(lang)
+            access_copy = _published_course_access_copy(lang)
             pending_title = str(pending_project.get("unit_title") or pending_project.get("project_name") or "3alimnIA")
-            hero(pending_title, public_copy["signin"])
+            pending_concept = str(pending_project.get("target_concept") or pending_project.get("domain") or "")
+            hero(pending_title, public_copy["signin"], compact=True)
+            st.markdown(
+                f"<div class='v43-guest-intro' dir='{u['dir']}'><b>{escape(access_copy['guest_label'])}</b>"
+                f"<span>{escape(pending_concept or access_copy['guest_help'])}</span>"
+                f"<small>{escape(access_copy['guest_help'])}</small></div>",
+                unsafe_allow_html=True,
+            )
         else:
             hero("3alimnIA Quantum", branding.TEXT[lang]["subheadline"])
-        st.markdown(f"<div class='v43-guest-intro' dir='{u['dir']}'><b>{escape(u['path_title'])}</b><span>{escape(u['path_sub'])}</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='v43-guest-intro' dir='{u['dir']}'><b>{escape(u['path_title'])}</b><span>{escape(u['path_sub'])}</span></div>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
             if st.button(i18n.tr("Sign in"), type="primary", use_container_width=True):
@@ -1634,6 +1718,12 @@ def render_student_home(student: Optional[Dict[str, Any]]) -> None:
         if st.button(i18n.tr("I saved my participant code"), type="primary"):
             st.session_state.new_participant_code = None
             set_student_page(_student_destination_after_auth(student))
+        return
+    if _is_general_course_account(student):
+        access_copy = _published_course_access_copy(lang)
+        hero(access_copy["home_title"], access_copy["home_help"], compact=True)
+        if st.button(access_copy["open_courses"], type="primary", use_container_width=True):
+            set_student_page("Published Courses")
         return
     summary = db.progress_summary_df(len(content.LESSONS))
     row = summary[summary["student_id"] == student["id"]] if not summary.empty and "student_id" in summary.columns else pd.DataFrame()
@@ -1788,14 +1878,20 @@ def render_password_reset_form(token: str) -> None:
 
 def render_student_signin() -> None:
     lang = i18n.current_lang(st)
-    hero("Student Sign in", "Access your existing participant account.", compact=True)
+    pending_project = _pending_published_project()
+    access_copy = _published_course_access_copy(lang)
+    if pending_project:
+        pending_title = str(pending_project.get("unit_title") or pending_project.get("project_name") or "3alimnIA")
+        hero(access_copy["signin_title"], f"{pending_title} — {access_copy['signin_help']}", compact=True)
+    else:
+        hero("Student Sign in", "Access your existing participant account.", compact=True)
     _, form_col, _ = ui_stability.columns([1, 1.25, 1], gap="large", vertical_alignment="top")
     with form_col:
         with st.container(border=True, key="v618_student_auth_card"):
             st.markdown("<span class='v618-auth-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
             global_ui.render_section_header(
-                {"ar": "تسجيل دخول المتعلم", "fr": "Connexion apprenant", "en": "Learner sign in"}.get(lang, "Learner sign in"),
-                {"ar": "أدخل رمز المشاركة أو البريد الإلكتروني للعودة إلى مسارك.", "fr": "Utilisez votre code participant ou votre e-mail pour reprendre votre parcours.", "en": "Use your participant code or email to resume your learning path."}.get(lang, ""),
+                access_copy["signin_title"] if pending_project else {"ar": "تسجيل دخول المتعلم", "fr": "Connexion apprenant", "en": "Learner sign in"}.get(lang, "Learner sign in"),
+                access_copy["signin_help"] if pending_project else {"ar": "أدخل رمز المشاركة أو البريد الإلكتروني للعودة إلى مسارك.", "fr": "Utilisez votre code participant ou votre e-mail pour reprendre votre parcours.", "en": "Use your participant code or email to resume your learning path."}.get(lang, ""),
                 lang=lang,
             )
             with st.form("student_signin_form"):
@@ -1821,15 +1917,24 @@ def render_student_signin() -> None:
 
 def render_student_registration() -> None:
     lang = i18n.current_lang(st)
-    hero("Create Student Account", "Register as a participant before starting the pilot study.")
-    access_required = registration_code_required()
+    pending_project = _pending_published_project()
+    course_registration = bool(pending_project)
+    access_copy = _published_course_access_copy(lang)
+    if course_registration:
+        pending_title = str(pending_project.get("unit_title") or pending_project.get("project_name") or "3alimnIA")
+        hero(access_copy["register_title"], f"{pending_title} — {access_copy['register_help']}", compact=True)
+        access_required = ""
+    else:
+        hero("Create Student Account", "Register as a participant before starting the pilot study.")
+        access_required = registration_code_required()
+
     _, register_col, _ = ui_stability.columns([.5, 2.15, .5], gap="large", vertical_alignment="top")
     with register_col:
         with st.container(border=True, key="v618_student_registration_card"):
             st.markdown("<span class='v618-auth-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
             global_ui.render_section_header(
-                {"ar": "إنشاء حساب متعلم", "fr": "Créer un compte apprenant", "en": "Create a learner account"}.get(lang, "Create a learner account"),
-                {"ar": "أنشئ حسابًا واحدًا واحفظ رمز المشاركة قبل بدء المسار.", "fr": "Créez un seul compte et conservez votre code participant.", "en": "Create one account and keep your participant code before starting."}.get(lang, ""),
+                access_copy["register_title"] if course_registration else {"ar": "إنشاء حساب متعلم", "fr": "Créer un compte apprenant", "en": "Create a learner account"}.get(lang, "Create a learner account"),
+                access_copy["register_help"] if course_registration else {"ar": "أنشئ حسابًا واحدًا واحفظ رمز المشاركة قبل بدء المسار.", "fr": "Créez un seul compte et conservez votre code participant.", "en": "Create one account and keep your participant code before starting."}.get(lang, ""),
                 lang=lang,
             )
             with st.form("student_register_form"):
@@ -1840,18 +1945,30 @@ def render_student_registration() -> None:
                     institution = st.text_input("Institution")
                 with col2:
                     academic_level = st.selectbox("Academic level", ["Licence", "Master", "PhD", "Other"])
-                    render_self_eval_scale_help()
-                    prior_python = st.slider("Prior Python level", 0, 3, 1, help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use.")
-                    prior_quantum = st.slider("Prior quantum programming knowledge", 0, 3, 0, help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use.")
+                    if course_registration:
+                        prior_python = 0
+                        prior_quantum = 0
+                        global_ui.render_inline_notice(
+                            access_copy["guest_label"],
+                            access_copy["account_notice"],
+                            lang=lang, tone="info",
+                        )
+                    else:
+                        render_self_eval_scale_help()
+                        prior_python = st.slider("Prior Python level", 0, 3, 1, help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use.")
+                        prior_quantum = st.slider("Prior quantum programming knowledge", 0, 3, 0, help="0 = no prior knowledge; 1 = basic awareness; 2 = some understanding; 3 = confident use.")
                 password = st.text_input("Password", type="password")
                 password2 = st.text_input("Confirm password", type="password")
                 study_code = st.text_input("Study registration access code", type="password") if access_required else ""
-                global_ui.render_inline_notice(
-                    {"ar": "إشعار البحث", "fr": "Information de recherche", "en": "Research notice"}.get(lang, "Research notice"),
-                    {"ar": "تُسجل نتائج التعلم والتفاعلات لأغراض التحليل البحثي وفق سياسة الدراسة.", "fr": "Les résultats et interactions sont enregistrés pour l’analyse de l’étude.", "en": "Learning outcomes and interactions are recorded for research analysis."}.get(lang, ""),
-                    lang=lang, tone="info",
-                )
-                consent = st.checkbox("I have read the study notice and agree to participate in this pilot evaluation.")
+                if course_registration:
+                    consent = True
+                else:
+                    global_ui.render_inline_notice(
+                        {"ar": "إشعار البحث", "fr": "Information de recherche", "en": "Research notice"}.get(lang, "Research notice"),
+                        {"ar": "تُسجل نتائج التعلم والتفاعلات لأغراض التحليل البحثي وفق سياسة الدراسة.", "fr": "Les résultats et interactions sont enregistrés pour l’analyse de l’étude.", "en": "Learning outcomes and interactions are recorded for research analysis."}.get(lang, ""),
+                        lang=lang, tone="info",
+                    )
+                    consent = st.checkbox("I have read the study notice and agree to participate in this pilot evaluation.")
                 submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
     if submitted:
         try:
@@ -1864,17 +1981,39 @@ def render_student_registration() -> None:
             if not consent:
                 st.error("Please confirm the study notice before creating an account.")
                 return
-            assigned_group = "pending" if control_group_enabled() else None
-            student = db.create_student(full_name, email, institution, academic_level, prior_python, prior_quantum, password, study_group=("" if assigned_group else "single_arm"), preferred_language=i18n.current_lang(st))
-            if control_group_enabled():
-                group = db.assign_study_group(student["id"])
-                student = db.get_student(student["id"]) or student
-                db.log_event(student["id"], "system", "study_group_assigned", json.dumps({"study_group": group, "method": "balanced_alternation"}))
-            consent_text = "Participant confirmed that answers and AI interactions may be recorded for the pilot evaluation."
-            db.save_consent(student["id"], consent_text, consent_version="v1")
-            db.log_event(student["id"], "student", "account_created", "Student created account and confirmed consent notice")
+            if course_registration and db.get_student_by_email(email):
+                st.error(access_copy["existing_account"])
+                return
+
+            if course_registration:
+                student = db.create_student(
+                    full_name, email, institution, academic_level,
+                    prior_python, prior_quantum, password,
+                    study_group="general_course",
+                    preferred_language=i18n.current_lang(st),
+                )
+                db.log_event(
+                    student["id"], "student", "course_account_created",
+                    json.dumps({"project_id": int(pending_project["id"])}, ensure_ascii=False),
+                )
+            else:
+                assigned_group = "pending" if control_group_enabled() else None
+                student = db.create_student(
+                    full_name, email, institution, academic_level,
+                    prior_python, prior_quantum, password,
+                    study_group=("" if assigned_group else "single_arm"),
+                    preferred_language=i18n.current_lang(st),
+                )
+                if control_group_enabled():
+                    group = db.assign_study_group(student["id"])
+                    student = db.get_student(student["id"]) or student
+                    db.log_event(student["id"], "system", "study_group_assigned", json.dumps({"study_group": group, "method": "balanced_alternation"}))
+                consent_text = "Participant confirmed that answers and AI interactions may be recorded for the pilot evaluation."
+                db.save_consent(student["id"], consent_text, consent_version="v1")
+                db.log_event(student["id"], "student", "account_created", "Student created account and confirmed consent notice")
+
             st.session_state.student_id = student["id"]
-            st.session_state.current_lesson_id = content.LESSONS[0]["id"]
+            st.session_state.current_lesson_id = None if course_registration else content.LESSONS[0]["id"]
             st.session_state.new_participant_code = student["participant_code"]
             st.success(f"Account created. Your participant code is: {student['participant_code']}")
             set_student_page("Student Home")

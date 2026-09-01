@@ -33,6 +33,11 @@ VALIDATORS = [
     "validate_v6203_mobile_public_shell.py",
     "validate_v6204_mobile_header_first_viewport.py",
     "validate_v6205_mobile_header_shell.py",
+    "validate_release_security.py",
+    "validate_v62019_course_enrollment_baseline.py",
+    "validate_v62020_learner_account_compat.py",
+    "validate_v62020_security_hotfix.py",
+    "validate_v62021_published_course_entry_routing.py",
 ]
 
 

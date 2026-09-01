@@ -1,3 +1,11 @@
+# V6.20.21 — Published course entry routing
+
+- Fixed the public teacher-course entry path so a selected course survives sign-in/account creation and opens the teacher-published runtime instead of the controlled Qiskit study.
+- Added a general learner account mode for teacher-published courses without Qiskit-specific self-rating, study access code, or pilot consent.
+- Existing emails are directed to sign in rather than create duplicate learner accounts.
+- General-course accounts no longer render the Qiskit study progress bar/home by default.
+- Added V6.20.21 routing regression checks and wired V6.20.19–V6.20.21/security validators into the current release chain.
+
 # V6.20.20.1 — Security import compatibility hotfix
 
 - Restored `password_policy_error` and `password_is_strong` in `security.py` so the V6.20.20 `db.py` import contract is valid in production.
