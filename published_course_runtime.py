@@ -9,6 +9,8 @@ from the controlled Qiskit research tables.
 
 from __future__ import annotations
 
+import json
+import re
 from html import escape
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
@@ -109,6 +111,18 @@ def _copy(lang: str) -> Dict[str, str]:
             "save_before_complete": "احفظ محاولة مستقلة واكتب تأملًا قصيرًا قبل إتمام الدرس.",
             "words": "كلمة", "chars": "حرف", "evidence_coverage": "تغطية الأدلة",
             "activity": "نشاط", "assessment": "تقييم",
+            "enroll_title": "التسجيل في هذا المقرر",
+            "enroll_help": "لا تحتاج إلى إنشاء حساب جديد. ينشئ النظام تسجيلًا مستقلًا لهذا المقرر ثم يطلب اختبارًا قبليًا خاصًا به قبل فتح الدروس.",
+            "enroll_action": "سجّل في المقرر وابدأ الاختبار القبلي",
+            "course_pretest": "الاختبار القبلي للمقرر",
+            "course_pretest_help": "قياس تشخيصي قصير قبل بدء التعلم. لا يؤثر في درجتك الأكاديمية ويُحفظ منفصلًا لكل مقرر وإصداره.",
+            "submit_course_pretest": "إرسال الاختبار القبلي وبدء التعلم",
+            "pretest_done": "أكملت الاختبار القبلي لهذا المقرر.",
+            "pretest_score": "النتيجة التشخيصية",
+            "answer_all": "أجب عن جميع أسئلة الاختبار القبلي قبل المتابعة.",
+            "baseline_fallback": "تعذر استخراج أسئلة اختيار من متعدد من حزمة التقييم القديمة، لذلك تستخدم هذه النسخة خط أساس تشخيصيًا لمستوى الألفة مع مفاهيم المقرر.",
+            "baseline_levels": ["لا أعرفه بعد", "أتعرف عليه فقط", "أستطيع شرحه بشكل أساسي", "أستطيع تطبيقه بثقة"],
+            "workflow_account": "الحساب", "workflow_enroll": "التسجيل في المقرر", "workflow_pretest": "الاختبار القبلي", "workflow_learn": "التعلم",
         },
         "fr": {
             "catalog": "Cours des enseignants",
@@ -156,6 +170,18 @@ def _copy(lang: str) -> Dict[str, str]:
             "save_before_complete": "Enregistrez une tentative autonome et une courte réflexion avant de terminer la leçon.",
             "words": "mots", "chars": "caractères", "evidence_coverage": "couverture des preuves",
             "activity": "Activité", "assessment": "Évaluation",
+            "enroll_title": "Inscription à ce cours",
+            "enroll_help": "Il n'est pas nécessaire de créer un nouveau compte. La plateforme crée une inscription distincte à ce cours puis exige un pré-test propre au cours avant l'accès aux leçons.",
+            "enroll_action": "S'inscrire au cours et commencer le pré-test",
+            "course_pretest": "Pré-test du cours",
+            "course_pretest_help": "Court diagnostic avant l'apprentissage. Il ne constitue pas une note académique et reste séparé pour chaque cours et version.",
+            "submit_course_pretest": "Envoyer le pré-test et commencer",
+            "pretest_done": "Vous avez terminé le pré-test de ce cours.",
+            "pretest_score": "Résultat diagnostique",
+            "answer_all": "Répondez à toutes les questions avant de continuer.",
+            "baseline_fallback": "Les QCM du dossier d'évaluation historique n'ont pas pu être extraits ; un diagnostic de familiarité avec les concepts est utilisé pour cette version.",
+            "baseline_levels": ["Je ne connais pas encore", "Je reconnais seulement", "Je peux l'expliquer simplement", "Je peux l'appliquer avec confiance"],
+            "workflow_account": "Compte", "workflow_enroll": "Inscription", "workflow_pretest": "Pré-test", "workflow_learn": "Apprentissage",
         },
         "en": {
             "catalog": "Teacher courses",
@@ -203,6 +229,18 @@ def _copy(lang: str) -> Dict[str, str]:
             "save_before_complete": "Save an independent attempt and a short reflection before completing the lesson.",
             "words": "words", "chars": "chars", "evidence_coverage": "evidence coverage",
             "activity": "Activity", "assessment": "Assessment",
+            "enroll_title": "Enroll in this course",
+            "enroll_help": "You do not need another account. The platform creates a separate enrollment for this course and requires a course-specific pre-test before lessons open.",
+            "enroll_action": "Enroll and start the pre-test",
+            "course_pretest": "Course pre-test",
+            "course_pretest_help": "A short diagnostic before learning. It is not an academic grade and is stored separately for each course and pinned version.",
+            "submit_course_pretest": "Submit pre-test and start learning",
+            "pretest_done": "You completed the pre-test for this course.",
+            "pretest_score": "Diagnostic score",
+            "answer_all": "Answer every pre-test item before continuing.",
+            "baseline_fallback": "Multiple-choice diagnostics could not be extracted from the legacy assessment package, so this version uses a familiarity baseline for the course concepts.",
+            "baseline_levels": ["I do not know this yet", "I only recognize it", "I can explain it basically", "I can apply it confidently"],
+            "workflow_account": "Account", "workflow_enroll": "Course enrollment", "workflow_pretest": "Pre-test", "workflow_learn": "Learning",
         },
     }
     return values.get(lang, values["en"])
@@ -282,6 +320,211 @@ def _approved_excerpt(blocks: Iterable[Mapping[str, Any]], lang: str, max_chars:
         chunks.append(clean[:remaining])
         used += len(chunks[-1])
     return "\n\n".join(chunks)
+
+
+
+def _json_diagnostic_questions(text: str) -> List[Dict[str, Any]]:
+    """Extract the machine-readable diagnostic block requested by newer prompts."""
+    candidates = re.findall(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", str(text or ""), flags=re.I | re.S)
+    for raw in candidates:
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            continue
+        if isinstance(payload, Mapping):
+            values = payload.get("course_pretest") or payload.get("diagnostic_questions") or payload.get("questions")
+        else:
+            values = payload
+        if not isinstance(values, list):
+            continue
+        parsed: List[Dict[str, Any]] = []
+        for index, row in enumerate(values[:6], start=1):
+            if not isinstance(row, Mapping):
+                continue
+            question = str(row.get("question") or row.get("prompt") or "").strip()
+            options = [str(x).strip() for x in (row.get("options") or []) if str(x).strip()]
+            correct = row.get("correct_index")
+            if correct is None:
+                answer = str(row.get("correct_answer") or "").strip()
+                if answer:
+                    letter = answer[:1].upper()
+                    if letter in "ABCD" and ord(letter) - ord("A") < len(options):
+                        correct = ord(letter) - ord("A")
+                    else:
+                        try:
+                            correct = options.index(answer)
+                        except Exception:
+                            correct = None
+            if question and len(options) >= 2 and correct is not None:
+                parsed.append({
+                    "id": str(row.get("id") or f"D{index}"),
+                    "question": question,
+                    "options": options,
+                    "correct_index": int(correct),
+                    "objective": str(row.get("learning_objective") or row.get("objective") or ""),
+                })
+        if len(parsed) >= 3:
+            return parsed[:3]
+    return []
+
+
+def _markdown_diagnostic_questions(text: str) -> List[Dict[str, Any]]:
+    """Best-effort parser for assessment packages produced before the JSON contract."""
+    clean = str(text or "").replace("\r", "")
+    if not clean.strip():
+        return []
+    start = re.search(r"(?im)^(?:#{1,5}\s*)?.*(?:diagnostic|تشخيص|diagnostique).*$", clean)
+    if not start:
+        return []
+    section = clean[start.start():]
+    next_heading = re.search(r"(?im)^#{1,3}\s+(?!.*(?:diagnostic|تشخيص|diagnostique)).+$", section[1:])
+    if next_heading:
+        section = section[: next_heading.start() + 1]
+    blocks = re.split(r"(?im)(?=^(?:#{2,6}\s*)?(?:D\s*\d+|Q\s*\d+|\d+[.)]|السؤال\s*\d+|Question\s*\d+))", section)
+    parsed: List[Dict[str, Any]] = []
+    for idx, block in enumerate(blocks, start=1):
+        if not block.strip():
+            continue
+        qmatch = re.search(r"(?im)^\s*(?:[-*]\s*)?(?:Question|السؤال|Question diagnostique)\s*[:：-]\s*(.+)$", block)
+        if qmatch:
+            question = qmatch.group(1).strip()
+        else:
+            qline = next((line.strip(" -*\t") for line in block.splitlines() if "?" in line or "؟" in line), "")
+            question = qline
+        options: List[str] = []
+        option_letters: List[str] = []
+        for line in block.splitlines():
+            om = re.match(r"^\s*[-*]?\s*([A-Da-d])\s*[).:\-]\s*(.+?)\s*$", line)
+            if om:
+                option_letters.append(om.group(1).upper())
+                options.append(om.group(2).strip())
+        if len(options) < 2:
+            continue
+        cm = re.search(r"(?im)^\s*(?:[-*]\s*)?(?:Correct answer|Correct|الإجابة الصحيحة|الجواب الصحيح|Réponse correcte)\s*[:：-]\s*(.+)$", block)
+        correct_index = None
+        if cm:
+            answer = cm.group(1).strip().strip("*`")
+            letter = answer[:1].upper()
+            if letter in option_letters:
+                correct_index = option_letters.index(letter)
+            else:
+                for pos, option in enumerate(options):
+                    if answer.lower() == option.lower() or answer.lower() in option.lower():
+                        correct_index = pos
+                        break
+        if question and correct_index is not None:
+            parsed.append({"id": f"D{len(parsed)+1}", "question": question, "options": options, "correct_index": int(correct_index)})
+        if len(parsed) >= 3:
+            break
+    return parsed[:3]
+
+
+def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> List[Dict[str, Any]]:
+    """Create a transparent self-report baseline when an old assessment is not machine-readable."""
+    concepts = list(_concept_names(blueprint).values())
+    if not concepts:
+        for lesson in blueprint.get("lessons") or []:
+            if not isinstance(lesson, Mapping):
+                continue
+            title = str(lesson.get("title") or "").strip()
+            if title and title not in concepts:
+                concepts.append(title)
+    concepts = concepts[:3]
+    if not concepts:
+        concepts = ["Course concept 1", "Course concept 2", "Course concept 3"]
+    stems = {
+        "ar": "قبل بدء المقرر، ما مستوى معرفتك الحالي بـ: {concept}؟",
+        "fr": "Avant le cours, quel est votre niveau actuel sur : {concept} ?",
+        "en": "Before the course, how familiar are you with: {concept}?",
+    }
+    return [
+        {"id": f"B{idx}", "question": stems.get(lang, stems["en"]).format(concept=name), "options": [], "correct_index": None, "concept": name}
+        for idx, name in enumerate(concepts, start=1)
+    ]
+
+
+def _course_pretest_questions(project: Mapping[str, Any], blueprint: Mapping[str, Any], lang: str) -> tuple[List[Dict[str, Any]], str]:
+    outputs = db.teacher_project_phase_outputs(int(project["id"]), prefer_completed=True)
+    phase8 = outputs.get(8) or {}
+    text = str(phase8.get("response_text") or "")
+    questions = _json_diagnostic_questions(text) or _markdown_diagnostic_questions(text)
+    if len(questions) >= 3:
+        return questions[:3], "teacher_assessment"
+    return _fallback_baseline_questions(blueprint, lang), "self_report_baseline"
+
+
+def _workflow_strip(copy: Mapping[str, Any], *, enrolled: bool, pretest_done: bool) -> None:
+    labels = [copy["workflow_account"], copy["workflow_enroll"], copy["workflow_pretest"], copy["workflow_learn"]]
+    states = [True, bool(enrolled), bool(pretest_done), bool(pretest_done)]
+    html = "".join(
+        f"<div class='v62019-course-step {'is-done' if state else ''}'><span>{idx}</span><b>{escape(str(label))}</b></div>"
+        for idx, (label, state) in enumerate(zip(labels, states), start=1)
+    )
+    st.markdown(f"<div class='v62019-course-flow'>{html}</div>", unsafe_allow_html=True)
+
+
+def _render_course_pretest(
+    student: Mapping[str, Any],
+    project: Mapping[str, Any],
+    blueprint: Mapping[str, Any],
+    enrollment: Mapping[str, Any],
+    copy: Mapping[str, Any],
+    lang: str,
+) -> bool:
+    student_id = int(student["id"])
+    project_id = int(project["id"])
+    blueprint_run_id = int(enrollment.get("blueprint_run_id") or blueprint.get("id") or 0)
+    existing = db.get_published_course_pretest_attempt(student_id, project_id, blueprint_run_id)
+    _workflow_strip(copy, enrolled=True, pretest_done=bool(existing))
+    if existing:
+        st.success(f"{copy['pretest_done']} {copy['pretest_score']}: {float(existing.get('score') or 0):.0f}%")
+        return True
+
+    questions, source_type = _course_pretest_questions(project, blueprint, lang)
+    global_ui.render_section_header(copy["course_pretest"], copy["course_pretest_help"], lang=lang)
+    if source_type == "self_report_baseline":
+        st.info(copy["baseline_fallback"])
+    answers: Dict[str, Any] = {}
+    with st.form(f"v62019_course_pretest_{project_id}_{blueprint_run_id}"):
+        for idx, item in enumerate(questions, start=1):
+            qid = str(item.get("id") or f"Q{idx}")
+            st.markdown(f"**{idx}. {escape(str(item.get('question') or ''))}**")
+            options = list(item.get("options") or [])
+            if source_type == "self_report_baseline":
+                options = list(copy["baseline_levels"])
+            answers[qid] = st.radio(
+                str(item.get("question") or qid),
+                options=list(range(len(options))),
+                format_func=lambda pos, opts=options: opts[pos],
+                index=None,
+                key=f"v62019_pre_{project_id}_{blueprint_run_id}_{qid}",
+                label_visibility="collapsed",
+            )
+        submitted = st.form_submit_button(copy["submit_course_pretest"], type="primary", use_container_width=True)
+    if submitted:
+        if len(answers) != len(questions) or any(value is None for value in answers.values()):
+            st.error(copy["answer_all"])
+            return False
+        attempt = db.save_published_course_pretest_attempt(
+            student_id,
+            project_id,
+            blueprint_run_id,
+            answers=answers,
+            questions=questions,
+            source_type=source_type,
+        )
+        try:
+            db.log_event(student_id, "student", "published_course_pretest_submitted", json.dumps({
+                "project_id": project_id,
+                "blueprint_run_id": blueprint_run_id,
+                "score": float(attempt.get("score") or 0),
+                "source_type": source_type,
+            }, ensure_ascii=False))
+        except Exception:
+            pass
+        st.success(f"{copy['pretest_done']} {copy['pretest_score']}: {float(attempt.get('score') or 0):.0f}%")
+        st.rerun()
+    return False
 
 
 def _legacy_preview(project: Mapping[str, Any], copy: Mapping[str, str]) -> None:
@@ -402,21 +645,59 @@ def render_course(student: Mapping[str, Any], project: Mapping[str, Any]) -> Non
 
     blueprint_run_id = int(blueprint.get("id") or 0)
     first_lesson_id = str(lessons[0].get("lesson_id") or "")
-    if not enrollment:
-        readiness = db.teacher_project_runtime_readiness(project_id)
-        if not readiness.get("ready"):
-            global_ui.render_page_header(
-                str(project.get("unit_title") or project.get("project_name") or copy["catalog"]),
-                str(project.get("target_concept") or ""), lang=lang,
-                eyebrow=copy["teacher"], status=copy["preview"], compact=True,
-                icon="menu_book", role="student",
-            )
-            st.warning(str(readiness.get("reason") or copy["not_ready"]))
-            _legacy_preview(project, copy)
-            return
-        enrollment = db.start_published_course_enrollment(
-            student_id, project_id, blueprint_run_id, first_lesson_id
+    title = str(project.get("unit_title") or project.get("project_name") or "Course")
+    readiness = db.teacher_project_runtime_readiness(project_id)
+    if not readiness.get("ready"):
+        global_ui.render_page_header(
+            title, str(project.get("target_concept") or ""), lang=lang,
+            eyebrow=copy["teacher"], status=copy["preview"], compact=True,
+            icon="menu_book", role="student",
         )
+        st.warning(str(readiness.get("reason") or copy["not_ready"]))
+        _legacy_preview(project, copy)
+        return
+
+    # V6.20.19: selecting a teacher course does not silently open its lessons.
+    # One account may join many courses; each course receives its own enrollment
+    # and its own baseline diagnostic before the learning runtime is unlocked.
+    if not enrollment:
+        global_ui.render_page_header(
+            title, str(project.get("target_concept") or ""), lang=lang,
+            eyebrow=copy["teacher"], status=copy["runtime_ready"], compact=True,
+            meta=[str(project.get("domain") or ""), str(project.get("learner_level") or ""), f"{copy['version']} {int(blueprint.get('version_number') or 1)}"],
+            icon="school", role="student",
+        )
+        _workflow_strip(copy, enrolled=False, pretest_done=False)
+        global_ui.render_section_header(copy["enroll_title"], copy["enroll_help"], lang=lang)
+        if st.button(copy["enroll_action"], type="primary", use_container_width=True, key=f"v62019_enroll_{student_id}_{project_id}"):
+            enrollment = db.start_published_course_enrollment(
+                student_id, project_id, blueprint_run_id, first_lesson_id
+            )
+            try:
+                db.log_event(student_id, "student", "published_course_enrolled", json.dumps({"project_id": project_id, "blueprint_run_id": blueprint_run_id}, ensure_ascii=False))
+            except Exception:
+                pass
+            st.rerun()
+        return
+
+    # Always use the pinned version from the enrollment.  Existing enrollments
+    # created before this release are also routed through the baseline gate.
+    blueprint_run_id = int(enrollment.get("blueprint_run_id") or blueprint_run_id)
+    if int(blueprint.get("id") or 0) != blueprint_run_id:
+        pinned = db.teacher_blueprint_bundle(blueprint_run_id)
+        if pinned:
+            blueprint = pinned
+            lessons = [dict(item) for item in (blueprint.get("lessons") or []) if isinstance(item, Mapping)]
+            first_lesson_id = str((lessons[0] if lessons else {}).get("lesson_id") or "")
+
+    global_ui.render_page_header(
+        title, str(project.get("target_concept") or ""), lang=lang,
+        eyebrow=copy["teacher"], status=copy["runtime_ready"], compact=True,
+        meta=[str(project.get("domain") or ""), str(project.get("learner_level") or ""), f"{copy['version']} {int(blueprint.get('version_number') or 1)}"],
+        icon="school", role="student",
+    )
+    if not _render_course_pretest(student, project, blueprint, enrollment, copy, lang):
+        return
 
     progress_df = db.published_course_lesson_progress_df(student_id, project_id, blueprint_run_id)
     progress_rows = progress_df.to_dict("records") if not progress_df.empty else []
@@ -428,22 +709,6 @@ def render_course(student: Mapping[str, Any], project: Mapping[str, Any]) -> Non
     completed_count = len(completed_ids.intersection({str(item.get("lesson_id") or "") for item in lessons}))
     progress_value = completed_count / len(lessons) if lessons else 0.0
 
-    title = str(project.get("unit_title") or project.get("project_name") or "Course")
-    global_ui.render_page_header(
-        title,
-        str(project.get("target_concept") or ""),
-        lang=lang,
-        eyebrow=copy["teacher"],
-        status=copy["completed"] if completed_count == len(lessons) else copy["runtime_ready"],
-        meta=[
-            str(project.get("domain") or ""),
-            str(project.get("learner_level") or ""),
-            f"{copy['version']} {int(blueprint.get('version_number') or 1)}",
-        ],
-        compact=True,
-        icon="school",
-        role="student",
-    )
     st.progress(progress_value, text=f"{copy['progress']}: {completed_count}/{len(lessons)}")
     if completed_count == len(lessons):
         st.success(copy["course_complete"], icon="✅")

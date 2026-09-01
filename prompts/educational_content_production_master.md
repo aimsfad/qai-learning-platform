@@ -315,6 +315,24 @@ For each item provide: item ID, learning objective, question, answer options if 
 
 Avoid trivia and superficial recall unless used diagnostically.
 
+At the end of Phase 8, include one machine-readable JSON block with exactly three diagnostic multiple-choice questions for the learner pre-test. Use this schema and keep the visible assessment package above it unchanged:
+
+```json
+{
+  "course_pretest": [
+    {
+      "id": "D1",
+      "learning_objective": "...",
+      "question": "...",
+      "options": ["...", "...", "...", "..."],
+      "correct_index": 0
+    }
+  ]
+}
+```
+
+The three questions must be answerable before instruction, align with the approved course outcomes, and avoid relying on knowledge introduced only inside the course.
+
 ---
 
 # Phase 9 — Multilingual localization

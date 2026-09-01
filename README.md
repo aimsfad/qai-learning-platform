@@ -1,4 +1,4 @@
-> Current release: **V6.20.18 — Glass UI Integration**
+> Current release: **V6.20.19 — Course Enrollment & Baseline Gate**
 
 # 3alimnIA V6.20.14 — Final Review & Publish Workflow
 

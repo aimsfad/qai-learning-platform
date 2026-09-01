@@ -14,7 +14,8 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.18-glass-ui-integration"
+APP_VERSION = "v6.20.19-course-enrollment-baseline-gate"
+# APP_VERSION = "v6.20.18-glass-ui-integration"
 # APP_VERSION = "v6.20.17-public-catalog-sync"
 # APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
 # APP_VERSION = "v6.20.14-final-review-publish-workflow"
@@ -595,6 +596,22 @@ def init_db() -> None:
         )
         """,
         f"""
+        CREATE TABLE IF NOT EXISTS published_course_pretest_attempts (
+            id {id_col},
+            student_id INTEGER NOT NULL,
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER NOT NULL,
+            score REAL NOT NULL,
+            correct_count INTEGER DEFAULT 0,
+            total_count INTEGER NOT NULL,
+            answers_json TEXT NOT NULL,
+            questions_json TEXT NOT NULL,
+            source_type TEXT DEFAULT 'teacher_assessment',
+            created_at {created_default},
+            UNIQUE(student_id, project_id, blueprint_run_id)
+        )
+        """,
+        f"""
         CREATE TABLE IF NOT EXISTS published_course_lesson_progress (
             id {id_col},
             student_id INTEGER NOT NULL,
@@ -634,6 +651,7 @@ def init_db() -> None:
         )
         """,
         "CREATE INDEX IF NOT EXISTS idx_course_enrollments_project ON published_course_enrollments(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_course_pretest_student_project ON published_course_pretest_attempts(student_id, project_id, blueprint_run_id)",
         "CREATE INDEX IF NOT EXISTS idx_course_progress_student_project ON published_course_lesson_progress(student_id, project_id)",
         "CREATE INDEX IF NOT EXISTS idx_course_ai_student_project ON published_course_ai_interactions(student_id, project_id)",
         f"""
@@ -3803,6 +3821,120 @@ def start_published_course_enrollment(
         "blueprint_run_id": int(blueprint_run_id),
         "status": "active",
         "current_lesson_id": str(first_lesson_id or ""),
+    }
+
+
+
+def get_published_course_pretest_attempt(
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+) -> Optional[Dict[str, Any]]:
+    """Return the immutable baseline attempt for one learner/course version."""
+    return query_one(
+        """SELECT * FROM published_course_pretest_attempts
+        WHERE student_id=:student_id AND project_id=:project_id AND blueprint_run_id=:blueprint_run_id""",
+        {
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+        },
+    )
+
+
+def save_published_course_pretest_attempt(
+    student_id: int,
+    project_id: int,
+    blueprint_run_id: int,
+    *,
+    answers: Dict[str, Any],
+    questions: Sequence[Dict[str, Any]],
+    source_type: str = "teacher_assessment",
+) -> Dict[str, Any]:
+    """Persist a course-version baseline once.
+
+    Teacher-published courses have a separate diagnostic baseline from the
+    controlled Qiskit pilot pre-test.  The unique key is learner + project +
+    pinned blueprint version, so a pre-test from another course can never unlock
+    this course accidentally.
+    """
+    existing = get_published_course_pretest_attempt(student_id, project_id, blueprint_run_id)
+    if existing:
+        return dict(existing)
+
+    normalized_questions = [dict(item or {}) for item in questions]
+    correct = 0
+    scored = 0
+    for item in normalized_questions:
+        qid = str(item.get("id") or "").strip()
+        if not qid:
+            continue
+        correct_index = item.get("correct_index")
+        if correct_index is None:
+            continue
+        try:
+            correct_index = int(correct_index)
+            selected = int(answers.get(qid, -1))
+        except Exception:
+            continue
+        scored += 1
+        if selected == correct_index:
+            correct += 1
+
+    # If the legacy assessment package cannot be parsed into objective MCQs,
+    # the runtime falls back to a four-level familiarity baseline.  Store that
+    # as a 0-100 readiness signal without pretending it is an objective score.
+    if scored:
+        total = scored
+        score = 100.0 * correct / max(total, 1)
+    else:
+        values = []
+        for item in normalized_questions:
+            qid = str(item.get("id") or "").strip()
+            if not qid:
+                continue
+            try:
+                values.append(max(0, min(3, int(answers.get(qid, 0)))))
+            except Exception:
+                values.append(0)
+        total = len(values)
+        score = 100.0 * (sum(values) / max(3 * total, 1)) if total else 0.0
+        correct = 0
+
+    now = utc_now()
+    attempt_id = execute_returning_id(
+        """INSERT INTO published_course_pretest_attempts
+        (student_id, project_id, blueprint_run_id, score, correct_count, total_count,
+         answers_json, questions_json, source_type, created_at)
+        VALUES (:student_id, :project_id, :blueprint_run_id, :score, :correct_count, :total_count,
+         :answers_json, :questions_json, :source_type, :created_at)"""
+        + (" RETURNING id" if dialect() != "sqlite" else ""),
+        {
+            "student_id": int(student_id),
+            "project_id": int(project_id),
+            "blueprint_run_id": int(blueprint_run_id),
+            "score": float(score),
+            "correct_count": int(correct),
+            "total_count": int(total),
+            "answers_json": json.dumps(dict(answers or {}), ensure_ascii=False),
+            "questions_json": json.dumps(normalized_questions, ensure_ascii=False),
+            "source_type": str(source_type or "teacher_assessment"),
+            "created_at": now,
+        },
+    )
+    return query_one(
+        "SELECT * FROM published_course_pretest_attempts WHERE id=:id",
+        {"id": int(attempt_id)},
+    ) or {
+        "id": int(attempt_id),
+        "student_id": int(student_id),
+        "project_id": int(project_id),
+        "blueprint_run_id": int(blueprint_run_id),
+        "score": float(score),
+        "correct_count": int(correct),
+        "total_count": int(total),
+        "source_type": str(source_type or "teacher_assessment"),
+        "created_at": now,
     }
 
 
