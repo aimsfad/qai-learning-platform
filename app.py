@@ -231,7 +231,7 @@ def _student_tool_copy() -> Dict[str, str]:
         "ar": {
             "title": "أدوات التعلّم",
             "dashboard": "لوحة المتعلّم",
-            "modules": "الوحدات وQiskit",
+            "modules": "مسار Qiskit البحثي",
             "coach": "المدرّب الذكي",
             "plan": "الخطة التكيفية",
             "courses": "دورات الأساتذة",
@@ -245,7 +245,7 @@ def _student_tool_copy() -> Dict[str, str]:
         "fr": {
             "title": "Outils d’apprentissage",
             "dashboard": "Tableau apprenant",
-            "modules": "Modules & Qiskit",
+            "modules": "Parcours de recherche Qiskit",
             "coach": "Coach IA",
             "plan": "Plan adaptatif",
             "courses": "Cours des enseignants",
@@ -259,7 +259,7 @@ def _student_tool_copy() -> Dict[str, str]:
         "en": {
             "title": "Learning tools",
             "dashboard": "Learner dashboard",
-            "modules": "Modules & Qiskit",
+            "modules": "Qiskit research path",
             "coach": "AI Coach",
             "plan": "Adaptive plan",
             "courses": "Teacher courses",

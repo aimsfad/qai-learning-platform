@@ -10560,3 +10560,41 @@ div[data-testid="stDownloadButton"] > button {
 /* ============================================================================
    END V6.20.23
    ============================================================================ */
+
+/* ============================================================================
+   V6.20.24 — FINAL LEARNER POLISH (CURRENT-MAIN COMPAT)
+   ============================================================================ */
+@media (min-width: 761px) {
+  [data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stRadio"] [role="radiogroup"] {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    gap: .42rem !important;
+  }
+  [data-testid="stForm"]:has(.v62023-pretest-marker) [data-testid="stRadio"] [role="radiogroup"] > label {
+    flex: 1 1 180px !important;
+    max-width: 260px !important;
+    min-height: 36px !important;
+    margin: 0 !important;
+  }
+  .v618-page-header-compact {
+    padding-top: 11px !important;
+    padding-bottom: 11px !important;
+  }
+  .v618-page-header-compact .v618-page-header-accent {
+    width: 148px !important;
+    height: 148px !important;
+    top: -74px !important;
+  }
+}
+.v62023-pretest-question code,
+.v618-section-head code {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  display: inline-block;
+}
+/* ============================================================================
+   END V6.20.24 CURRENT-MAIN COMPAT
+   ============================================================================ */

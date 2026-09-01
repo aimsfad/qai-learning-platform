@@ -259,6 +259,26 @@ def _response_language(lang: str) -> str:
     return {"ar": "Arabic", "fr": "French", "en": "English"}.get(lang, "English")
 
 
+def _display_lesson_title(value: Any, index: int) -> str:
+    """Remove duplicate lesson numbering from learner-facing titles only."""
+    clean = " ".join(str(value or "").strip().split())
+    clean = re.sub(r"(?i)^\s*(?:الدرس|درس|lesson|leçon)\s*\d+\s*[:：.\-–—]?\s*", "", clean)
+    clean = re.sub(r"^\s*\d+\s*[.:：\-–—]\s*", "", clean)
+    return clean or str(value or "").strip() or f"Lesson {index}"
+
+
+def _baseline_key(value: Any) -> str:
+    """Conservative semantic key used only to avoid near-duplicate fallback prompts."""
+    clean = str(value or "").casefold()
+    clean = re.sub(r"[\W_]+", " ", clean, flags=re.UNICODE)
+    stop = {
+        "تعلم", "تعليم", "أساسيات", "اساسيات", "لغة", "مقرر", "المقرر", "دورة", "الدورة",
+        "learn", "learning", "teach", "teaching", "basic", "basics", "language", "course", "intro", "introduction",
+        "apprendre", "apprentissage", "bases", "base", "langage", "langue", "cours", "introduction",
+    }
+    return " ".join(token for token in clean.split() if token not in stop)
+
+
 def _block_label(block_type: str, lang: str) -> str:
     return BLOCK_LABELS.get(lang, BLOCK_LABELS["en"]).get(str(block_type), str(block_type).replace("_", " ").title())
 
@@ -420,18 +440,32 @@ def _markdown_diagnostic_questions(text: str) -> List[Dict[str, Any]]:
 
 
 def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> List[Dict[str, Any]]:
-    """Create a transparent self-report baseline when an old assessment is not machine-readable."""
-    concepts = list(_concept_names(blueprint).values())
-    if not concepts:
+    """Create a transparent duplicate-resistant self-report baseline."""
+    concepts: List[str] = []
+    concept_keys: List[str] = []
+
+    def add(value: Any) -> None:
+        clean = " ".join(str(value or "").strip().split())
+        if not clean:
+            return
+        key = _baseline_key(clean) or clean.casefold()
+        if any(key == existing or key in existing or existing in key for existing in concept_keys):
+            return
+        concepts.append(clean)
+        concept_keys.append(key)
+
+    for name in _concept_names(blueprint).values():
+        add(name)
+        if len(concepts) >= 3:
+            break
+    if len(concepts) < 3:
         for lesson in blueprint.get("lessons") or []:
-            if not isinstance(lesson, Mapping):
-                continue
-            title = str(lesson.get("title") or "").strip()
-            if title and title not in concepts:
-                concepts.append(title)
-    concepts = concepts[:3]
-    if not concepts:
-        concepts = ["Course concept 1", "Course concept 2", "Course concept 3"]
+            if isinstance(lesson, Mapping):
+                add(lesson.get("title"))
+            if len(concepts) >= 3:
+                break
+
+    concepts = concepts[:3] or ["Course concept 1", "Course concept 2", "Course concept 3"]
     stems = {
         "ar": "قبل بدء المقرر، ما مستوى معرفتك الحالي بـ: {concept}؟",
         "fr": "Avant le cours, quel est votre niveau actuel sur : {concept} ?",
@@ -441,7 +475,6 @@ def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> Lis
         {"id": f"B{idx}", "question": stems.get(lang, stems["en"]).format(concept=name), "options": [], "correct_index": None, "concept": name}
         for idx, name in enumerate(concepts, start=1)
     ]
-
 
 def _course_pretest_questions(project: Mapping[str, Any], blueprint: Mapping[str, Any], lang: str) -> tuple[List[Dict[str, Any]], str]:
     outputs = db.teacher_project_phase_outputs(int(project["id"]), prefer_completed=True)
@@ -724,8 +757,10 @@ def render_course(student: Mapping[str, Any], project: Mapping[str, Any]) -> Non
     current_id = _pick_current_lesson(lessons, enrollment, progress_rows)
     lesson_ids = [str(item.get("lesson_id") or "") for item in lessons]
     titles = {
-        str(item.get("lesson_id") or ""): str(item.get("title") or item.get("lesson_id") or copy["lesson"])
-        for item in lessons
+        str(item.get("lesson_id") or ""): _display_lesson_title(
+            item.get("title") or item.get("lesson_id") or copy["lesson"], idx + 1
+        )
+        for idx, item in enumerate(lessons)
     }
     first_incomplete_index = next(
         (idx for idx, lesson_id in enumerate(lesson_ids) if lesson_id not in completed_ids),

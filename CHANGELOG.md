@@ -1,3 +1,13 @@
+# V6.20.24 — Final learner polish
+
+- Kept the V6.20.23 blue-accent collision fix and tightened the compact course header slightly.
+- Displayed course pre-test choices as responsive horizontal cards on desktop, while preserving stacked mobile controls.
+- Removed duplicate lesson-number prefixes from learner-facing lesson titles without mutating the approved blueprint.
+- Reduced near-duplicate fallback diagnostic concepts using a conservative semantic key.
+- Renamed the legacy Qiskit navigation destination as a research path to distinguish it from teacher-authored courses.
+- Compatible with both the public-main baseline and the later project-aware baseline implementation.
+- No authentication, enrollment, scoring, course-version pinning, database-schema, or learner-progress changes.
+
 # V6.20.23 — UI Density & Header Accent Safety
 
 - Prevented the blue decorative header accent from colliding with page titles by binding its side to each header's own RTL/LTR direction.
