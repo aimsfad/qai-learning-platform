@@ -704,6 +704,8 @@ FR.update({"Post-test is locked until at least one AI Tutor interaction is recor
 
 # V4.4: complete localization for dynamic plan guidance and pedagogical guardrails.
 AR.update({
+    "Participant code, email, or exact registered full name": "\u0631\u0645\u0632 \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0629 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062c\u0644 \u0643\u0627\u0645\u0644\u0627",
+    "Participant code, email, or full registered name": "\u0631\u0645\u0632 \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0629 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062c\u0644 \u0643\u0627\u0645\u0644\u0627",
     "How to read this plan:": "كيف تقرأ هذه الخطة؟",
     "Start with the concepts listed as weak or recommended.": "ابدأ بالمفاهيم التي ظهرت حاجتها إلى التعزيز أو التي أوصت بها المنصة.",
     "Complete the learning module before relying on the AI tutor.": "أكمل الوحدة التعليمية وحاول بنفسك قبل الاعتماد على المدرّب الذكي.",

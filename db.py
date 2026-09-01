@@ -7,6 +7,7 @@ import json
 import os
 import secrets as py_secrets
 import string
+import unicodedata
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
@@ -14,7 +15,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.19-course-enrollment-baseline-gate"
+APP_VERSION = "v6.20.20-learner-account-compat-ui-density"
 # APP_VERSION = "v6.20.18-glass-ui-integration"
 # APP_VERSION = "v6.20.17-public-catalog-sync"
 # APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
@@ -24,7 +25,7 @@ APP_VERSION = "v6.20.19-course-enrollment-baseline-gate"
 # APP_VERSION = "v6.20.3-mobile-public-shell"
 from sqlalchemy.engine import Engine
 
-from security import hash_password, verify_password
+from security import hash_password, verify_password, password_policy_error
 import lesson_identity
 
 
@@ -836,19 +837,61 @@ def set_student_study_group(student_id: int, study_group: str) -> None:
     exec_sql("UPDATE students SET study_group=:group WHERE id=:id", {"group": clean, "id": int(student_id)})
 
 
+def normalize_student_identifier(identifier: str) -> str:
+    """Normalize a sign-in identifier without changing credential semantics."""
+    value = unicodedata.normalize("NFKC", str(identifier or ""))
+    for char in ("\u200b", "\u200c", "\u200d", "\u2060", "\ufeff"):
+        value = value.replace(char, "")
+    return value.strip().casefold()
+
+
 def get_student_by_code(code: str) -> Optional[Dict[str, Any]]:
-    return query_one("SELECT * FROM students WHERE LOWER(participant_code)=LOWER(:code)", {"code": code.strip()})
+    ident = normalize_student_identifier(code)
+    return query_one(
+        "SELECT * FROM students WHERE LOWER(TRIM(participant_code))=:code ORDER BY id DESC",
+        {"code": ident},
+    )
+
+
+def student_auth_diagnostic(identifier: str) -> Dict[str, Any]:
+    """Return non-secret account state for support diagnostics."""
+    ident = normalize_student_identifier(identifier)
+    if not ident:
+        return {"found": False, "is_active": False, "has_password": False, "participant_code": ""}
+    row = query_one(
+        """
+        SELECT id, participant_code, is_active,
+               CASE WHEN password_hash IS NULL OR TRIM(password_hash)='' THEN 0 ELSE 1 END AS has_password
+        FROM students
+        WHERE LOWER(TRIM(participant_code))=:ident
+           OR LOWER(TRIM(email))=:ident
+           OR LOWER(TRIM(full_name))=:ident
+        ORDER BY id DESC
+        """,
+        {"ident": ident},
+    )
+    if not row:
+        return {"found": False, "is_active": False, "has_password": False, "participant_code": ""}
+    return {
+        "found": True,
+        "is_active": bool(int(row.get("is_active") or 0)),
+        "has_password": bool(int(row.get("has_password") or 0)),
+        "participant_code": str(row.get("participant_code") or ""),
+    }
 
 
 def authenticate_student(identifier: str, password: str) -> Optional[Dict[str, Any]]:
-    ident = identifier.strip().lower()
+    """Authenticate a global learner account; course enrollment is a separate concern."""
+    ident = normalize_student_identifier(identifier)
     if not ident:
         return None
     student = query_one(
         """
         SELECT * FROM students
         WHERE is_active=1 AND (
-            LOWER(participant_code)=:ident OR LOWER(email)=:ident OR LOWER(full_name)=:ident
+            LOWER(TRIM(participant_code))=:ident
+            OR LOWER(TRIM(email))=:ident
+            OR LOWER(TRIM(full_name))=:ident
         )
         ORDER BY id DESC
         """,
@@ -904,8 +947,9 @@ def reset_student_password(token: str, new_password: str) -> Tuple[bool, str]:
     """Validate a password reset token and update the student's password."""
     if not token.strip():
         return False, "Missing reset token."
-    if len(new_password or "") < 6:
-        return False, "Password must contain at least 6 characters."
+    policy_error = password_policy_error(new_password)
+    if policy_error:
+        return False, policy_error
     token_hash = _reset_token_hash(token.strip())
     row = query_one(
         """

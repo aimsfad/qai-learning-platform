@@ -1,3 +1,11 @@
+# V6.20.20 - Learner account compatibility and UI density
+
+- Kept learner accounts global while preserving per-course enrollment and per-version course baselines.
+- Hardened identifier normalization and added non-secret learner-account diagnostics.
+- Restored the R2 password-reset policy contract.
+- Added a compact density layer for shared headers, cards, forms, and published-course flow.
+- Added behavioral regression coverage for one learner enrolling in multiple courses.
+
 # V6.20.5 — Mobile Header Shell
 
 - Rebuilt the mobile public header without Streamlit columns to prevent Cloud responsive stacking.

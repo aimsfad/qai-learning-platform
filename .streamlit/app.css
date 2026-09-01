@@ -10183,3 +10183,163 @@ div[data-testid="stVerticalBlockBorderWrapper"]{
 /* ============================================================================
    END V6.20.19
    ============================================================================ */
+
+/* === V6.20.20 COMPACT DENSITY LAYER === */
+/* Desktop-first density correction. Keeps the existing glass identity while
+   reducing vertical waste in shared headers, cards, forms, and course flows. */
+.v618-page-header,
+.qai-hero.v618-page-header {
+  min-height: 0 !important;
+  padding: clamp(16px, 1.8vw, 24px) clamp(18px, 2.4vw, 28px) !important;
+  margin-top: 0 !important;
+  margin-bottom: 14px !important;
+  border-radius: 20px !important;
+}
+.v618-page-header .v618-page-header-row {
+  min-height: 0 !important;
+  align-items: center !important;
+}
+.v618-page-header .v618-page-header-copy {
+  max-width: min(100%, 980px) !important;
+}
+.v618-page-header h1 {
+  font-size: clamp(1.72rem, 2.2vw, 2.25rem) !important;
+  line-height: 1.16 !important;
+  letter-spacing: -0.025em !important;
+  margin: 4px 0 6px !important;
+}
+.v618-page-header p {
+  max-width: 80ch !important;
+  margin: 0 !important;
+  font-size: 0.94rem !important;
+  line-height: 1.6 !important;
+}
+.v618-page-eyebrow {
+  gap: 7px !important;
+  font-size: 0.74rem !important;
+  line-height: 1.2 !important;
+}
+.v618-page-icon {
+  font-size: 1.05rem !important;
+}
+.v618-page-meta {
+  gap: 6px !important;
+  margin-top: 9px !important;
+}
+.v618-meta-chip,
+.v618-page-status {
+  min-height: 24px !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+}
+.v618-section-head {
+  margin: 14px 0 8px !important;
+}
+.v618-section-head h2 {
+  margin: 2px 0 3px !important;
+  font-size: clamp(1.12rem, 1.45vw, 1.34rem) !important;
+  line-height: 1.25 !important;
+}
+.v618-section-head p {
+  margin: 0 !important;
+  font-size: 0.84rem !important;
+  line-height: 1.5 !important;
+}
+.v618-action-card {
+  min-height: 0 !important;
+  padding: 14px 15px !important;
+  border-radius: 16px !important;
+}
+.v618-action-card .v618-action-top {
+  margin-bottom: 7px !important;
+}
+.v618-action-card h3 {
+  margin: 4px 0 5px !important;
+  font-size: 0.98rem !important;
+  line-height: 1.3 !important;
+}
+.v618-action-card p {
+  margin: 0 !important;
+  font-size: 0.80rem !important;
+  line-height: 1.5 !important;
+}
+.v618-action-index {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  padding: 3px 7px !important;
+}
+.v618-kpi-card {
+  min-height: 88px !important;
+  padding: 13px 14px !important;
+  border-radius: 16px !important;
+}
+.v618-kpi-value-row strong {
+  font-size: clamp(1.45rem, 2vw, 1.85rem) !important;
+}
+.v618-kpi-caption,
+.v618-kpi-label {
+  font-size: 0.76rem !important;
+}
+.v62019-course-flow {
+  gap: 10px !important;
+}
+.v62019-course-flow > * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.v618-auth-brand {
+  margin-bottom: 10px !important;
+}
+[data-testid="stForm"] {
+  padding: 16px !important;
+  border-radius: 18px !important;
+}
+[data-testid="stForm"] [data-testid="stVerticalBlock"] {
+  gap: 0.62rem !important;
+}
+div.stButton > button,
+div[data-testid="stFormSubmitButton"] > button,
+div[data-testid="stDownloadButton"] > button {
+  min-height: 42px !important;
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+  border-radius: 12px !important;
+}
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+  min-height: 42px !important;
+}
+
+@media (min-width: 901px) {
+  .v618-page-header.compact,
+  .v618-page-header.v618-page-header-compact {
+    padding-top: 14px !important;
+    padding-bottom: 14px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .v618-page-header,
+  .qai-hero.v618-page-header {
+    padding: 15px 16px !important;
+    margin-bottom: 12px !important;
+    border-radius: 17px !important;
+  }
+  .v618-page-header h1 {
+    font-size: 1.55rem !important;
+  }
+  .v618-page-header p {
+    font-size: 0.88rem !important;
+  }
+  .v618-action-card {
+    padding: 13px 14px !important;
+  }
+  div.stButton > button,
+  div[data-testid="stFormSubmitButton"] > button,
+  div[data-testid="stDownloadButton"] > button {
+    min-height: 44px !important;
+  }
+}
+

@@ -7,7 +7,7 @@ css = (root / '.streamlit' / 'app.css').read_text(encoding='utf-8')
 prompt = (root / 'prompts' / 'educational_content_production_master.md').read_text(encoding='utf-8')
 
 checks = {
-    'version': 'APP_VERSION = "v6.20.19-course-enrollment-baseline-gate"' in db,
+    'version': ('APP_VERSION = "v6.20.20-learner-account-compat-ui-density"' in db or 'APP_VERSION = "v6.20.19-course-enrollment-baseline-gate"' in db),
     'pretest_table': 'CREATE TABLE IF NOT EXISTS published_course_pretest_attempts' in db,
     'pretest_get': 'def get_published_course_pretest_attempt' in db,
     'pretest_save': 'def save_published_course_pretest_attempt' in db,
