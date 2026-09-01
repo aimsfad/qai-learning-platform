@@ -10693,3 +10693,42 @@ div[data-testid="stDownloadButton"] > button {
 /* ============================================================================
    END V6.20.25.1
    ============================================================================ */
+
+
+/* ============================================================================
+   V6.20.26 — PRE-TEST CONTENT + GRID RELIABILITY
+   ============================================================================ */
+@media (min-width: 761px) {
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stRadio"] [role="radiogroup"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    width: 100% !important;
+    gap: .46rem .52rem !important;
+    align-items: stretch !important;
+  }
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stRadio"] [role="radiogroup"] > label {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: .42rem .62rem !important;
+    display: flex !important;
+    align-items: center !important;
+    white-space: normal !important;
+  }
+}
+@media (max-width: 760px) {
+  [data-testid="stForm"]:has(.v62023-pretest-marker)
+    [data-testid="stRadio"] [role="radiogroup"] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: .38rem !important;
+  }
+}
+/* ============================================================================
+   END V6.20.26
+   ============================================================================ */

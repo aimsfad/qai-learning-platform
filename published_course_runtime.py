@@ -450,11 +450,26 @@ def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> Lis
     concepts: List[str] = []
     concept_keys: List[str] = []
 
+    blocked_keys = {
+        _baseline_key(value)
+        for value in (blueprint.get("course_title"), blueprint.get("title"), blueprint.get("program_name"))
+        if _baseline_key(value)
+    }
+
     def add(value: Any) -> None:
         clean = " ".join(str(value or "").strip().split())
-        if not clean:
+        # Never surface generator placeholders or the course title itself as learner-facing concepts.
+        placeholder_key = re.sub(r"[^\w\u0600-\u06FF]+", " ", clean.casefold()).strip()
+        placeholder_key = " ".join(placeholder_key.split())
+        invalid_placeholders = {
+            "untitled", "title", "tbd", "to be defined", "none", "null", "n a",
+            "sans titre", "بدون عنوان", "غير معنون", "غير معنونة",
+        }
+        if (not clean) or clean.lstrip().startswith("$") or placeholder_key in invalid_placeholders:
             return
         key = _baseline_key(clean) or clean.casefold()
+        if not key or key in blocked_keys:
+            return
         if not key:
             return
         if any(key == existing or key in existing or existing in key for existing in concept_keys):
