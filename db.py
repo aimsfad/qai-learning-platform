@@ -16,6 +16,7 @@ import streamlit as st
 from sqlalchemy import bindparam, create_engine, text
 
 APP_VERSION = "v6.20.21-published-course-entry-routing"
+COURSE_PRETEST_ENGINE_VERSION = "v6.20.27-ai-generated-course-pretest"
 # APP_VERSION = "v6.20.18-glass-ui-integration"
 # APP_VERSION = "v6.20.17-public-catalog-sync"
 # APP_VERSION = "v6.20.15-teacher-resume-state-hotfix"
@@ -597,6 +598,27 @@ def init_db() -> None:
         )
         """,
         f"""
+        CREATE TABLE IF NOT EXISTS published_course_pretest_packages (
+            id {id_col},
+            project_id INTEGER NOT NULL,
+            blueprint_run_id INTEGER NOT NULL,
+            language_code TEXT DEFAULT 'en',
+            schema_version TEXT DEFAULT '3alimnia.course_pretest.v1',
+            content_fingerprint TEXT,
+            questions_json TEXT NOT NULL,
+            source_type TEXT DEFAULT 'ai_generated_course_pretest',
+            provider TEXT,
+            model TEXT,
+            quality_json TEXT,
+            status TEXT DEFAULT 'ready',
+            diagnostic TEXT,
+            generation_attempts INTEGER DEFAULT 0,
+            created_at {created_default},
+            updated_at {created_default},
+            UNIQUE(project_id, blueprint_run_id)
+        )
+        """,
+        f"""
         CREATE TABLE IF NOT EXISTS published_course_pretest_attempts (
             id {id_col},
             student_id INTEGER NOT NULL,
@@ -652,6 +674,7 @@ def init_db() -> None:
         )
         """,
         "CREATE INDEX IF NOT EXISTS idx_course_enrollments_project ON published_course_enrollments(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_course_pretest_package_project ON published_course_pretest_packages(project_id, blueprint_run_id)",
         "CREATE INDEX IF NOT EXISTS idx_course_pretest_student_project ON published_course_pretest_attempts(student_id, project_id, blueprint_run_id)",
         "CREATE INDEX IF NOT EXISTS idx_course_progress_student_project ON published_course_lesson_progress(student_id, project_id)",
         "CREATE INDEX IF NOT EXISTS idx_course_ai_student_project ON published_course_ai_interactions(student_id, project_id)",
@@ -669,6 +692,7 @@ def init_db() -> None:
         exec_sql(stmt)
 
     # Lightweight migrations for users updating from older releases.
+    ensure_column("published_course_pretest_packages", "content_fingerprint", "TEXT")
     ensure_column("students", "password_hash", "TEXT")
     ensure_column("students", "is_active", "INTEGER DEFAULT 1")
     ensure_column("students", "last_login_at", "TEXT")
@@ -3867,6 +3891,90 @@ def start_published_course_enrollment(
         "current_lesson_id": str(first_lesson_id or ""),
     }
 
+
+
+def get_published_course_pretest_package(
+    project_id: int,
+    blueprint_run_id: int,
+) -> Optional[Dict[str, Any]]:
+    """Return the immutable AI diagnostic package for one course version."""
+    return query_one(
+        """SELECT * FROM published_course_pretest_packages
+        WHERE project_id=:project_id AND blueprint_run_id=:blueprint_run_id""",
+        {"project_id": int(project_id), "blueprint_run_id": int(blueprint_run_id)},
+    )
+
+
+def save_published_course_pretest_package(
+    project_id: int,
+    blueprint_run_id: int,
+    *,
+    language_code: str,
+    content_fingerprint: str,
+    questions: Sequence[Dict[str, Any]],
+    source_type: str,
+    provider: str = "",
+    model: str = "",
+    quality: Optional[Dict[str, Any]] = None,
+    status: str = "ready",
+    diagnostic: str = "",
+    generation_attempts: int = 0,
+    overwrite: bool = False,
+) -> Dict[str, Any]:
+    """Persist one shared pre-test package per project + approved blueprint.
+
+    Learners never receive individually generated questions. Pinning the package
+    to the blueprint version preserves fairness, reproducibility, and direct
+    comparability of diagnostic scores within the same published course version.
+    """
+    existing = get_published_course_pretest_package(int(project_id), int(blueprint_run_id))
+    if existing and not overwrite:
+        return dict(existing)
+
+    now = utc_now()
+    params = {
+        "project_id": int(project_id),
+        "blueprint_run_id": int(blueprint_run_id),
+        "language_code": str(language_code or "en"),
+        "schema_version": "3alimnia.course_pretest.v1",
+        "content_fingerprint": str(content_fingerprint or ""),
+        "questions_json": json.dumps([dict(item or {}) for item in questions], ensure_ascii=False),
+        "source_type": str(source_type or "ai_generated_course_pretest"),
+        "provider": str(provider or ""),
+        "model": str(model or ""),
+        "quality_json": json.dumps(dict(quality or {}), ensure_ascii=False),
+        "status": str(status or "error"),
+        "diagnostic": str(diagnostic or "")[:4000],
+        "generation_attempts": int(generation_attempts or 0),
+        "updated_at": now,
+    }
+    if existing:
+        params["id"] = int(existing["id"])
+        exec_sql(
+            """UPDATE published_course_pretest_packages
+            SET language_code=:language_code, schema_version=:schema_version, content_fingerprint=:content_fingerprint, questions_json=:questions_json,
+                source_type=:source_type, provider=:provider, model=:model, quality_json=:quality_json,
+                status=:status, diagnostic=:diagnostic, generation_attempts=:generation_attempts, updated_at=:updated_at
+            WHERE id=:id""",
+            params,
+        )
+        return query_one(
+            "SELECT * FROM published_course_pretest_packages WHERE id=:id", {"id": int(existing["id"])}
+        ) or dict(existing)
+
+    params["created_at"] = now
+    package_id = execute_returning_id(
+        """INSERT INTO published_course_pretest_packages
+        (project_id, blueprint_run_id, language_code, schema_version, content_fingerprint, questions_json, source_type,
+         provider, model, quality_json, status, diagnostic, generation_attempts, created_at, updated_at)
+        VALUES (:project_id, :blueprint_run_id, :language_code, :schema_version, :content_fingerprint, :questions_json, :source_type,
+         :provider, :model, :quality_json, :status, :diagnostic, :generation_attempts, :created_at, :updated_at)"""
+        + (" RETURNING id" if dialect() != "sqlite" else ""),
+        params,
+    )
+    return query_one(
+        "SELECT * FROM published_course_pretest_packages WHERE id=:id", {"id": int(package_id)}
+    ) or {**params, "id": int(package_id)}
 
 
 def get_published_course_pretest_attempt(

@@ -1,3 +1,14 @@
+# V6.20.27 — AI-generated course pre-test engine
+
+- Generates exactly six objective, course-specific diagnostic questions through the existing AI provider router.
+- Persists one validated pre-test package per approved course blueprint version so all learners in the same version receive the same questions.
+- Adds a content fingerprint so stale packages are regenerated when approved course content changes.
+- Reuses a valid Phase-8 AI assessment package when possible, otherwise performs dedicated generation with one bounded repair attempt.
+- Rejects self-report prompts, placeholders such as `$Untitled`, course-title-as-concept leakage, duplicate options, invalid answer keys, and weak concept coverage.
+- Adds teacher-side generate/regenerate controls and automatic pre-test preparation before publication.
+- Keeps the historical familiarity baseline only as an emergency learner-access fallback if AI generation is unavailable.
+- No change to authentication, enrollment identity, learner progress, Qiskit study tables, or objective scoring semantics.
+
 # V6.20.26 — Pre-test content + grid reliability
 
 - Prevents placeholder concepts such as `$Untitled`, `Untitled`, `TBD`, and equivalent empty labels from reaching learner-facing fallback diagnostics.

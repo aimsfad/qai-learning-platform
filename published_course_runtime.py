@@ -18,6 +18,7 @@ import streamlit as st
 
 import adaptive_support_engine
 import attempt_gate
+import course_pretest_engine
 import db
 import feedback_engine
 import global_design_system as global_ui
@@ -120,7 +121,9 @@ def _copy(lang: str) -> Dict[str, str]:
             "pretest_done": "أكملت الاختبار القبلي لهذا المقرر.",
             "pretest_score": "النتيجة التشخيصية",
             "answer_all": "أجب عن جميع أسئلة الاختبار القبلي قبل المتابعة.",
-            "baseline_fallback": "تعذر استخراج أسئلة اختيار من متعدد من حزمة التقييم القديمة، لذلك تستخدم هذه النسخة خط أساس تشخيصيًا لمستوى الألفة مع مفاهيم المقرر.",
+            "baseline_fallback": "تعذر إنشاء اختبار موضوعي موثوق لهذا الإصدار، لذلك تستخدم المنصة مؤقتًا خط أساس لمستوى الألفة حتى يعاد توليد الاختبار.",
+            "pretest_prepare": "تجهّز المنصة اختبارًا قبليًا خاصًا بهذه النسخة من المقرر…",
+            "pretest_ai_ready": "اختبار تشخيصي موضوعي مولّد آليًا ومثبت لهذه النسخة من المقرر.",
             "baseline_levels": ["لا أعرفه بعد", "أتعرف عليه فقط", "أستطيع شرحه بشكل أساسي", "أستطيع تطبيقه بثقة"],
             "workflow_account": "الحساب", "workflow_enroll": "التسجيل في المقرر", "workflow_pretest": "الاختبار القبلي", "workflow_learn": "التعلم",
         },
@@ -179,7 +182,9 @@ def _copy(lang: str) -> Dict[str, str]:
             "pretest_done": "Vous avez terminé le pré-test de ce cours.",
             "pretest_score": "Résultat diagnostique",
             "answer_all": "Répondez à toutes les questions avant de continuer.",
-            "baseline_fallback": "Les QCM du dossier d'évaluation historique n'ont pas pu être extraits ; un diagnostic de familiarité avec les concepts est utilisé pour cette version.",
+            "baseline_fallback": "Un pré-test objectif fiable n'a pas pu être préparé pour cette version ; un diagnostic de familiarité est utilisé temporairement jusqu'à régénération.",
+            "pretest_prepare": "La plateforme prépare un pré-test propre à cette version du cours…",
+            "pretest_ai_ready": "Pré-test objectif généré par IA et figé pour cette version du cours.",
             "baseline_levels": ["Je ne connais pas encore", "Je reconnais seulement", "Je peux l'expliquer simplement", "Je peux l'appliquer avec confiance"],
             "workflow_account": "Compte", "workflow_enroll": "Inscription", "workflow_pretest": "Pré-test", "workflow_learn": "Apprentissage",
         },
@@ -238,7 +243,9 @@ def _copy(lang: str) -> Dict[str, str]:
             "pretest_done": "You completed the pre-test for this course.",
             "pretest_score": "Diagnostic score",
             "answer_all": "Answer every pre-test item before continuing.",
-            "baseline_fallback": "Multiple-choice diagnostics could not be extracted from the legacy assessment package, so this version uses a familiarity baseline for the course concepts.",
+            "baseline_fallback": "A reliable objective pre-test could not be prepared for this version, so a familiarity baseline is used temporarily until regeneration.",
+            "pretest_prepare": "The platform is preparing a course-version-specific pre-test…",
+            "pretest_ai_ready": "AI-generated objective diagnostic pinned to this course version.",
             "baseline_levels": ["I do not know this yet", "I only recognize it", "I can explain it basically", "I can apply it confidently"],
             "workflow_account": "Account", "workflow_enroll": "Course enrollment", "workflow_pretest": "Pre-test", "workflow_learn": "Learning",
         },
@@ -510,12 +517,32 @@ def _fallback_baseline_questions(blueprint: Mapping[str, Any], lang: str) -> Lis
     ]
 
 def _course_pretest_questions(project: Mapping[str, Any], blueprint: Mapping[str, Any], lang: str) -> tuple[List[Dict[str, Any]], str]:
+    """Return the course-version-pinned objective diagnostic when available.
+
+    V6.20.27 first resolves the persisted AI package. Existing legacy Phase-8
+    objective questions remain a compatibility fallback; self-report is used
+    only when neither route can produce a usable objective diagnostic.
+    """
+    try:
+        package = course_pretest_engine.ensure_course_pretest_package(
+            project, blueprint, requested_language=lang
+        )
+        if str(package.get("status") or "") == "ready":
+            questions = course_pretest_engine.package_questions(package)
+            if len(questions) >= 3:
+                return questions, str(package.get("source_type") or "ai_generated_course_pretest")
+    except Exception:
+        # Learner access must remain available during temporary provider or
+        # persistence failures. The deterministic compatibility path below
+        # preserves the pre-test gate without leaking errors into the UI.
+        pass
+
     outputs = db.teacher_project_phase_outputs(int(project["id"]), prefer_completed=True)
     phase8 = outputs.get(8) or {}
     text = str(phase8.get("response_text") or "")
     questions = _json_diagnostic_questions(text) or _markdown_diagnostic_questions(text)
     if len(questions) >= 3:
-        return questions[:3], "teacher_assessment"
+        return questions[:6], "teacher_assessment"
     return _fallback_baseline_questions(blueprint, lang), "self_report_baseline"
 
 
@@ -546,10 +573,13 @@ def _render_course_pretest(
         st.success(f"{copy['pretest_done']} {copy['pretest_score']}: {float(existing.get('score') or 0):.0f}%")
         return True
 
-    questions, source_type = _course_pretest_questions(project, blueprint, lang)
+    with st.spinner(copy["pretest_prepare"]):
+        questions, source_type = _course_pretest_questions(project, blueprint, lang)
     global_ui.render_section_header(copy["course_pretest"], copy["course_pretest_help"], lang=lang)
     if source_type == "self_report_baseline":
         st.info(copy["baseline_fallback"])
+    elif source_type in {"ai_generated_course_pretest", "phase8_ai_assessment"}:
+        st.caption(copy["pretest_ai_ready"])
     answers: Dict[str, Any] = {}
     with st.form(f"v62019_course_pretest_{project_id}_{blueprint_run_id}"):
         st.markdown("<span class='v62023-pretest-marker' aria-hidden='true'></span>", unsafe_allow_html=True)

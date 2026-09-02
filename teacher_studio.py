@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 
 import content_generation_engine
+import course_pretest_engine
 import educational_builder
 import evidence_synthesis_engine
 import lesson_blueprint_engine
@@ -2711,6 +2712,7 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             "publish_title": "5. النشر في فضاء المتعلم", "publish_help": "بعد اعتماد النسخة النهائية يمكن نشر المقرر ليظهر في فضاء المتعلم.",
             "publish_action": "نشر في فضاء المتعلم", "published_ok": "تم نشر المقرر في فضاء المتعلم.",
             "published": "المقرر منشور الآن.", "return_draft": "إرجاع إلى المسودة", "archive": "أرشفة المشروع",
+            "pretest_title": "الاختبار القبلي الذكي", "pretest_ready": "اختبار موضوعي خاص بهذا الإصدار جاهز ومثبت لجميع المتعلمين.", "pretest_pending": "سيولّد الذكاء الاصطناعي اختبارًا قبليًا موضوعيًا خاصًا بهذا الإصدار قبل النشر.", "pretest_action": "توليد الاختبار القبلي الآن", "pretest_regenerate": "إعادة توليد الاختبار القبلي", "pretest_failed": "تعذر إنشاء اختبار قبلي ينجح في بوابة الجودة. أعيدي المحاولة قبل النشر.", "pretest_generating": "جاري توليد الاختبار القبلي والتحقق من جودته…",
             "delivery": "مؤشرات الاستخدام بعد النشر", "enrollments": "المسجلون", "course_completion": "إكمال الدورة", "lesson_completion": "إكمال الدروس", "ai": "تفاعلات المدرب الذكي",
         },
         "fr": {
@@ -2730,6 +2732,7 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             "publish_title": "5. Publier dans l’espace apprenant", "publish_help": "La publication devient disponible après la validation finale.",
             "publish_action": "Publier dans l’espace apprenant", "published_ok": "Cours publié dans l’espace apprenant.",
             "published": "Le cours est publié.", "return_draft": "Repasser en brouillon", "archive": "Archiver le projet",
+            "pretest_title": "Pré-test intelligent", "pretest_ready": "Un pré-test objectif propre à cette version est prêt et figé pour tous les apprenants.", "pretest_pending": "L’IA générera un pré-test objectif propre à cette version avant publication.", "pretest_action": "Générer le pré-test maintenant", "pretest_regenerate": "Régénérer le pré-test", "pretest_failed": "Le pré-test n’a pas franchi la porte qualité. Réessayez avant de publier.", "pretest_generating": "Génération et validation du pré-test…",
             "delivery": "Indicateurs après publication", "enrollments": "Inscriptions", "course_completion": "Cours terminés", "lesson_completion": "Leçons terminées", "ai": "Interactions coach IA",
         },
         "en": {
@@ -2749,6 +2752,7 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             "publish_title": "5. Publish to learner workspace", "publish_help": "Publishing becomes available after final teacher approval.",
             "publish_action": "Publish to learner workspace", "published_ok": "Course published to the learner workspace.",
             "published": "The course is published.", "return_draft": "Return to draft", "archive": "Archive project",
+            "pretest_title": "AI course pre-test", "pretest_ready": "An objective diagnostic is ready and pinned to this course version for all learners.", "pretest_pending": "AI will generate and quality-check a course-version-specific objective pre-test before publication.", "pretest_action": "Generate pre-test now", "pretest_regenerate": "Regenerate pre-test", "pretest_failed": "The generated pre-test did not pass the quality gate. Retry before publishing.", "pretest_generating": "Generating and validating the course pre-test…",
             "delivery": "Post-publication delivery signals", "enrollments": "Enrollments", "course_completion": "Course completion", "lesson_completion": "Lesson completion", "ai": "AI coach interactions",
         },
     }.get(lang, {})
@@ -2820,6 +2824,37 @@ def render_project_publication(project: Dict[str, Any]) -> None:
         st.caption(labels["preview_help"])
         render_project_student_preview(project, public_view=False)
 
+    st.markdown(f"#### {labels['pretest_title']}")
+    pretest_package = None
+    if blueprint:
+        pretest_package = db.get_published_course_pretest_package(project_id, int(blueprint.get("id") or 0))
+    pretest_ready = bool(
+        pretest_package and blueprint and course_pretest_engine.package_is_current(project, blueprint, pretest_package)
+    )
+    if pretest_ready:
+        try:
+            pretest_questions = course_pretest_engine.package_questions(pretest_package or {})
+        except Exception:
+            pretest_questions = []
+        st.success(f"{labels['pretest_ready']} ({len(pretest_questions)} questions · {pretest_package.get('provider') or 'AI'} / {pretest_package.get('model') or 'model'})")
+    else:
+        st.info(labels["pretest_pending"])
+    if blueprint and publish_ready:
+        pretest_button_label = labels["pretest_regenerate"] if pretest_package else labels["pretest_action"]
+        if st.button(pretest_button_label, use_container_width=True, key=f"teacher_prepare_pretest_{project_id}"):
+            try:
+                with st.spinner(labels["pretest_generating"]):
+                    package = course_pretest_engine.ensure_course_pretest_package(
+                        project, blueprint, requested_language=lang, force=bool(pretest_package)
+                    )
+                if str(package.get("status") or "") != "ready":
+                    st.error(labels["pretest_failed"])
+                else:
+                    st.session_state.teacher_flash_success = labels["pretest_ready"]
+                    st.rerun()
+            except Exception as exc:
+                ui_stability.render_error_card(exc, lang=lang)
+
     st.markdown(f"### {labels['approval_title']}")
     st.caption(labels["approval_help"])
     if final_review_fresh:
@@ -2871,9 +2906,19 @@ def render_project_publication(project: Dict[str, Any]) -> None:
             key="teacher_publish_project",
         ):
             try:
-                db.set_teacher_project_status(project_id, _current_teacher_username(), "published")
-                st.session_state.teacher_flash_success = labels["published_ok"]
-                st.rerun()
+                if blueprint:
+                    with st.spinner(labels["pretest_generating"]):
+                        package = course_pretest_engine.ensure_course_pretest_package(
+                            project, blueprint, requested_language=lang
+                        )
+                    if str(package.get("status") or "") != "ready":
+                        st.error(labels["pretest_failed"])
+                    else:
+                        db.set_teacher_project_status(project_id, _current_teacher_username(), "published")
+                        st.session_state.teacher_flash_success = labels["published_ok"]
+                        st.rerun()
+                else:
+                    st.error(labels["pretest_failed"])
             except Exception as exc:
                 ui_stability.render_error_card(exc, lang=lang)
 

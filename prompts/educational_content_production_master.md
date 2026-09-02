@@ -302,7 +302,7 @@ For each mode output: AI objective, expected input, response structure, maximum 
 
 Create:
 
-1. Three diagnostic questions.
+1. Six diagnostic questions spanning prerequisites, core concepts, misconceptions, application, interpretation, and transfer.
 2. Five formative questions.
 3. Two misconception-based questions.
 4. Two code-reading or process-reading questions where relevant.
@@ -315,23 +315,28 @@ For each item provide: item ID, learning objective, question, answer options if 
 
 Avoid trivia and superficial recall unless used diagnostically.
 
-At the end of Phase 8, include one machine-readable JSON block with exactly three diagnostic multiple-choice questions for the learner pre-test. Use this schema and keep the visible assessment package above it unchanged:
+At the end of Phase 8, include one machine-readable JSON block with exactly six objective diagnostic multiple-choice questions for the learner pre-test. This package is pinned to the published course version, so all learners in that version must receive the same six questions. Keep the visible assessment package above it unchanged.
 
 ```json
 {
+  "schema_version": "3alimnia.course_pretest.v1",
   "course_pretest": [
     {
-      "id": "D1",
-      "learning_objective": "...",
+      "id": "Q1",
+      "question_type": "prerequisite",
+      "concept": "specific concept",
       "question": "...",
       "options": ["...", "...", "...", "..."],
-      "correct_index": 0
+      "correct_index": 0,
+      "explanation": "...",
+      "difficulty": "easy",
+      "cognitive_level": "understand"
     }
   ]
 }
 ```
 
-The three questions must be answerable before instruction, align with the approved course outcomes, and avoid relying on knowledge introduced only inside the course.
+The six questions must be answerable before instruction, align with approved prerequisites/outcomes and course concepts, include at least four distinct concepts, and include prerequisite, misconception, and application/transfer coverage. Do not use self-report familiarity questions, course titles, source titles, `$Untitled`, `Untitled`, `TBD`, or other placeholders as diagnostic concepts. Every item must have exactly four distinct options, exactly one correct answer, and a concise explanation.
 
 ---
 
