@@ -1,3 +1,9 @@
+# V6.20.27.3 — Pre-test prompt-budget reliability
+
+- Fixed a Groq runtime-budget regression where long AI course pre-test prompts that do not use Teacher Studio phase markers could be compacted to an empty prompt (`~0 input tokens`).
+- Added a provider-neutral head+tail fallback that preserves the JSON/schema instructions and the course-context evidence when compacting arbitrary long prompts.
+- Added regression coverage proving course-pretest generation, repair, and recovery prompts remain non-empty and within the Groq input budget.
+
 # V6.20.27.2 — AI pre-test recovery and diagnostics
 
 - Added a third schema-first automatic recovery pass for rejected AI course pre-tests.

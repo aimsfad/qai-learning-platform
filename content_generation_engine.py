@@ -138,6 +138,59 @@ def _extract_block(text: str, start_pattern: str, end_pattern: str = r"\Z") -> s
     return match.group(0).strip() if match else ""
 
 
+def _slice_to_tokens(text: str, max_tokens: int, *, keep_tail: bool = False) -> str:
+    """Return a raw head/tail slice bounded by the provider-neutral estimator.
+
+    Unlike ``_truncate_to_tokens`` this helper adds no marker.  It is used to
+    build a head+tail fallback for prompts that do not follow the Teacher
+    Studio section grammar.
+    """
+    clean = str(text or "").strip()
+    max_tokens = max(16, int(max_tokens))
+    if estimate_tokens(clean) <= max_tokens:
+        return clean
+    low, high = 0, len(clean)
+    while low < high:
+        mid = (low + high + 1) // 2
+        candidate = clean[-mid:] if keep_tail else clean[:mid]
+        if estimate_tokens(candidate) <= max_tokens:
+            low = mid
+        else:
+            high = mid - 1
+    return clean[-low:] if keep_tail else clean[:low]
+
+
+def _compact_unstructured_prompt(prompt: str, max_tokens: int) -> str:
+    """Safely compact arbitrary prompts while preserving instructions and data.
+
+    V6.11.1 originally assumed every long prompt used the Teacher Studio
+    ``# Phase``/``<teacher_project_brief>`` grammar.  Course pre-test prompts
+    intentionally use a schema-first JSON contract instead, so the structured
+    extractor could yield an empty runtime prompt.  This fallback keeps the
+    instruction/schema head and the course-context tail within the same token
+    budget instead of ever returning an empty request.
+    """
+    clean = str(prompt or "").strip()
+    max_tokens = max(128, int(max_tokens))
+    if estimate_tokens(clean) <= max_tokens:
+        return clean
+
+    marker = "\n\n[UNSTRUCTURED PROMPT MIDDLE COMPACTED BY 3alimnIA]\n\n"
+    marker_tokens = estimate_tokens(marker)
+    usable = max(96, max_tokens - marker_tokens)
+    # The head contains task rules / JSON schema; the tail normally contains
+    # project evidence plus the final output reminder.
+    head_budget = max(64, int(usable * 0.58))
+    tail_budget = max(32, usable - head_budget)
+    head = _slice_to_tokens(clean, head_budget, keep_tail=False).rstrip()
+    tail = _slice_to_tokens(clean, tail_budget, keep_tail=True).lstrip()
+    compact = f"{head}{marker}{tail}".strip()
+    if estimate_tokens(compact) > max_tokens:
+        # Defensive bound; the split above should already fit.
+        compact = _truncate_to_tokens(compact, max_tokens, keep_tail=False)
+    return compact
+
+
 def _compact_teacher_brief(block: str, max_tokens: int) -> str:
     """Compact teacher fields while preserving every field label."""
     clean = str(block or "").strip()
@@ -254,6 +307,12 @@ def compact_prompt_for_budget(prompt: str, max_input_tokens: int) -> str:
         _truncate_to_tokens(contracts, allocations["contracts"], keep_tail=True),
     ]
     compact = "\n\n".join(part for part in parts if part).strip()
+    # Long non-Teacher-Studio prompts (for example the course pre-test JSON
+    # generator) do not contain the section anchors above.  Never collapse
+    # such a request to an empty prompt: preserve both its contract head and
+    # its course-context tail instead.
+    if not compact:
+        compact = _compact_unstructured_prompt(clean, max_input_tokens)
     if estimate_tokens(compact) > max_input_tokens:
         compact = _truncate_to_tokens(compact, max_input_tokens, keep_tail=False)
     return compact
