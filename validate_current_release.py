@@ -39,6 +39,7 @@ VALIDATORS = [
     "validate_v62020_security_hotfix.py",
     "validate_v62021_published_course_entry_routing.py",
     "validate_v62027_ai_course_pretest.py",
+    "validate_v62027_2_pretest_recovery.py",
 ]
 
 

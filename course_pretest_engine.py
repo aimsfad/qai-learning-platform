@@ -277,6 +277,65 @@ Invalid provider output to repair:
 """.strip()
 
 
+def _final_recovery_prompt(
+    project: Mapping[str, Any],
+    blueprint: Mapping[str, Any],
+    language_code: str,
+    diagnostics: Sequence[str],
+) -> str:
+    """Build a shorter, schema-first recovery request after two failed passes.
+
+    Some providers obey the pedagogical request but drift from the JSON shape.
+    The final pass deliberately removes most prose and assigns the six required
+    diagnostic roles explicitly so the quality gate can recover automatically.
+    """
+    language_name = LANGUAGE_NAMES.get(language_code, "English")
+    project_id = int(project.get("id") or 0)
+    blueprint_run_id = int(blueprint.get("id") or 0)
+    compact_context = {
+        "project": _project_context(project),
+        "blueprint": _blueprint_context(blueprint),
+        "approved_lesson_evidence": _approved_instructional_excerpts(
+            project_id, blueprint_run_id, blueprint
+        )[:4],
+    }
+    return f"""3alimnIA PRE-TEST RECOVERY PASS. Return JSON only.
+
+Generate exactly 6 objective multiple-choice diagnostic questions in {language_name}.
+Use these roles in this exact order:
+Q1 prerequisite
+Q2 prerequisite
+Q3 core_concept
+Q4 misconception
+Q5 application
+Q6 interpretation
+
+Hard schema for every item:
+- id: Q1..Q6
+- question_type: one of prerequisite, core_concept, misconception, application, interpretation, transfer
+- concept: a specific course concept, never the course title or a placeholder
+- question: objective learner-facing question, never self-report
+- options: exactly 4 distinct strings
+- correct_index: integer 0, 1, 2, or 3
+- explanation: non-empty concise rationale
+- difficulty: easy, medium, or hard
+- cognitive_level: remember, understand, apply, or analyze
+
+Use at least 4 distinct specific concepts across the 6 questions.
+Do not output markdown, code fences, commentary, or keys outside the JSON object.
+Never use Untitled, $Untitled, TBD, None, or the course/project title as a concept.
+
+Earlier validation signals to avoid:
+{json.dumps([str(x) for x in diagnostics if str(x).strip()][-18:], ensure_ascii=False)}
+
+Course context:
+{json.dumps(compact_context, ensure_ascii=False, separators=(",", ":"))[:14000]}
+
+Return exactly:
+{{"schema_version":"{SCHEMA_VERSION}","course_pretest":[...6 items...]}}
+""".strip()
+
+
 def _phase8_candidate(project_id: int) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     outputs = db.teacher_project_phase_outputs(int(project_id), prefer_completed=True)
     phase8 = dict(outputs.get(8) or {})
@@ -375,7 +434,7 @@ def ensure_course_pretest_package(
         repair = content_generation_engine.generate_content(
             _repair_prompt(prompt, result.response, quality, lang),
             LANGUAGE_NAMES.get(lang, "English"),
-            max_tokens=2400,
+            max_tokens=2600,
             phase_number=8,
             research_grounded=True,
         )
@@ -384,9 +443,34 @@ def ensure_course_pretest_package(
             repaired_rows = extract_payload(repair.response)
             repaired, repaired_quality = validate_generated_pretest(repaired_rows, blocked_titles=blocked)
             diagnostics.extend([str(repair.diagnostic or "").strip(), *list(repaired_quality.get("errors") or [])])
-            if repaired_quality.get("ready"):
-                normalized, quality = repaired, repaired_quality
-                provider, model = repair.provider, repair.model
+            # Keep the latest quality report even when it still fails; this
+            # gives the final recovery pass and teacher UI accurate diagnostics.
+            normalized, quality = repaired, repaired_quality
+            provider, model = repair.provider, repair.model
+
+    # Third and final automatic recovery pass.  It is intentionally compact
+    # and schema-first, which is more reliable for providers that returned
+    # pedagogically useful content in an invalid shape on earlier attempts.
+    if not quality.get("ready"):
+        recovery = content_generation_engine.generate_content(
+            _final_recovery_prompt(project, blueprint, lang, diagnostics),
+            LANGUAGE_NAMES.get(lang, "English"),
+            max_tokens=3200,
+            phase_number=8,
+            research_grounded=True,
+        )
+        attempts = 3
+        diagnostics.append(str(recovery.diagnostic or "").strip())
+        if recovery.status == "completed":
+            recovery_rows = extract_payload(recovery.response)
+            recovered, recovered_quality = validate_generated_pretest(
+                recovery_rows, blocked_titles=blocked
+            )
+            diagnostics.extend(list(recovered_quality.get("errors") or []))
+            normalized, quality = recovered, recovered_quality
+            provider, model = recovery.provider, recovery.model
+        else:
+            diagnostics.append(f"final_recovery_status={recovery.status}")
 
     status = "ready" if quality.get("ready") else "error"
     source_type = "ai_generated_course_pretest" if status == "ready" else "ai_generation_failed"

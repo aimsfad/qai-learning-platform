@@ -119,21 +119,29 @@ def extract_payload(text: str) -> List[Dict[str, Any]]:
 
 
 def _correct_index(row: Mapping[str, Any], options: Sequence[str]) -> Any:
+    # Prefer an explicit textual answer when providers return both an answer
+    # and an index.  This avoids the common 1-based-vs-0-based ambiguity.
+    answer = clean_text(
+        row.get("correct_answer")
+        or row.get("answer")
+        or row.get("correct_option")
+    )
+    if answer:
+        letter = answer[:1].upper()
+        if letter in "ABCD":
+            return ord(letter) - ord("A")
+        for idx, option in enumerate(options):
+            if clean_text(option).casefold() == answer.casefold():
+                return idx
+
     value = row.get("correct_index")
+    if value is None:
+        value = row.get("answer_index")
     if value is not None:
         try:
             return int(value)
         except Exception:
             return None
-    answer = clean_text(row.get("correct_answer"))
-    if not answer:
-        return None
-    letter = answer[:1].upper()
-    if letter in "ABCD":
-        return ord(letter) - ord("A")
-    for idx, option in enumerate(options):
-        if clean_text(option).casefold() == answer.casefold():
-            return idx
     return None
 
 
@@ -160,10 +168,22 @@ def validate_generated_pretest(
         question = clean_text(row.get("question") or row.get("prompt"))
         concept = clean_text(row.get("concept") or row.get("learning_objective") or row.get("objective"))
         qtype = clean_text(row.get("question_type") or row.get("type") or "core_concept").casefold().replace(" ", "_")
+        qtype = {
+            "foundation": "prerequisite",
+            "foundational": "prerequisite",
+            "knowledge": "prerequisite",
+            "prior_knowledge": "prerequisite",
+            "error_diagnosis": "misconception",
+            "misconception_diagnosis": "misconception",
+            "reasoning": "application",
+            "worked_reasoning": "application",
+            "analysis": "interpretation",
+        }.get(qtype, qtype)
         difficulty = clean_text(row.get("difficulty") or "medium").casefold()
         cognitive = clean_text(row.get("cognitive_level") or row.get("bloom_level") or "understand").casefold()
-        explanation = clean_text(row.get("explanation") or row.get("rationale"))
-        options = [clean_text(item) for item in (row.get("options") or []) if clean_text(item)]
+        explanation = clean_text(row.get("explanation") or row.get("rationale") or row.get("feedback"))
+        option_values = row.get("options") or row.get("choices") or row.get("answers") or []
+        options = [clean_text(item) for item in option_values if clean_text(item)]
         correct_index = _correct_index(row, options)
 
         tag = f"Q{index}"

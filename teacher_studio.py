@@ -2839,6 +2839,17 @@ def render_project_publication(project: Dict[str, Any]) -> None:
         st.success(f"{labels['pretest_ready']} ({len(pretest_questions)} questions · {pretest_package.get('provider') or 'AI'} / {pretest_package.get('model') or 'model'})")
     else:
         st.info(labels["pretest_pending"])
+        if pretest_package and str(pretest_package.get("status") or "") == "error":
+            provider_label = f"{pretest_package.get('provider') or 'provider'} / {pretest_package.get('model') or 'model'}"
+            attempts_label = int(pretest_package.get("generation_attempts") or 0)
+            diagnostic_text = str(pretest_package.get("diagnostic") or "").strip()
+            with st.expander(
+                {"ar": "تفاصيل فشل التوليد", "fr": "Détails de l’échec de génération", "en": "Generation failure details"}.get(lang, "Generation failure details"),
+                expanded=False,
+            ):
+                st.caption(f"{provider_label} · attempts={attempts_label}")
+                if diagnostic_text:
+                    st.code(diagnostic_text[:3500], language=None)
     if blueprint and publish_ready:
         pretest_button_label = labels["pretest_regenerate"] if pretest_package else labels["pretest_action"]
         if st.button(pretest_button_label, use_container_width=True, key=f"teacher_prepare_pretest_{project_id}"):
@@ -2849,6 +2860,13 @@ def render_project_publication(project: Dict[str, Any]) -> None:
                     )
                 if str(package.get("status") or "") != "ready":
                     st.error(labels["pretest_failed"])
+                    diagnostic_text = str(package.get("diagnostic") or "").strip()
+                    if diagnostic_text:
+                        with st.expander(
+                            {"ar": "سبب الرفض", "fr": "Motif du rejet", "en": "Rejection reason"}.get(lang, "Rejection reason"),
+                            expanded=True,
+                        ):
+                            st.code(diagnostic_text[:3500], language=None)
                 else:
                     st.session_state.teacher_flash_success = labels["pretest_ready"]
                     st.rerun()

@@ -1,3 +1,9 @@
+# V6.20.27.2 — AI pre-test recovery and diagnostics
+
+- Added a third schema-first automatic recovery pass for rejected AI course pre-tests.
+- Added provider-output normalization and visible Teacher Studio diagnostics for quality-gate failures.
+- Kept the six-question per-course-version fairness contract and all learner routing/scoring behavior unchanged.
+
 # V6.20.27 — AI-generated course pre-test engine
 
 - Generates exactly six objective, course-specific diagnostic questions through the existing AI provider router.
