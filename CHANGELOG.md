@@ -1,3 +1,10 @@
+# V6.20.27.4 — Structured pre-test output
+
+- Course pre-test generation now requests provider-enforced structured JSON instead of relying on free-form model text.
+- Groq GPT-OSS 20B/120B use strict JSON Schema output with six required questions and four options per question.
+- All three generation/repair/recovery attempts use the same schema; the existing semantic quality gate remains authoritative.
+- Generic Teacher Studio generation remains unchanged unless a caller explicitly requests a structured schema.
+
 # V6.20.27.3 — Pre-test prompt-budget reliability
 
 - Fixed a Groq runtime-budget regression where long AI course pre-test prompts that do not use Teacher Studio phase markers could be compacted to an empty prompt (`~0 input tokens`).

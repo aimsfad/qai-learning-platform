@@ -18,6 +18,7 @@ import db
 from course_pretest_contract import (
     REQUIRED_QUESTION_COUNT,
     SCHEMA_VERSION,
+    course_pretest_json_schema,
     extract_payload,
     validate_generated_pretest,
 )
@@ -416,12 +417,15 @@ def ensure_course_pretest_package(
         )
 
     prompt = build_generation_prompt(project, blueprint, lang)
+    response_schema = course_pretest_json_schema()
     result = content_generation_engine.generate_content(
         prompt,
         LANGUAGE_NAMES.get(lang, "English"),
         max_tokens=2800,
         phase_number=8,
         research_grounded=True,
+        structured_schema=response_schema,
+        structured_schema_name="course_pretest",
     )
     attempts = 1
     rows = extract_payload(result.response) if result.status == "completed" else []
@@ -437,6 +441,10 @@ def ensure_course_pretest_package(
             max_tokens=2600,
             phase_number=8,
             research_grounded=True,
+
+            structured_schema=response_schema,
+
+            structured_schema_name="course_pretest",
         )
         attempts = 2
         if repair.status == "completed":
@@ -458,6 +466,10 @@ def ensure_course_pretest_package(
             max_tokens=3200,
             phase_number=8,
             research_grounded=True,
+
+            structured_schema=response_schema,
+
+            structured_schema_name="course_pretest",
         )
         attempts = 3
         diagnostics.append(str(recovery.diagnostic or "").strip())

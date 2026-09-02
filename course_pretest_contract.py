@@ -52,6 +52,51 @@ SELF_REPORT_PATTERNS = (
 )
 
 
+def course_pretest_json_schema() -> Dict[str, Any]:
+    """Return the strict provider schema for one six-question pre-test package."""
+    question_schema: Dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "question_type": {"type": "string", "enum": sorted(QUESTION_TYPES)},
+            "concept": {"type": "string"},
+            "question": {"type": "string"},
+            "options": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": REQUIRED_OPTIONS_COUNT,
+                "maxItems": REQUIRED_OPTIONS_COUNT,
+            },
+            "correct_index": {"type": "integer", "minimum": 0, "maximum": 3},
+            "explanation": {"type": "string"},
+            "difficulty": {"type": "string", "enum": ["easy", "medium", "hard"]},
+            "cognitive_level": {
+                "type": "string",
+                "enum": ["remember", "understand", "apply", "analyze"],
+            },
+        },
+        "required": [
+            "id", "question_type", "concept", "question", "options",
+            "correct_index", "explanation", "difficulty", "cognitive_level",
+        ],
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "properties": {
+            "schema_version": {"type": "string", "enum": [SCHEMA_VERSION]},
+            "course_pretest": {
+                "type": "array",
+                "items": question_schema,
+                "minItems": REQUIRED_QUESTION_COUNT,
+                "maxItems": REQUIRED_QUESTION_COUNT,
+            },
+        },
+        "required": ["schema_version", "course_pretest"],
+        "additionalProperties": False,
+    }
+
+
 def clean_text(value: Any) -> str:
     return " ".join(str(value or "").strip().split())
 

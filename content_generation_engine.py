@@ -478,6 +478,8 @@ def _call_openai_compatible(
     api_key: str,
     base_url: str,
     enable_web_research: bool = False,
+    structured_schema: Optional[Dict[str, Any]] = None,
+    structured_schema_name: str = "structured_output",
 ) -> Tuple[str, str, str]:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     if provider == "openrouter":
@@ -493,6 +495,25 @@ def _call_openai_compatible(
         "temperature": 0.25,
         "max_tokens": int(max_tokens),
     }
+    if provider == "groq" and structured_schema:
+        # GPT-OSS supports Groq strict Structured Outputs. This prevents a
+        # successful provider call from returning prose or malformed JSON that
+        # the pre-test parser cannot consume. The semantic quality gate still
+        # validates concepts, coverage, and pedagogical quality afterwards.
+        if model in {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}:
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": re.sub(r"[^A-Za-z0-9_-]+", "_", structured_schema_name or "structured_output")[:64],
+                    "strict": True,
+                    "schema": structured_schema,
+                },
+            }
+            payload.pop("max_tokens", None)
+            payload["max_completion_tokens"] = int(max_tokens)
+            payload["reasoning_effort"] = "low"
+        else:
+            payload["response_format"] = {"type": "json_object"}
     if provider == "groq" and enable_web_research and model.startswith("openai/gpt-oss-"):
         payload.pop("max_tokens", None)
         payload.update(
@@ -591,6 +612,8 @@ def _call_selection(
     max_tokens: int,
     *,
     enable_web_research: bool = False,
+    structured_schema: Optional[Dict[str, Any]] = None,
+    structured_schema_name: str = "structured_output",
 ) -> Tuple[str, str, str]:
     if selection.provider in {"groq", "openai", "openrouter"}:
         return _call_openai_compatible(
@@ -602,6 +625,8 @@ def _call_selection(
             api_key=selection.api_key,
             base_url=selection.base_url,
             enable_web_research=enable_web_research,
+            structured_schema=structured_schema,
+            structured_schema_name=structured_schema_name,
         )
     if selection.provider == "gemini":
         return _call_gemini(
@@ -642,6 +667,8 @@ def generate_content(
     *,
     phase_number: Optional[int] = None,
     research_grounded: bool = False,
+    structured_schema: Optional[Dict[str, Any]] = None,
+    structured_schema_name: str = "structured_output",
 ) -> ContentGenerationResult:
     """Generate content with task-aware routing and a safe provider fallback chain."""
     started = time.perf_counter()
@@ -672,6 +699,11 @@ def generate_content(
         selection_web = enable_web_research and selection.provider == "groq"
         plan = _provider_prompt_plan(selection, prompt, system, int(max_tokens))
         plan_notes = [part for part in [_plan_note(plan, selection.provider)] if part]
+        if structured_schema and selection.provider == "groq":
+            if selection.model in {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}:
+                plan_notes.append("Groq strict JSON-schema output enabled.")
+            else:
+                plan_notes.append("Groq JSON-object output enabled for this structured task.")
         try:
             try:
                 text, provider_name, model_name = _call_selection(
@@ -680,6 +712,8 @@ def generate_content(
                     system,
                     plan.max_output_tokens,
                     enable_web_research=selection_web,
+                    structured_schema=structured_schema,
+                    structured_schema_name=structured_schema_name,
                 )
             except Exception as first_exc:
                 # One bounded, more aggressive retry is worthwhile for 413/TPM
@@ -699,6 +733,8 @@ def generate_content(
                         system,
                         strict_plan.max_output_tokens,
                         enable_web_research=False,
+                        structured_schema=structured_schema,
+                        structured_schema_name=structured_schema_name,
                     )
                     plan = strict_plan
                 else:

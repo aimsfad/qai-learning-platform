@@ -41,6 +41,7 @@ VALIDATORS = [
     "validate_v62027_ai_course_pretest.py",
     "validate_v62027_2_pretest_recovery.py",
     "validate_v62027_3_prompt_budget_fix.py",
+    "validate_v62027_4_structured_pretest_output.py",
 ]
 
 
