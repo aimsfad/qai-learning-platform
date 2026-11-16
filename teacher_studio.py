@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import io
+import os
+import tempfile
+from pathlib import Path
 import json
 import re
 from html import escape
@@ -14,6 +17,7 @@ import streamlit as st
 import content_generation_engine
 import course_pretest_engine
 import educational_builder
+import hybrid_rag
 import evidence_synthesis_engine
 import lesson_blueprint_engine
 import lesson_block_generation_engine
@@ -391,7 +395,7 @@ def teacher_ui() -> Dict[str, str]:
             "evidence_readiness": "درجة الجاهزية",
             "evidence_cards": "بطاقات الأدلة",
             "evidence_concepts": "المفاهيم",
-            "evidence_approved_sources": "المصادر المعتمدة آليًا",
+            "evidence_approved_sources": "المصادر المجتازة للتصفية الآلية",
             "evidence_source_score": "الدرجة المركبة",
             "evidence_status": "الحالة",
             "evidence_warnings": "تحذيرات الجودة",
@@ -417,7 +421,7 @@ def teacher_ui() -> Dict[str, str]:
             "evidence_readiness": "Score de préparation",
             "evidence_cards": "Cartes de preuve",
             "evidence_concepts": "Concepts",
-            "evidence_approved_sources": "Sources approuvées automatiquement",
+            "evidence_approved_sources": "Sources présélectionnées automatiquement",
             "evidence_source_score": "Score composite",
             "evidence_status": "Statut",
             "evidence_warnings": "Alertes qualité",
@@ -443,7 +447,7 @@ def teacher_ui() -> Dict[str, str]:
             "evidence_readiness": "Readiness score",
             "evidence_cards": "Evidence cards",
             "evidence_concepts": "Concepts",
-            "evidence_approved_sources": "Automatically approved sources",
+            "evidence_approved_sources": "Automatically screened sources",
             "evidence_source_score": "Composite score",
             "evidence_status": "Status",
             "evidence_warnings": "Quality warnings",
@@ -1077,6 +1081,8 @@ def _render_latest_research(
     return latest
 
 def render_prompt_and_generation(project: Dict[str, Any]) -> None:
+    if not _simple_teacher_mode():
+        render_local_rag_sources(project)
     """Render a single, guided sources-and-research workspace."""
     u = teacher_ui()
     p = _project_defaults(project)
@@ -1091,7 +1097,11 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         default_mode = "balanced"
     if not research_status.get("enabled"):
         default_mode = "off"
-    modes = ["off", "quick", "balanced", "deep"]
+    local_only = os.getenv("AI_PRIVACY_MODE", "").strip().lower() == "local_only"
+    if local_only:
+        default_mode = "off"
+        st.info("Local-only privacy mode is enabled: external web research is disabled.")
+    modes = ["off"] if local_only else ["off", "quick", "balanced", "deep"]
     mode_labels = {
         "off": u["research_mode_off"],
         "quick": u["research_mode_quick"],
@@ -1195,7 +1205,7 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
         st.caption(u["research_cost"])
 
     # Inputs must exist even when the settings expander is closed.
-    research_mode = st.session_state.get(f"teacher_research_mode_{project_id}_{research_phase}", default_mode)
+    research_mode = "off" if local_only else st.session_state.get(f"teacher_research_mode_{project_id}_{research_phase}", default_mode)
     max_sources = int(st.session_state.get(f"teacher_research_sources_{project_id}_{research_phase}", 8))
     preferred_domains_raw = st.session_state.get(f"teacher_preferred_domains_{project_id}_{research_phase}", "")
     excluded_domains_raw = st.session_state.get(
@@ -3195,7 +3205,147 @@ def _render_simple_journey(project: Dict[str, Any], simple_state: Dict[str, Any]
     return selected
 
 
+def render_local_rag_sources(project: Dict[str, Any]) -> None:
+    """Authenticated teacher UI for online-server indexing and explicit source approval."""
+    if not hybrid_rag.enabled():
+        return
+    owner = _current_teacher_username()
+    project_id = int(project.get("id") or 0)
+    if not owner or not db.get_teacher_project(project_id, owner):
+        st.error("RAG project access denied")
+        return
+    lang = i18n.current_lang(st)
+    labels = {
+        "ar": ("مكتبة مراجع RAG للمقرر", "رفع مرجع جديد", "أملك حق استعمال المرجع وأوافق على فهرسته في خادم المنصة", "فهرسة مرجع (مسودة)", "اعتماد المرجع المحدد", "إلغاء اعتماد المرجع", "احذف المرجع", "لا تُستخدم المراجع قبل اعتماد الأستاذ؛ الفهرسة لا تثبت الصحة العلمية"),
+        "fr": ("Bibliothèque RAG du cours", "Ajouter des références", "Je suis autorisé(e) à utiliser le document et à l'indexer sur le serveur de la plateforme", "Indexer en brouillon", "Approuver la source", "Révoquer l'approbation", "Supprimer la source", "Seules les sources validées par l'enseignant sont utilisées; la vérification scientifique reste nécessaire"),
+        "en": ("Course RAG reference library", "Upload a reference", "I have permission to use this document and index it on the platform server", "Index as draft", "Approve source", "Revoke approval", "Delete source", "Only teacher-approved references are used; scientific verification remains necessary"),
+    }[lang if lang in {"ar", "fr", "en"} else "en"]
+    with st.expander(labels[0], expanded=False):
+        st.caption(labels[7])
+        files = st.file_uploader(labels[1], type=["pdf", "docx", "txt", "md"], accept_multiple_files=True,
+                                 key=f"rag_file_upload_{project_id}")
+        source_citation = st.text_input({"ar": "المرجع الببليوغرافي (اختياري)", "fr": "Référence bibliographique (facultatif)", "en": "Bibliographic citation (optional)"}.get(lang),
+                                        key=f"rag_citation_{project_id}")
+        source_url = st.text_input({"ar": "رابط رسمي أو DOI (اختياري - HTTPS فقط)", "fr": "Lien officiel ou DOI (facultatif, HTTPS)", "en": "Official reference or DOI URL (optional, HTTPS only)"}.get(lang),
+                                   key=f"rag_url_{project_id}")
+        license_note = st.text_input({"ar": "الترخيص أو إذن الاستخدام (اختياري)", "fr": "Licence ou autorisation d'usage", "en": "License / usage permission"}.get(lang),
+                                     key=f"rag_license_{project_id}")
+        consent = st.checkbox(labels[2], value=False, key=f"rag_upload_permission_{project_id}")
+        cloud_mode = hybrid_rag.cloud_embeddings_enabled()
+        cloud_labels = {
+            "ar": "أوافق صراحةً على إرسال مقاطع هذا المرجع وعبارات البحث إلى Google Gemini لإنشاء فهرس دلالي (قد تنطبق رسوم الخدمة)",
+            "fr": "J'autorise explicitement l'envoi d'extraits de cette source et des requêtes à Google Gemini pour l'indexation sémantique (frais éventuels)",
+            "en": "I explicitly allow sending excerpts from this source and search phrases to Google Gemini for semantic indexing (provider charges may apply)",
+        }
+        cloud_consent = st.checkbox(cloud_labels.get(lang, cloud_labels["en"]), value=False,
+                                    disabled=not cloud_mode, key=f"rag_cloud_permission_{project_id}")
+        generation_labels = {
+            "ar": "أوافق على إرسال المقاطع المسترجعة من هذا المرجع إلى نموذج التوليد السحابي الذي أختاره داخل 3alimnIA",
+            "fr": "J'autorise l'envoi d'extraits récupérés de ce document au modèle de génération cloud choisi dans 3alimnIA",
+            "en": "I authorize sending retrieved excerpts of this document to the online generation model selected in 3alimnIA",
+        }
+        generation_consent = st.checkbox(generation_labels.get(lang, generation_labels["en"]),
+                                         value=False, key=f"rag_generation_permission_{project_id}")
+        if not cloud_mode:
+            st.caption({"ar": "البحث النصي متاح. الاسترجاع الدلالي السحابي اختياري ويحتاج تفعيلًا من مسؤول المنصة.",
+                        "fr": "Recherche lexicale disponible. La recherche sémantique cloud nécessite une activation explicite.",
+                        "en": "Lexical retrieval is available; cloud semantic indexing is optional and separately configured."}.get(lang))
+        if st.button(labels[3], key=f"rag_upload_action_{project_id}", disabled=not files or not consent):
+            try:
+                index = hybrid_rag.RAGIndex()
+                for uploaded in files or []:
+                    if uploaded.size > hybrid_rag.MAX_DOC_BYTES:
+                        raise ValueError(f"{uploaded.name}: file exceeds the 20 MiB limit")
+                    with tempfile.TemporaryDirectory(prefix="3alimnia_rag_") as tmp:
+                        safe_name = Path(str(uploaded.name).replace("\\", "/")).name
+                        path = Path(tmp) / safe_name
+                        path.write_bytes(uploaded.getvalue())
+                        result = index.add_document(owner=owner, project_id=project_id, path=path,
+                                                    origin="teacher", approved=False,
+                                                    allow_cloud_processing=bool(cloud_consent),
+                                                    allow_online_generation=bool(generation_consent),
+                                                    license_note=str(license_note or ""),
+                                                    source_url=str(source_url or ""),
+                                                    citation_label=str(source_citation or ""))
+                        st.success(f"{safe_name}: {result['source_id']} ({result['chunks']} chunks)")
+            except Exception as exc:
+                st.error(f"Indexing failed: {exc}")
+        index = hybrid_rag.RAGIndex()
+        documents = index.list_documents(owner=owner, project_id=project_id)
+        if not documents:
+            st.info("No indexed sources yet.")
+            return
+        st.dataframe([{"source_id": d["source_id"], "name": d["name"],
+                       "approved": bool(d["approved"]), "origin": d["origin"],
+                       "embedding": d.get("embedding_provider") or "lexical",
+                       "approved_by": d.get("approved_by") or "",
+                       "generation_consent": bool(d.get("cloud_generation_consent")),
+                       "reference": d.get("citation_label") or ""}
+                      for d in documents], hide_index=True, use_container_width=True)
+        options = {f"{d['name']} — {d['source_id']}": d for d in documents}
+        selected = st.selectbox("Source", list(options), key=f"rag_source_select_{project_id}")
+        target = options[selected]
+        cols = st.columns(3)
+        with cols[0]:
+            if st.button(labels[4], key=f"rag_approve_{project_id}", disabled=bool(target["approved"])):
+                index.approve(owner=owner, project_id=project_id, source_id=target["source_id"])
+                st.rerun()
+        with cols[1]:
+            if st.button(labels[5], key=f"rag_revoke_{project_id}", disabled=not bool(target["approved"])):
+                index.approve(owner=owner, project_id=project_id, source_id=target["source_id"], approved=False)
+                st.rerun()
+        with cols[2]:
+            if st.button(labels[6], key=f"rag_delete_{project_id}"):
+                index.delete(owner=owner, project_id=project_id, source_id=target["source_id"])
+                st.rerun()
+        consent_state = bool(target.get("cloud_generation_consent"))
+        if st.button({"ar": "إلغاء السماح بإرسال المقاطع للنموذج السحابي" if consent_state else "السماح بإرسال المقاطع للنموذج السحابي",
+                      "fr": "Révoquer l'autorisation de génération cloud" if consent_state else "Autoriser la génération cloud",
+                      "en": "Revoke cloud generation permission" if consent_state else "Allow cloud generation"}.get(lang),
+                     key=f"rag_cloud_generation_toggle_{project_id}"):
+            index.set_generation_consent(owner=owner, project_id=project_id,
+                                         source_id=target["source_id"], allowed=not consent_state)
+            st.rerun()
+        st.caption({"ar": "سيُستبعد أي مرجع لم يسمح الأستاذ بإرساله من أوامر التوليد السحابي، حتى لو كان معتمدًا.",
+                    "fr": "Sans autorisation, les extraits de cette source sont exclus des requêtes de génération cloud.",
+                    "en": "Without permission, excerpts from this source are excluded from cloud-generation prompts."}.get(lang))
+        if cloud_mode and (target.get("embedding_provider") != "gemini"):
+            cloud_recheck = st.checkbox(cloud_labels.get(lang, cloud_labels["en"]), value=False,
+                                       key=f"rag_cloud_reindex_consent_{project_id}")
+            if st.button("Enable cloud embeddings for selected source", disabled=not cloud_recheck,
+                         key=f"rag_cloud_reindex_{project_id}"):
+                try:
+                    index.enable_cloud_embeddings(owner=owner, project_id=project_id,
+                                                  source_id=target["source_id"], teacher_confirmed=True)
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Semantic indexing failed: {exc}")
+        if target.get("embedding_provider") == "gemini":
+            if st.button({"ar": "إلغاء فهرسة Gemini الدلالية (لا يسحب البيانات التي أُرسلت سابقًا)",
+                          "fr": "Désactiver l'index sémantique Gemini (sans effacer les données déjà transmises)",
+                          "en": "Disable Gemini semantic index (cannot retract already transmitted data)"}.get(lang),
+                         key=f"rag_cloud_disable_{project_id}"):
+                index.disable_cloud_embeddings(owner=owner, project_id=project_id,
+                                               source_id=target["source_id"])
+                st.rerun()
+        query = st.text_input({"ar": "اختبار استرجاع الأدلة", "fr": "Tester la recherche des preuves", "en": "Test evidence retrieval"}.get(lang, "Test retrieval"),
+                              key=f"rag_preview_query_{project_id}")
+        if st.button({"ar": "استرجاع", "fr": "Rechercher", "en": "Retrieve"}.get(lang, "Retrieve"),
+                     disabled=not query.strip(), key=f"rag_preview_go_{project_id}"):
+            try:
+                context = index.search(owner=owner, project_id=project_id, query=query.strip())
+                st.info(f"{context.retrieval_mode}: {len(context.hits)} excerpts. {context.retrieval_diagnostic}")
+                if context.hits:
+                    st.dataframe([{
+                        "reference": h["citation_key"], "document": h["name"],
+                        "page": h["page"], "origin": h["origin"], "excerpt": str(h["body"])[:240]
+                    } for h in context.hits], hide_index=True, use_container_width=True)
+            except Exception as exc:
+                st.error(f"Retrieval failed: {exc}")
+
+
 def _render_simple_sources(project: Dict[str, Any], base_state: Dict[str, Any]) -> None:
+    render_local_rag_sources(project)
     lang = i18n.current_lang(st)
     substep = simple_teacher_journey.source_substep(base_state)
     labels = {
