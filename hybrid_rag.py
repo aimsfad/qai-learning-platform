@@ -500,11 +500,25 @@ class RAGIndex:
                               retrieval_diagnostic=diagnostic)
 
 
+def open_index(*, embedder: Any = None):
+    """Select the storage backend without silently falling back on storage failure.
+
+    SQLite remains the V0.2 default. Neon staging requires explicit opt-in.
+    """
+    backend = os.getenv("RAG_STORAGE_BACKEND", "sqlite").strip().lower()
+    if backend == "sqlite":
+        return RAGIndex(embedder=embedder)
+    if backend == "postgres":
+        from rag_postgres import PostgresRAGIndex
+        return PostgresRAGIndex(embedder=embedder)
+    raise ValueError("RAG_STORAGE_BACKEND must be sqlite or postgres")
+
+
 def project_context(*, project_id: int, owner: str, query: str, limit: int = 6) -> RAGContext:
     """Feature-flagged retrieval. The caller must already verify project ownership."""
     if not enabled():
         return RAGContext()
-    return RAGIndex().search(owner=owner, project_id=project_id, query=query,
+    return open_index().search(owner=owner, project_id=project_id, query=query,
                              limit=limit, for_generation=True)
 
 

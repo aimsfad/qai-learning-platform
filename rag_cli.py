@@ -6,7 +6,7 @@ Then:  python rag_cli.py approve --project-id 5 --teacher professor --source-id 
 import argparse
 import json
 
-from hybrid_rag import RAGIndex
+from hybrid_rag import open_index
 
 
 def main() -> None:
@@ -20,7 +20,7 @@ def main() -> None:
     parser.add_argument("--source-id", help="Source ID for approve/revoke/remove")
     parser.add_argument("--query", help="Search query")
     args = parser.parse_args()
-    index = RAGIndex()
+    index = open_index()
     shared = {"owner": args.teacher, "project_id": args.project_id}
     if args.command == "add":
         if not args.file:
@@ -38,7 +38,7 @@ def main() -> None:
             parser.error(f"{args.command} requires --source-id")
         result = (index.delete(**shared, source_id=args.source_id) if args.command == "remove"
                   else index.approve(**shared, source_id=args.source_id, approved=args.command == "approve"))
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
 
 
 if __name__ == "__main__":

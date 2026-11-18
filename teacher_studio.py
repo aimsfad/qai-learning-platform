@@ -3252,7 +3252,7 @@ def render_local_rag_sources(project: Dict[str, Any]) -> None:
                         "en": "Lexical retrieval is available; cloud semantic indexing is optional and separately configured."}.get(lang))
         if st.button(labels[3], key=f"rag_upload_action_{project_id}", disabled=not files or not consent):
             try:
-                index = hybrid_rag.RAGIndex()
+                index = hybrid_rag.open_index()
                 for uploaded in files or []:
                     if uploaded.size > hybrid_rag.MAX_DOC_BYTES:
                         raise ValueError(f"{uploaded.name}: file exceeds the 20 MiB limit")
@@ -3270,7 +3270,7 @@ def render_local_rag_sources(project: Dict[str, Any]) -> None:
                         st.success(f"{safe_name}: {result['source_id']} ({result['chunks']} chunks)")
             except Exception as exc:
                 st.error(f"Indexing failed: {exc}")
-        index = hybrid_rag.RAGIndex()
+        index = hybrid_rag.open_index()
         documents = index.list_documents(owner=owner, project_id=project_id)
         if not documents:
             st.info("No indexed sources yet.")

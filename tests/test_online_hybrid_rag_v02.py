@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
@@ -82,7 +83,7 @@ class OnlineRAGTest(unittest.TestCase):
 
     def test_migration_preserves_previous_database(self):
         # Old V0.1 schema without new provenance columns.
-        with sqlite3.connect(str(self.db)) as con:
+        with closing(sqlite3.connect(str(self.db))) as con:
             con.executescript('''CREATE TABLE rag_documents (
                 id INTEGER PRIMARY KEY, owner TEXT NOT NULL, project_id INTEGER NOT NULL,
                 source_id TEXT NOT NULL UNIQUE, name TEXT NOT NULL, origin TEXT NOT NULL,
