@@ -1059,7 +1059,8 @@ def evaluator_password_is_valid(username: str, password: str) -> bool:
     stored_hash = secret("EVALUATOR_PASSWORD_HASH", "").strip()
     if stored_hash:
         return verify_password(password, stored_hash)
-    return password == secret("ADMIN_PASSWORD", "admin123")
+    configured_password = secret("ADMIN_PASSWORD", "").strip()
+    return bool(configured_password) and bool(password) and password == configured_password
 
 
 def registration_code_required() -> str:
@@ -4224,8 +4225,8 @@ def render_evaluator_login() -> None:
         with st.container(border=True, key="v618_evaluator_auth_card"):
             st.markdown("<span class='v618-auth-marker v618-evaluator-auth-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
             st.markdown(f"<div class='v618-auth-brand' dir='{u['dir']}'><b>3alimnIA Research</b><span>{escape(u['workspace_sub'])}</span></div>", unsafe_allow_html=True)
-            if secret("ADMIN_PASSWORD", "admin123") == "admin123" and not secret("EVALUATOR_PASSWORD_HASH", ""):
-                st.warning(i18n.tr("Default evaluator password is still active. Change ADMIN_PASSWORD or use EVALUATOR_PASSWORD_HASH before cloud deployment."))
+            if not secret("ADMIN_PASSWORD", "").strip() and not secret("EVALUATOR_PASSWORD_HASH", "").strip():
+                st.warning(i18n.tr("Evaluator access is disabled until ADMIN_PASSWORD or EVALUATOR_PASSWORD_HASH is configured."))
             with st.form("eval_login"):
                 username = st.text_input(u["username"], value=secret("EVALUATOR_USERNAME", "evaluator"))
                 password = st.text_input(u["password"], type="password")

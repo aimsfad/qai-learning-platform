@@ -14,6 +14,8 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
+import local_ai
+
 
 @dataclass(frozen=True)
 class ProviderSelection:
@@ -42,6 +44,8 @@ def _as_bool(name: str, default: bool = True) -> bool:
 
 def _configured_provider(task_type: str) -> str:
     task = (task_type or "content").strip().lower()
+    if _secret("AI_PRIVACY_MODE", "").strip().lower() == "local_only":
+        return "ollama"
     if task == "file_analysis":
         return _secret("FILE_ANALYSIS_PROVIDER", "gemini").strip().lower() or "gemini"
     if task == "content":
@@ -73,6 +77,9 @@ def _normalize_model(provider: str, model: str) -> str:
 def _model_for(provider: str, task_type: str) -> str:
     task = (task_type or "content").strip().lower()
     provider = provider.strip().lower()
+
+    if provider in {"ollama", "local"}:
+        return _secret("CONTENT_OLLAMA_MODEL", "qwen3:4b").strip() or "qwen3:4b"
 
     if provider == "groq":
         if task == "content":
@@ -125,10 +132,15 @@ def _model_for(provider: str, task_type: str) -> str:
 
 
 def _selection(provider: str, task_type: str, role: str = "primary") -> ProviderSelection:
-    provider = (provider or "local").strip().lower()
+    provider = (provider or "ollama").strip().lower()
+    if provider == "local":
+        provider = "ollama"
     model = _normalize_model(provider, _model_for(provider, task_type))
 
-    if provider == "groq":
+    if provider == "ollama":
+        key = ""
+        base = local_ai.configured_url()
+    elif provider == "groq":
         key = _secret("GROQ_API_KEY", "").strip()
         base = _secret("GROQ_BASE_URL", "https://api.groq.com/openai/v1").strip().rstrip("/")
     elif provider == "gemini":
@@ -150,7 +162,7 @@ def _selection(provider: str, task_type: str, role: str = "primary") -> Provider
     return ProviderSelection(
         provider=provider,
         model=model,
-        available=bool(key),
+        available=(bool(key) or (provider == "ollama" and _as_bool("OLLAMA_ENABLED", False))),
         base_url=base,
         api_key=key,
         role=role,
@@ -160,6 +172,9 @@ def _selection(provider: str, task_type: str, role: str = "primary") -> Provider
 def generation_candidates(task_type: str = "content") -> List[ProviderSelection]:
     """Return an ordered, de-duplicated provider chain for a task."""
     primary = _configured_provider(task_type)
+    local_only = _secret("AI_PRIVACY_MODE", "").strip().lower() == "local_only"
+    if local_only or (primary in {"ollama", "local"} and not _as_bool("LOCAL_AI_ALLOW_CLOUD_FALLBACK", False)):
+        return [_selection("ollama", task_type, "primary")]
     if not _as_bool("ENABLE_MODEL_FALLBACK", True):
         return [_selection(primary, task_type, "primary")]
 
@@ -175,7 +190,7 @@ def generation_candidates(task_type: str = "content") -> List[ProviderSelection]
     seen = set()
     for provider in order:
         provider = (provider or "").strip().lower()
-        if not provider or provider in seen or provider in {"local", "none", "fallback"}:
+        if not provider or provider in seen or provider in {"none", "fallback"}:
             continue
         seen.add(provider)
         selections.append(_selection(provider, task_type, "primary" if not selections else "fallback"))
@@ -196,7 +211,7 @@ def provider_status(task_type: str = "content") -> Dict[str, Any]:
         "configured_model": configured.model,
         "using_fallback": effective.provider != configured.provider,
         "ready_fallbacks": ready_fallbacks,
-        "fallback_enabled": _as_bool("ENABLE_MODEL_FALLBACK", True),
+        "fallback_enabled": len(candidates) > 1,
     }
 
 
@@ -211,4 +226,5 @@ def integration_status() -> Dict[str, bool]:
         "openrouter": bool(_secret("OPENROUTER_API_KEY", "").strip()),
         "gemini": bool(_secret("GEMINI_API_KEY", "").strip()),
         "groq": bool(_secret("GROQ_API_KEY", "").strip()),
+        "ollama": _as_bool("OLLAMA_ENABLED", False),
     }
