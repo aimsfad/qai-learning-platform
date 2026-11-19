@@ -17,7 +17,7 @@ MIN_UNIQUE_WORDS = 4
 # V6.20.11 label-demo switch.
 # Temporary: AI support can be opened without satisfying the attempt-first gate.
 # Set this back to False after the label/demo recording to restore the research policy.
-DEMO_BYPASS_ATTEMPT_GATE = False
+DEMO_BYPASS_ATTEMPT_GATE = True
 
 
 def support_access_allowed(validation: "AttemptValidation") -> bool:
