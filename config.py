@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,11 +12,8 @@ LESSON_MEDIA_DIR = ROOT_DIR / "assets" / "lesson_media"
 
 
 def load_css() -> None:
-    """Load the single production stylesheet at app startup."""
+    """Load the platform stylesheet."""
     if APP_STYLE_PATH.exists():
-        st.markdown(
-            f"<style>{APP_STYLE_PATH.read_text(encoding='utf-8')}</style>",
-            unsafe_allow_html=True,
-        )
+        st.html(APP_STYLE_PATH)
         return
     st.warning("Theme stylesheet was not found; the app will use Streamlit defaults.")
