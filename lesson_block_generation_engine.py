@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 import content_generation_engine
+import hybrid_rag
+import rag_grounding
 import db
 import pedagogical_orchestrator
 import pedagogical_quality_gate
@@ -198,6 +200,8 @@ def build_block_prompt(
     block_type: str,
     *,
     previous_blocks: Optional[List[Dict[str, Any]]] = None,
+    rag_packet: str = "",
+    rag_source_ids: Optional[List[str]] = None,
 ) -> str:
     if block_type not in BLOCK_SPECS:
         raise ValueError(f"Unsupported block type: {block_type}")
@@ -210,7 +214,7 @@ def build_block_prompt(
     previous_summary = "\n".join(
         f"- {item.get('block_type')}: {str(item.get('content_text') or '')[:500]}" for item in previous[-3:]
     ) or "[No earlier approved blocks]"
-    source_ids = list(lesson.get("source_ids") or [])
+    source_ids = list(dict.fromkeys(list(lesson.get("source_ids") or []) + list(rag_source_ids or [])))
     outcome_lines = "\n".join(
         f"- {o.get('outcome_id')}: {o.get('verb')} {o.get('object_text')} | criterion: {o.get('success_criterion')}"
         for o in outcomes
@@ -258,6 +262,9 @@ Concepts:
 
 {pedagogy_contract}
 
+# Verified teacher-approved RAG evidence
+{rag_packet or '[No local RAG excerpts for this block]'}
+
 # Requested block
 - Type: {block_type}
 - Label: {label}
@@ -292,7 +299,7 @@ def validate_block_content(block_type: str, text: str, allowed_source_ids: List[
         warnings.append("content_is_short")
     if clean.lower().startswith("generation failed") or "no content-generation provider" in clean.lower():
         errors.append("provider_failure_text")
-    cited = sorted(set(re.findall(r"\[(S\d+)\]", clean)))
+    cited = sorted(set(re.findall(r"\[((?:S\d+)|(?:RAG[A-F0-9]{12}(?:_P\d+_C\d+)?))\]", clean)))
     allowed = set(str(x) for x in allowed_source_ids)
     invalid = [item for item in cited if item not in allowed]
     if invalid:
@@ -379,8 +386,18 @@ def generate_and_persist(
             project_id, str(lesson_id), blueprint_run_id=blueprint_run_id
         )
     )
-    prompt = build_block_prompt(project, blueprint_bundle, lesson_id, block_type, previous_blocks=previous)
-    allowed_sources = list(ctx["lesson"].get("source_ids") or [])
+    rag_query = " ".join(str(x or "") for x in [ctx["lesson"].get("title"), block_type] +
+                         [c.get("name") for c in ctx["concepts"]] +
+                         [o.get("object_text") for o in ctx["outcomes"]])
+    rag_context = hybrid_rag.project_context(
+        project_id=project_id, owner=str(teacher_username), query=rag_query,
+    )
+    prompt = build_block_prompt(
+        project, blueprint_bundle, lesson_id, block_type, previous_blocks=previous,
+        rag_packet=rag_context.packet, rag_source_ids=rag_context.citation_ids,
+    )
+    allowed_sources = list(dict.fromkeys(list(ctx["lesson"].get("source_ids") or [])
+                                     + rag_context.source_ids + rag_context.citation_ids))
     result = content_generation_engine.generate_content(
         prompt,
         str(project.get("primary_language") or project.get("primary_language_code") or "Arabic"),
@@ -389,6 +406,22 @@ def generate_and_persist(
         research_grounded=True,
     )
     validation = validate_block_content(block_type, result.response, allowed_sources)
+    if rag_context.retrieval_diagnostic and not rag_context.hits:
+        validation["warnings"].append("rag_unavailable_or_unpermitted: " + rag_context.retrieval_diagnostic)
+        if validation["status"] == "completed":
+            validation["status"] = "needs_review"
+    if rag_context.hits:
+        grounding_audit = rag_grounding.audit_generated_text(result.response, rag_context)
+        validation["grounding_audit"] = grounding_audit
+        if grounding_audit["unknown_citations"]:
+            validation["errors"].append("unknown_rag_sources:" + ",".join(grounding_audit["unknown_citations"]))
+            validation["status"] = "error"
+        else:
+            validation["warnings"].append("rag_grounding_requires_teacher_verification")
+            if grounding_audit["document_level_citations"] or not grounding_audit["known_chunk_citations"]:
+                validation["warnings"].append("rag_chunk_citations_missing_or_inexact")
+            if validation["status"] == "completed":
+                validation["status"] = "needs_review"
     status = result.status if result.status != "completed" else validation["status"]
     run_id = db.save_teacher_lesson_block(
         project_id=project_id,
@@ -586,6 +619,12 @@ def approve_full_lesson(project_id: int, lesson_id: str, teacher_username: str) 
             + ", ".join(str(item) for item in gate.get("blockers") or [])
         )
 
+    # Resolve the approved blueprint explicitly. The previous code referenced
+    # `blueprint_bundle` without defining it, breaking full-lesson approval.
+    blueprint_bundle = db.teacher_blueprint_bundle(int(blueprint_run_id)) or {}
+    if (not blueprint_bundle or int(blueprint_bundle.get("project_id") or 0) != int(project_id)
+            or not bool(int(blueprint_bundle.get("approved_by_teacher") or 0))):
+        raise ValueError("Active approved blueprint is missing or belongs to another project")
     # Validate lesson identity once at the lesson boundary.  The legacy path
     # repeated this same evidence/blueprint/project lookup for every one of the
     # nine lesson blocks, which is unnecessarily expensive on remote databases.

@@ -13,3 +13,6 @@ venv/
 .DS_Store
 Thumbs.db
 _archive/
+.rag_data/
+.3alimnia_patch_backups/
+.3alimnia_patch_backups/

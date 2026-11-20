@@ -22,6 +22,7 @@ import requests
 import streamlit as st
 
 import model_router
+import local_ai
 
 
 @dataclass
@@ -255,6 +256,24 @@ def _compact_teacher_brief(block: str, max_tokens: int) -> str:
     return _truncate_to_tokens(result, max_tokens)
 
 
+def compact_lesson_prompt(prompt: str, max_tokens: int) -> str:
+    """Keep evidence *and* binding source-ID rules for lesson-block prompts."""
+    marker = "# Verified teacher-approved RAG evidence"
+    tail_marker = "# Requested block"
+    clean = str(prompt or "")
+    if marker not in clean or tail_marker not in clean:
+        return _compact_unstructured_prompt(clean, max_tokens)
+    head, rest = clean.split(marker, 1)
+    rag, tail = rest.split(tail_marker, 1)
+    parts = [
+        _slice_to_tokens(head, int(max_tokens * 0.36)),
+        marker + "\n" + _slice_to_tokens(rag, int(max_tokens * 0.28)),
+        tail_marker + "\n" + _slice_to_tokens(tail, int(max_tokens * 0.30), keep_tail=True),
+    ]
+    candidate = "\n\n".join(parts)
+    return candidate if estimate_tokens(candidate) <= max_tokens else _truncate_to_tokens(candidate, max_tokens)
+
+
 def compact_prompt_for_budget(prompt: str, max_input_tokens: int) -> str:
     """Build a section-aware runtime prompt bounded by estimated input tokens."""
     clean = str(prompt or "").strip()
@@ -282,19 +301,21 @@ def compact_prompt_for_budget(prompt: str, max_input_tokens: int) -> str:
     research = _extract_block(
         clean,
         r"^# Verified web-research evidence",
-        r"^# Evidence contract|^# Research-grounding contract|^# Response contract|\Z",
+        r"^# Verified teacher-approved RAG evidence|^# Evidence contract|^# Research-grounding contract|^# Response contract|\Z",
     )
+    rag = _extract_block(clean, r"^# Verified teacher-approved RAG evidence", r"^# Evidence contract|^# Research-grounding contract|^# Response contract|\Z")
     evidence = _extract_block(clean, r"^# Evidence contract", r"^# Research-grounding contract|^# Response contract|\Z")
     research_contract = _extract_block(clean, r"^# Research-grounding contract", r"^# Response contract|\Z")
     response_contract = _extract_block(clean, r"^# Response contract", r"\Z")
 
     # Token allocations preserve the current phase and project evidence first.
     allocations = {
-        "preamble": int(max_input_tokens * 0.14),
-        "brief": int(max_input_tokens * 0.27),
-        "phase": int(max_input_tokens * 0.17),
-        "research": int(max_input_tokens * 0.25),
-        "previous": int(max_input_tokens * 0.09),
+        "preamble": int(max_input_tokens * 0.12),
+        "brief": int(max_input_tokens * 0.21),
+        "phase": int(max_input_tokens * 0.16),
+        "research": int(max_input_tokens * 0.12),
+        "rag": int(max_input_tokens * 0.25),
+        "previous": int(max_input_tokens * 0.06),
         "contracts": int(max_input_tokens * 0.08),
     }
     contracts = "\n\n".join(part for part in [evidence, research_contract, response_contract] if part)
@@ -303,6 +324,7 @@ def compact_prompt_for_budget(prompt: str, max_input_tokens: int) -> str:
         _compact_teacher_brief(brief, allocations["brief"]),
         _truncate_to_tokens(phase, allocations["phase"]),
         _truncate_to_tokens(research, allocations["research"], keep_tail=True),
+        _truncate_to_tokens(rag, allocations["rag"], keep_tail=False),
         _truncate_to_tokens(previous, allocations["previous"], keep_tail=True),
         _truncate_to_tokens(contracts, allocations["contracts"], keep_tail=True),
     ]
@@ -350,6 +372,23 @@ def _provider_prompt_plan(
             total_token_budget=total_budget,
             compacted=runtime_prompt != prompt,
             aggressive=aggressive,
+        )
+
+    if selection.provider == "ollama":
+        context = _as_int("CONTENT_OLLAMA_INPUT_TOKENS", 4600, 900, 24000)
+        cap = _as_int("CONTENT_OLLAMA_MAX_OUTPUT_TOKENS", 2400, 256, 8192)
+        runtime_prompt = (
+            compact_lesson_prompt(prompt, context)
+            if "# 3alimnIA lesson-block production request" in prompt and estimate_tokens(prompt) > context
+            else compact_prompt_for_budget(prompt, context)
+        )
+        return RuntimePromptPlan(
+            prompt=runtime_prompt,
+            estimated_original_tokens=original_estimate,
+            estimated_runtime_tokens=estimate_tokens(runtime_prompt),
+            max_output_tokens=min(requested_max_tokens, cap),
+            total_token_budget=context + cap,
+            compacted=runtime_prompt != prompt,
         )
 
     provider_caps = {
@@ -615,6 +654,14 @@ def _call_selection(
     structured_schema: Optional[Dict[str, Any]] = None,
     structured_schema_name: str = "structured_output",
 ) -> Tuple[str, str, str]:
+    if selection.provider == "ollama":
+        return (
+            local_ai.chat(
+                model=selection.model, prompt=prompt, system=system,
+                max_tokens=max_tokens, response_schema=structured_schema,
+            ),
+            "ollama", selection.model,
+        )
     if selection.provider in {"groq", "openai", "openrouter"}:
         return _call_openai_compatible(
             prompt,
@@ -684,7 +731,7 @@ def generate_content(
             provider=primary.provider if primary.provider != "local" else "local",
             model=primary.model if primary.provider != "local" else "prompt-export-only",
             status="not_configured",
-            diagnostic="Configure GROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.",
+            diagnostic="Enable OLLAMA_ENABLED and CONTENT_LLM_PROVIDER=ollama, or configure a supported hosted-provider API key.",
             latency_ms=int((time.perf_counter() - started) * 1000),
         )
 
