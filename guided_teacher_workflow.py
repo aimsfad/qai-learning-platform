@@ -273,6 +273,15 @@ def load_workflow_state(project: Dict[str, Any]) -> Dict[str, Any]:
     project_id = int(project.get("id") or 0)
     research_df = db.teacher_research_runs_df(project_id, phase_number=1)
     research_runs = research_df.to_dict("records") if hasattr(research_df, "to_dict") else []
+    # Revoked/deleted local RAG sources cannot unlock later workflow stages.
+    import rag_course_sources
+    owner = str(project.get("teacher_username") or "").strip()
+    for row in research_runs:
+        if str(row.get("provider") or "") == rag_course_sources.LOCAL_RAG_PROVIDER:
+            if rag_course_sources.current_snapshot_error(
+                row, owner=owner, project_id=project_id,
+            ):
+                row["approved_by_teacher"] = 0
     evidence = db.latest_teacher_evidence(project_id, 1, approved_only=False)
     blueprint = db.latest_teacher_blueprint(project_id, approved_only=False)
     approved_blueprint = db.latest_teacher_blueprint(project_id, approved_only=True)

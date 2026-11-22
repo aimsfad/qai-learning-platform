@@ -18,6 +18,7 @@ import content_generation_engine
 import course_pretest_engine
 import educational_builder
 import hybrid_rag
+import rag_course_sources
 import evidence_synthesis_engine
 import lesson_blueprint_engine
 import lesson_block_generation_engine
@@ -972,7 +973,10 @@ def _render_latest_research(
     sources = web_research_engine.sources_from_json(latest.get("sources_json") or "[]")
     status = str(latest.get("status") or "")
     lang = i18n.current_lang(st)
-    approved = bool(int(latest.get("approved_by_teacher") or 0))
+    snapshot_error = rag_course_sources.current_snapshot_error(
+        latest, owner=_current_teacher_username(), project_id=int(project_id),
+    )
+    approved = bool(int(latest.get("approved_by_teacher") or 0)) and not snapshot_error
     labels = {
         "ar": {
             "title": "نتائج البحث ومراجعة المصادر",
@@ -1072,8 +1076,10 @@ def _render_latest_research(
     if approved:
         st.success(labels["approved"])
     elif canonical_stage and status in {"completed", "needs_review"}:
+        if snapshot_error:
+            st.error(snapshot_error)
         st.markdown("<span class='v6172-approval-marker' aria-hidden='true'></span>", unsafe_allow_html=True)
-        if st.button(labels["approve"], type="primary", use_container_width=True, key=f"approve_research_{int(latest.get('id') or 0)}"):
+        if st.button(labels["approve"], type="primary", use_container_width=True, disabled=bool(snapshot_error), key=f"approve_research_{int(latest.get('id') or 0)}"):
             db.approve_teacher_research_run(int(latest["id"]), int(project_id), _current_teacher_username())
             st.session_state.teacher_flash_success = labels["approved"]
             st.session_state.teacher_workspace_section_pending = "evidence"
@@ -1111,6 +1117,13 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
 
     latest_research = db.latest_usable_teacher_research(project_id, research_phase)
     approved_research = db.latest_approved_teacher_research(project_id, research_phase)
+    if approved_research:
+        rag_permission_error = rag_course_sources.current_snapshot_error(
+            approved_research, owner=_current_teacher_username(), project_id=project_id,
+        )
+        if rag_permission_error:
+            st.warning(rag_permission_error)
+            approved_research = None
     stage_state = "approved" if approved_research else ("review" if latest_research else "search")
     stage_labels = {
         "ar": {
@@ -1203,6 +1216,35 @@ def render_prompt_and_generation(project: Dict[str, Any]) -> None:
                 disabled=research_mode == "off",
             )
         st.caption(u["research_cost"])
+
+    if hybrid_rag.enabled():
+        st.markdown("#### مصادر RAG المعتمدة — دون بحث خارجي")
+        st.caption(
+            "استخدم المراجع التي رفعتها واعتمدتها في مكتبة RAG. "
+            "يجب السماح باستخدام المقاطع في التوليد السحابي؛ "
+            "لا تُعتبر هذه العملية بحثًا عبر الإنترنت."
+        )
+        rag_query = st.text_input(
+            "كلمات مفتاحية لاسترجاع مقاطع المقرر",
+            value=str(p.get("target_concept") or p.get("project_name") or "")[:180],
+            key=f"teacher_local_rag_query_{project_id}",
+        )
+        if st.button(
+            "إنشاء حزمة مصادر من مراجع RAG",
+            disabled=not bool(rag_query.strip()),
+            use_container_width=True,
+            key=f"teacher_local_rag_import_{project_id}",
+        ):
+            try:
+                rag_course_sources.create_local_rag_dossier(
+                    p, owner=_current_teacher_username(), query=rag_query,
+                )
+                st.session_state.teacher_flash_success = (
+                    "حُفظت حزمة RAG. راجع المصادر واعتمدها للانتقال إلى تركيب الأدلة."
+                )
+            except Exception as exc:
+                st.session_state.teacher_flash_error = str(exc)
+            st.rerun()
 
     # Inputs must exist even when the settings expander is closed.
     research_mode = "off" if local_only else st.session_state.get(f"teacher_research_mode_{project_id}_{research_phase}", default_mode)
@@ -1332,6 +1374,13 @@ def render_evidence_synthesis(project: Dict[str, Any]) -> None:
         st.info(u["evidence_strict_gate"])
 
     latest_research = db.latest_approved_teacher_research(project_id, phase_number)
+    if latest_research:
+        rag_permission_error = rag_course_sources.current_snapshot_error(
+            latest_research, owner=_current_teacher_username(), project_id=project_id,
+        )
+        if rag_permission_error:
+            st.error(rag_permission_error)
+            latest_research = None
     col1, col2 = st.columns(2)
     with col1:
         max_cards = st.slider(
