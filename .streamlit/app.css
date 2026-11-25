@@ -11249,3 +11249,5 @@ html body .stApp [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
     color: #F1F5F9 !important;
   }
 }
+
+[data-testid="stHeader"]{background:transparent!important;border:none!important;box-shadow:none!important;}
