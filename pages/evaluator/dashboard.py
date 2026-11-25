@@ -1,4 +1,4 @@
-"""Evaluator Dashboard Adapter (V7.0 Modular Routing)."""
+"""Evaluator Dashboard Adapter (V7.2 Modular Routing)."""
 def render_page():
-    from v7_engines import ABExperimentEngine
-    return ABExperimentEngine
+    import main_app
+    return getattr(main_app, "render_evaluator_app", None)

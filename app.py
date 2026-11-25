@@ -12,7 +12,6 @@ import main_app
 import router
 import teacher_studio
 import ui_v6
-import v7_enterprise_hub
 from config import APP_ICON, APP_TITLE, load_css
 
 
@@ -501,11 +500,6 @@ def main() -> None:
         _render_toolbar(getattr(navigation, "title", APP_TITLE))
         if st.session_state.get("role") == "student":
             _render_student_tool_dock()
-    with st.container():
-        show_v7 = st.toggle("✨ مركز ميزات 3alimnIA V7.1 (Liquid Glass Suite)", key="v7_hub_toggle")
-    if show_v7:
-        v7_enterprise_hub.render_v7_hub()
-        return
     navigation.run()
 
 
