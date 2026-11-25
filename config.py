@@ -59,7 +59,9 @@ html body .stApp .qai-pill,
 html body .stApp .v64-ai-chip,
 html body .stApp .v65-program-status,
 html body .stApp .v61-eyebrow,
-html body .stApp .v61-section-kicker {{
+html body .stApp .v61-section-kicker,
+html body .stApp .v61-benefit-row span,
+html body .stApp article .material-symbols-rounded {{
   background: rgba(37, 99, 235, 0.11) !important;
   color: #1E3A8A !important;
   border: 1px solid rgba(37, 99, 235, 0.22) !important;
@@ -117,6 +119,12 @@ html body .stApp .qai-v11-section,
 html body .stApp .v6-course-outline,
 html body .stApp .v6-comparison-wrap,
 html body .stApp .v43-guest-intro,
+html body .stApp article,
+html body .stApp .v6-pillar-grid article,
+html body .stApp .v65-capabilities-grid article,
+html body .stApp .v6-engine-grid article,
+html body .stApp .v6-institution-grid article,
+html body .stApp .v6-studio-flow article,
 html body .stApp [data-testid="stExpander"],
 html body .stApp [data-testid="stMetric"],
 html body .stApp [data-testid="stForm"],
@@ -161,7 +169,9 @@ html body .stApp .qai-pill,
 html body .stApp .v64-ai-chip,
 html body .stApp .v65-program-status,
 html body .stApp .v61-eyebrow,
-html body .stApp .v61-section-kicker {{
+html body .stApp .v61-section-kicker,
+html body .stApp .v61-benefit-row span,
+html body .stApp article .material-symbols-rounded {{
   background: rgba(56, 189, 248, 0.16) !important;
   color: #BAE6FD !important;
   border: 1px solid rgba(125, 211, 252, 0.34) !important;
