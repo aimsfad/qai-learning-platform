@@ -11,9 +11,8 @@ LESSON_MEDIA_DIR = ROOT_DIR / "assets" / "lesson_media"
 
 
 def load_css() -> None:
-    """Inject the unified V7.1 Ultra Liquid Glass stylesheet reliably across all Streamlit versions."""
+    """Inject the unified V7.3 Liquid Glass stylesheet via st.html (bypasses Markdown blank-line truncation)."""
     if APP_STYLE_PATH.exists():
-        css_text = APP_STYLE_PATH.read_text(encoding="utf-8")
-        st.html(APP_STYLE_PATH)
+        st.html(f"<style>{APP_STYLE_PATH.read_text(encoding='utf-8')}</style>")
         return
     st.warning("Theme stylesheet was not found; the app will use Streamlit defaults.")

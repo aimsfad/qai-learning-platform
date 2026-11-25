@@ -10735,312 +10735,517 @@ div[data-testid="stDownloadButton"] > button {
 
 
 /* ==========================================================================
-   3alimnIA V7.2 — ULTRA LIQUID GLASS OVERRIDE & RESPONSIVE POLISH LAYER
-   Preserves 100% of original structural grids & icons while upgrading every
-   surface to multi-layer Liquid Glass with full Desktop/Tablet/Mobile support
+   3alimnIA V7.5 — MASTER ULTRA LIQUID GLASS FRONTEND SYSTEM
+   Covers: Public Home · Programs · AI Studio · Student · Teacher · Evaluator
+   Devices: Ultra-Wide · Desktop · Tablet · Mobile · Small Phone · Print
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,-50..200&display=swap');
-
-.material-symbols-rounded {
-  font-family: 'Material Symbols Rounded' !important;
-  font-weight: normal;
-  font-style: normal;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
+@keyframes lgAuroraFloat {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(1.5%, -1.2%, 0) scale(1.03); }
+  100% { transform: translate3d(-1.2%, 1.4%, 0) scale(1.01); }
 }
 
-/* Luminous Aurora Liquid Backdrop */
-html, body, [data-testid="stAppViewContainer"], .stApp {
-  background-color: #EAF1FB !important;
-  background-image:
-    radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.28) 0%, transparent 42%),
-    radial-gradient(circle at 88% 8%, rgba(99, 102, 241, 0.22) 0%, transparent 44%),
-    radial-gradient(circle at 82% 84%, rgba(16, 185, 129, 0.18) 0%, transparent 44%),
-    radial-gradient(circle at 14% 86%, rgba(37, 99, 235, 0.15) 0%, transparent 40%) !important;
-  background-attachment: fixed !important;
-  overflow-x: clip !important;
+:root {
+  --lg-glass-bg: linear-gradient(138deg, rgba(255, 255, 255, 0.62) 0%, rgba(244, 249, 255, 0.28) 100%);
+  --lg-glass-strong: linear-gradient(142deg, rgba(255, 255, 255, 0.78) 0%, rgba(240, 247, 255, 0.44) 100%);
+  --lg-glass-hover: linear-gradient(138deg, rgba(255, 255, 255, 0.78) 0%, rgba(240, 248, 255, 0.46) 100%);
+  --lg-border: rgba(255, 255, 255, 0.88);
+  --lg-border-soft: rgba(148, 163, 184, 0.28);
+  --lg-shadow:
+    0 20px 52px rgba(15, 23, 42, 0.10),
+    0 3px 10px rgba(37, 99, 235, 0.06),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.42);
+  --lg-shadow-hover:
+    0 30px 70px rgba(15, 23, 42, 0.15),
+    0 8px 24px rgba(37, 99, 235, 0.13),
+    inset 0 2px 0 rgba(255, 255, 255, 1);
+  --lg-blur: blur(30px) saturate(210%);
+  --lg-blur-heavy: blur(38px) saturate(225%);
+  --lg-ink: #0A1428;
+  --lg-ink2: #24344F;
+  --lg-primary: #2563EB;
+  --lg-cyan: #0EA5E9;
+  --lg-emerald: #059669;
 }
 
-[data-testid="stHeader"] {
-  background: rgba(255, 255, 255, 0.56) !important;
-  backdrop-filter: blur(28px) saturate(195%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(195%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.85) !important;
-}
-
-/* Fix Top Navbar Button Truncation (الرئيسية / دخول الأستاذ) */
-[data-testid="stHorizontalBlock"] .stButton > button {
-  padding: 0.44rem 0.82rem !important;
-  font-size: 0.88rem !important;
-  white-space: nowrap !important;
-  min-height: 40px !important;
-  border-radius: 999px !important;
-  background: linear-gradient(142deg, rgba(255,255,255,0.86) 0%, rgba(242,247,255,0.58) 100%) !important;
-  backdrop-filter: blur(20px) saturate(185%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(185%) !important;
-  border: 1px solid rgba(255,255,255,0.88) !important;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07), inset 0 1.5px 0 rgba(255,255,255,0.95) !important;
-  transition: transform 180ms cubic-bezier(0.22,1,0.36,1), box-shadow 180ms ease !important;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12), inset 0 1.5px 0 rgba(255,255,255,1) !important;
-}
-
-.stButton > button[kind="primary"] {
-  background: linear-gradient(135deg, #2563EB 0%, #0284C7 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(255,255,255,0.45) !important;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.30), inset 0 1px 0 rgba(255,255,255,0.48) !important;
-}
-
-/* Liquid Glass Upgrade for ALL Cards, Program Tiles, Feature Tiles & Containers */
-.v65-program-card,
-.v61-float-card,
-.v618-action-card,
-.v6163-overview-card,
-.qai-card,
-.qai-v11-section,
-.v619-quality-gate,
-.v619-adaptive-support-card,
-.v6191-evidence-card,
-.v6191-next-move,
-.lg-card,
-.lg-hero,
-.lg-kpi,
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stExpander"],
-[data-testid="stMetric"],
-[data-testid="stForm"],
-[data-testid="stChatMessage"] {
-  background: linear-gradient(138deg, rgba(255,255,255,0.80) 0%, rgba(255,255,255,0.46) 100%) !important;
-  backdrop-filter: blur(26px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(26px) saturate(190%) !important;
-  border: 1px solid rgba(255,255,255,0.86) !important;
-  border-radius: 22px !important;
-  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08), inset 0 1.5px 0 rgba(255,255,255,0.95) !important;
-}
-
-.v65-program-card:hover,
-.lg-card:hover,
-.qai-card:hover {
-  transform: translateY(-4px) !important;
-  box-shadow: 0 28px 66px rgba(15, 23, 42, 0.13), inset 0 1.5px 0 rgba(255,255,255,1) !important;
-}
-
-/* Liquid Glass Tabs & Inputs */
-[data-testid="stTabs"] [role="tablist"] {
-  background: rgba(255, 255, 255, 0.56) !important;
-  backdrop-filter: blur(22px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.86) !important;
-  border-radius: 999px !important;
-  padding: 0.35rem !important;
-  overflow-x: auto !important;
-  scrollbar-width: none !important;
-}
-
-[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(241,246,255,0.58) 100%) !important;
-  backdrop-filter: blur(32px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
-  border-inline-end: 1px solid rgba(255,255,255,0.86) !important;
-}
-
-/* V7.1 Hub Component Styles */
-.lg-hero { padding: clamp(1.3rem, 2.8vw, 2.2rem); margin-bottom: 1.4rem; }
-.lg-hero__badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
-.lg-hero__title { font-size: clamp(1.45rem, 2.5vw, 2.25rem) !important; font-weight: 800 !important; margin: 0 0 0.5rem !important; }
-.lg-hero__subtitle { margin: 0; opacity: 0.88; line-height: 1.7; }
-.lg-card { padding: 1.25rem 1.4rem; margin-bottom: 0.9rem; }
-.lg-card__top { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
-.lg-card__title { font-size: 1.1rem !important; font-weight: 700 !important; margin: 0 0 0.35rem !important; }
-.lg-card__body { margin: 0; line-height: 1.68; }
-.lg-card__footer { margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid rgba(148,163,184,0.28); font-size: 0.84rem; }
-.lg-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 0.9rem; margin: 0.9rem 0 1.3rem; }
-.lg-kpi { padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 0.2rem; }
-.lg-kpi__label { font-size: 0.84rem; font-weight: 600; color: #4E5E7A; }
-.lg-kpi__value { font-size: 1.75rem; font-weight: 800; color: #1E3A8A; }
-.lg-kpi__delta { font-size: 0.8rem; font-weight: 700; color: #065F46; }
-.lg-badge { display: inline-flex; align-items: center; padding: 0.22rem 0.72rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.8); }
-.lg-badge--primary { background: rgba(37,99,235,0.13); color: #1E3A8A; }
-.lg-badge--emerald { background: rgba(5,150,105,0.15); color: #065F46; }
-.lg-badge--rose { background: rgba(190,18,60,0.13); color: #881337; }
-.lg-mobile-dock { display: none; }
-
-/* Dark Obsidian Liquid Glass */
-@media (prefers-color-scheme: dark) {
-  html, body, [data-testid="stAppViewContainer"], .stApp {
-    background-color: #070B14 !important;
-    color: #F8FAFC !important;
-  }
-}
-
-/* Full Multi-Device Responsiveness (Tablet · Phone · Small Phone) */
-@media (max-width: 1024px) {
-  .block-container { max-width: 100% !important; padding-inline: 1.1rem !important; }
-  [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.75rem !important; }
-}
-
-@media (max-width: 768px) {
-  .block-container {
-    padding-inline: 0.85rem !important;
-    padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  [data-testid="stHorizontalBlock"] { flex-direction: column !important; }
-  [data-testid="stHorizontalBlock"] > [data-testid="column"] { width: 100% !important; min-width: 100% !important; }
-  .stButton > button, .stDownloadButton > button { width: 100% !important; min-height: 46px !important; }
-  .lg-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-}
-
-@media (max-width: 480px) {
-  .lg-kpi-grid { grid-template-columns: 1fr !important; }
-}
-
-
-/* ==========================================================================
-   3alimnIA V7.3 — TRUE TRANSLUCENT LIQUID GLASS OVERRIDE (HIGH SPECIFICITY)
-   Forces transparent inner wrappers so the vivid Liquid Aurora shines through
-   every frosted glass card, navbar, hero, and stat surface — zero broken layout!
-   ========================================================================== */
-
-/* 1. Vivid Multi-Orb Liquid Aurora Canvas */
+/* 1. Full-Viewport Animated Liquid Aurora Backdrop (Overrides original white ::before) */
 html, body, .stApp, [data-testid="stAppViewContainer"] {
-  background-color: #DCE9FA !important;
-  background-image:
-    radial-gradient(ellipse 65% 55% at 8% 10%, rgba(56, 189, 248, 0.52) 0%, transparent 62%),
-    radial-gradient(ellipse 60% 55% at 92% 8%, rgba(99, 102, 241, 0.42) 0%, transparent 62%),
-    radial-gradient(ellipse 58% 55% at 84% 86%, rgba(16, 185, 129, 0.34) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 50% at 14% 88%, rgba(59, 130, 246, 0.36) 0%, transparent 58%),
-    linear-gradient(160deg, #E3EEFC 0%, #EEF4FF 48%, #E0F2FE 100%) !important;
-  background-attachment: fixed !important;
+  background-color: #D7E7FC !important;
+  overflow-x: clip !important;
+  scroll-behavior: smooth !important;
 }
 
-/* 2. Make Inner Streamlit Wrappers Transparent so Aurora Shines Through */
-[data-testid="stMain"],
-section.main,
-.stMainBlockContainer,
-[data-testid="stAppViewBlockContainer"] {
-  background: transparent !important;
-  background-image: none !important;
-}
-
-/* 3. Floating Translucent Liquid Glass Header & Nav Bar */
-[data-testid="stHeader"] {
-  background: rgba(255, 255, 255, 0.38) !important;
-  backdrop-filter: blur(32px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.78) !important;
-}
-
-/* 4. True Frosted Liquid Glass on ALL Hero, Program, Stat, Feature & Bordered Containers */
-.stApp [data-testid="stVerticalBlockBorderWrapper"],
-.stApp .v6-page-hero,
-.stApp .v65-program-card,
-.stApp .v64-stat-card,
-.stApp .v64-ai-banner,
-.stApp .v65-institution-banner,
-.stApp .v61-float-card,
-.stApp .v6-footer,
-.stApp .v618-action-card,
-.stApp .v6163-overview-card,
-.stApp .qai-card,
-.stApp .qai-v11-section,
-.stApp .v6-course-outline,
-.stApp .v6-comparison-wrap,
-.stApp [data-testid="stExpander"],
-.stApp [data-testid="stMetric"],
-.stApp [data-testid="stForm"] {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.26) 100%) !important;
-  backdrop-filter: blur(30px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
-  border-radius: 26px !important;
-  box-shadow:
-    0 22px 54px rgba(15, 23, 42, 0.10),
-    0 4px 14px rgba(37, 99, 235, 0.08),
-    inset 0 2px 0 rgba(255, 255, 255, 0.96),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.42) !important;
-}
-
-.stApp .v65-program-card:hover,
-.stApp .v64-stat-card:hover,
-.stApp .v61-float-card:hover,
-.stApp .qai-card:hover {
-  transform: translateY(-5px) scale(1.008) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.38) 100%) !important;
-  box-shadow:
-    0 32px 72px rgba(15, 23, 42, 0.15),
-    0 8px 24px rgba(37, 99, 235, 0.14),
-    inset 0 2px 0 rgba(255, 255, 255, 1) !important;
-}
-
-/* 5. Liquid Glass Pill Buttons (Crisp, Specular, No Truncation) */
-.stApp .stButton > button,
-.stApp .stDownloadButton > button {
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.36) 100%) !important;
-  backdrop-filter: blur(22px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(200%) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.90) !important;
-  border-radius: 999px !important;
-  color: #0B162C !important;
-  font-weight: 700 !important;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08), inset 0 1.5px 0 rgba(255, 255, 255, 0.98) !important;
-}
-
-.stApp .stButton > button[kind="primary"] {
-  background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%) !important;
-  color: #FFFFFF !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.55) !important;
-  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.36), inset 0 1.5px 0 rgba(255, 255, 255, 0.55) !important;
-}
-
-/* 6. Liquid Glass Selectbox / Language Switcher */
-.stApp [data-testid="stSelectbox"] > div > div {
-  background: rgba(255, 255, 255, 0.62) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.88) !important;
-  border-radius: 999px !important;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-}
-
-/* === V7.4 LIQUID GLASS PSEUDO-ELEMENT & HIGH-SPECIFICITY OVERRIDE === */
 html body .stApp [data-testid="stAppViewContainer"]::before,
 [data-testid="stAppViewContainer"]::before {
   content: "" !important;
   position: fixed !important;
-  inset: -6% !important;
+  inset: -8% !important;
   z-index: 0 !important;
   pointer-events: none !important;
   background:
-    radial-gradient(ellipse 62% 52% at 10% 10%, rgba(56, 189, 248, 0.56) 0%, transparent 62%),
-    radial-gradient(ellipse 58% 52% at 90% 8%, rgba(99, 102, 241, 0.46) 0%, transparent 62%),
-    radial-gradient(ellipse 56% 52% at 82% 88%, rgba(16, 185, 129, 0.36) 0%, transparent 60%),
-    radial-gradient(ellipse 52% 48% at 16% 86%, rgba(37, 99, 235, 0.38) 0%, transparent 58%),
-    linear-gradient(155deg, #D8E8FC 0%, #EAF2FF 48%, #D9F2FE 100%) !important;
+    radial-gradient(ellipse 58% 48% at 10% 10%, rgba(56, 189, 248, 0.56) 0%, transparent 62%),
+    radial-gradient(ellipse 56% 48% at 90% 8%, rgba(99, 102, 241, 0.44) 0%, transparent 62%),
+    radial-gradient(ellipse 54% 48% at 84% 88%, rgba(16, 185, 129, 0.36) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 46% at 14% 88%, rgba(37, 99, 235, 0.36) 0%, transparent 58%),
+    radial-gradient(ellipse 40% 36% at 52% 44%, rgba(255, 255, 255, 0.55) 0%, transparent 65%),
+    linear-gradient(155deg, #D8E9FD 0%, #EBF3FF 48%, #D8F1FE 100%) !important;
+  animation: lgAuroraFloat 22s ease-in-out infinite alternate !important;
 }
 
+/* Transparent inner Streamlit layers so the aurora shines through */
+html body .stApp [data-testid="stMain"],
+html body .stApp section.main,
+html body .stApp .stMainBlockContainer,
+html body .stApp [data-testid="stAppViewBlockContainer"] {
+  background: transparent !important;
+  background-image: none !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* 2. Material Symbols Icon Font Protection */
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded' !important;
+  font-feature-settings: 'liga' !important;
+  -webkit-font-feature-settings: 'liga' !important;
+}
+
+/* 3. Floating Liquid Glass Top Header & Sidebar */
+html body .stApp [data-testid="stHeader"] {
+  background: rgba(255, 255, 255, 0.40) !important;
+  backdrop-filter: var(--lg-blur-heavy) !important;
+  -webkit-backdrop-filter: var(--lg-blur-heavy) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.80) !important;
+}
+
+html body .stApp [data-testid="stSidebar"],
+html body .stApp [data-testid="stSidebar"] > div:first-child {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68) 0%, rgba(235, 244, 255, 0.44) 100%) !important;
+  backdrop-filter: var(--lg-blur-heavy) !important;
+  -webkit-backdrop-filter: var(--lg-blur-heavy) !important;
+  border-inline-end: 1.5px solid var(--lg-border) !important;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* 4. Universal Frosted Liquid Glass Cards (Public, Student, Teacher, Evaluator) */
 html body .stApp [data-testid="stVerticalBlockBorderWrapper"],
 html body .stApp [data-testid="stVerticalBlockBorderWrapper"]:has(*),
 html body .stApp .v6-page-hero,
 html body .stApp .v65-program-card,
 html body .stApp .v64-stat-card,
+html body .stApp .v64-ai-banner,
+html body .stApp .v65-institution-banner,
 html body .stApp .v61-float-card,
-html body .stApp .qai-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.24) 100%) !important;
-  backdrop-filter: blur(32px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.86) !important;
+html body .stApp .v6-footer,
+html body .stApp .v618-action-card,
+html body .stApp .v6163-overview-card,
+html body .stApp .v619-quality-gate,
+html body .stApp .v619-adaptive-support-card,
+html body .stApp .v6191-evidence-card,
+html body .stApp .v6191-next-move,
+html body .stApp .qai-card,
+html body .stApp .qai-v11-section,
+html body .stApp .v6-course-outline,
+html body .stApp .v6-comparison-wrap,
+html body .stApp .v43-guest-intro,
+html body .stApp .lg-card,
+html body .stApp .lg-hero,
+html body .stApp [data-testid="stExpander"],
+html body .stApp [data-testid="stMetric"],
+html body .stApp [data-testid="stForm"],
+html body .stApp [data-testid="stFileUploader"] {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: var(--lg-blur) !important;
+  -webkit-backdrop-filter: var(--lg-blur) !important;
+  border: 1.5px solid var(--lg-border) !important;
   border-radius: 26px !important;
-  box-shadow: 0 22px 56px rgba(15, 23, 42, 0.11), inset 0 2px 0 rgba(255, 255, 255, 0.96) !important;
+  box-shadow: var(--lg-shadow) !important;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 240ms ease, background 240ms ease !important;
+}
+
+html body .stApp .v65-program-card:hover,
+html body .stApp .v64-stat-card:hover,
+html body .stApp .v61-float-card:hover,
+html body .stApp .v618-action-card:hover,
+html body .stApp .qai-card:hover,
+html body .stApp .lg-card:hover {
+  transform: translateY(-5px) !important;
+  background: var(--lg-glass-hover) !important;
+  box-shadow: var(--lg-shadow-hover) !important;
+}
+
+/* 5. Liquid Glass Buttons (Specular Pill + Anti-Truncation Navbar) */
+html body .stApp .stButton > button,
+html body .stApp .stDownloadButton > button,
+html body .stApp .stFormSubmitButton > button {
+  background: var(--lg-glass-strong) !important;
+  backdrop-filter: blur(22px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(200%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.92) !important;
+  border-radius: 999px !important;
+  color: var(--lg-ink) !important;
+  font-weight: 700 !important;
+  min-height: 42px !important;
+  padding: 0.44rem 0.92rem !important;
+  white-space: nowrap !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08), inset 0 1.5px 0 rgba(255, 255, 255, 0.98) !important;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease !important;
+}
+
+html body .stApp .stButton > button:hover,
+html body .stApp .stDownloadButton > button:hover,
+html body .stApp .stFormSubmitButton > button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14), inset 0 1.5px 0 rgba(255, 255, 255, 1) !important;
+  border-color: rgba(37, 99, 235, 0.42) !important;
+}
+
+html body .stApp .stButton > button[kind="primary"],
+html body .stApp .stFormSubmitButton > button[kind="primary"] {
+  background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 14px 34px rgba(37, 99, 235, 0.36), inset 0 1.5px 0 rgba(255, 255, 255, 0.58) !important;
+}
+
+html body .stApp .stButton > button[kind="primary"]:hover {
+  background: linear-gradient(135deg, #1D4ED8 0%, #0284C7 100%) !important;
+  box-shadow: 0 20px 44px rgba(29, 78, 216, 0.44), inset 0 1.5px 0 rgba(255, 255, 255, 0.68) !important;
+}
+
+/* 6. Liquid Glass Tabs, Inputs, Chat Bubbles, Tables & Alerts */
+html body .stApp [data-testid="stTabs"] [role="tablist"] {
+  background: rgba(255, 255, 255, 0.46) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  border: 1.5px solid var(--lg-border) !important;
+  border-radius: 999px !important;
+  padding: 0.35rem !important;
+  gap: 0.35rem !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+  scroll-snap-type: x mandatory !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+}
+html body .stApp [data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar { display: none; }
+
+html body .stApp [data-testid="stTabs"] [role="tab"] {
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  padding: 0.45rem 1.05rem !important;
+  white-space: nowrap !important;
+  scroll-snap-align: start !important;
+}
+
+html body .stApp [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #1E3A8A !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.09) !important;
+}
+
+html body .stApp [data-testid="stTextInput"] input,
+html body .stApp [data-testid="stTextArea"] textarea,
+html body .stApp [data-testid="stSelectbox"] > div > div,
+html body .stApp [data-testid="stNumberInput"] input,
+html body .stApp [data-testid="stChatInput"] {
+  background: rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.86) !important;
+  border-radius: 16px !important;
+  color: var(--lg-ink) !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+}
+
+html body .stApp [data-testid="stTextInput"] input:focus,
+html body .stApp [data-testid="stTextArea"] textarea:focus {
+  border-color: var(--lg-primary) !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18) !important;
+}
+
+html body .stApp [data-testid="stChatMessage"] {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.68) 0%, rgba(241, 247, 255, 0.42) 100%) !important;
+  backdrop-filter: blur(24px) saturate(195%) !important;
+  border: 1.5px solid var(--lg-border) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07) !important;
+  padding: 1rem 1.2rem !important;
+}
+
+html body .stApp [data-testid="stDataFrame"],
+html body .stApp [data-testid="stTable"],
+html body .stApp [data-testid="stAlert"] {
+  background: rgba(255, 255, 255, 0.64) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1.5px solid var(--lg-border) !important;
+  border-radius: 20px !important;
+  overflow-x: auto !important;
+}
+
+/* Fix Hero Image Clipping & Crisp Rounded Framing */
+html body .stApp [data-testid="stImage"] img {
+  border-radius: 22px !important;
+  height: auto !important;
+  max-width: 100% !important;
+  box-shadow: 0 22px 52px rgba(10, 25, 65, 0.22) !important;
+}
+
+/* Custom Liquid Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.36); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.56); }
+
+/* 7. Obsidian Dark Liquid Glass (Auto OS Dark Theme) */
+@media (prefers-color-scheme: dark) {
+  html body .stApp [data-testid="stAppViewContainer"]::before,
+  [data-testid="stAppViewContainer"]::before {
+    background:
+      radial-gradient(ellipse 58% 48% at 10% 10%, rgba(56, 189, 248, 0.28) 0%, transparent 62%),
+      radial-gradient(ellipse 56% 48% at 90% 8%, rgba(129, 140, 248, 0.28) 0%, transparent 62%),
+      radial-gradient(ellipse 54% 48% at 84% 88%, rgba(16, 185, 129, 0.22) 0%, transparent 60%),
+      linear-gradient(160deg, #060A14 0%, #0B1222 50%, #07131D 100%) !important;
+  }
+}
+
+/* 8. Full Multi-Device Responsiveness (Tablet · Phone · Small Phone) */
+@media (max-width: 1024px) {
+  .block-container {
+    max-width: 100% !important;
+    padding-inline: 1.1rem !important;
+  }
+  html body .stApp [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .block-container {
+    padding-top: 0.85rem !important;
+    padding-inline: 0.85rem !important;
+    padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  html body .stApp [data-testid="stHorizontalBlock"] {
+    flex-direction: column !important;
+    gap: 0.7rem !important;
+  }
+  html body .stApp [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  html body .stApp .stButton > button,
+  html body .stApp .stDownloadButton > button {
+    width: 100% !important;
+    min-height: 46px !important;
+  }
+  html body .stApp [data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  html body .stApp .stButton > button {
+    font-size: 0.9rem !important;
+    padding: 0.42rem 0.75rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body .stApp [data-testid="stAppViewContainer"]::before,
+  [data-testid="stAppViewContainer"]::before {
+    animation: none !important;
+  }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  [data-testid="stSidebar"], [data-testid="stHeader"] { display: none !important; }
+  [data-testid="stAppViewContainer"]::before { display: none !important; }
+  html, body, .stApp { background: #FFFFFF !important; }
+}
+
+/* ==========================================================================
+   3alimnIA V7.6 — BIG-TECH LIQUID GLASS MENUS, DROPDOWNS & BUTTONS
+   Apple / Stripe / Linear-grade tactile physics, specular sheen & glass menus
+   ========================================================================== */
+
+/* 1. Big-Tech Tactile Buttons with Specular Light-Sweep Sheen */
+html body .stApp .stButton > button,
+html body .stApp .stDownloadButton > button,
+html body .stApp .stFormSubmitButton > button,
+html body .stApp [data-testid="stPopover"] > button {
+  position: relative !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  border-radius: 999px !important;
+  min-height: 42px !important;
+  padding: 0.48rem 1.05rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  background: linear-gradient(145deg, rgba(255,255,255,0.82) 0%, rgba(238,246,255,0.46) 100%) !important;
+  backdrop-filter: blur(26px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(210%) !important;
+  border: 1.5px solid rgba(255,255,255,0.92) !important;
+  color: #0B162C !important;
+  box-shadow:
+    0 10px 26px rgba(15,23,42,0.08),
+    0 2px 6px rgba(15,23,42,0.04),
+    inset 0 1.5px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(148,163,184,0.22) !important;
+  transition: transform 180ms cubic-bezier(0.22,1,0.36,1), box-shadow 200ms ease, border-color 180ms ease, background 180ms ease !important;
+}
+
+html body .stApp .stButton > button::after,
+html body .stApp .stFormSubmitButton > button::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  inset-inline-start: -120% !important;
+  width: 65% !important;
+  height: 100% !important;
+  background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,0.52) 50%, transparent 100%) !important;
+  transform: skewX(-20deg) !important;
+  transition: inset-inline-start 520ms cubic-bezier(0.22,1,0.36,1) !important;
+  pointer-events: none !important;
+}
+
+html body .stApp .stButton > button:hover::after,
+html body .stApp .stFormSubmitButton > button:hover::after {
+  inset-inline-start: 145% !important;
+}
+
+html body .stApp .stButton > button:hover,
+html body .stApp .stDownloadButton > button:hover,
+html body .stApp .stFormSubmitButton > button:hover,
+html body .stApp [data-testid="stPopover"] > button:hover {
+  transform: translateY(-2.5px) !important;
+  border-color: rgba(37,99,235,0.45) !important;
+  color: #1E3A8A !important;
+  box-shadow:
+    0 18px 38px rgba(15,23,42,0.13),
+    0 4px 12px rgba(37,99,235,0.12),
+    inset 0 1.5px 0 rgba(255,255,255,1) !important;
+}
+
+html body .stApp .stButton > button:active,
+html body .stApp .stDownloadButton > button:active,
+html body .stApp .stFormSubmitButton > button:active {
+  transform: translateY(0) scale(0.978) !important;
+  box-shadow: 0 6px 16px rgba(15,23,42,0.10), inset 0 2px 4px rgba(15,23,42,0.08) !important;
+}
+
+html body .stApp .stButton > button:focus-visible,
+html body .stApp .stDownloadButton > button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.28), 0 12px 28px rgba(37,99,235,0.20) !important;
+}
+
+/* Primary CTA Button — Luminous Sapphire Glass */
+html body .stApp .stButton > button[kind="primary"],
+html body .stApp .stFormSubmitButton > button[kind="primary"] {
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 52%, #0EA5E9 100%) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid rgba(255,255,255,0.52) !important;
+  box-shadow:
+    0 14px 34px rgba(37,99,235,0.38),
+    0 4px 12px rgba(14,165,233,0.22),
+    inset 0 1.5px 0 rgba(255,255,255,0.62) !important;
+}
+
+html body .stApp .stButton > button[kind="primary"]:hover,
+html body .stApp .stFormSubmitButton > button[kind="primary"]:hover {
+  color: #FFFFFF !important;
+  background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 52%, #0284C7 100%) !important;
+  box-shadow:
+    0 22px 46px rgba(29,78,216,0.46),
+    0 6px 18px rgba(14,165,233,0.28),
+    inset 0 1.5px 0 rgba(255,255,255,0.72) !important;
+}
+
+/* 2. Floating Glass Menus, Dropdowns, Selectboxes & Popovers */
+div[data-baseweb="popover"],
+div[data-baseweb="menu"],
+ul[role="listbox"],
+[data-testid="stPopoverBody"] {
+  background: linear-gradient(145deg, rgba(255,255,255,0.86) 0%, rgba(240,247,255,0.74) 100%) !important;
+  backdrop-filter: blur(36px) saturate(225%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(225%) !important;
+  border: 1.5px solid rgba(255,255,255,0.92) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 28px 68px rgba(15,23,42,0.18),
+    0 6px 18px rgba(37,99,235,0.08),
+    inset 0 1.5px 0 rgba(255,255,255,1) !important;
+  padding: 6px !important;
+  overflow: hidden !important;
+}
+
+ul[role="listbox"] li[role="option"],
+div[data-baseweb="menu"] li {
+  border-radius: 12px !important;
+  margin: 2px 0 !important;
+  padding: 0.56rem 0.92rem !important;
+  font-weight: 600 !important;
+  color: #0F172A !important;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease !important;
+}
+
+ul[role="listbox"] li[role="option"]:hover,
+div[data-baseweb="menu"] li:hover {
+  background: rgba(37,99,235,0.12) !important;
+  color: #1E3A8A !important;
+  transform: translateX(-2px) !important;
+}
+
+ul[role="listbox"] li[role="option"][aria-selected="true"] {
+  background: linear-gradient(135deg, rgba(37,99,235,0.18) 0%, rgba(14,165,233,0.14) 100%) !important;
+  color: #1D4ED8 !important;
+  font-weight: 700 !important;
+}
+
+/* 3. Segmented Controls, Radio Pill Menus & Sidebar Nav Links */
+html body .stApp [data-testid="stSidebar"] .stButton > button,
+html body .stApp [data-testid="stSidebarNav"] a {
+  border-radius: 14px !important;
+  justify-content: flex-start !important;
+  padding: 0.58rem 0.95rem !important;
+  background: rgba(255,255,255,0.48) !important;
+  border: 1px solid rgba(255,255,255,0.75) !important;
+}
+
+html body .stApp [data-testid="stSidebar"] .stButton > button:hover,
+html body .stApp [data-testid="stSidebarNav"] a:hover {
+  background: rgba(255,255,255,0.84) !important;
+  border-color: rgba(37,99,235,0.38) !important;
+}
+
+html body .stApp [data-testid="stTabs"] [role="tablist"] {
+  padding: 0.42rem !important;
+  box-shadow:
+    0 12px 30px rgba(15,23,42,0.07),
+    inset 0 1.5px 0 rgba(255,255,255,0.95) !important;
+}
+
+html body .stApp [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+  background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 22px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.52) !important;
+}
+
+/* Dark Mode Menus & Buttons */
+@media (prefers-color-scheme: dark) {
+  div[data-baseweb="popover"],
+  div[data-baseweb="menu"],
+  ul[role="listbox"],
+  [data-testid="stPopoverBody"] {
+    background: linear-gradient(145deg, rgba(15,23,42,0.88) 0%, rgba(30,41,59,0.78) 100%) !important;
+    border-color: rgba(255,255,255,0.18) !important;
+  }
+  ul[role="listbox"] li[role="option"],
+  div[data-baseweb="menu"] li {
+    color: #F1F5F9 !important;
+  }
 }
