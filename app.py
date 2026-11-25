@@ -12,7 +12,7 @@ import main_app
 import router
 import teacher_studio
 import ui_v6
-from config import APP_ICON, APP_TITLE, load_css
+from config import APP_ICON, APP_TITLE, load_css, render_theme_toggle
 
 
 st.set_page_config(
@@ -500,6 +500,8 @@ def main() -> None:
         _render_toolbar(getattr(navigation, "title", APP_TITLE))
         if st.session_state.get("role") == "student":
             _render_student_tool_dock()
+    render_theme_toggle()
+    load_css()
     navigation.run()
 
 

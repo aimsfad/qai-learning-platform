@@ -30,6 +30,9 @@ def main() -> None:
     assert not (ROOT / "v7_engines").exists()
     assert not (ROOT / "v7_enterprise_hub.py").exists()
 
+    cfg_src = (ROOT / "config.py").read_text(encoding="utf-8")
+    assert "v8_dark_glass_mode" in cfg_src and "render_theme_toggle" in cfg_src
+    assert "V8.0" in css
     print("PASS validate_v7_enterprise.py — Liquid Glass V7.2 UI, responsiveness & XSS layer verified (10 extra features removed).")
 
 
