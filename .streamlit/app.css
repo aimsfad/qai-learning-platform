@@ -526,3 +526,48 @@ img, video, svg, iframe {
   html, body, [data-testid="stAppViewContainer"] { background: #FFFFFF !important; }
   .lg-card, .lg-hero { box-shadow: none !important; border: 1px solid #CBD5E1 !important; }
 }
+
+/* ===== V7.1 LIQUID GLASS BRIDGE FOR ALL EXISTING 3alimnIA COMPONENTS ===== */
+[data-testid="stVerticalBlockBorderWrapper"],
+.qai-card,
+.qai-v11-section,
+.qai-interactive,
+.v43-guest-intro,
+.v45-transcript,
+.v61-float-card,
+.v65-program-card,
+.v618-action-card,
+.v6163-overview-card {
+  background: var(--lg-surface-1) !important;
+  backdrop-filter: var(--lg-blur) !important;
+  -webkit-backdrop-filter: var(--lg-blur) !important;
+  border: 1px solid var(--lg-border-specular) !important;
+  border-radius: var(--lg-radius-lg) !important;
+  box-shadow: var(--lg-shadow-soft) !important;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease !important;
+}
+
+.qai-card:hover,
+.v65-program-card:hover,
+.v618-action-card:hover,
+.v61-float-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: var(--lg-shadow-float) !important;
+}
+
+.qai-pill,
+.v64-ai-chip,
+.v65-program-status {
+  background: rgba(37, 99, 235, 0.13) !important;
+  color: var(--lg-primary-deep) !important;
+  border: 1px solid var(--lg-border-specular) !important;
+  border-radius: 999px !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.qai-v11-section-title,
+.v66-panel-heading,
+.v65-program-head {
+  color: var(--lg-ink) !important;
+  font-weight: 800 !important;
+}

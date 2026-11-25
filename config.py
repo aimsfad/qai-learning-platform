@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,8 +11,9 @@ LESSON_MEDIA_DIR = ROOT_DIR / "assets" / "lesson_media"
 
 
 def load_css() -> None:
-    """Load the platform stylesheet."""
+    """Inject the unified V7.1 Ultra Liquid Glass stylesheet reliably across all Streamlit versions."""
     if APP_STYLE_PATH.exists():
-        st.html(APP_STYLE_PATH)
+        css_text = APP_STYLE_PATH.read_text(encoding="utf-8")
+        st.markdown(f"<style>\n{css_text}\n</style>", unsafe_allow_html=True)
         return
     st.warning("Theme stylesheet was not found; the app will use Streamlit defaults.")
