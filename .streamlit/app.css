@@ -11326,3 +11326,166 @@ html body .stApp [data-testid="stStatusWidget"] {
   padding: 0.45rem 1rem !important;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
 }
+
+/* ==========================================================================
+   3alimnIA V8.4 — INTERNAL WORKSPACES TYPOGRAPHY, ALIGNMENT & READABILITY
+   Polishes Teacher Studio, Student Workspace, Lesson Renderer, Pretest,
+   AI Tutor Chat & Evaluator Dashboard for crystal-clear reading & alignment
+   ========================================================================== */
+
+/* 1. Generous Breathing Room inside ALL Bordered Glass Containers */
+html body .stApp [data-testid="stVerticalBlockBorderWrapper"] {
+  padding: clamp(1.1rem, 2.2vw, 1.75rem) clamp(1.15rem, 2.4vw, 1.85rem) !important;
+}
+
+/* 2. Crisp Typography, Paragraph Rhythm & Mixed Arabic/English BiDi Alignment */
+html body .stApp [data-testid="stMarkdownContainer"] h1 {
+  font-size: clamp(1.55rem, 2.4vw, 2.2rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.32 !important;
+  margin-bottom: 0.55rem !important;
+  text-align: start !important;
+}
+
+html body .stApp [data-testid="stMarkdownContainer"] h2 {
+  font-size: clamp(1.28rem, 1.85vw, 1.65rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.38 !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.5rem !important;
+  text-align: start !important;
+}
+
+html body .stApp [data-testid="stMarkdownContainer"] h3,
+html body .stApp [data-testid="stMarkdownContainer"] h4 {
+  font-size: clamp(1.06rem, 1.35vw, 1.24rem) !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+  margin-bottom: 0.4rem !important;
+  text-align: start !important;
+  unicode-bidi: plaintext !important;
+}
+
+html body .stApp [data-testid="stMarkdownContainer"] p {
+  font-size: 0.98rem !important;
+  line-height: 1.82 !important;
+  margin-bottom: 0.72rem !important;
+  text-align: start !important;
+  unicode-bidi: plaintext !important;
+}
+
+html body .stApp [data-testid="stMarkdownContainer"] ul,
+html body .stApp [data-testid="stMarkdownContainer"] ol {
+  padding-inline-start: 1.4rem !important;
+  margin-bottom: 0.85rem !important;
+}
+
+html body .stApp [data-testid="stMarkdownContainer"] li {
+  font-size: 0.96rem !important;
+  line-height: 1.8 !important;
+  margin-bottom: 0.38rem !important;
+  text-align: start !important;
+}
+
+html body .stApp [data-testid="stCaptionContainer"] p,
+html body .stApp [data-testid="stCaptionContainer"] {
+  font-size: 0.90rem !important;
+  line-height: 1.68 !important;
+  opacity: 0.92 !important;
+}
+
+/* 3. Teacher Studio Project Cards, Overview Fields, Stage Flows & Summary Rows */
+html body .stApp .v6163-overview-card,
+html body .stApp .v620-course-card,
+html body .stApp .v620-support-card,
+html body .stApp .v6189-safe-content-renderer {
+  padding: 1.35rem 1.6rem !important;
+  line-height: 1.82 !important;
+}
+
+html body .stApp .v6163-overview-field,
+html body .stApp .v6162-summary-row {
+  padding: 0.85rem 1.05rem !important;
+  border-radius: 16px !important;
+  gap: 0.45rem !important;
+}
+
+html body .stApp .v6183-stage-flow,
+html body .stApp .v62019-course-flow,
+html body .stApp .v6172-research-steps {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.65rem !important;
+  align-items: center !important;
+}
+
+html body .stApp .v6183-flow-step,
+html body .stApp .v62019-course-step,
+html body .stApp .v6172-research-step {
+  padding: 0.55rem 0.95rem !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+}
+
+/* 4. Internal Metrics, Progress Bars & Pretest Question Cards */
+html body .stApp [data-testid="stMetric"] {
+  padding: 1rem 1.25rem !important;
+  text-align: center !important;
+}
+
+html body .stApp [data-testid="stMetricValue"] {
+  font-size: clamp(1.35rem, 1.9vw, 1.75rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+}
+
+html body .stApp [data-testid="stMetricLabel"] {
+  font-size: 0.86rem !important;
+  font-weight: 600 !important;
+}
+
+html body .stApp [data-testid="stProgress"] > div > div {
+  height: 10px !important;
+  border-radius: 999px !important;
+}
+
+html body .stApp .v62023-pretest-question {
+  font-size: 1.04rem !important;
+  font-weight: 700 !important;
+  line-height: 1.72 !important;
+  padding: 0.35rem 0 !important;
+}
+
+/* 5. Lesson Section Chips & AI Tutor Chat Readability */
+html body .stApp .v6185-section-nav {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+html body .stApp .v6185-section-chip {
+  padding: 0.36rem 0.85rem !important;
+  border-radius: 999px !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+}
+
+html body .stApp [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {
+  font-size: 0.97rem !important;
+  line-height: 1.84 !important;
+}
+
+/* 6. Crisp Form Labels & Radio/Checkbox Alignment */
+html body .stApp [data-testid="stWidgetLabel"] p {
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.35rem !important;
+}
+
+html body .stApp [role="radiogroup"] label {
+  padding: 0.48rem 0.78rem !important;
+  border-radius: 12px !important;
+  line-height: 1.65 !important;
+}

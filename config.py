@@ -125,6 +125,11 @@ html body .stApp .v65-capabilities-grid article,
 html body .stApp .v6-engine-grid article,
 html body .stApp .v6-institution-grid article,
 html body .stApp .v6-studio-flow article,
+html body .stApp .v620-course-card,
+html body .stApp .v620-support-card,
+html body .stApp .v6189-safe-content-renderer,
+html body .stApp .v6163-overview-field,
+html body .stApp .v6162-summary-row,
 html body .stApp [data-testid="stExpander"],
 html body .stApp [data-testid="stMetric"],
 html body .stApp [data-testid="stForm"],
@@ -169,9 +174,7 @@ html body .stApp .qai-pill,
 html body .stApp .v64-ai-chip,
 html body .stApp .v65-program-status,
 html body .stApp .v61-eyebrow,
-html body .stApp .v61-section-kicker,
-html body .stApp .v61-benefit-row span,
-html body .stApp article .material-symbols-rounded {{
+html body .stApp .v61-section-kicker {{
   background: rgba(56, 189, 248, 0.16) !important;
   color: #BAE6FD !important;
   border: 1px solid rgba(125, 211, 252, 0.34) !important;
