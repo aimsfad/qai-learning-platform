@@ -313,6 +313,9 @@ class PostgresRAGIndex:
         permission_sql = "AND d.cloud_generation_consent=TRUE" if for_generation else ""
         lexical_ids: List[int] = []
         semantic_ids: List[int] = []
+        _ALLOWED_PERMISSION_SQL = {"", "AND d.allow_generation=TRUE", " AND d.allow_generation=TRUE", "AND d.allow_retrieval=TRUE", " AND d.allow_retrieval=TRUE"}
+        if permission_sql.strip() and permission_sql not in _ALLOWED_PERMISSION_SQL and "allow_" not in permission_sql:
+            raise ValueError(f"Disallowed SQL permission clause: {permission_sql!r}")
         diagnostic = ""
         with self._connect() as cn:
             with cn.cursor() as cur:

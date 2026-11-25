@@ -1,64 +1,46 @@
-> Current release: **V6.20.19 — Course Enrollment & Baseline Gate**
+# 3alimnIA (علّمنيا) — V7.0 Liquid Glass Enterprise Edition
 
-# 3alimnIA V6.20.14 — Final Review & Publish Workflow
+منصة تعليمية وبحثية متكاملة مدعومة بالذكاء الاصطناعي التربوي، تجمع بين **الحوكمة البشرية للمحتوى**، و**محرك Hybrid RAG معزول لكل أستاذ ومشروع على Neon/pgvector**، و**واجهة Liquid Glass فاخرة** تدعم العربية (RTL) والفرنسية والإنجليزية (LTR).
 
-V6.20.14 turns the fifth teacher stage into a real, teacher-owned final-review workflow. The former ambiguous **Send for review** state change is replaced by an explicit sequence: readiness check → lesson/source review → learner preview → teacher final approval → publication.
+## أبرز ما أُنجز في الإصدار V7.0
 
-## V6.20.14 highlights
+### 1. التصليحات الحرجة العشرة (Security, Stability & Repo Hygiene)
+- إزالة ملفات الأسرار الحية وتحصين `package_release.py` بمنع تلقائي لأي تسرب.
+- فك ارتباط `db.py` عن الاستيراد الإلزامي لـ `streamlit` لدعم عمال الخلفية (RQ) والاختبارات المستقلة.
+- إنشاء بوابة الأمان `validate_release_security.py` وتحديث `validate_current_release.py`.
+- تنظيف المجلد الجذري من الملفات الطرفية العالقة والنسخ الاحتياطية وأرشفة الوثائق التاريخية في `docs/archive/` و`tests/legacy_validators/`.
+- توحيد مشغّل PostgreSQL على `psycopg[binary]` وإضافة `alembic` و`requirements-dev.txt`.
+- تحصين استعلامات SQL الديناميكية في `hybrid_rag.py` و`rag_postgres.py`.
+- إضافة طبقة تعقيم HTML مركزية (`safe_html.py`) للحماية من XSS.
+- حذف 9 ملفات CSS قديمة وتوحيد الواجهة بالكامل في `.streamlit/app.css` (8.5 KB بدل 964 KB).
 
-- real final-review workspace instead of a silent status change;
-- approved sources and per-lesson readiness are visible in the same screen;
-- missing lesson sections are shown with pedagogical labels rather than internal block codes;
-- learner preview is embedded before final approval;
-- final approval is explicitly the teacher's decision and is not sent to the research evaluator account;
-- publication is blocked until the course is runtime-ready **and** the teacher has approved the final version;
-- if the course changes after final review, approval becomes stale and must be renewed;
-- preserves the V6.20.13 lesson-approval hotfix, V6.20.12 navigation fix, and V6.20.11 temporary demo AI-Coach unlock.
+### 2. الواجهة الأمامية بالنمط الزجاجي السائل (Liquid Glass UI)
+- تصميم زجاجي سائل متعدد الطبقات (`backdrop-filter: blur(26px) saturate(185%)`) مع انعكاسات ضوئية ناعمة وتباين لوني متوافق مع معايير WCAG AA/AAA.
+- معاينة تفاعلية حية مرفقة داخل `assets/branding/v7_liquid_glass_preview.html`.
 
-# 3alimnIA — V6.20.10 Label Candidate
+### 3. المحركات الجديدة العشرة (`v7_engines/`)
+1. `knowledge_graph_engine.py` — خريطة الإتقان المعرفي الديناميكية (DAG + SVG).
+2. `interactive_lab_generator.py` — مولّد المختبرات التفاعلية المعزولة بـ CSP لأي تخصص.
+3. `spaced_repetition_engine.py` — محرك المراجعة المتباعدة التكيفي (SM-2).
+4. `voice_coach_engine.py` — المدرب الصوتي متعدد اللغات (AR / FR / EN).
+5. `co_creation_engine.py` — استوديو التأليف الجماعي والمراجعة العلمية متعددة التوقيعات.
+6. `credential_engine.py` — شهادات الإتقان الموثّقة بالأدلة وتوقيع HMAC-SHA256.
+7. `lti_integration_engine.py` — التكامل القياسي مع الجامعات (LTI 1.3 & SCORM 2004).
+8. `citation_auditor_engine.py` — مدقق الاستشهاد الحي وكاشف الهلوسة على مستوى الجملة.
+9. `offline_pack_engine.py` — تصدير حزم الدراسة للعمل دون إنترنت.
+10. `ab_experiment_engine.py` — مختبر التجارب التربوية A/B (Welch t-test & Cohen's d + LaTeX).
 
-V6.20.10 is the presentation and project-label candidate built on the stable V6.20.9 role-polish release. It freezes the current learning, teacher-production, evaluator-research, publication, evidence, and AI-support logic and applies only final screenshot-driven density and spacing corrections.
+إضافةً إلى وحدات البنية المؤسسية: `rbac_engine.py`، `ai_observability.py`، `session_state_contracts.py`، `alembic.ini`، و`.github/workflows/ci.yml`.
 
-## Release purpose
+## التشغيل والتحقق السريع
 
-This build is intended for:
-- project demonstrations and pitch presentations;
-- screenshots and recorded walkthroughs;
-- project-label / innovation-label submission dossiers;
-- stakeholder review before the next functional development cycle.
+```bash
+pip install -r requirements-dev.txt
+python validate_current_release.py
+streamlit run app.py
+```
 
-## Final visual corrections
-
-- compact learner and evaluator authentication headers so the form is visible earlier on common laptop screens;
-- reduce remaining dead space in teacher/evaluator internal headers;
-- replace the oversized Streamlit divider between the five-step journey and the active production task with a compact branded separator;
-- improve visibility of workflow status captions and secondary text;
-- preserve the V6.20.5 mobile public header and V6.20.8 visual restoration;
-- preserve all Quantum/Qiskit educational media.
-
-## Functional freeze
-
-No routing, database schema, assessment rule, publication gate, learner-evidence logic, adaptive-support policy, LPQS calculation, or teacher-production workflow was intentionally changed in this release.
-
-## Key files
-
-- `.streamlit/app.css` — single production stylesheet including the final label-candidate polish layer.
-- `main_app.py` — explicit compact authentication page headers.
-- `teacher_studio.py` — compact visual separator in the five-step production journey.
-- `db.py` — release identifier only.
-- `docs/V6_20_10_LABEL_CANDIDATE_AR.md` — release summary.
-- `docs/LABEL_DEMO_CHECKLIST_AR.md` — recommended presentation/demo sequence.
-- `docs/VALIDATION_V6_20_10_AR.md` — technical validation summary.
-
-
-
-## V6.20.12 — Teacher Navigation Hotfix
-
-- Fixed teacher top navigation so **New project** and **Project workspace** can be selected normally.
-- Preserved programmatic Open / Continue / Back navigation for existing projects.
-- Preserved the V6.20.11 temporary AI Coach demo unlock.
-- No database schema, pedagogical workflow, or media changes.
-
-## V6.20.11 — Demo Coach Unlock
-
-For the label/demo recording, AI Coach access is temporarily available even when the learner has not yet satisfied the attempt-first threshold. The validation rules, evidence model, attempt saving rules, and course-completion requirements remain intact. Restore the original policy by setting `DEMO_BYPASS_ATTEMPT_GATE = False` in `attempt_gate.py`.
+لتغليف إصدار نظيف وآمن للمشاركة:
+```bash
+python package_release.py
+```

@@ -12,10 +12,22 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import pandas as pd
-import streamlit as st
+from functools import lru_cache
+try:
+    import streamlit as st
+except Exception:
+    st = None  # Allows headless RQ workers, CLI tools, and unit tests without Streamlit
+
+
+def _cache_resource_compat(*args, **kwargs):
+    if st is not None and hasattr(st, "cache_resource"):
+        return st.cache_resource(*args, **kwargs)
+    def _decorator(fn):
+        return lru_cache(maxsize=4)(fn)
+    return _decorator
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v6.20.21-published-course-entry-routing"
+APP_VERSION = "v7.0.0-liquid-glass-enterprise"
 COURSE_PRETEST_ENGINE_VERSION = "v6.20.27-ai-generated-course-pretest"
 # APP_VERSION = "v6.20.18-glass-ui-integration"
 # APP_VERSION = "v6.20.17-public-catalog-sync"
@@ -39,12 +51,12 @@ def _secret(name: str, default: str = "") -> str:
     if env_value not in {None, ""}:
         return str(env_value)
     try:
-        return str(st.secrets.get(name, default))
+        return str(st.secrets.get(name, default)) if st is not None else default
     except Exception:
         return default
 
 
-@st.cache_resource(show_spinner=False)
+@_cache_resource_compat(show_spinner=False)
 def get_engine() -> Engine:
     database_url = _secret("DATABASE_URL", "").strip() or os.environ.get("DATABASE_URL", "").strip()
     if database_url:
@@ -82,7 +94,7 @@ def execute_returning_id(sql: str, params: Dict[str, Any]) -> int:
         return int(returned)
 
 
-@st.cache_resource(show_spinner=False)
+@_cache_resource_compat(show_spinner=False)
 def init_db() -> None:
     d = dialect()
     id_col = "INTEGER PRIMARY KEY AUTOINCREMENT" if d == "sqlite" else "SERIAL PRIMARY KEY"

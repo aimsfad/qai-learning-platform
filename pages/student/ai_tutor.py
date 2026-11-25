@@ -1,1 +1,4 @@
-"""Student AI Tutor page placeholder. V8.1 keeps rendering in main_app while the app is migrated safely."""
+"""Student Adaptive AI Coach Adapter (V7.0 Modular Routing)."""
+def render_page():
+    import adaptive_support_engine
+    return adaptive_support_engine

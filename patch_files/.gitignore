@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+*.log
+.env
+.venv/
+venv/
+.streamlit/secrets.toml
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+Thumbs.db
+_archive/
+.rag_data/

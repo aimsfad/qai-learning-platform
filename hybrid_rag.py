@@ -181,6 +181,8 @@ class RAGIndex:
             }
             for column, definition in additions.items():
                 if column not in current:
+                    if not re.fullmatch(r"[a-z_][a-z0-9_]*", column):
+                        raise ValueError(f"Invalid schema column identifier: {column!r}")
                     connection.execute(f"ALTER TABLE rag_documents ADD COLUMN {column} {definition}")
             if os.name == "posix":
                 try:

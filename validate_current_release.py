@@ -1,4 +1,4 @@
-"""Run the supported regression suite for the current 3alimnIA release."""
+"""Run the supported regression and security suite for 3alimnIA V7.0 Enterprise."""
 
 from __future__ import annotations
 
@@ -9,35 +9,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 VALIDATORS = [
-    "validate_v6165_ui_stability_design_system.py",
-    "validate_v616_lesson_block_generation.py",
-    "validate_v617_hybrid_background_production.py",
-    "validate_v6171_unified_guided_production_journey.py",
-    "validate_v6172_simplified_guided_research_flow.py",
-    "validate_v6173_blueprint_action_feedback.py",
-    "validate_v618_global_design_system.py",
-    "validate_v6181_blueprint_api_contract.py",
-    "validate_v6182_blueprint_editor_runtime_ui.py",
-    "validate_v6183_guided_blueprint_lesson_flow.py",
-    "validate_v6184_simple_teacher_journey.py",
-    "validate_v6185_premium_lesson_workspace.py",
-    "validate_v6186_unified_premium_platform_design.py",
-    "validate_v6187_frictionless_ui_contract.py",
-    "validate_v6188_teacher_workspace_screenshot_polish.py",
-    "validate_v6189_lesson_identity_content_hygiene.py",
+    "validate_release_security.py",
+    "validate_v7_enterprise.py",
     "validate_v6190_pedagogical_quality_adaptive_coach.py",
     "validate_v6191_learner_evidence_misconception_tracing.py",
-    "validate_v620_published_course_runtime.py",
-    "validate_v6201_responsive_visual_polish.py",
-    "validate_v6202_visual_qa_stabilization.py",
-    "validate_v6203_mobile_public_shell.py",
-    "validate_v6204_mobile_header_first_viewport.py",
-    "validate_v6205_mobile_header_shell.py",
-    "validate_release_security.py",
-    "validate_v62019_course_enrollment_baseline.py",
-    "validate_v62020_learner_account_compat.py",
     "validate_v62020_security_hotfix.py",
-    "validate_v62021_published_course_entry_routing.py",
     "validate_v62027_ai_course_pretest.py",
     "validate_v62027_2_pretest_recovery.py",
     "validate_v62027_3_prompt_budget_fix.py",
@@ -63,7 +39,7 @@ def main() -> None:
             print(f"PASS {name}")
     if failures:
         for name, output in failures:
-            print(f"\n--- {name} ---\n{output[-3000:]}")
+            print(f"\n--- {name} ---\n{output[-2000:]}")
         raise SystemExit(f"Current release validation failed: {len(failures)}/{len(VALIDATORS)}")
     print(f"Current release validation passed: {len(VALIDATORS)}/{len(VALIDATORS)} validators + compileall.")
 

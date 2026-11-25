@@ -1,0 +1,139 @@
+{
+  "version": "3alimnia-online-hybrid-rag-v0.2-2026-11-13",
+  "source": "qai_platform_ (11)(1).zip",
+  "description": "Cumulative overlay: original release or local V0.1, no secrets or private data.",
+  "files": {
+    ".gitignore": {
+      "original_sha256": "ccfc56b064843c2acf137772ba621887f7683ee21da434f1c07e1978bb3fba26",
+      "v01_sha256": "991bc2b78697a33ff5d698dd41f87ded36aeff57414d7a076a143c44c43fba02",
+      "patched_sha256": "991bc2b78697a33ff5d698dd41f87ded36aeff57414d7a076a143c44c43fba02",
+      "size": 164
+    },
+    "attempt_gate.py": {
+      "original_sha256": "10a8018893a374dc5c0109fd89609af5f31bc649b57ca84850568081ab732245",
+      "v01_sha256": "7f77f08a8472361893d2902b031f0c677191a8e637a67ce0353570b31f334990",
+      "patched_sha256": "7f77f08a8472361893d2902b031f0c677191a8e637a67ce0353570b31f334990",
+      "size": 4832
+    },
+    "benchmarks/README.md": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "7e4b7fa5d0dacd454186e1ae5af382f266ed154227b56f9d4734547c001b7a8c",
+      "size": 1025
+    },
+    "benchmarks/gold_queries_TEMPLATE.csv": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "393beac97383e26adc2a9fd7a83f4c2ca3556756ec7b3a420e379a3cedea6247",
+      "size": 50
+    },
+    "benchmarks/human_grounding_TEMPLATE.csv": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "f52f8458c042b39b1c659572b446fc1313e64c9c0baa8273956ec435cebfd48f",
+      "size": 177
+    },
+    "benchmarks/run_retrieval_eval.py": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "a759af42d9f3349146e3afd8c1456ea1586175574184c5db0f79aa148de8bec2",
+      "size": 4008
+    },
+    "content_generation_engine.py": {
+      "original_sha256": "7e8fa0b4ce6e83e85b18bc27d03e42be92712e1b844276d32bd81793f62a31cf",
+      "v01_sha256": "f6383a4f3cb2da20d6a95f3094b38a1146faecfd4515ee7731c63e58382d3ed3",
+      "patched_sha256": "f6383a4f3cb2da20d6a95f3094b38a1146faecfd4515ee7731c63e58382d3ed3",
+      "size": 33574
+    },
+    "docs/3ALIMNIA_HYBRID_RAG_LOCAL_V01_AR.md": {
+      "original_sha256": null,
+      "v01_sha256": "ea958e0e88062bd9d5be3382b9d588cbdab779e37bb88221881d6646f958af86",
+      "patched_sha256": "ea958e0e88062bd9d5be3382b9d588cbdab779e37bb88221881d6646f958af86",
+      "size": 13555
+    },
+    "docs/3ALIMNIA_ONLINE_HYBRID_RAG_V02_AR.md": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "b278fa5767c7821c5dba0717e47b4ceb5cb108cfe4e4e718d2a7e4a99fb54455",
+      "size": 12769
+    },
+    "educational_builder.py": {
+      "original_sha256": "b0e2c7989f32ecea589b4ed5e8167c02140d6cf2bc7a9ed738b1c3d1808771cb",
+      "v01_sha256": "bace100daa5624e95f81c5e07c9569d133e43feb820f1df104e4a800e616b6b6",
+      "patched_sha256": "23492ce6c5fca7a6d9502f1cdfd5f104698ffb0341c0d86f95108bd96b7138b2",
+      "size": 31297
+    },
+    "hybrid_rag.py": {
+      "original_sha256": null,
+      "v01_sha256": "bed0e143c544ad82a610fb0ace7daf8175f410890b10ad399b5a8ab839acb408",
+      "patched_sha256": "3ebd96629cdb3cede77faa8261a73e1705faaa6ed0f1f93f962db7c37fdf5bd8",
+      "size": 27732
+    },
+    "lesson_block_generation_engine.py": {
+      "original_sha256": "226776df899c2a7c8f9ca55c743f45b6f93fe71a36f8c3cc14d846959229d2bf",
+      "v01_sha256": "db0fd4b2c8520635b0a279ccbe45579bf6280b4f0d4bfed0975e170a8404a454",
+      "patched_sha256": "285e101ff589a1ac1ecdefbeff949812eb608712a603d9c3bded57c33086598d",
+      "size": 33118
+    },
+    "local_ai.py": {
+      "original_sha256": null,
+      "v01_sha256": "2fecc7015a68301aba66ee3c7f7be42db356c4fd65d667fef084dbd9b43ecedb",
+      "patched_sha256": "2fecc7015a68301aba66ee3c7f7be42db356c4fd65d667fef084dbd9b43ecedb",
+      "size": 3639
+    },
+    "main_app.py": {
+      "original_sha256": "c066dc183699ec9658915cee6f0a825603497fd53920a9aa81ab1e80bd12461c",
+      "v01_sha256": "6d0f569924e196696aaba08865f18348fb2c94c707cc99564fa4533f34cd62e6",
+      "patched_sha256": "6d0f569924e196696aaba08865f18348fb2c94c707cc99564fa4533f34cd62e6",
+      "size": 359685
+    },
+    "model_router.py": {
+      "original_sha256": "679ee641b5335b676627dbcd99a62448b94408d4870a3514171341ab07d260fc",
+      "v01_sha256": "2a436db28ecd93f02562996cdd44033d1d5b701a1a261915a07569154d2fac9a",
+      "patched_sha256": "2a436db28ecd93f02562996cdd44033d1d5b701a1a261915a07569154d2fac9a",
+      "size": 8281
+    },
+    "online_embeddings.py": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "b40600fd7a32a702fd3ea95f4246281d8276650226df4aa139d0a2ecf48f4c37",
+      "size": 3460
+    },
+    "rag_cli.py": {
+      "original_sha256": null,
+      "v01_sha256": "ed9012b24747f971a124b754f8ab200607bd09e444f47890b990b281208b59a4",
+      "patched_sha256": "ed9012b24747f971a124b754f8ab200607bd09e444f47890b990b281208b59a4",
+      "size": 2135
+    },
+    "rag_grounding.py": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "03508ea720cec246f8b6bc8171e21473ff6c20b8e89972d0fa1b8ef1a255d191",
+      "size": 2689
+    },
+    "teacher_studio.py": {
+      "original_sha256": "14d0c70c7c89739724f2097ff36479978bf0d413c6cecaea5e37bd9d181ab7aa",
+      "v01_sha256": "6dc99d24c03252e4e2fc9684c52efdbdd890fe3243fe7aa1cdba758d6aeb52a2",
+      "patched_sha256": "89c5e7ae0fd7bf0d9fd89a876caceab7862debba3836917e72ab79917d23d6cb",
+      "size": 275381
+    },
+    "tests/__init__.py": {
+      "original_sha256": null,
+      "v01_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patched_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "tests/test_hybrid_rag_v01.py": {
+      "original_sha256": null,
+      "v01_sha256": "9db44ee53840af00c8d00dd6479924118ed410916b40b563f2b7bf9399769a9e",
+      "patched_sha256": "9db44ee53840af00c8d00dd6479924118ed410916b40b563f2b7bf9399769a9e",
+      "size": 10689
+    },
+    "tests/test_online_hybrid_rag_v02.py": {
+      "original_sha256": null,
+      "v01_sha256": null,
+      "patched_sha256": "3762b62968554343d06c7a59fef3e2915630294de1a42e017257b21385ba9001",
+      "size": 14170
+    }
+  }
+}

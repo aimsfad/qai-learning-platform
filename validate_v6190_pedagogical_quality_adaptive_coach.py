@@ -176,7 +176,7 @@ def validate_static_integration() -> None:
     teacher = read("teacher_studio.py")
     feedback = read("feedback_engine.py")
     blocks = read("lesson_block_generation_engine.py")
-    css = read(".streamlit/v6_theme.css")
+    css = read(".streamlit/app.css")
     secrets = read(".streamlit/secrets_example.toml")
 
     require(any(v in db for v in ('APP_VERSION = "v6.20.3-mobile-public-shell"', 'APP_VERSION = "v6.20.1-responsive-visual-polish"', 'APP_VERSION = "v6.20.0-published-course-runtime"', 'APP_VERSION = "v6.19.1-learner-evidence-misconception-tracing"', 'APP_VERSION = "v6.19.0-pedagogical-quality-adaptive-coach"')), "V6.19.0+ app version missing")

@@ -1,0 +1,12 @@
+ docs/3ALIMNIA_NEON_RAG_V03_GUIDE.md    | 146 [32m++++++++++++[m
+ hybrid_rag.py                          |  16 [32m+[m[31m-[m
+ migrations/001_neon_rag.sql            |  60 [32m+++++[m
+ rag_cli.py                             |   6 [32m+[m[31m-[m
+ rag_pg_health.py                       |  21 [32m++[m
+ rag_pg_migrate.py                      |  54 [32m+++++[m
+ rag_postgres.py                        | 420 [32m+++++++++++++++++++++++++++++++++[m
+ teacher_studio.py                      |   4 [32m+[m[31m-[m
+ tests/test_neon_rag_v03.py             | 181 [32m++++++++++++++[m
+ tests/test_neon_rag_v03_integration.py |  57 [32m+++++[m
+ tests/test_online_hybrid_rag_v02.py    |   3 [32m+[m[31m-[m
+ 11 files changed, 961 insertions(+), 7 deletions(-)

@@ -1,1 +1,4 @@
-"""Evaluator analytics page placeholder for staged modularization."""
+"""Evaluator Analytics Adapter (V7.0 Modular Routing)."""
+def render_page():
+    import research_export_center
+    return research_export_center
