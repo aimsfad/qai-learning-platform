@@ -27,7 +27,7 @@ def _cache_resource_compat(*args, **kwargs):
     return _decorator
 from sqlalchemy import bindparam, create_engine, text
 
-APP_VERSION = "v7.0.0-liquid-glass-enterprise"
+APP_VERSION = "v8.5.0-liquid-glass-verified"
 COURSE_PRETEST_ENGINE_VERSION = "v6.20.27-ai-generated-course-pretest"
 # APP_VERSION = "v6.20.18-glass-ui-integration"
 # APP_VERSION = "v6.20.17-public-catalog-sync"

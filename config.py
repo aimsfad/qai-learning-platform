@@ -263,10 +263,20 @@ def is_dark_glass_mode() -> bool:
     return bool(st.session_state.get("v8_dark_glass_mode", False))
 
 
+_THEME_TOGGLE_LABELS = {
+    "ar": ("☀️ الوضع النهاري", "🌙 الوضع الليلي"),
+    "fr": ("☀️ Mode jour", "🌙 Mode nuit"),
+    "en": ("☀️ Light mode", "🌙 Dark mode"),
+}
+
+
 def render_theme_toggle() -> None:
-    """Render a sleek, instant Day/Night Liquid Glass pill button."""
+    """Render a localized (AR/FR/EN) instant Day/Night Liquid Glass pill button."""
+    import i18n
+    lang = i18n.current_lang(st)
+    light_lbl, dark_lbl = _THEME_TOGGLE_LABELS.get(lang, _THEME_TOGGLE_LABELS["en"])
     dark = is_dark_glass_mode()
-    label = "☀️ الوضع النهاري" if dark else "🌙 الوضع الليلي"
+    label = light_lbl if dark else dark_lbl
     cols = st.columns([7.5, 1.5])
     with cols[1]:
         if st.button(label, key="v8_theme_switch_btn", use_container_width=True):

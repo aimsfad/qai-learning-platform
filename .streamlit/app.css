@@ -10733,6 +10733,8 @@ div[data-testid="stDownloadButton"] > button {
    END V6.20.26
    ============================================================================ */
 
+/* === 3alimnIA V8.5 DEDUPLICATED LIQUID GLASS LAYER (MANUAL THEME CONTROL) === */
+
 
 /* ==========================================================================
    3alimnIA V7.5 — MASTER ULTRA LIQUID GLASS FRONTEND SYSTEM
@@ -10996,17 +10998,7 @@ html body .stApp [data-testid="stImage"] img {
 ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.36); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.56); }
 
-/* 7. Obsidian Dark Liquid Glass (Auto OS Dark Theme) */
-@media (prefers-color-scheme: dark) {
-  html body .stApp [data-testid="stAppViewContainer"]::before,
-  [data-testid="stAppViewContainer"]::before {
-    background:
-      radial-gradient(ellipse 58% 48% at 10% 10%, rgba(56, 189, 248, 0.28) 0%, transparent 62%),
-      radial-gradient(ellipse 56% 48% at 90% 8%, rgba(129, 140, 248, 0.28) 0%, transparent 62%),
-      radial-gradient(ellipse 54% 48% at 84% 88%, rgba(16, 185, 129, 0.22) 0%, transparent 60%),
-      linear-gradient(160deg, #060A14 0%, #0B1222 50%, #07131D 100%) !important;
-  }
-}
+
 
 /* 8. Full Multi-Device Responsiveness (Tablet · Phone · Small Phone) */
 @media (max-width: 1024px) {
@@ -11235,20 +11227,7 @@ html body .stApp [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
   box-shadow: 0 8px 22px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.52) !important;
 }
 
-/* Dark Mode Menus & Buttons */
-@media (prefers-color-scheme: dark) {
-  div[data-baseweb="popover"],
-  div[data-baseweb="menu"],
-  ul[role="listbox"],
-  [data-testid="stPopoverBody"] {
-    background: linear-gradient(145deg, rgba(15,23,42,0.88) 0%, rgba(30,41,59,0.78) 100%) !important;
-    border-color: rgba(255,255,255,0.18) !important;
-  }
-  ul[role="listbox"] li[role="option"],
-  div[data-baseweb="menu"] li {
-    color: #F1F5F9 !important;
-  }
-}
+
 
 /* ==========================================================================
    3alimnIA V8.0 — FLAGSHIP DESIGN POLISH LAYER

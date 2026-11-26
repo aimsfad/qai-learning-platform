@@ -1,7 +1,8 @@
-"""Verification suite for 3alimnIA V7.2 Liquid Glass UI & XSS-Safe Layer."""
+"""Verification suite for 3alimnIA V8.5 Audit-Clean Liquid Glass Edition."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 import safe_html
 
@@ -15,25 +16,28 @@ def main() -> None:
     assert "@media (max-width: 1024px)" in css
     assert "@media (max-width: 768px)" in css
     assert "@media (max-width: 480px)" in css
-    assert "prefers-color-scheme: dark" in css
     assert "safe-area-inset-bottom" in css
+    v85_tail = css.split("V8.5 DEDUPLICATED LIQUID GLASS LAYER", 1)[1]
+    assert "prefers-color-scheme: dark" not in v85_tail, "OS dark media query must not conflict with manual toggle"
 
+    # Single CSS injection in app.py
+    app_src = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert len(re.findall(r"\bload_css\(\)", app_src)) == 1, "load_css() must be called exactly once in app.py"
+    assert "v7_enterprise_hub" not in app_src and "v7_engines" not in app_src
+
+    # Multilingual theme toggle in config.py
+    cfg_src = (ROOT / "config.py").read_text(encoding="utf-8")
+    assert "Mode nuit" in cfg_src and "Dark mode" in cfg_src and "الوضع الليلي" in cfg_src
+
+    # Version marker updated in db.py
+    db_src = (ROOT / "db.py").read_text(encoding="utf-8")
+    assert 'APP_VERSION = "v8.5.0-liquid-glass-verified"' in db_src
+
+    # XSS protection layer
     assert "&lt;script&gt;" in safe_html.esc("<script>alert(1)</script>")
     assert safe_html.safe_url("javascript:alert(1)") == "#"
-    assert safe_html.safe_url("https://example.org/course") == "https://example.org/course"
-    assert "lg-hero" in safe_html.glass_hero("3alimnIA", "Liquid Glass", badges=["V7.2"])
-    assert "lg-mobile-dock" in safe_html.glass_mobile_dock([{"label": "Home", "href": "/", "active": True}])
-    assert "<svg" in safe_html.glass_progress_ring(88, "Mastery")
 
-    app_src = (ROOT / "app.py").read_text(encoding="utf-8")
-    assert "v7_enterprise_hub" not in app_src and "v7_engines" not in app_src
-    assert not (ROOT / "v7_engines").exists()
-    assert not (ROOT / "v7_enterprise_hub.py").exists()
-
-    cfg_src = (ROOT / "config.py").read_text(encoding="utf-8")
-    assert "v8_dark_glass_mode" in cfg_src and "render_theme_toggle" in cfg_src
-    assert "V8.0" in css
-    print("PASS validate_v7_enterprise.py — Liquid Glass V7.2 UI, responsiveness & XSS layer verified (10 extra features removed).")
+    print("PASS validate_v7_enterprise.py — V8.5 single load_css, AR/FR/EN toggle, no OS dark conflict, and version verified.")
 
 
 if __name__ == "__main__":

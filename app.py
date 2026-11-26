@@ -21,7 +21,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-load_css()
 
 
 def _bootstrap() -> None:
@@ -29,7 +28,6 @@ def _bootstrap() -> None:
     main_app.init_state()
     i18n.install_streamlit_i18n(st)
     i18n.apply_language_css(st, i18n.current_lang(st))
-    load_css()
     main_app.perform_scroll_top_if_requested()
 
 
