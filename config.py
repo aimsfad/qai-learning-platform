@@ -241,6 +241,10 @@ ul[role="listbox"] li[role="option"]:hover, div[data-baseweb="menu"] li:hover {{
   color: #FFFFFF !important;
 }}
 
+
+html body .stApp [data-baseweb="select"] * {{ color: #F8FAFC !important; }}
+html body .stApp .v61-hero-copy .v61-benefit-row span {{ background: rgba(56, 189, 248, 0.16) !important; color: #E0F2FE !important; border: 1px solid rgba(125, 211, 252, 0.36) !important; }}
+html body .stApp .v64-stat-card b, html body .stApp .v64-stat-card strong, html body .stApp .v64-stat-copy b, html body .stApp .v64-stat-copy strong {{ color: #38BDF8 !important; }}
 /* Crisp Gold Day-Mode Switch Button with Dark Ink */
 html body .stApp .st-key-v8_theme_switch_btn button {{
   min-height: 36px !important;
