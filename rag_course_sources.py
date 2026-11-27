@@ -6,6 +6,7 @@ scoped, consented RAG hits into the existing teacher research review workflow.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 from html import escape
 from typing import Any, Mapping
@@ -67,15 +68,44 @@ def create_local_rag_dossier(project: Mapping[str, Any], *, owner: str, query: s
     }
     if not eligible:
         raise ValueError("Approve at least one RAG reference and allow its excerpts to be used for cloud generation.")
-    context = index.search(owner=owner, project_id=project_id, query=search, limit=12, for_generation=True)
+    # V0.4.1: Search the exact teacher phrase first, then course metadata and
+    # bounded individual tokens. This is RAG retrieval, not external web search.
+    # Every hit still must pass the original approved + cloud-consent checks.
+    candidate_queries: list[str] = []
+    raw_candidates = [search, project.get("project_name"), project.get("unit_title"), project.get("target_concept")]
+    raw_candidates.extend(search.split()[:6])
+    for raw_candidate in raw_candidates:
+        candidate = str(raw_candidate or "").strip(" ,.;:!?()[]{}\t\n\r\u060c\u061b\u061f")[:180]
+        if len(candidate) >= 2 and candidate.casefold() not in {q.casefold() for q in candidate_queries}:
+            candidate_queries.append(candidate)
+        if len(candidate_queries) >= 8:
+            break
+
     matches: dict[str, list[dict[str, Any]]] = {}
-    for raw in context.hits:
-        hit = dict(raw)
-        source_id = str(hit.get("source_id") or "")
-        if source_id in eligible and str(hit.get("body") or "").strip():
-            matches.setdefault(source_id, []).append(hit)
+    used_query = search
+    attempts: list[str] = []
+    context = None
+    for candidate in candidate_queries:
+        attempts.append(candidate)
+        context = index.search(owner=owner, project_id=project_id, query=candidate, limit=12, for_generation=True)
+        matches = {}
+        for raw in context.hits:
+            hit = dict(raw)
+            source_id = str(hit.get("source_id") or "")
+            if source_id in eligible and str(hit.get("body") or "").strip():
+                matches.setdefault(source_id, []).append(hit)
+        if matches:
+            used_query = candidate
+            break
     if not matches:
-        raise ValueError("No approved, cloud-consented RAG excerpt matches this phrase. Try a shorter term from the document.")
+        backend = os.getenv("RAG_STORAGE_BACKEND", "sqlite").strip().lower()
+        retriever_info = str(getattr(context, "retrieval_diagnostic", "") or "").strip()[:160]
+        raise ValueError(
+            "No approved, cloud-consented RAG excerpt matches the course terms. "
+            f"RAG backend={backend}; eligible documents={len(eligible)}; "
+            f"queries attempted={attempts!r}; retriever={retriever_info or 'no additional diagnostic'}. "
+            "Check whether the Streamlit app uses the intended staging RAG database."
+        )
 
     sources = []
     packet = [
@@ -104,17 +134,21 @@ def create_local_rag_dossier(project: Mapping[str, Any], *, owner: str, query: s
             citation = str(hit.get("citation_key") or source_id)
             body = escape(str(hit.get("body") or "").strip()[:1200], quote=False)
             packet.append(f"<untrusted_source_excerpt id='{citation}'>\n{body}\n</untrusted_source_excerpt>")
+    if used_query != search:
+        packet.insert(1, f"Retrieval fallback used: {used_query!r}; teacher query was {search!r}. The teacher must check relevance.")
     report = "\n".join(packet)[:12000]
     return int(db.save_teacher_research_run(
         project_id=project_id,
         phase_number=1,
         research_mode="rag_only",
-        query_plan_json=json.dumps([search], ensure_ascii=False),
+        query_plan_json=json.dumps([search] if used_query == search else [search, used_query], ensure_ascii=False),
         report_text=report,
         sources_json=json.dumps([asdict(item) for item in sources], ensure_ascii=False),
         provider=LOCAL_RAG_PROVIDER,
         model=str(context.retrieval_mode or "lexical"),
         status="needs_review",
-        diagnostic=f"Local RAG: {len(sources)} document(s), {sum(len(v[:3]) for v in matches.values())} excerpts; no web search. Human source and evidence approval required.",
+        diagnostic=(f"Local RAG: {len(sources)} document(s), {sum(len(v[:3]) for v in matches.values())} excerpts; "
+                    f"query={used_query!r}; fallback={'yes' if used_query != search else 'no'}; "
+                    "no web search. Human source and evidence approval required."),
         source_count=len(sources),
     ))

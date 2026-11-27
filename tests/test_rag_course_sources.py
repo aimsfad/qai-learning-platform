@@ -66,4 +66,31 @@ class BridgeTests(unittest.TestCase):
         self.assertIn('revoked',self.mod.current_snapshot_error(run,owner='teacher',project_id=5))
         self.assertEqual(self.mod.current_snapshot_error({'provider':'gemini'},owner='teacher',project_id=5),'')
 
+    def test_fallback_to_course_title_when_teacher_phrase_has_no_hits(self):
+        def by_query(**kwargs):
+            hits = self.hits if kwargs.get('query') == 'Machine Learning' else []
+            return types.SimpleNamespace(hits=hits, retrieval_mode='lexical', retrieval_diagnostic='')
+        self.idx.search.side_effect = by_query
+        rid = self.mod.create_local_rag_dossier(
+            {'id': 5, 'project_name': 'Machine Learning'}, owner='teacher', query='تعلم الالة'
+        )
+        self.assertEqual(rid, 29)
+        self.assertEqual(
+            [c.kwargs['query'] for c in self.idx.search.call_args_list],
+            ['تعلم الالة', 'Machine Learning'],
+        )
+        record = self.saved[0]
+        self.assertEqual(json.loads(record['query_plan_json']), ['تعلم الالة', 'Machine Learning'])
+        self.assertIn('Retrieval fallback used', record['report_text'])
+        self.assertIn('fallback=yes', record['diagnostic'])
+        self.assertEqual(record['status'], 'needs_review')
+
+    def test_no_hits_error_reports_scoped_retrieval_diagnostics(self):
+        self.hits.clear()
+        with self.assertRaisesRegex(ValueError, 'eligible documents=1'):
+            self.mod.create_local_rag_dossier(
+                {'id': 5, 'project_name': 'Machine Learning'}, owner='teacher', query='تعلم الالة'
+            )
+        self.assertFalse(self.saved)
+
 if __name__=='__main__': unittest.main()
